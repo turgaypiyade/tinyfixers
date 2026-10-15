@@ -1896,6 +1896,7 @@ public class BoardController : MonoBehaviour
         obstacleStateService.OnObstacleDestroyed -= HandleObstacleDestroyed;
         obstacleStateService.OnCellUnlocked -= HandleCellUnlocked;
         obstacleStateService.OnGrassFlowerShed -= HandleGrassFlowerShed;
+        obstacleStateService.OnWaterLilyCleared -= HandleWaterLilyCleared;
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -1930,6 +1931,7 @@ public class BoardController : MonoBehaviour
             obstacleStateService.OnObstacleDestroyed -= HandleObstacleDestroyed;
             obstacleStateService.OnCellUnlocked -= HandleCellUnlocked;
             obstacleStateService.OnGrassFlowerShed -= HandleGrassFlowerShed;
+            obstacleStateService.OnWaterLilyCleared -= HandleWaterLilyCleared;
         }
 
         if (levelData == null) { obstacleStateService = null; oilSpreadService = null; return; }
@@ -5221,7 +5223,9 @@ public class BoardController : MonoBehaviour
         obstacleStateService.OnObstacleDestroyed += HandleObstacleDestroyed;
         obstacleStateService.OnCellUnlocked += HandleCellUnlocked;
         obstacleStateService.OnGrassFlowerShed -= HandleGrassFlowerShed;
+        obstacleStateService.OnWaterLilyCleared -= HandleWaterLilyCleared;
         obstacleStateService.OnGrassFlowerShed += HandleGrassFlowerShed;
+        obstacleStateService.OnWaterLilyCleared += HandleWaterLilyCleared;
         obstacleStateService.OnChestOpened -= HandleChestOpened;
         obstacleStateService.OnChestColorRemoved -= HandleChestColorRemoved;
         obstacleStateService.OnChestOpened += HandleChestOpened;
@@ -5395,6 +5399,12 @@ public class BoardController : MonoBehaviour
     // Çiçek katmanı bir "engel" gibi sayılır: önce görsel dökülür, sonra hedef (GrassFlower) düşer.
     // HandleObstacleDestroyed'dan GEÇMEZ: hücredeki taş silinmesin, çim yerinde kalır (GridSpawner
     // GrassFlower id'li bir view takip etmediği için çim görselini de silmez).
+    private void HandleWaterLilyCleared(int cell)
+    {
+        OnObstacleDestroyed?.Invoke(cell, ObstacleId.GrassWaterLily);
+        GameEventBus.EmitObstacleCleared(ObstacleId.GrassWaterLily);
+    }
+
     private void HandleGrassFlowerShed(int cell)
     {
         OnGrassFlowerShed?.Invoke(cell);

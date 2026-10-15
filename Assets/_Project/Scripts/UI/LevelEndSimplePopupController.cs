@@ -145,9 +145,12 @@ public class LevelEndSimplePopupController : MonoBehaviour
     [SerializeField] private TMP_Text successContinueText;
     [SerializeField] private TMP_Text scoreLabelText;
     [SerializeField] private TMP_Text scoreValueText;
-    [SerializeField] private GameObject[] goalResultRoots = new GameObject[4];
-    [SerializeField] private Image[] goalIconImages = new Image[4];
-    [SerializeField] private Image[] goalCheckMarkImages = new Image[4];
+    private const int MaxGoalResults = 5;
+    [SerializeField] private GameObject[] goalResultRoots = new GameObject[MaxGoalResults];
+    [SerializeField] private Image[] goalIconImages = new Image[MaxGoalResults];
+    [SerializeField] private Image[] goalCheckMarkImages = new Image[MaxGoalResults];
+    private Transform goalResultsRow;
+    private Vector3 goalResultsRowBaseScale;
     [SerializeField] private Sprite goalCheckMarkSprite;
 
     [Header("Success - Coin Text")]
@@ -325,7 +328,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
             starImages[1] = FindComponent<Image>(successPopupRoot.transform, "UIS/StarsRow/Star2") ?? starImages[1];
             starImages[2] = FindComponent<Image>(successPopupRoot.transform, "UIS/StarsRow/Star3") ?? starImages[2];
 
-            for (int i = 0; i < 4; i++)
+            for (int i = 0; i < MaxGoalResults; i++)
             {
                 string resultPath = $"UIS/GoalsRow/GoalResult_{i + 1}";
                 var result = successPopupRoot.transform.Find(resultPath);
@@ -2745,13 +2748,14 @@ public class LevelEndSimplePopupController : MonoBehaviour
         var goals = levelData != null ? levelData.goals : null;
         int slotIndex = 0;
 
-        for (int i = 0; i < 4; i++)
+        ApplyGoalResultLayout(0);
+        for (int i = 0; i < MaxGoalResults; i++)
             SetGoalResultVisible(i, false);
 
         if (goals == null)
             return;
 
-        for (int i = 0; i < goals.Length && slotIndex < 4; i++)
+        for (int i = 0; i < goals.Length && slotIndex < MaxGoalResults; i++)
         {
             var goal = goals[i];
             var icon = ResolveGoalResultIcon(goal);
@@ -2759,6 +2763,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
             if (goal == null || goal.amount <= 0 || icon == null)
                 continue;
 
+            EnsureGoalResultSlot(slotIndex);
             SetGoalResultVisible(slotIndex, true);
 
             if (goalIconImages[slotIndex] != null)
@@ -2780,6 +2785,34 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
             slotIndex++;
         }
+        ApplyGoalResultLayout(slotIndex);
+    }
+
+    private void EnsureGoalResultSlot(int index)
+    {
+        if (goalResultRoots[index] != null || goalResultRoots[0] == null)
+            return;
+
+        // Older scene/prefab instances contain four slots. Create the extra slot once and reuse it.
+        var template = goalResultRoots[0];
+        var result = Instantiate(template, template.transform.parent, false);
+        result.name = $"GoalResult_{index + 1}";
+        result.SetActive(false);
+        goalResultRoots[index] = result;
+        goalIconImages[index] = FindComponent<Image>(result.transform, "GoalIcon");
+        goalCheckMarkImages[index] = FindComponent<Image>(result.transform, "CheckMark");
+    }
+
+    private void ApplyGoalResultLayout(int count)
+    {
+        if (goalResultsRow == null && goalResultRoots[0] != null)
+        {
+            goalResultsRow = goalResultRoots[0].transform.parent;
+            if (goalResultsRow != null)
+                goalResultsRowBaseScale = goalResultsRow.localScale;
+        }
+        if (goalResultsRow != null)
+            goalResultsRow.localScale = goalResultsRowBaseScale * (count > 4 ? 4f / count : 1f);
     }
 
     private Sprite ResolveGoalResultIcon(LevelGoalDefinition goal)
@@ -2817,7 +2850,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
     private void SetGoalResultVisible(int index, bool visible)
     {
-        if (index < 0 || index >= 4)
+        if (index < 0 || index >= MaxGoalResults)
             return;
 
         if (goalResultRoots != null && index < goalResultRoots.Length && goalResultRoots[index] != null)
@@ -2914,12 +2947,12 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
     private void EnsureGoalResultArrays()
     {
-        if (goalResultRoots == null || goalResultRoots.Length < 4)
-            Array.Resize(ref goalResultRoots, 4);
-        if (goalIconImages == null || goalIconImages.Length < 4)
-            Array.Resize(ref goalIconImages, 4);
-        if (goalCheckMarkImages == null || goalCheckMarkImages.Length < 4)
-            Array.Resize(ref goalCheckMarkImages, 4);
+        if (goalResultRoots == null || goalResultRoots.Length < MaxGoalResults)
+            Array.Resize(ref goalResultRoots, MaxGoalResults);
+        if (goalIconImages == null || goalIconImages.Length < MaxGoalResults)
+            Array.Resize(ref goalIconImages, MaxGoalResults);
+        if (goalCheckMarkImages == null || goalCheckMarkImages.Length < MaxGoalResults)
+            Array.Resize(ref goalCheckMarkImages, MaxGoalResults);
     }
 
     private static T FindComponent<T>(Transform root, string path) where T : Component

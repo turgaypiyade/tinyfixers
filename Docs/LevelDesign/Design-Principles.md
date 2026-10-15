@@ -26,6 +26,8 @@ Engel seçmeden önce [engel tasarım rehberi](Obstacle-Design-Guide.md) ve gere
 
 108 sonrası geri bildirim: kullanıcı leveli kolay geçti; EggBird ve RocketBasket yardımı belirgin biçimde kolaylaştırdı. 108 değiştirilmez. Sonraki tasarımlarda yardım yoğunluğu ve hedef yükü birlikte ayarlanır; zorluk yalnız hamle sayısından ibaret düşünülmez. Tam 9×11 dış çerçeve içinde hole şeritleri ve toplu engel desenleri de denenir.
 
+151 sonrası geri bildirim: ilk tasarım kolay bulundu. Ayrık nilüfer çiftleri iki kesintisiz sütuna birleştirildi; hazır special ve sabit başlangıç renkleri kaldırıldı. Level tasarlarken taşları elle yerleştirmek zorunlu değildir; bu tür kompozisyonlarda engelleri tasarlayıp taş üretimini oyunun rastgele dolumuna bırakmak uygundur.
+
 113–116 sonrası geri bildirim: çiçek/çim çok kullanıldı; sonraki levellarda başka örtü ve katmanlar (çamur, jel, taş) öne çıkarılır. Overlay/katmanlı engeller ekranı hem şık hem zor yapar; zor levellarda 3 katmanlı yığınlar kullanılabilir.
 
 MetalWall için: hamlede vurulmayan hücre geri gittiği için duvara ilk hamlelerde kolay ulaşılmamalı. Örnek: sağa dayalı 2 sütun genişliğinde dikey bir duvar şeridi ve solunda Wall, SculptingStone ya da 3 aşamalı bir engelle korunması. Tek parça büyük blok kolaylaştırır; parçalı (çok sayıda küçük) duvar blokları zorlaştırır.

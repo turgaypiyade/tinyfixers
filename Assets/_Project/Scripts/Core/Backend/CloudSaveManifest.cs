@@ -100,6 +100,7 @@ public static class CloudSaveManifest
         "safari_lastask_ticks",
         "safari_fall_until_ticks",
         "bridge_cycle",
+        "gearcup_state_v1",
         "harvest_cycle",
         "iap_processed_transactions",
         "bridge_join_ticks",
@@ -148,6 +149,7 @@ public static class CloudSaveManifest
         || key.StartsWith("wonder_", System.StringComparison.Ordinal)
         || key.StartsWith("safari_", System.StringComparison.Ordinal)
         || key.StartsWith("bridge_", System.StringComparison.Ordinal)
+        || key.StartsWith("gearcup_", System.StringComparison.Ordinal)
         || key.StartsWith("progress_event_", System.StringComparison.Ordinal);
 
     private static long ReadRevision(object value) =>

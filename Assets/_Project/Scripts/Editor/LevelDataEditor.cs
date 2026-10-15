@@ -682,7 +682,8 @@ public class LevelDataEditor : Editor
             return playable;
         }
 
-        bool Matches(int raw) => raw == (int)id || (id == ObstacleId.Grass && raw == (int)ObstacleId.GrassFlower);
+        bool Matches(int raw) => raw == (int)id || (id == ObstacleId.Grass &&
+            (raw == (int)ObstacleId.GrassFlower || raw == (int)ObstacleId.GrassWaterLily));
 
         int count = 0;
         for (int i = 0; i < level.obstacles.Length && i < level.obstacleOrigins.Length; i++)
@@ -805,7 +806,7 @@ public class LevelDataEditor : Editor
                 GUI.backgroundColor = isSel ? new Color(0.2f, 0.9f, 1f, 1f) : Color.white;
                 if (GUI.Button(r, GUIContent.none)) selectedObstacle = def.id;
                 GUI.backgroundColor = Color.white;
-                DrawSpriteInRect(def.GetPreviewSprite(), r, 4);
+                DrawObstaclePreview(library, def, r, 4);
                 var mini = new GUIStyle(EditorStyles.miniLabel) { alignment = TextAnchor.LowerRight };
                 GUI.Label(r, $"{def.size.x}x{def.size.y}", mini);
             }
@@ -813,6 +814,8 @@ public class LevelDataEditor : Editor
         }
 
         EditorGUILayout.Space(4);
+        if (selectedObstacle == ObstacleId.GrassWaterLily)
+            EditorGUILayout.HelpBox("GrassWaterLily tek parça yerleştirilir: çim + nilüfer birlikte gelir. Ayrı Grass ekleme.", MessageType.Info);
         if (selectedObstacle == ObstacleId.TarpStatue)
             DrawTarpStatuePalette(level);
         if (selectedObstacle == ObstacleId.Hamster)
@@ -957,7 +960,7 @@ public class LevelDataEditor : Editor
             var foot = level.GetObstacleFootprint(obs, idx, def);
             int w = foot.x, h = foot.y;
             Rect big = new Rect(ox + x * cellPx, oy + y * cellPx, w * cellPx - 1, h * cellPx - 1);
-            DrawSpriteInRect(def.GetPreviewSprite(), big, 2);
+            DrawObstaclePreview(library, def, big, 2);
             if (obs == ObstacleId.TarpStatue)
             {
                 var tarp = level.GetTarpStatue(idx);
@@ -1223,7 +1226,7 @@ public class LevelDataEditor : Editor
 
                 // Origin'in üst-sol köşesine üstteki obstacle'ın mini ikonu.
                 Rect lr = new Rect(ox + sox * cellPx, oy + soy * cellPx, cellPx * 0.55f, cellPx * 0.55f);
-                if (def != null) DrawSpriteInRect(def.GetPreviewSprite(), lr, 1);
+                if (def != null) DrawObstaclePreview(lib, def, lr, 1);
             }
         }
 
@@ -2284,6 +2287,18 @@ public class LevelDataEditor : Editor
         }
 
         return SafeLockColor.Red;
+    }
+
+    private void DrawObstaclePreview(ObstacleLibrary library, ObstacleDef def, Rect rect, float padding)
+    {
+        if (def == null) return;
+        if (def.id == ObstacleId.GrassWaterLily)
+        {
+            DrawSpriteInRect(library != null ? library.Get(ObstacleId.Grass)?.GetPreviewSprite() : null, rect, padding);
+            float grow = (GrassWaterLilyService.FlowerSizeRatio - 1) * (rect.width - padding * 2) * 0.5f;
+            rect = new Rect(rect.x - grow, rect.y - grow, rect.width + grow * 2, rect.height + grow * 2);
+        }
+        DrawSpriteInRect(def.GetPreviewSprite(), rect, padding);
     }
 
     private void DrawSpriteInRect(Sprite sprite, Rect r, float padding)

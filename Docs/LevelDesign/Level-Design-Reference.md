@@ -105,3 +105,5 @@ Akış: aşağı **daralan** (taç→gövde, kâse→ayak, kalkan) ve **alta otu
 - Yeni kullanım: **Çiçekli Yonca 148** — dört lob ve çiçekli çim çerçeve, üstte Wardrobe çifti, altta PaintCanBox çifti, ortada 3×3 TarpStatue.
 - Yeni kullanım: **Mühürlü Dört Kule 149** — soyut dört 3×3 kule ve merkez koridoru; Gel → EggBird → SculptingStone → AncientSeal, dört tür/üç hedef; EggBird yardımıyla 30 hamle (ilk ayar).
 - Yeni kullanım: **Onarım Kapısı 150 (Boss Duel)** — 9×10 simetrik kapı silueti; iki PaintCanBox, iki çim ayağı ve en altta altı kalkan saklayan 3×3 TarpStatue. 30 hamle, üç rakip/520 toplam can (ilk ayar).
+
+- Yeni kullanım: **Nilüfer Göleti 151** — 9×11 iki loblu simetrik gölet; iki kesintisiz beşli GrassWaterLily (69) sütunu, krem kask kemerleri ve çamurlu kıyılar. Alt kenarda iki yardımcı RocketBasket; başlangıç taşları rastgele, hazır special yok; 32 hamle / üç hedef (kullanıcı geri bildirimiyle zorlaştırıldı).

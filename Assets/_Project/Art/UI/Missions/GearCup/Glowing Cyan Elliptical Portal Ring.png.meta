@@ -1,0 +1,468 @@
+fileFormatVersion: 2
+guid: 8234ce5afbb3e4e76a3040a7dbd9eb06
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: -4353746434145133316
+    second: Glowing Cyan Elliptical Portal Ring_0
+  - first:
+      213: 8702746165827395750
+    second: Glowing Cyan Elliptical Portal Ring_1
+  - first:
+      213: -3615344478752778615
+    second: Glowing Cyan Elliptical Portal Ring_2
+  - first:
+      213: 5919472695222097367
+    second: Glowing Cyan Elliptical Portal Ring_3
+  - first:
+      213: 6412682318080954472
+    second: Glowing Cyan Elliptical Portal Ring_4
+  - first:
+      213: -8264699327662654195
+    second: Glowing Cyan Elliptical Portal Ring_5
+  - first:
+      213: 8428790167758591824
+    second: Glowing Cyan Elliptical Portal Ring_6
+  - first:
+      213: -3765166960281950749
+    second: Glowing Cyan Elliptical Portal Ring_7
+  - first:
+      213: 434291428318605713
+    second: Glowing Cyan Elliptical Portal Ring_8
+  - first:
+      213: -4210362271798347088
+    second: Glowing Cyan Elliptical Portal Ring_9
+  - first:
+      213: 8237063340707358623
+    second: Glowing Cyan Elliptical Portal Ring_10
+  - first:
+      213: -2461181022499016911
+    second: Glowing Cyan Elliptical Portal Ring_11
+  - first:
+      213: 6449100380602291135
+    second: Glowing Cyan Elliptical Portal Ring_12
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 1
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 1
+  spriteExtrude: 1
+  spriteMeshType: 0
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 1024
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: iOS
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: Glowing Cyan Elliptical Portal Ring_0
+      rect:
+        serializedVersion: 2
+        x: 186
+        y: 0
+        width: 1743
+        height: 732
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: cfcd7ae6fa26493c0800000000000000
+      internalID: -4353746434145133316
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glowing Cyan Elliptical Portal Ring_1
+      rect:
+        serializedVersion: 2
+        x: 846
+        y: 726
+        width: 127
+        height: 36
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6a0e888578d56c870800000000000000
+      internalID: 8702746165827395750
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glowing Cyan Elliptical Portal Ring_2
+      rect:
+        serializedVersion: 2
+        x: 96
+        y: 519
+        width: 31
+        height: 91
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 986554bf957b3ddc0800000000000000
+      internalID: -3615344478752778615
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glowing Cyan Elliptical Portal Ring_3
+      rect:
+        serializedVersion: 2
+        x: 38
+        y: 401
+        width: 23
+        height: 28
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7d55658bd01362250800000000000000
+      internalID: 5919472695222097367
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glowing Cyan Elliptical Portal Ring_4
+      rect:
+        serializedVersion: 2
+        x: 1880
+        y: 191
+        width: 7
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 860d4aaa79c6ef850800000000000000
+      internalID: 6412682318080954472
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glowing Cyan Elliptical Portal Ring_5
+      rect:
+        serializedVersion: 2
+        x: 690
+        y: 111
+        width: 13
+        height: 16
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d0df14fefb3ed4d80800000000000000
+      internalID: -8264699327662654195
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glowing Cyan Elliptical Portal Ring_6
+      rect:
+        serializedVersion: 2
+        x: 816
+        y: 103
+        width: 17
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0575e8bfff319f470800000000000000
+      internalID: 8428790167758591824
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glowing Cyan Elliptical Portal Ring_7
+      rect:
+        serializedVersion: 2
+        x: 894
+        y: 93
+        width: 9
+        height: 27
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3e56b5c29907fbbc0800000000000000
+      internalID: -3765166960281950749
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glowing Cyan Elliptical Portal Ring_8
+      rect:
+        serializedVersion: 2
+        x: 902
+        y: 97
+        width: 9
+        height: 22
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1917de9c0c9e60600800000000000000
+      internalID: 434291428318605713
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glowing Cyan Elliptical Portal Ring_9
+      rect:
+        serializedVersion: 2
+        x: 920
+        y: 96
+        width: 15
+        height: 17
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0bab0cd32d9c195c0800000000000000
+      internalID: -4210362271798347088
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glowing Cyan Elliptical Portal Ring_10
+      rect:
+        serializedVersion: 2
+        x: 878
+        y: 79
+        width: 17
+        height: 28
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f97214f677def4270800000000000000
+      internalID: 8237063340707358623
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glowing Cyan Elliptical Portal Ring_11
+      rect:
+        serializedVersion: 2
+        x: 1152
+        y: 85
+        width: 7
+        height: 13
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 13f630266e028ddd0800000000000000
+      internalID: -2461181022499016911
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glowing Cyan Elliptical Portal Ring_12
+      rect:
+        serializedVersion: 2
+        x: 1382
+        y: 35
+        width: 9
+        height: 15
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: fb3d2aa90aecf7950800000000000000
+      internalID: 6449100380602291135
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 5e97eb03825dee720800000000000000
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      Glowing Cyan Elliptical Portal Ring_0: -4353746434145133316
+      Glowing Cyan Elliptical Portal Ring_1: 8702746165827395750
+      Glowing Cyan Elliptical Portal Ring_10: 8237063340707358623
+      Glowing Cyan Elliptical Portal Ring_11: -2461181022499016911
+      Glowing Cyan Elliptical Portal Ring_12: 6449100380602291135
+      Glowing Cyan Elliptical Portal Ring_2: -3615344478752778615
+      Glowing Cyan Elliptical Portal Ring_3: 5919472695222097367
+      Glowing Cyan Elliptical Portal Ring_4: 6412682318080954472
+      Glowing Cyan Elliptical Portal Ring_5: -8264699327662654195
+      Glowing Cyan Elliptical Portal Ring_6: 8428790167758591824
+      Glowing Cyan Elliptical Portal Ring_7: -3765166960281950749
+      Glowing Cyan Elliptical Portal Ring_8: 434291428318605713
+      Glowing Cyan Elliptical Portal Ring_9: -4210362271798347088
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

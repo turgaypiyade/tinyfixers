@@ -130,6 +130,8 @@ public class GridSpawner : MonoBehaviour
     // ObstacleStateService'e çiçekli olarak kaydedilir (çimin kalan vuruşu +1).
     private readonly List<int> pendingGrassFlowerCells = new();
     private GrassFlowerOverlayService grassFlowerOverlayService;
+    private readonly List<int> pendingWaterLilyCells = new();
+    private GrassWaterLilyService waterLilyService;
     private readonly Dictionary<int, Image> beneathViewsByCell = new();
 
     [Header("Obstacle Visual (UI)")]
@@ -647,6 +649,7 @@ public class GridSpawner : MonoBehaviour
             // movable ayrılınca restore path'i yeniden çizdiği için ancak sonradan görünür.
             DrawStampedBeneathVisuals();   // overlay altındaki obstacle'ı arkada baştan göster
             DrawCoveringOverlayVisuals();  // movable üstündeki grass örtüsü
+            DrawWaterLilies();
             DrawGrassFlowerOverlays();     // çiçekli çimlerin menekşeleri (grass kökünde, en üstte)
             DrawTubeObstacles();
             DrawMagnetObstacles();
@@ -1389,6 +1392,7 @@ public class GridSpawner : MonoBehaviour
         if (grassOverlayRoot == null)
             grassOverlayRoot = GetOrCreateChildRoot(rootParent, "GrassOverlay");
 
+        if (waterLilyService != null) waterLilyService.enabled = false;
         ClearChildren(grassOverlayRoot);
         if (spawnParent != null && grassOverlayRoot.parent != spawnParent)
             grassOverlayRoot.SetParent(spawnParent, worldPositionStays: false);
@@ -1423,6 +1427,9 @@ public class GridSpawner : MonoBehaviour
         // Menekşe kökünün torunları (hücre kökü, çiçek/gölge görselleri) da aynı layer'a geçsin.
         if (grassFlowerOverlayService != null)
             foreach (var t in grassFlowerOverlayService.GetComponentsInChildren<Transform>(true))
+                t.gameObject.layer = lyr;
+        if (waterLilyService != null)
+            foreach (var t in waterLilyService.GetComponentsInChildren<Transform>(true))
                 t.gameObject.layer = lyr;
     }
 
@@ -1772,26 +1779,29 @@ public class GridSpawner : MonoBehaviour
     private void ConvertGrassFlowersToGrass(LevelData lvl)
     {
         pendingGrassFlowerCells.Clear();
+        pendingWaterLilyCells.Clear();
         if (lvl == null || lvl.obstacles == null || lvl.obstacleOrigins == null) return;
 
         for (int i = 0; i < lvl.obstacles.Length && i < lvl.obstacleOrigins.Length; i++)
         {
-            if ((ObstacleId)lvl.obstacles[i] != ObstacleId.GrassFlower) continue;
+            var id = (ObstacleId)lvl.obstacles[i];
+            if (id != ObstacleId.GrassFlower && id != ObstacleId.GrassWaterLily) continue;
             lvl.obstacles[i] = (int)ObstacleId.Grass;
-            lvl.obstacleOrigins[i] = i;   // çim 1x1
-            pendingGrassFlowerCells.Add(i);
+            lvl.obstacleOrigins[i] = i;
+            (id == ObstacleId.GrassWaterLily ? pendingWaterLilyCells : pendingGrassFlowerCells).Add(i);
         }
 
         if (lvl.stackedObstacles == null) return;
         for (int i = 0; i < lvl.stackedObstacles.Length; i++)
         {
             var entry = lvl.stackedObstacles[i];
-            if (entry.obstacleId != ObstacleId.GrassFlower) continue;
+            var id = entry.obstacleId;
+            if (id != ObstacleId.GrassFlower && id != ObstacleId.GrassWaterLily) continue;
             entry.obstacleId = ObstacleId.Grass;
             lvl.stackedObstacles[i] = entry;
             int cell = entry.originCellIndex;
-            if (cell >= 0 && cell < lvl.obstacles.Length && !pendingGrassFlowerCells.Contains(cell))
-                pendingGrassFlowerCells.Add(cell);
+            var pending = id == ObstacleId.GrassWaterLily ? pendingWaterLilyCells : pendingGrassFlowerCells;
+            if (cell >= 0 && cell < lvl.obstacles.Length && !pending.Contains(cell)) pending.Add(cell);
         }
     }
 
@@ -1801,7 +1811,23 @@ public class GridSpawner : MonoBehaviour
         if (state != null)
             foreach (int cell in pendingGrassFlowerCells)
                 state.RegisterGrassFlowerCell(cell);
+        if (state != null)
+            foreach (int cell in pendingWaterLilyCells) state.RegisterWaterLilyCell(cell);
+        pendingWaterLilyCells.Clear();
         pendingGrassFlowerCells.Clear();
+    }
+
+    private void DrawWaterLilies()
+    {
+        waterLilyService = null;
+        if (grassOverlayRoot == null || board == null || board.ObstacleStateService == null) return;
+        var cells = new List<int>();
+        board.ObstacleStateService.CollectWaterLilyCells(cells);
+        if (cells.Count == 0) return;
+        var root = CreateChildRoot(grassOverlayRoot, "GrassWaterLilyOverlay");
+        root.gameObject.layer = grassOverlayRoot.gameObject.layer;
+        waterLilyService = root.gameObject.AddComponent<GrassWaterLilyService>();
+        waterLilyService.Init(board, cells, tileSize);
     }
 
     // Menekşeler grass kökünün çocuğu olan ayrı bir kökte çizilir: grass ile birlikte border'ın üstüne

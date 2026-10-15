@@ -96,3 +96,9 @@ Bu ayar, taşın engelin köşesinden komşu alt hücreye çapraz kaymasını sa
 Dolum incelemesinde yalnız kaynak/hedef boşluğuna bakılmaz, `BoardCellStateQuery` ve `FindSlideSource` köşe kuralı da kontrol edilir.
 
 Temel kaynaklar: [LevelData](../../Assets/_Project/Scripts/Core/LevelData.cs), [ObstacleLibrary](../../Assets/_Project/Settings/ObstacleLibrary.asset), [LevelCatalogPro](../../Assets/_Project/Settings/LevelCatalogPro.asset). [Eski akış envanteri](../ObstacleFlow_Inventory.md) zamanlama geçmişi için faydalıdır; güncel gameplay ayarı olarak tek başına kullanılmaz.
+
+## GrassWaterLily — ID 69, ilk seviye 151
+
+Tek seçimle çim + nilüfer yerleşir; ayrıca Grass eklenmez. Komşu special ilk gözlemden sonra bir gerçek oyuncu hamlesi aynı hücrede kaldıysa yutulur. İçeride special varken ilk special vuruşu geri fırlatır; uygun hücreye patlamadan iner. Bir sonraki special vuruşunda kalıcı yaprak kaybı başlar; karnı boşken ilk vuruş doğrudan yaprak düşürür. Dört yaprak bittiğinde alt çim normal akışla temizlenir. ID 69 hedefi ancak alttaki çim de bitince bir kez ilerler. Normal eşleşme veya booster yaprak düşürmez. Renk/ölçek hasarla değişmez.
+
+Tanıtımda çevresinde special üretme ve geri atılan special'ın inebileceği açık hücreler bırakılır; yoğun kaplama altında saklanmaz. Ayrıntı: [GrassWaterLily](../GrassWaterLily-Plan.md), ilk tasarım: [Nilüfer Göleti 151](Level151-Nilufer-Goleti.md).

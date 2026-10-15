@@ -613,3 +613,7 @@ MonoBehaviour:
     level: 150
     levelKey: LevelCL_0150
     levelData: {fileID: 11400000, guid: ddd4885034bc4734b36e7046dd6fabf0, type: 2}
+  - chapter: 7
+    level: 151
+    levelKey: LevelCL_0151
+    levelData: {fileID: 11400000, guid: 02211d8ac0df43c48ad595be93f71c83, type: 2}

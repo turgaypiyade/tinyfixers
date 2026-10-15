@@ -284,6 +284,10 @@ public enum ObstacleId : int
     // eşleşme vurmaz, SculptingSpecial kuralı), her vuruşta parça düşer; son vuruşta bitmiş heykel hedefe uçar, çerçeve parçalanır.
     // Renk/sayı engel başına: LevelData.tarpStatues. Mantık + görsel: Grid/TarpStatue/. Docs/TarpStatue_Plan.md.
     TarpStatue = 68,
+
+    // Grass-backed water lily. Eats adjacent specials; special hits return the stored special,
+    // then remove four petals permanently. The goal completes only after its grass is cleared.
+    GrassWaterLily = 69,
 }
 
 public enum TubeDirection { Up, Down, Left, Right }

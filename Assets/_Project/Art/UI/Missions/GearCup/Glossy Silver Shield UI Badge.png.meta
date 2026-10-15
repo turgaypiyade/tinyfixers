@@ -1,0 +1,572 @@
+fileFormatVersion: 2
+guid: 905e728a10bd14f6f8903421df313485
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: 1933456200827335167
+    second: Glossy Silver Shield UI Badge_0
+  - first:
+      213: 6088477862492004607
+    second: Glossy Silver Shield UI Badge_1
+  - first:
+      213: -17349198624161424
+    second: Glossy Silver Shield UI Badge_2
+  - first:
+      213: -6763743746266251736
+    second: Glossy Silver Shield UI Badge_3
+  - first:
+      213: -9048950225160936479
+    second: Glossy Silver Shield UI Badge_4
+  - first:
+      213: 3421864444921115273
+    second: Glossy Silver Shield UI Badge_5
+  - first:
+      213: 1056560583753352411
+    second: Glossy Silver Shield UI Badge_6
+  - first:
+      213: 3688391811022459201
+    second: Glossy Silver Shield UI Badge_7
+  - first:
+      213: -2783381273455815845
+    second: Glossy Silver Shield UI Badge_8
+  - first:
+      213: -5862139886486693680
+    second: Glossy Silver Shield UI Badge_9
+  - first:
+      213: -2064966771338633294
+    second: Glossy Silver Shield UI Badge_10
+  - first:
+      213: 3761151672076822237
+    second: Glossy Silver Shield UI Badge_11
+  - first:
+      213: 8874435776793429351
+    second: Glossy Silver Shield UI Badge_12
+  - first:
+      213: -2390627584173044224
+    second: Glossy Silver Shield UI Badge_13
+  - first:
+      213: 1734822394033227893
+    second: Glossy Silver Shield UI Badge_14
+  - first:
+      213: -1865926329729379808
+    second: Glossy Silver Shield UI Badge_15
+  - first:
+      213: 5466128763164144782
+    second: Glossy Silver Shield UI Badge_16
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 1
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 1
+  spriteExtrude: 1
+  spriteMeshType: 0
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 512
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: iOS
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: Glossy Silver Shield UI Badge_0
+      rect:
+        serializedVersion: 2
+        x: 58
+        y: 46
+        width: 1681
+        height: 821
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ff1f617bb2405da10800000000000000
+      internalID: 1933456200827335167
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Silver Shield UI Badge_1
+      rect:
+        serializedVersion: 2
+        x: 874
+        y: 726
+        width: 116
+        height: 153
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ff06aa89b5e9e7450800000000000000
+      internalID: 6088477862492004607
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Silver Shield UI Badge_2
+      rect:
+        serializedVersion: 2
+        x: 1336
+        y: 854
+        width: 50
+        height: 24
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0718edaeefc52cff0800000000000000
+      internalID: -17349198624161424
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Silver Shield UI Badge_3
+      rect:
+        serializedVersion: 2
+        x: 1181
+        y: 739
+        width: 7
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 82eb70c06ea5222a0800000000000000
+      internalID: -6763743746266251736
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Silver Shield UI Badge_4
+      rect:
+        serializedVersion: 2
+        x: 1290
+        y: 735
+        width: 6
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1e3671fa6bbab6280800000000000000
+      internalID: -9048950225160936479
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Silver Shield UI Badge_5
+      rect:
+        serializedVersion: 2
+        x: 1113
+        y: 717
+        width: 9
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 982ff053597ec7f20800000000000000
+      internalID: 3421864444921115273
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Silver Shield UI Badge_6
+      rect:
+        serializedVersion: 2
+        x: 1121
+        y: 719
+        width: 7
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: bd44c46c048a9ae00800000000000000
+      internalID: 1056560583753352411
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Silver Shield UI Badge_7
+      rect:
+        serializedVersion: 2
+        x: 1128
+        y: 724
+        width: 8
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 14114786fcccf2330800000000000000
+      internalID: 3688391811022459201
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Silver Shield UI Badge_8
+      rect:
+        serializedVersion: 2
+        x: 1226
+        y: 717
+        width: 7
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b5311319a717f59d0800000000000000
+      internalID: -2783381273455815845
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Silver Shield UI Badge_9
+      rect:
+        serializedVersion: 2
+        x: 1266
+        y: 725
+        width: 7
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0d8df4a05de75aea0800000000000000
+      internalID: -5862139886486693680
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Silver Shield UI Badge_10
+      rect:
+        serializedVersion: 2
+        x: 1385
+        y: 692
+        width: 17
+        height: 25
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 2bf106189a3c753e0800000000000000
+      internalID: -2064966771338633294
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Silver Shield UI Badge_11
+      rect:
+        serializedVersion: 2
+        x: 1675
+        y: 276
+        width: 16
+        height: 16
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: dd66180b48b423430800000000000000
+      internalID: 3761151672076822237
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Silver Shield UI Badge_12
+      rect:
+        serializedVersion: 2
+        x: 1592
+        y: 132
+        width: 22
+        height: 25
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7654ac9f154582b70800000000000000
+      internalID: 8874435776793429351
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Silver Shield UI Badge_13
+      rect:
+        serializedVersion: 2
+        x: 419
+        y: 83
+        width: 13
+        height: 16
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 00e8d17d0e8c2ded0800000000000000
+      internalID: -2390627584173044224
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Silver Shield UI Badge_14
+      rect:
+        serializedVersion: 2
+        x: 691
+        y: 46
+        width: 14
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5784eb0a6c3531810800000000000000
+      internalID: 1734822394033227893
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Silver Shield UI Badge_15
+      rect:
+        serializedVersion: 2
+        x: 705
+        y: 53
+        width: 6
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0229e63a3e5ea16e0800000000000000
+      internalID: -1865926329729379808
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Silver Shield UI Badge_16
+      rect:
+        serializedVersion: 2
+        x: 659
+        y: 23
+        width: 34
+        height: 24
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e84b1f836279bdb40800000000000000
+      internalID: 5466128763164144782
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 5e97eb03825dee720800000000000000
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      Glossy Silver Shield UI Badge_0: 1933456200827335167
+      Glossy Silver Shield UI Badge_1: 6088477862492004607
+      Glossy Silver Shield UI Badge_10: -2064966771338633294
+      Glossy Silver Shield UI Badge_11: 3761151672076822237
+      Glossy Silver Shield UI Badge_12: 8874435776793429351
+      Glossy Silver Shield UI Badge_13: -2390627584173044224
+      Glossy Silver Shield UI Badge_14: 1734822394033227893
+      Glossy Silver Shield UI Badge_15: -1865926329729379808
+      Glossy Silver Shield UI Badge_16: 5466128763164144782
+      Glossy Silver Shield UI Badge_2: -17349198624161424
+      Glossy Silver Shield UI Badge_3: -6763743746266251736
+      Glossy Silver Shield UI Badge_4: -9048950225160936479
+      Glossy Silver Shield UI Badge_5: 3421864444921115273
+      Glossy Silver Shield UI Badge_6: 1056560583753352411
+      Glossy Silver Shield UI Badge_7: 3688391811022459201
+      Glossy Silver Shield UI Badge_8: -2783381273455815845
+      Glossy Silver Shield UI Badge_9: -5862139886486693680
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

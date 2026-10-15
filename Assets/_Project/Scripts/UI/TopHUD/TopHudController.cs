@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class TopHudController : MonoBehaviour
 {
@@ -34,16 +35,16 @@ public class TopHudController : MonoBehaviour
     [SerializeField] private string movesPrefix = "MOVES";
     [SerializeField] private Sprite fallbackGoalIcon;
     [SerializeField] private Sprite tubeGoalFallbackIcon;
-    [Tooltip("4 hedef (tam satır) gösterilirken hedef ızgarasının yatay kaydırması. GoalsGrid çerçeveye göre " +
-             "tam ortalanmasın diye ince ayar; + değer sağa kaydırır.")]
-    [SerializeField] private float fourGoalsOffsetX = 4f;
 
     public RectTransform MovesTextRect => movesText != null ? movesText.rectTransform : null;
 
     private readonly List<RuntimeGoal> runtimeGoals = new();
     private bool initialized;
     private bool goalsRootBaseCaptured;
-    private Vector2 goalsRootBasePosition;
+    private Vector3 goalsRootBaseScale;
+    private GridLayoutGroup goalsGrid;
+    private GridLayoutGroup.Constraint goalsGridBaseConstraint;
+    private int goalsGridBaseConstraintCount;
 
     // Kırılmış ama saçılımı henüz bitmemiş kaynak sayısı, saçılan obstacle başına
     // (Mud ← Barrel, WaterPuddle ← WaterTank/WaterTankSmall). Saçılan-obstacle hedefinin placeholder'ı.
@@ -144,6 +145,7 @@ public class TopHudController : MonoBehaviour
 
         if (levelData == null || levelData.goals == null)
         {
+            ApplyGoalsRowLayout();
             UpdateGoalsCompletionState();
             return;
         }
@@ -189,23 +191,49 @@ public class TopHudController : MonoBehaviour
             runtimeGoals.Add(runtime);
         }
 
-        ApplyGoalsRowOffset();
+        ApplyGoalsRowLayout();
         UpdateGoalsCompletionState();
     }
 
-    private void ApplyGoalsRowOffset()
+    private void ApplyGoalsRowLayout()
     {
         if (goalsRoot is not RectTransform rt)
             return;
 
         if (!goalsRootBaseCaptured)
         {
-            goalsRootBasePosition = rt.anchoredPosition;
+            goalsRootBaseScale = rt.localScale;
+            goalsGrid = rt.GetComponent<GridLayoutGroup>();
+            if (goalsGrid != null)
+            {
+                goalsGridBaseConstraint = goalsGrid.constraint;
+                goalsGridBaseConstraintCount = goalsGrid.constraintCount;
+            }
             goalsRootBaseCaptured = true;
         }
 
-        float offsetX = runtimeGoals.Count == 4 ? fourGoalsOffsetX : 0f;
-        rt.anchoredPosition = goalsRootBasePosition + new Vector2(offsetX, 0f);
+        // Keep the original four-goal footprint, including counters and completion checks.
+        // This runs only when goals are built or a spreading obstacle adds a new goal.
+        float scale = 1f;
+        if (goalsGrid != null)
+        {
+            int count = runtimeGoals.Count;
+            bool compactRow = count > 4;
+            goalsGrid.constraint = compactRow
+                ? GridLayoutGroup.Constraint.FixedColumnCount : goalsGridBaseConstraint;
+            goalsGrid.constraintCount = compactRow ? count : goalsGridBaseConstraintCount;
+            if (compactRow)
+            {
+                float normalWidth = 4f * goalsGrid.cellSize.x + 3f * goalsGrid.spacing.x;
+                float rowWidth = count * goalsGrid.cellSize.x + (count - 1) * goalsGrid.spacing.x;
+                if (normalWidth > 0f && rowWidth > 0f)
+                    scale = Mathf.Min(1f, normalWidth / rowWidth);
+            }
+        }
+
+        // Left/Right remain owned by the scene, including adjustments made during Play mode.
+        // Reapplying a cached position here would undo those adjustments when a goal is added.
+        rt.localScale = goalsRootBaseScale * scale;
     }
 
     private RuntimeGoal FindRuntimeObstacleGoal(ObstacleId obstacleId)
@@ -245,7 +273,7 @@ public class TopHudController : MonoBehaviour
 
         runtime.slot?.SetRemaining(runtime.remaining);
         runtimeGoals.Add(runtime);
-        ApplyGoalsRowOffset();
+        ApplyGoalsRowLayout();
         return runtime;
     }
 

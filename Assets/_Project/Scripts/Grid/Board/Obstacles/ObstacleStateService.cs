@@ -206,6 +206,11 @@ public class ObstacleStateService : ISimObstacleQuery
     // başlar; ilk tüketilen vuruş çiçekleri döker (OnGrassFlowerShed) ve hücre setten çıkar.
     private readonly HashSet<int> _grassFlowerCells = new();
     public event Action<int> OnGrassFlowerShed;
+    private readonly HashSet<int> waterLilyCells = new();
+    public event Action<int> OnWaterLilyCleared;
+    // Null result: petals are gone, so use ordinary grass damage. Otherwise the flower owns the hit.
+    public Func<int, ObstacleHitContext, bool?> WaterLilyHitInterceptor;
+    public Func<int, int> WaterLilyRemainingHitsQuery;
 
     /// Set by BoardController → RaiseObstacleCreatedDynamic. Restore edilen beneath obstacle'a
     /// (x,y) görselini oluşturmak için çağrılır.
@@ -344,6 +349,7 @@ public class ObstacleStateService : ISimObstacleQuery
         _underTileBeneathMovable.Clear();
         _stampedBeneathByCell.Clear();
         _grassFlowerCells.Clear();
+        waterLilyCells.Clear();
         wallRemainingHits.Clear();
         _revealGraceUntil.Clear();
 
@@ -456,6 +462,14 @@ public class ObstacleStateService : ISimObstacleQuery
         // Az önce açığa çıkan katman: kırıcı etkinin kalan vuruşlarını almaz (bkz. RevealGraceSeconds).
         if (IsInRevealGrace(idx))
             return new ObstacleHitResult(false, false, false, default, default, Array.Empty<int>());
+
+        if (id == ObstacleId.Grass && waterLilyCells.Contains(idx))
+        {
+            bool? handled = WaterLilyHitInterceptor?.Invoke(idx, context);
+            if (handled.HasValue)
+                return new ObstacleHitResult(handled.Value, handled.Value, !handled.Value,
+                    new ObstacleVisualChange(-1, ObstacleId.GrassWaterLily, false, 0, null), default, Array.Empty<int>());
+        }
 
         // Cargo (exitAtBottom): KIRILMAZ — hiçbir kaynak (match/special/booster) hasar veremez.
         // Yalnızca en alta inip board'dan çıkınca toplanır (BoardController bottom-exit akışı).
@@ -1440,6 +1454,7 @@ public class ObstacleStateService : ISimObstacleQuery
             ShedGrassFlowerIfAny(origin);
 
         OnObstacleDestroyed?.Invoke(origin, originId);
+        if (originId == ObstacleId.Grass) CompleteWaterLily(origin);
 
         // Cover view'ı OnObstacleDestroyed dinleyicilerinde temizlendikten sonra beneath view'ı
         // oluştur. Aynı origin key'i hâlâ cover'a aitken dynamic create skip'leniyordu.
@@ -1533,7 +1548,18 @@ public class ObstacleStateService : ISimObstacleQuery
 
     /// Saydam örtü: altındaki katman görünür kalır (Grass, GrassFlower, Oil). Opak katmanın altı gizlidir.
     public static bool IsSeeThroughLayer(ObstacleId id) =>
-        id == ObstacleId.Grass || id == ObstacleId.GrassFlower || id == ObstacleId.Oil;
+        id == ObstacleId.Grass || id == ObstacleId.GrassFlower || id == ObstacleId.GrassWaterLily || id == ObstacleId.Oil;
+
+    public void RegisterWaterLilyCell(int cell) => waterLilyCells.Add(cell);
+    public void CollectWaterLilyCells(ICollection<int> into)
+    {
+        if (into == null) return;
+        foreach (int cell in waterLilyCells) into.Add(cell);
+    }
+    private void CompleteWaterLily(int cell)
+    {
+        if (waterLilyCells.Remove(cell)) OnWaterLilyCleared?.Invoke(cell);
+    }
 
     // ── Çiçekli çim (GrassFlower) ────────────────────────────────────────────
 
@@ -2193,6 +2219,17 @@ public class ObstacleStateService : ISimObstacleQuery
         if (beneath.Id != ObstacleId.Grass && beneath.Id != ObstacleId.Oil)
             return false;
 
+        if (beneath.Id == ObstacleId.Grass && waterLilyCells.Contains(idx))
+        {
+            bool? handled = WaterLilyHitInterceptor?.Invoke(idx, context);
+            if (handled.HasValue)
+            {
+                change = new ObstacleVisualChange(-1, ObstacleId.GrassWaterLily, false, 0, null);
+                // A rejected hit must still protect the movable beneath this flower.
+                return true;
+            }
+        }
+
         var overlayDef = library != null ? library.Get(beneath.Id) : null;
         int remaining = beneath.Remaining;
         if (remaining < 0)
@@ -2212,6 +2249,7 @@ public class ObstacleStateService : ISimObstacleQuery
             _underTileBeneathMovable.Remove(idx);
             // Normal grass-clear ile aynı olay: goal sayımı + GrassOverlayService/obstacle view temizliği.
             OnObstacleDestroyed?.Invoke(idx, beneath.Id);
+            if (beneath.Id == ObstacleId.Grass) CompleteWaterLily(idx);
             change = new ObstacleVisualChange(idx, beneath.Id, cleared: true, remainingHits: 0, sprite: null);
         }
         else
@@ -2226,6 +2264,7 @@ public class ObstacleStateService : ISimObstacleQuery
 
     public int CountAliveOrigins(ObstacleId obstacleId)
     {
+        if (obstacleId == ObstacleId.GrassWaterLily) return waterLilyCells.Count;
         if (level == null || level.obstacles == null || level.obstacleOrigins == null)
             return 0;
 
@@ -2389,7 +2428,7 @@ public class ObstacleStateService : ISimObstacleQuery
         if (def == null) return 0;
 
         int current = ResolveRemainingHitsForCell(idx, def);
-        int count = 0;
+        int count = waterLilyCells.Contains(idx) ? Mathf.Max(0, WaterLilyRemainingHitsQuery?.Invoke(idx) ?? 4) : 0;
 
         for (int r = current; r > 0; r--)
         {

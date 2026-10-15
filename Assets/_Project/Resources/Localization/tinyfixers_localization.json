@@ -5,6 +5,130 @@
       "code": "tr",
       "entries": [
         {
+          "key": "gearcup_unlock",
+          "value": "{0}. seviyede açılır."
+        },
+        {
+          "key": "gearcup_need_team",
+          "value": "Dişli Kupası’na katılmak için önce bir takıma katıl."
+        },
+        {
+          "key": "gearcup_team_locked",
+          "value": "Bu etkinlikte takımın sabittir. Yeni takımınla bir sonraki etkinliğe katılabilirsin."
+        },
+        {
+          "key": "gearcup_settling",
+          "value": "Etkinlik sonucu güncelleniyor. Lütfen biraz sonra tekrar dene."
+        },
+        {
+          "key": "gearcup_gears",
+          "value": "Dişli"
+        },
+        {
+          "key": "gearcup_next_event",
+          "value": "Yeni etkinliğe katılmak için dokun"
+        },
+        {
+          "key": "gearcup_live_hint",
+          "value": "Bölüm kazan, takımına dişli ekle!"
+        },
+        {
+          "key": "gearcup_scoring_rules",
+          "value": "Kırılan her normal taş +1 dişli verir. Dişliler yalnız bölüm kazanılınca takım puanına eklenir. Vazgeçersen o bölümde topladığın dişlileri kaybedersin."
+        },
+        {
+          "key": "gearcup_reward_live",
+          "value": "Etkinlik sonunda dişli katkısı olan takım üyelerine verilir."
+        },
+        {
+          "key": "gearcup_result",
+          "value": "Takımın etkinliği {0}. sırada tamamladı!"
+        },
+        {
+          "key": "gearcup_join_message",
+          "value": "Takımınla dişli topla! En yüksek puana ulaşan ilk üç takım ödül kazanır."
+        },
+        {
+          "key": "gearcup_join_later",
+          "value": "Şimdi Değil"
+        },
+        {
+          "key": "gearcup_title",
+          "value": "DİŞLİ KUPASI"
+        },
+        {
+          "key": "gearcup_preview",
+          "value": "Tasarım önizlemesi · örnek puanlar"
+        },
+        {
+          "key": "gearcup_contribution",
+          "value": "SENİN KATKIN"
+        },
+        {
+          "key": "gearcup_your_team",
+          "value": "SENİN TAKIMIN"
+        },
+        {
+          "key": "gearcup_ends_in",
+          "value": "KALAN SÜRE"
+        },
+        {
+          "key": "gearcup_howto",
+          "value": "Takımınla dişli topla. En yüksek toplam puana ulaşan ilk üç takım farklı ödüller kazanır."
+        },
+        {
+          "key": "gearcup_preview_note",
+          "value": "Bu ekran tasarım önizlemesidir. Puanlar ve ödüller örnektir; gerçek ödül verilmez."
+        },
+        {
+          "key": "gearcup_reward_preview",
+          "value": "Örnek ödül paketi · gerçek ödül verilmez"
+        },
+        {
+          "key": "gearcup_reward_item",
+          "value": "Etkinlik ödülü"
+        },
+        {
+          "key": "gearcup_team_total",
+          "value": "Takım toplamı: {0} dişli"
+        },
+        {
+          "key": "gearcup_members_preview",
+          "value": "Takım yarışında üyelerin katkıları burada listelenecek."
+        },
+        {
+          "key": "gearcup_rank_1",
+          "value": "1."
+        },
+        {
+          "key": "gearcup_rank_2",
+          "value": "2."
+        },
+        {
+          "key": "gearcup_rank_3",
+          "value": "3."
+        },
+        {
+          "key": "gearcup_sample_team_1",
+          "value": "Cıvata Ekibi"
+        },
+        {
+          "key": "gearcup_sample_team_2",
+          "value": "Turbo Kuyruklar"
+        },
+        {
+          "key": "gearcup_sample_team_3",
+          "value": "Bakır Yavrular"
+        },
+        {
+          "key": "gearcup_sample_team_4",
+          "value": "Kıvılcım Ekibi"
+        },
+        {
+          "key": "gearcup_sample_team_5",
+          "value": "Altın Kanatlar"
+        },
+        {
           "key": "boss_howto_match",
           "value": "Taşları eşleştir,\nsaldırını güçlendir!"
         },
@@ -2665,6 +2789,130 @@
     {
       "code": "en",
       "entries": [
+        {
+          "key": "gearcup_unlock",
+          "value": "Unlocks at level {0}."
+        },
+        {
+          "key": "gearcup_need_team",
+          "value": "Join a team first to enter Gear Cup."
+        },
+        {
+          "key": "gearcup_team_locked",
+          "value": "Your team is fixed for this event. Enter the next event with your new team."
+        },
+        {
+          "key": "gearcup_settling",
+          "value": "Event results are updating. Please try again shortly."
+        },
+        {
+          "key": "gearcup_gears",
+          "value": "Gears"
+        },
+        {
+          "key": "gearcup_next_event",
+          "value": "Tap to join the next event"
+        },
+        {
+          "key": "gearcup_live_hint",
+          "value": "Win levels to add gears to your team!"
+        },
+        {
+          "key": "gearcup_scoring_rules",
+          "value": "Each normal tile earns +1 gear. Gears only count toward the team score when you win the level. Giving up loses the gears collected in that level."
+        },
+        {
+          "key": "gearcup_reward_live",
+          "value": "Awarded to contributing team members at the end of the event."
+        },
+        {
+          "key": "gearcup_result",
+          "value": "Your team finished in place {0}!"
+        },
+        {
+          "key": "gearcup_join_message",
+          "value": "Collect gears with your team! The top three teams win rewards."
+        },
+        {
+          "key": "gearcup_join_later",
+          "value": "Not Now"
+        },
+        {
+          "key": "gearcup_title",
+          "value": "GEAR CUP"
+        },
+        {
+          "key": "gearcup_preview",
+          "value": "Design preview · sample scores"
+        },
+        {
+          "key": "gearcup_contribution",
+          "value": "YOUR CONTRIBUTION"
+        },
+        {
+          "key": "gearcup_your_team",
+          "value": "YOUR TEAM"
+        },
+        {
+          "key": "gearcup_ends_in",
+          "value": "ENDS IN"
+        },
+        {
+          "key": "gearcup_howto",
+          "value": "Collect gears with your team. The three highest-scoring teams win different rewards."
+        },
+        {
+          "key": "gearcup_preview_note",
+          "value": "This is a design preview. Scores and rewards are samples; no rewards are granted."
+        },
+        {
+          "key": "gearcup_reward_preview",
+          "value": "Sample reward package · no rewards are granted"
+        },
+        {
+          "key": "gearcup_reward_item",
+          "value": "Event reward"
+        },
+        {
+          "key": "gearcup_team_total",
+          "value": "Team total: {0} gears"
+        },
+        {
+          "key": "gearcup_members_preview",
+          "value": "Member contributions will appear here in the team competition."
+        },
+        {
+          "key": "gearcup_rank_1",
+          "value": "1st"
+        },
+        {
+          "key": "gearcup_rank_2",
+          "value": "2nd"
+        },
+        {
+          "key": "gearcup_rank_3",
+          "value": "3rd"
+        },
+        {
+          "key": "gearcup_sample_team_1",
+          "value": "Bolt Crew"
+        },
+        {
+          "key": "gearcup_sample_team_2",
+          "value": "Turbo Tails"
+        },
+        {
+          "key": "gearcup_sample_team_3",
+          "value": "Copper Cubs"
+        },
+        {
+          "key": "gearcup_sample_team_4",
+          "value": "Spark Squad"
+        },
+        {
+          "key": "gearcup_sample_team_5",
+          "value": "Golden Wings"
+        },
         {
           "key": "boss_howto_match",
           "value": "Match tiles\nto power up your attack!"

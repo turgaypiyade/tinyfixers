@@ -1,0 +1,87 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a5e1c956349a42c690b98cca79ba250d, type: 3}
+  m_Name: GearCupConfig
+  m_EditorClassIdentifier: Assembly-CSharp::GearCupPreviewConfig
+  background: {fileID: 21300000, guid: 76a32c9d377d64489a0e4f6dd3f67559, type: 3}
+  platform: {fileID: 21300000, guid: e950d2e7005cc49e49b656d5c66a60f9, type: 3}
+  platformRing: {fileID: 21300000, guid: 8234ce5afbb3e4e76a3040a7dbd9eb06, type: 3}
+  gear: {fileID: 21300000, guid: 05efb9c5b642d408f90e209d2a848b11, type: 3}
+  eventBadge: {fileID: 21300000, guid: bd26eff827ca49289ffa233b3de8ab67, type: 3}
+  rankShield: {fileID: 21300000, guid: 6098726e2ea0c4e01b376818b27ab6d2, type: 3}
+  rewardHeader: {fileID: 21300000, guid: 905e728a10bd14f6f8903421df313485, type: 3}
+  rewardCardGold: {fileID: 21300000, guid: 6f5ff2146dce467486656b4b3fa71770, type: 3}
+  rewardCardSilverMaterial: {fileID: 2100000, guid: 255565df26e7490b9df2af88b50f262a, type: 2}
+  rewardCardBronzeMaterial: {fileID: 2100000, guid: 90ebd125a88e4d898b55bbb5268ff079, type: 2}
+  teamRowWhiteMaterial: {fileID: 2100000, guid: 516188de5e2f4125b21430edb5d36bf6, type: 2}
+  rowBackground: {fileID: 21300000, guid: c2dddd86abf834e60854c27b9e4672d0, type: 3}
+  darkPanel: {fileID: 21300000, guid: b7152b4daa6d944d18c6fc8430918086, type: 3}
+  infoIcon: {fileID: 21300000, guid: 07ea0aaf063c43f4937e67d6b6ab6dee, type: 3}
+  closeIcon: {fileID: 21300000, guid: 8fb720f1c5fe84fceaa7533ae6712d06, type: 3}
+  inspectIcon: {fileID: 21300000, guid: d9239315fe0f41779792973c7b5ada50, type: 3}
+  buttonBackground: {fileID: 21300000, guid: b586c420aa7c42edbea078153759811b, type: 3}
+  closeBackground: {fileID: 0}
+  joinPopupBackground: {fileID: 21300000, guid: 151bf75851e554170ab322eabebafc57, type: 3}
+  joinPopupMaterial: {fileID: 2100000, guid: bb380a88a72e40ce877e774ad5ae4068, type: 2}
+  teamEmblems:
+  - {fileID: 21300000, guid: 575f4d2945de448999680817e3270327, type: 3}
+  - {fileID: 21300000, guid: b1048270708e4daebd0e9eac1d86ea1f, type: 3}
+  - {fileID: 21300000, guid: a6955e9fe5cc496e9d808e766ab21250, type: 3}
+  - {fileID: 21300000, guid: d38cff4d9a7042d2b35e2512360d1a7c, type: 3}
+  - {fileID: 21300000, guid: c5de51f39b234e05bc66b701f227c3ba, type: 3}
+  headingFont: {fileID: 11400000, guid: 5e6309197a20b48f38af13be4a943e86, type: 2}
+  bodyFont: {fileID: 11400000, guid: af5dedf535e914a95b9338f201a87125, type: 2}
+  rabbitFrames:
+  - {fileID: 21300000, guid: dd306bb67edd149969af9c70f2e737b1, type: 3}
+  - {fileID: 21300000, guid: 8c5a6ca15ce6b4ad3a757a17d28c847d, type: 3}
+  - {fileID: 21300000, guid: 43ef8df86800c4e7f87ea4193ec6bcb5, type: 3}
+  - {fileID: 21300000, guid: 2112c6497bcc8457b9f0e5bb9fa09b58, type: 3}
+  - {fileID: 21300000, guid: ab08e25f124a145fc80279886eea9516, type: 3}
+  - {fileID: 21300000, guid: ac2960f4458644773bd10d38b8811431, type: 3}
+  - {fileID: 21300000, guid: 6c6562dfabd92402b8107cc63b04f8da, type: 3}
+  rabbitFootY:
+  - 1508
+  - 1508
+  - 1508
+  - 1509
+  - 1509
+  - 1508
+  - 1479
+  animationCycleSeconds: 4.333333
+  pigFrames:
+  - {fileID: 21300000, guid: a3af26a1f8eb94201a06c6324d74da46, type: 3}
+  - {fileID: 21300000, guid: 32034fc903ad8466b9a09d42b9caf4d9, type: 3}
+  - {fileID: 21300000, guid: 18f539912eb9f4c099e561779d23f051, type: 3}
+  - {fileID: 21300000, guid: d8148365890e244139f4dd15a4d233ae, type: 3}
+  pigFootY:
+  - 1497
+  - 1492
+  - 1486
+  - 1494
+  eventEnabled: 1
+  minLevelGate: 51
+  seasonHours: 72
+  settlementMinutes: 10
+  onlyYellowTiles: 0
+  gearsPerTile: 1
+  maxGearsPerLevel: 10000
+  gainLabelMaterial: {fileID: 2100000, guid: 9f3a9e5f6f9747fa9c8ae26b53dcea68, type: 2}
+  rewards:
+  - coins: 1000
+    item: 11
+    itemAmount: 2
+  - coins: 500
+    item: 10
+    itemAmount: 1
+  - coins: 250
+    item: 20
+    itemAmount: 1

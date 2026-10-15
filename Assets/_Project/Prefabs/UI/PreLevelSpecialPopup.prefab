@@ -3509,7 +3509,7 @@ MonoBehaviour:
   fallbackChapter: 1
   goalsPreviewRoot: {fileID: 3310771022297421038}
   goalSlotPrefab: {fileID: 8598178808890510351, guid: 5185880da700e4021a652744b8a70fe0, type: 3}
-  maxPreviewGoals: 4
+  maxPreviewGoals: 5
   goalPreviewScale: 2.6
   fallbackGoalIcon: {fileID: 0}
   tileIconLibrary: {fileID: 11400000, guid: 44f21392c67a14dfbb8782561221acf8, type: 2}
