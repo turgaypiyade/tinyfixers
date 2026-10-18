@@ -6,7 +6,8 @@ using UnityEngine.UI;
 /// menu layout lives in the SafeArea; on iPhones the home-indicator inset hides the difference, but on phones
 /// without a bottom inset (most Android, 16:9) the authored 190 spacer left the Level/Missions buttons behind
 /// the 250-tall bar. The spacer becomes max(authored, bar top above the safe-area bottom + gap) — iPhone keeps
-/// its authored look. Recomputed only when the screen or safe area changes.
+/// its authored look. Measured every frame (two corner reads, main menu only) and applied only on change:
+/// SafeAreaFitter and the layout settle a frame after enable, so a one-shot measurement read stale rects.
 /// </summary>
 [RequireComponent(typeof(LayoutElement))]
 public sealed class BottomTabClearance : MonoBehaviour
@@ -17,8 +18,6 @@ public sealed class BottomTabClearance : MonoBehaviour
 
     private LayoutElement element;
     private float authoredHeight = -1f;
-    private Rect lastSafeArea;
-    private Vector2Int lastScreen;
     private readonly Vector3[] corners = new Vector3[4];
 
     private void Awake()
@@ -27,17 +26,7 @@ public sealed class BottomTabClearance : MonoBehaviour
         authoredHeight = element.preferredHeight;
     }
 
-    private void OnEnable() => lastScreen = Vector2Int.zero;   // force a refresh
-
-    private void LateUpdate()
-    {
-        // SafeAreaFitter applies at end of frame; checking here (cheap struct compares) follows it.
-        var screen = new Vector2Int(Screen.width, Screen.height);
-        if (screen == lastScreen && Screen.safeArea == lastSafeArea) return;
-        lastScreen = screen;
-        lastSafeArea = Screen.safeArea;
-        Refresh();
-    }
+    private void LateUpdate() => Refresh();
 
     private void Refresh()
     {
@@ -51,7 +40,7 @@ public sealed class BottomTabClearance : MonoBehaviour
         if (scale <= 0f) return;
         float needed = (barTop - safeBottom) / scale + gap;
         float height = Mathf.Max(authoredHeight, needed);
-        if (!Mathf.Approximately(element.preferredHeight, height))
+        if (Mathf.Abs(element.preferredHeight - height) > 0.5f)
         {
             element.preferredHeight = height;
             LayoutRebuilder.MarkLayoutForRebuild(parent);
