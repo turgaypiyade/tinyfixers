@@ -178,8 +178,6 @@ public static class BridgeRepairState
         // cycle sıfırlansa bile ödül kaybolmaz. Harita yalnız sandık törenini gösterir (EndPresented).
         if (wins >= config.levelsToFinish)
             GrantFinishReward(config);
-        Debug.Log($"[BridgeRepair] Level kazanıldı → köprü {wins}/{config.levelsToFinish}" +
-                  (wins >= config.levelsToFinish ? $" (BİTTİ, sıra {FinalRank})" : ""));
         OnChanged?.Invoke();
     }
 
@@ -191,7 +189,6 @@ public static class BridgeRepairState
         if (rank < 1 || rank > config.prizeRanks) return;
         foreach (var reward in config.RewardsForRank(rank))
             DailySlotRewardService.Grant(reward);
-        Debug.Log($"[BridgeRepair] {rank}. sıra ödülü verildi.");
     }
 
     // ── Yardımcı ─────────────────────────────────────────────────

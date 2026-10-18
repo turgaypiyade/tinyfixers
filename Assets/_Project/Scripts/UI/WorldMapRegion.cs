@@ -278,7 +278,10 @@ public sealed class WorldMapRegion : MonoBehaviour
             {
                 if (this == null) return;
                 if (string.IsNullOrEmpty(regionId))
-                    Debug.LogWarning($"[WorldMapRegion] '{name}' için regionId boş — açılma durumu kaydedilemez.", this);
+                    {
+                        if (GameDiagnostics.CriticalErrors)
+                            Debug.LogWarning($"[WorldMapRegion] '{name}' için regionId boş — açılma durumu kaydedilemez.", this);
+                    }
             };
     }
 #endif

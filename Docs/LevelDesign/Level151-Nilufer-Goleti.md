@@ -37,8 +37,8 @@ MoLoooLoM
 - Nilüfer sayısı **4 → 10**; başlangıçtaki iki hazır LineH ve bütün sabit taş renkleri kaldırıldı. Oyuncu special'larını kendisi oluşturur. Hedef yükü arttığı için hamle 32'de tutuldu; aynı anda ayrıca azaltılmadı.
 - x=3–5 orta alanı, iki nilüfer sütununun arasındaki y=3–7 satırlarında açıktır. Yatay special aynı sıradaki iki nilüfere; nilüfer sütununa hizalanan dikey special ise bir sütundaki beş nilüfere birden erişebilir. Bu, tek tek hedefleme ile sütun boyunca hasar verme arasında tercih yaratır.
 - Komşu special ilk görüldüğünde yutulmaz. Bir sonraki gerçek oyuncu hamlesi çözülünce aynı taş aynı komşu hücrede hâlâ duruyorsa alınır. Düşüş/cascade special'ı yerinden oynatırsa bekleme baştan başlar.
-- İçeride special varken ilk special vuruşu onu tahtaya geri yollar; otomatik patlamaz. Sonraki special vuruşu ilk yaprağı düşürüp yutmayı kalıcı durdurur. Karnı boşken ilk vuruş doğrudan yaprak düşürür.
-- Kasklar ve çamur normal eşleşmelerle de ilerler; nilüfer yaprakları special gerektirir. Nilüferler açıldıkça yan kıyılarla orta alan arasındaki yatay eşleşme yolları genişler.
+- İçeride special varken ilk special vuruşu onu tahtaya geri yollar; otomatik patlamaz. Sonraki kabul edilen normal/special vuruşu ilk yaprağı düşürüp yutmayı kalıcı durdurur; çiçek yeniden special yutmuşsa onu yalnız special açar. Karnı boşken ilk vuruş doğrudan yaprak düşürür.
+- Kasklar ve çamur normal eşleşmelerle de ilerler; nilüfer yaprakları içerisi boşken normal eşleşme veya special ile düşer. İçinde special olan nilüferi yalnız special açar. Nilüferler açıldıkça yan kıyılarla orta alan arasındaki yatay eşleşme yolları genişler.
 
 ## Statik doğrulama ve performans
 

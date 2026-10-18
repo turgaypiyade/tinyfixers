@@ -69,7 +69,8 @@ public sealed class MainMenuStarDisplay : MonoBehaviour
         if (starCountText == null && !hasWarnedMissingText)
         {
             hasWarnedMissingText = true;
-            Debug.LogWarning("[MainMenuStarDisplay] Star count text not found. Checked StarCount, ChipStar, Stars, StarText and TotalStars paths. Star display will be skipped until a TMP text is assigned or renamed.");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogWarning("[MainMenuStarDisplay] Star count text not found. Checked StarCount, ChipStar, Stars, StarText and TotalStars paths. Star display will be skipped until a TMP text is assigned or renamed.");
         }
     }
 

@@ -29,6 +29,7 @@ public static class CloudSaveManifest
         "booster_row_count",
         "booster_column_count",
         "booster_shuffle_count",
+        "booster_paint_count",
         "lives_current",
         "purchase_thanks_pending_lives",
         "safari_joined",
@@ -68,6 +69,9 @@ public static class CloudSaveManifest
         "level_attempt_count",
         "level_attempt_fails",
         "level_attempt_struggles",
+        "level_attempt_lives_spent",
+        "mercy_has_rewarded_ad",
+        "mercy_has_purchase",
         // Harika (wonder/event) ilerlemesi: en son tamamlanan event + model sürümü.
         // Event başına görev sırası "wonder_stage_" aile öneki ile taranır (aşağıda).
         // Eski tek-harika anahtarları migration kaynağı olarak taşınmaya devam eder.
@@ -83,6 +87,9 @@ public static class CloudSaveManifest
     {
         ProgressResetRevisionKey,
         "player_name",
+        "legal_accepted_version", // kabul edilen Şartlar/Gizlilik sürümü (LegalConsent)
+        "legal_accepted_at",
+        "chat_blocked_uids",      // engellenen oyuncular (ChatModeration)
         "player_id",
         "friend_code",
         "friends_list",
@@ -118,6 +125,7 @@ public static class CloudSaveManifest
         "daily_slot_last_spin_date",
         "fortune_wheel_last_spin_time",
         "music_owned",           // 100 altınla açılan müzik parçaları (satın alma korunmalı)
+        "wonder_order",          // oyuncuya özel harika sırası (bölgeye göre ilk harika, WonderOrder)
     };
 
     // Sayı son-ekli INT bayrak aileleri (id 0..MaxEnumScan taranır, HasKey olanlar alınır).
@@ -186,6 +194,8 @@ public static class CloudSaveManifest
         foreach (string key in StringKeys)
             if (IsResettableProgress(key)) PlayerPrefs.DeleteKey(key);
         foreach (string key in ProgressIntKeys) PlayerPrefs.DeleteKey(key);
+        // Return activity is device-local: a cloud restore cannot overwrite a fresh 72-hour return.
+        LevelAssist.ClearAfterWin();
         PlayerPrefs.DeleteKey("stats_weekly_clear_ticks");
 
         for (int i = 0; i <= maxLevel + 2; i++)
@@ -272,6 +282,8 @@ public static class CloudSaveManifest
     public static void Apply(IDictionary<string, object> data)
     {
         if (data == null) return;
+        int localAdEvidence = PlayerPrefs.GetInt(LevelAssist.RewardedAdKey, 0);
+        int localPurchaseEvidence = PlayerPrefs.GetInt(LevelAssist.PurchaseKey, 0);
 
         // Apply normally merges keys; after a remote reset, remove older local progress first.
         if (ReadProgressResetRevision(data) > ProgressResetRevision)
@@ -292,6 +304,12 @@ public static class CloudSaveManifest
                 // double/bool beklenmiyor (Collect üretmez); bilinmeyen tip sessizce atlanır.
             }
         }
+        // An older snapshot cannot undo a completed ad or paid fulfilment on this profile.
+        PlayerPrefs.SetInt(LevelAssist.RewardedAdKey, Mathf.Max(localAdEvidence,
+            PlayerPrefs.GetInt(LevelAssist.RewardedAdKey, 0)));
+        PlayerPrefs.SetInt(LevelAssist.PurchaseKey, Mathf.Max(localPurchaseEvidence,
+            PlayerPrefs.GetInt(LevelAssist.PurchaseKey, 0)));
+        if (LevelAttemptStats.HasActiveAttempt) LevelAssist.RefreshAttemptEligibility(CurrentLevel.Global);
 
 #if UNITY_EDITOR
         const int minEditorCoins = 500;
@@ -299,7 +317,6 @@ public static class CloudSaveManifest
         if (coins < minEditorCoins)
         {
             PlayerPrefs.SetInt("player_coins", minEditorCoins);
-            Debug.Log($"[CloudSaveManifest] Editor coin minimum applied after restore: {coins} -> {minEditorCoins}");
         }
 #endif
 

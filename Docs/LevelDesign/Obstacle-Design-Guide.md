@@ -83,6 +83,8 @@ WaterPuddle (53), WaterTank'tan doğan tek vuruşlu alt zemindir; kendi hücresi
 
 Listede bulunmayan bir ID yalnız kodda mevcut diye yeni levele eklenmez. Katalog, üretici/katman verileri ve tanıtım sırası ayrıca incelenir.
 
+Yeni kütüphane engeli: **RhodesStatue · ID 70**, 2×2 sabit dev heykel; dört aşama/dört special isabeti, normal/booster hasarı almaz. İlk production tanıtımı 161; 162 ve 166'da yoğun yükle geri gelir. Goal/prelevel ikonu Resources/RhodesStatue/S1_Base'tir. Kapladığı dört hücre tek obstacle/goal'dür. Ayrıntı: [RhodesStatue](../RhodesStatue.md).
+
 ## Diyagonal köşe geçişi — 148 geri bildirimi
 
 Wardrobe (27), PaintCanBox (63) ve TarpStatue (68) için **bütün stage'lerde `allowDiagonal = 1`**.
@@ -99,6 +101,6 @@ Temel kaynaklar: [LevelData](../../Assets/_Project/Scripts/Core/LevelData.cs), [
 
 ## GrassWaterLily — ID 69, ilk seviye 151
 
-Tek seçimle çim + nilüfer yerleşir; ayrıca Grass eklenmez. Komşu special ilk gözlemden sonra bir gerçek oyuncu hamlesi aynı hücrede kaldıysa yutulur. İçeride special varken ilk special vuruşu geri fırlatır; uygun hücreye patlamadan iner. Bir sonraki special vuruşunda kalıcı yaprak kaybı başlar; karnı boşken ilk vuruş doğrudan yaprak düşürür. Dört yaprak bittiğinde alt çim normal akışla temizlenir. ID 69 hedefi ancak alttaki çim de bitince bir kez ilerler. Normal eşleşme veya booster yaprak düşürmez. Renk/ölçek hasarla değişmez.
+Tek seçimle çim + nilüfer yerleşir; ayrıca Grass eklenmez. Komşu special ilk gözlemden sonra bir gerçek oyuncu hamlesi aynı hücrede kaldıysa yutulur. İçeride special varken ilk special vuruşu geri fırlatır; uygun hücreye patlamadan iner. İçerisi boşken normal veya special vuruşunda kalıcı yaprak kaybı başlar; her vuruş bir yaprak düşürür. Yeniden special yutmuş olsa da içi dolu çiçeği yalnız special açar; normal eşleşme zarar vermez. Dört yaprak bittiğinde alt çim normal akışla temizlenir. ID 69 hedefi ancak alttaki çim de bitince bir kez ilerler. Booster yaprak düşürmez; normal eşleşme sadece içerisi boşken hasar verir. Renk/ölçek hasarla değişmez.
 
 Tanıtımda çevresinde special üretme ve geri atılan special'ın inebileceği açık hücreler bırakılır; yoğun kaplama altında saklanmaz. Ayrıntı: [GrassWaterLily](../GrassWaterLily-Plan.md), ilk tasarım: [Nilüfer Göleti 151](Level151-Nilufer-Goleti.md).

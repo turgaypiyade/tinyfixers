@@ -78,7 +78,8 @@ public sealed class ScriptedTutorial : MonoBehaviour
         var overlay = FindOverlay();
         if (overlay == null)
         {
-            Debug.LogWarning("[ScriptedTutorial] TutorialOverlayController bulunamadı; öğretici atlandı.");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogWarning("[ScriptedTutorial] TutorialOverlayController bulunamadı; öğretici atlandı.");
             Finish();
             yield break;
         }
@@ -96,7 +97,8 @@ public sealed class ScriptedTutorial : MonoBehaviour
 
             if (!TryResolve(steps[i], out var from, out var to))
             {
-                Debug.LogWarning($"[ScriptedTutorial] Level {levelNumber} adım {i}: hücreler geçersiz, atlandı.");
+                if (GameDiagnostics.CriticalErrors)
+                    Debug.LogWarning($"[ScriptedTutorial] Level {levelNumber} adım {i}: hücreler geçersiz, atlandı.");
                 MarkSeen(levelNumber, i);
                 continue;
             }

@@ -377,8 +377,10 @@ public static class SafariMockupSetup
         list.Sort((a, b) => a.rect.x.CompareTo(b.rect.x));
 
         if (list.Count == 0)
-            Debug.LogError($"[{LogTag}] Helmet sheet dilimlenmemiş: {HelmetSheetPath} " +
-                           "(Inspector > Sprite Mode: Multiple + Sprite Editor > Slice).");
+            {
+                if (GameDiagnostics.EditorTools)
+                    Debug.LogError($"[{LogTag}] Helmet sheet dilimlenmemiş: {HelmetSheetPath} " + "(Inspector > Sprite Mode: Multiple + Sprite Editor > Slice).");
+            }
         return list.ToArray();
     }
 

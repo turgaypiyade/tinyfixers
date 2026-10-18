@@ -147,6 +147,7 @@ public static class ShopPurchaseFeedback
                     BoardController.BoosterMode.Row => "shop_reward_row",
                     BoardController.BoosterMode.Column => "shop_reward_column",
                     BoardController.BoosterMode.Shuffle => "shop_reward_shuffle",
+                    BoardController.BoosterMode.PaintBucket => "shop_reward_paint",
                     _ => "shop_reward_booster"
                 };
             case ShopReward.Kind.Timed:
@@ -161,6 +162,7 @@ public static class ShopPurchaseFeedback
                     DailySlotRewardType.Booster_Row => "shop_reward_row",
                     DailySlotRewardType.Booster_Column => "shop_reward_column",
                     DailySlotRewardType.Booster_Shuffle => "shop_reward_shuffle",
+                    DailySlotRewardType.Booster_PaintBucket => "shop_reward_paint",
                     _ => "shop_reward_timed"
                 };
             default: return "shop_reward_booster";

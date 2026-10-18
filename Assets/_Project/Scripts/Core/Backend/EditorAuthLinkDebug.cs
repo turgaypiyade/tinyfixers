@@ -25,12 +25,8 @@ public static class EditorAuthLinkDebug
         {
             string email = $"editor-{Mathf.Abs(SystemInfo.deviceUniqueIdentifier.GetHashCode())}@tinyfixers.test";
             const string password = "TinyFixers-Editor-1!";
-
-            Debug.Log($"[EditorAuthDebug] test credential: {email}");
             callback(EmailAuthProvider.GetCredential(email, password), null);
         };
-
-        Debug.Log("[EditorAuthDebug] Google butonu EDITOR'de e-posta test credential'ına bağlandı.");
     }
 }
 #endif

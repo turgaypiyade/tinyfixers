@@ -62,9 +62,6 @@ public class TeamManager : MonoBehaviour
 
         PlayerPrefs.SetInt(KeyTeamsInitialized, 1);
         PlayerPrefs.Save();
-
-        Debug.Log($"[TeamManager] {teams.Count} takım oluşturuldu, " +
-                  $"her birinde {botConfig.teamMemberCount} üye.");
     }
 
     private void LoadTeams()
@@ -96,7 +93,6 @@ public class TeamManager : MonoBehaviour
         if (target == null) return null;
 
         target.memberIds.Add(playerId);
-        Debug.Log($"[TeamManager] {displayName} → {target.teamName} takımına eklendi.");
         return target;
     }
 

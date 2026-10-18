@@ -64,7 +64,8 @@ public static class HarvestTitleStyle
         }
         if (!BuildInfoRow(screen)) return;
         EditorSceneManager.MarkSceneDirty(screen.gameObject.scene);
-        Debug.Log("[Harvest] Hasat + süre hapları kuruldu. Sahneyi kaydet (Cmd+S).");
+        if (GameDiagnostics.EditorTools)
+            Debug.Log("[Harvest] Hasat + süre hapları kuruldu. Sahneyi kaydet (Cmd+S).");
     }
 
     private static bool BuildInfoRow(HarvestScreen screen)
@@ -72,7 +73,8 @@ public static class HarvestTitleStyle
         var so = new SerializedObject(screen);
         var title = so.FindProperty("titleText").objectReferenceValue as TextMeshProUGUI;
         var floor = so.FindProperty("floorText").objectReferenceValue as TextMeshProUGUI;
-        if (title == null || floor == null) { Debug.LogWarning("[Harvest] titleText/floorText atanmamış."); return false; }
+        if (title == null || floor == null) { if (GameDiagnostics.EditorTools)
+            Debug.LogWarning("[Harvest] titleText/floorText atanmamış."); return false; }
 
         var frame = (RectTransform)title.rectTransform.parent;
         var old = frame.Find("InfoRow");
@@ -195,19 +197,22 @@ public static class HarvestTitleStyle
         if (!Apply(screen, fontPath, matName, outlineWidth)) return;
         EditorSceneManager.MarkSceneDirty(screen.gameObject.scene);
         AssetDatabase.SaveAssets();
-        Debug.Log($"[Harvest] Tabela başlığı: {matName}. Sahneyi kaydet (Cmd+S).");
+        if (GameDiagnostics.EditorTools)
+            Debug.Log($"[Harvest] Tabela başlığı: {matName}. Sahneyi kaydet (Cmd+S).");
     }
 
     private static bool Apply(HarvestScreen screen, string fontPath, string matName, float outlineWidth)
     {
         var font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(fontPath);
-        if (font == null) { Debug.LogWarning($"[Harvest] Font yok: {fontPath}"); return false; }
+        if (font == null) { if (GameDiagnostics.EditorTools)
+            Debug.LogWarning($"[Harvest] Font yok: {fontPath}"); return false; }
         var mat = GetOrCreateMaterial(font, $"{MaterialsDir}/{matName}.mat", outlineWidth);
 
         var so = new SerializedObject(screen);
         var title = so.FindProperty("titleText").objectReferenceValue as TextMeshProUGUI;
         var floor = so.FindProperty("floorText").objectReferenceValue as TextMeshProUGUI;
-        if (title == null) { Debug.LogWarning("[Harvest] titleText atanmamış."); return false; }
+        if (title == null) { if (GameDiagnostics.EditorTools)
+            Debug.LogWarning("[Harvest] titleText atanmamış."); return false; }
 
         // Referansta tabela yazısı düz; kavis kaldırılır.
         if (title.TryGetComponent(out TMPArcText arc)) Object.DestroyImmediate(arc);

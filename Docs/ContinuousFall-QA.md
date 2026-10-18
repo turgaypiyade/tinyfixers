@@ -158,3 +158,20 @@ Mobil/Play Mode kontrolü henüz yapılmadı:
 3. Boss oil atarken oil olmayan bölgede aynı hamleyi deneyin. Yağlı hücrelerin mevcut oyun
    kuralıyla kilitli kalması beklenir; ilgisiz oturmuş eşleşmeler takasın kendi kilidine takılmamalı.
 4. Bir taşı basılı tutarken boss atışı gelsin: sürüklenen taşın üzerine yeni engel yerleşmemeli.
+
+## Arka plan / odak kaybında takılma sayacı (2026-10-16)
+
+ResolveBoard'un akış ve blocking-job kurtarma sayaçları artık `ActiveWatchdogDeltaTime` kullanır.
+Uygulama pause veya focus kaybındayken ve `timeScale=0` iken süre sayılmaz; resolve bekleme bütçeleri
+sıfırlanır. Pause ve focus bağımsız tutulur. Dönüş callback karesi ve ilk sonraki kare atlanır; OS/Editor'dan
+callbacksiz gelen büyük unscaled delta da `Time.maximumDeltaTime` ile sınırlanır. Böylece arka planda
+beklemiş iş, uygulamaya dönüşte 15 saniye takılmış sayılıp zorla boşaltılmaz. Board'un exclusive erişim
+ve RunAfterIdle timeout'ları da aynı aktif süreyi kullanır. Gerçek ön plan takılmasında 5 saniyelik uyarı
+ve 15 saniyelik kurtarma korunur. Yeni coroutine/obje/tahta taraması yoktur.
+
+`csi Tools/check_board_watchdog_pause.csx`: üretim callback, saat ve iki kurtarma dalıyla 24 kontrol.
+Odak/pause olaylarının farklı sıraları, hiç arka plan karesi çalışmaması, 120–180 saniyelik dönüş delta'sı,
+timeScale pause ve tekrar gerçek takılmada kurtarmanın devreye girmesi doğrulanır.
+
+Cihaz/Play Mode doğrulaması henüz yapılmadı: düşüş sırasında uygulamayı 30+ saniye arka plana alıp dönün;
+işler/hücreler zorla boşaltılmadan animasyon devam etmeli. Editor pause ve başka pencereye geçişi de deneyin.

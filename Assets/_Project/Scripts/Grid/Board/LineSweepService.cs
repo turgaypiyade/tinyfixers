@@ -33,7 +33,8 @@ public class LineSweepService
             if (!didLogMissingSpawner)
             {
                 didLogMissingSpawner = true;
-                Debug.LogWarning("[Lightning][LineSweepService] lightningSpawner is null, skipping emitter lightning VFX.");
+                if (GameDiagnostics.CriticalErrors)
+                    Debug.LogWarning("[Lightning][LineSweepService] lightningSpawner is null, skipping emitter lightning VFX.");
             }
             return 0f;
         }
@@ -110,7 +111,8 @@ public class LineSweepService
         if (playbackDuration <= 0f)
         {
             playbackDuration = MinLightningLeadTime;
-            Debug.LogWarning($"[Lightning] Spawner playbackDuration was <= 0. Using fallback {playbackDuration:0.000}s.");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogWarning($"[Lightning] Spawner playbackDuration was <= 0. Using fallback {playbackDuration:0.000}s.");
         }
 
         if (onTargetBeamSpawned != null)

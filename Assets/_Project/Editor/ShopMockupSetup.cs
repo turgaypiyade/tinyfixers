@@ -234,7 +234,8 @@ public static class ShopMockupSetup
     {
         foreach (var o in AssetDatabase.LoadAllAssetRepresentationsAtPath(ArtDir + "/GoldSheets.png"))
             if (o is Sprite s && s.name == subName) return s;
-        Debug.LogWarning($"[ShopMockupSetup] GoldSheets alt-sprite bulunamadı: {subName}");
+        if (GameDiagnostics.EditorTools)
+            Debug.LogWarning($"[ShopMockupSetup] GoldSheets alt-sprite bulunamadı: {subName}");
         return null;
     }
 
@@ -694,7 +695,8 @@ public static class ShopMockupSetup
     {
         var so = new SerializedObject(target);
         var p = so.FindProperty(field);
-        if (p == null) { Debug.LogError($"[ShopMockupSetup] '{field}' alanı {target} üzerinde bulunamadı."); return; }
+        if (p == null) { if (GameDiagnostics.EditorTools)
+            Debug.LogError($"[ShopMockupSetup] '{field}' alanı {target} üzerinde bulunamadı."); return; }
         p.objectReferenceValue = value;
         so.ApplyModifiedPropertiesWithoutUndo();
     }
@@ -703,7 +705,8 @@ public static class ShopMockupSetup
     {
         var so = new SerializedObject(target);
         var p = so.FindProperty(field);
-        if (p == null) { Debug.LogError($"[ShopMockupSetup] '{field}' dizisi {target} üzerinde bulunamadı."); return; }
+        if (p == null) { if (GameDiagnostics.EditorTools)
+            Debug.LogError($"[ShopMockupSetup] '{field}' dizisi {target} üzerinde bulunamadı."); return; }
         p.arraySize = values.Length;
         for (int i = 0; i < values.Length; i++)
             p.GetArrayElementAtIndex(i).objectReferenceValue = values[i];

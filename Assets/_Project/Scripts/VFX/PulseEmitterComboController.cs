@@ -130,7 +130,8 @@ public class PulseEmitterComboController : MonoBehaviour
     {
         if (!IsWired())
         {
-            Debug.LogError("[PulseEmitterComboController] Missing refs. Assign Pivot/ChargeRing/BeamH/BeamV/CanvasGroup.");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogError("[PulseEmitterComboController] Missing refs. Assign Pivot/ChargeRing/BeamH/BeamV/CanvasGroup.");
             return;
         }
 

@@ -2,10 +2,12 @@
 
 Kullanıcının 107 tasarımı için verdiği yönlendirmeler; sonraki seviyelerde de esas alınır.
 
+- **Yeni tasarımlar için katman kuralı (155 isteği):** Mud ve Oil dahil sıvılar en alttadır. Sandık/taş gibi katı engeller sıvının üstüne yerleştirilir; Oil sandığın üstünde kullanılmaz. Sıvı `obstacles[]` tabanı, katı örtü `stackedObstacles[]` üst katmanı olur. Eski level kayıtları bu yeni tasarım talebiyle otomatik değiştirilmez.
 - Yalnızca oyuncunun o seviyeye kadar gördüğü engeller kullanılabilir. Asset numarası yerine `LevelCatalogPro` sırası kontrol edilir.
 - Engel seçimi son tanıtılanlarla sınırlı değildir. O ana kadar açılmış tüm engeller dönem dönem yeniden kullanılır; her levelde son çıkan engeli kullanmak zorunlu değildir. Amaç seviyeler boyunca çeşitlilik sağlamak, arada yeni engeller tanıtarak yeni heyecan yaratmaktır.
 - İlk bakışta okunabilen güzel bir kompozisyon hedeflenir: altıgen, oval, uçurtma, simetrik şekiller veya belirgin renk blokları. Verilen şekiller örnektir, zorunlu şablon değildir.
 - Hole/board maskesi silueti destekleyebilir. Tam dikdörtgen board üzerinde de engel dizilimi tek başına güzel bir desen oluşturmalıdır.
+- **Güncel zorluk yönü (161/162 isteği, 2026-10-18):** Oyuncuyu zorlamak için tahtayı dar/erişilmesi zor bir şekle sokmak yerine geniş eşleşme alanını, bol kırılma ve patlama akışını öne çıkar. Zorluk yüksek engel/katman yükü ve/veya düşük hamle bütçesinden gelebilir. Hole, adacık veya dar boğaz zorunlu değildir; tam dikdörtgen tahta da tercih edilir. Bu yön, eski referanstaki "hole silueti zorunlu" önerisinin önündedir. **Yeni engelin ilk tanıtımı kolay tutulur:** 161 Rodos tanıtımında düşük yük/rahat hamle; yoğun yük ve sıkı bütçe 162'de başlar. Önceki seviyeler bu istek nedeniyle değiştirilmez.
 - Engel yoğun tasarımlarda 9×10 veya 9×11 gibi geniş alanlar tercih edilir.
 - Tek hücreli engeller bitişik gruplar, satırlar, sütunlar ve dikdörtgenler halinde yerleştirilir; renkler bölgesel olarak uyumlu tutulur. Plastic, PlasticTwoStage ve HelmetPorcelain aynı renk ailesi olarak birlikte değerlendirilebilir.
 - Her onluk normal level grubunda genellikle ilk beşte bir, ikinci beşte başka bir engel tanıtılır; bu kesin bir kota değildir. Yeni engeller, kompozisyona yakışan eski engellerle birlikte kullanılır.

@@ -18,7 +18,6 @@ public sealed class LineVHPulseCoreComboExecutionRuntime
     // Nested special execute sonucu action listesi döner
     public Func<ResolutionContext, TileView, TileView, List<BoardAction>> ExecuteSpecialActions;
 
-    public Action<string> DebugLog;
     public Action<TileSpecial, TileSpecial, Vector2Int> EmitComboTriggered;
     public Action<Vector2Int> EmitPulseEmitterComboTriggered;
 
@@ -194,7 +193,6 @@ public sealed class LineVHPulseCoreCombo
         rt.Context.Affected.Add(tile);
         comboLightningVisualTargets.Add(tile);
 
-        rt.DebugLog?.Invoke($"[LineVHPulseCoreCombo] AddCell cell={cell} special={tile.GetSpecial()}");
     }
 
     private void AddOrigin(LineVHPulseCoreComboExecutionRuntime rt, TileView tile)
@@ -209,7 +207,6 @@ public sealed class LineVHPulseCoreCombo
 
         SpecialCellUtils.MarkAffectedCell(rt.Context, tile, rt.Board);
 
-        rt.DebugLog?.Invoke($"[LineVHPulseCoreCombo] AddOrigin cell={cell} special={tile.GetSpecial()}");
     }
 
     private TileView GetPulseTile(LineVHPulseCoreComboExecutionRuntime rt)

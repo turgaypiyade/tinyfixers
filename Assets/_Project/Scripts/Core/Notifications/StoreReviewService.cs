@@ -98,7 +98,7 @@ public static class StoreReviewService
 #elif UNITY_ANDROID && !UNITY_EDITOR
         Application.OpenURL($"market://details?id={Application.identifier}");
 #else
-        Debug.Log("[StoreReview] (editör) mağaza sayfası açılacaktı.");
+        ;
 #endif
     }
 
@@ -107,7 +107,7 @@ public static class StoreReviewService
     private static bool PlatformCanRequest()
     {
 #if UNITY_EDITOR
-        Debug.Log("[StoreReview] (editör) değerlendirme penceresi istenecekti.");
+        ;
         return true;
 #elif UNITY_IOS
         return true;
@@ -129,13 +129,17 @@ public static class StoreReviewService
         yield return request;
         if (request.Error != ReviewErrorCode.NoError)
         {
-            Debug.LogWarning($"[StoreReview] RequestReviewFlow: {request.Error}");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogWarning($"[StoreReview] RequestReviewFlow: {request.Error}");
             yield break;
         }
         var launch = manager.LaunchReviewFlow(request.GetResult());
         yield return launch;
         if (launch.Error != ReviewErrorCode.NoError)
-            Debug.LogWarning($"[StoreReview] LaunchReviewFlow: {launch.Error}");
+            {
+                if (GameDiagnostics.CriticalErrors)
+                    Debug.LogWarning($"[StoreReview] LaunchReviewFlow: {launch.Error}");
+            }
 #else
         yield break;
 #endif

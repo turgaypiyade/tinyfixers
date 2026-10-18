@@ -27,6 +27,7 @@ public static class ShopPurchaseService
     {
         if (offer == null || offer.priceType != ShopOffer.PriceType.RealMoney
             || !LivesManager.GrantPurchaseThanks(transactionId)) return false;
+        LevelAssist.RecordPurchaseCompleted();
         PublishReceipt(offer, true);
         return true;
     }
@@ -39,8 +40,8 @@ public static class ShopPurchaseService
         ShopState.RecordPurchase(offer);
         ShopRewardGranter.Grant(offer);
         bool thanks = LivesManager.GrantPurchaseThanks(transactionId);
+        if (offer.priceType == ShopOffer.PriceType.RealMoney) LevelAssist.RecordPurchaseCompleted();
         PublishReceipt(offer, thanks);
-        Debug.Log($"[Shop] Mağaza alımı teslim edildi: '{offer.id}' tx={transactionId}");
     }
 
     /// Arayan için: false dönen TryPurchase bir mağaza penceresi başlattıysa true ("yakında" ipucu gösterilmesin).
@@ -79,7 +80,6 @@ public static class ShopPurchaseService
                     return false;
                 }
                 if (!SimulateRealMoneyPurchases) return false;
-                Debug.Log($"[Shop] IAP simülasyonu: '{offer.displayName}' satın alındı sayıldı.");
                 break;
 
             default:

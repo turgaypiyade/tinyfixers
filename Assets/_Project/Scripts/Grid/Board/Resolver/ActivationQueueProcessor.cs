@@ -46,7 +46,6 @@ public class ActivationQueueProcessor
 
         if (ShouldSuppressActivation(ctx, specialType))
         {
-            Debug.Log($"[ActivationQueue] suppress special={specialType} cell={pos} reason=OverridePulseCoreSequence");
             return;
         }
 
@@ -126,7 +125,6 @@ public class ActivationQueueProcessor
 
             if (ShouldSuppressActivation(ctx, specialType))
             {
-                Debug.Log($"[ActivationQueue] suppress-dequeued special={specialType} cell={activation.cell} reason=OverridePulseCoreSequence");
                 continue;
             }
 

@@ -21,7 +21,7 @@ MonoBehaviour:
   menuBottomArea: {fileID: 21300000, guid: 8f47d89b0f7fe4435b5e176a1f531f13, type: 3}
   menuLevelSelectorBtn: {fileID: 21300000, guid: c322b9cadec8b45aabd2f464edfc07e4, type: 3}
   menuRepairBtn: {fileID: 21300000, guid: 618b39e0230a1406ebfba99542c755c5, type: 3}
-  borderColorId: 0
+  borderColorId: 6
   borderSpriteLibrary: {fileID: 11400000, guid: b2b1fa88677e243bbbda0302c5efb9e1, type: 2}
   successAnimationBackground: {fileID: 0}
   preLevelPopupBackground: {fileID: 21300000, guid: c2cee371b18654473a7cf9bc0848606c, type: 3}

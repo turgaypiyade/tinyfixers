@@ -317,9 +317,7 @@ public class MainMenuLivesDisplay : MonoBehaviour
     private IEnumerator SimulateAd()
     {
         _adInProgress = true;
-        Debug.Log($"[LivesDisplay] Reklam simülasyonu ({simulatedAdDuration}s)...");
         yield return new WaitForSecondsRealtime(simulatedAdDuration);
-        Debug.Log("[LivesDisplay] Simülasyon tamamlandı — 1 can eklendi.");
         OnAdRewarded();
     }
 #endif

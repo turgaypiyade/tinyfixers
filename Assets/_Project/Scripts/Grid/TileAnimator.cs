@@ -711,7 +711,8 @@ public sealed class TileAnimator
         }
         catch (System.Exception e)
         {
-            Debug.LogWarning($"[SpecialCreationMerge] anchor ghost skipped: {e.Message}");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogWarning($"[SpecialCreationMerge] anchor ghost skipped: {e.Message}");
             anchorGhostRt = null;
         }
 

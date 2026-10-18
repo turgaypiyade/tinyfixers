@@ -25,6 +25,7 @@ public sealed class GearCupSave
 public static class GearCupState
 {
     public const string SaveKey = "gearcup_state_v1";
+    public const string InvitationAskedKey = "gearcup_join_asked_v1";
     private static GearCupSave data;
     private static int pending;
     private static bool tracking;
@@ -41,6 +42,13 @@ public static class GearCupState
         CurrentLevel.Global >= GearCupPreviewConfig.Shared.minLevelGate;
     public static bool CanEarn => HasJoined && IsUnlocked && GearCupPreviewConfig.Shared.eventEnabled &&
         PlayerTeamState.HasTeam && PlayerTeamState.TeamId == Data.teamId && DateTime.UtcNow < End;
+    public static bool HasPendingResult => HasJoined && DateTime.UtcNow >= End && Data.settledRank > 0
+        && Data.coinDelivered && Data.itemDelivered && !Data.resultPresented;
+    public static bool CanShowInvitation => IsUnlocked && GearCupPreviewConfig.Shared.eventEnabled
+        && (!HasJoined || (DateTime.UtcNow >= End && Data.outbox.Count == 0 && Data.settledRank > 0
+            && Data.coinDelivered && Data.itemDelivered && Data.resultPresented));
+    public static bool IsMenuAvailable => IsUnlocked && GearCupPreviewConfig.Shared.eventEnabled
+        && ((HasJoined && DateTime.UtcNow < End) || CanShowInvitation);
 
     public static void Initialize()
     {

@@ -60,7 +60,8 @@ public static class LevelRemoteTuning
                 s_fetchInFlight = false;
                 if (task.IsFaulted || task.IsCanceled)
                 {
-                    Debug.LogWarning($"[LevelRemoteTuning] okunamadı: {task.Exception?.GetBaseException().Message}");
+                    if (GameDiagnostics.Backend)
+                        Debug.LogWarning($"[LevelRemoteTuning] okunamadı: {task.Exception?.GetBaseException().Message}");
                     return;
                 }
 
@@ -79,7 +80,6 @@ public static class LevelRemoteTuning
                 s_moves.Clear();
                 foreach (var kv in parsed) s_moves[kv.Key] = kv.Value;
                 SaveCache();
-                Debug.Log($"[LevelRemoteTuning] {s_moves.Count} level hamle ayarı yüklendi.");
             });
     }
 

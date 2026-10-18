@@ -1,0 +1,17 @@
+// Wondi Games sitesi — Cloudflare Worker (yalnız statik dosyalar). Yayın: Website/ içinde
+//   set -a; . ~/.wondi-cloudflare.env; set +a; npx wrangler@4 deploy
+// build adımı (build.py): index.html + /tr/ + img/ + robots.txt + sitemap.xml → .wrangler/site; ham kareler (raw/, IMGStore/) asla yüklenmez.
+{
+  "name": "wondigames",
+  "compatibility_date": "2026-10-14",
+  "build": {
+    "command": "python3 build.py"
+  },
+  "assets": { "directory": ".wrangler/site" },
+  "workers_dev": true,
+  "preview_urls": false,
+  "routes": [
+    { "pattern": "wondigames.com", "custom_domain": true },
+    { "pattern": "www.wondigames.com", "custom_domain": true }
+  ]
+}

@@ -427,7 +427,8 @@ public sealed class RuntimeSimulationSession : MonoBehaviour
         }
         catch (Exception ex)
         {
-            Debug.LogError("[RuntimeSim] Report could not be written: " + ex.Message);
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogError("[RuntimeSim] Report could not be written: " + ex.Message);
             UnityEditor.SessionState.SetBool(CancelKey, true);
             SetStatus("Rapor kaydedilemedi: " + ex.Message);
             return false;

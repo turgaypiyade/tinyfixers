@@ -11,22 +11,35 @@ public sealed class GrassWaterLilyService : MonoBehaviour
     public const float FlowerSizeRatio = 1.12f;
     private const float FallingPetalScale = 1.6f;
     private const float SwallowSeconds = 0.48f;
-    private const float SpitWindup = 0.18f, SpitTravel = 0.62f, SpitLanding = 0.12f;
+    private const float SpitWindup = 0.18f, SpitTravel = 0.88f, SpitLanding = 0.12f;
+    private const float HitSwaySeconds = 0.32f, HitSwayImpulse = 280f;
+    private const float HitSwayMaxAngle = 6f;
+    private const float SpitPopSeconds = 0.26f, SpitPeakScale = 1.55f;
     private sealed class Lily
     {
         public int cell, skipEatMove = -1, version, destination;
         public WaterLilyProgress progress = new WaterLilyProgress();
         public WaterLilyPetalImage image;
         public RectTransform rect;
+        public RectTransform grass;
+        public Vector2 grassHome;
+        public Vector3 grassPivotOffset;
+        public Quaternion grassRotation, flowerRotation;
+        public float swayAge = -1, swayAngle, swayVelocity;
+        public bool swayApplied;
+        public Image breakingGrass;
+        public float grassBreakAge, grassBreakAlpha;
         public Image flight;
         public TileSpecial stored;
         public TileType baseType, overrideType;
         public bool hasOverride, releasePending, outbound, completed;
         public TileView target;
         public Vector3 from, to;
+        public Vector3 spitLaunch, spitControlA, spitControlB;
+        public float spitPopDuration;
         public float age = -1, pose = 1, launchAge = -1, launchScale = 0.12f;
         public int lastFrame = -1;
-        public Vector2 lean, home, spitDirection;
+        public Vector2 lean, home, spitDirection, swallowOffset;
         public IDisposable job, hold;
         public readonly Vector2Int[] heldCell = new Vector2Int[1];
         public readonly NeighbourWatch[] neighbours = new NeighbourWatch[4];
@@ -61,7 +74,8 @@ public sealed class GrassWaterLilyService : MonoBehaviour
         frames = board.ActiveLevelData.obstacleLibrary.Get(ObstacleId.GrassWaterLily)?.auxiliarySprites;
         if (frames == null || frames.Count < 5)
         {
-            Debug.LogError("[GrassWaterLily] ObstacleLibrary requires CF1–CF5 in auxiliarySprites.");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogError("[GrassWaterLily] ObstacleLibrary requires CF1–CF5 in auxiliarySprites.");
             return;
         }
         cells.Sort();
@@ -176,6 +190,7 @@ public sealed class GrassWaterLilyService : MonoBehaviour
         Vector3 from = board.GetTileWorldCenter(target), to = lily.rect.position;
         Vector3 offset = transform.InverseTransformVector(from - to);
         lily.lean = new Vector2(offset.x, offset.y).normalized;
+        lily.swallowOffset = new Vector2(offset.x, offset.y);
         // Only the special is removed: the normal tile stays, with no clear/goal/gear credit.
         target.SetSpecial(TileSpecial.None, deferVisualUpdate: true);
         if (lily.baseType != TileType.Gear && lily.baseType != TileType.Core
@@ -187,9 +202,16 @@ public sealed class GrassWaterLilyService : MonoBehaviour
     }
     private bool? Hit(int cell, ObstacleHitContext context)
     {
-        if (!byCell.TryGetValue(cell, out var lily) || lily.progress.RemainingPetals == 0) return null;
-        if (context != ObstacleHitContext.SpecialActivation) return false;
+        if (!byCell.TryGetValue(cell, out var lily)) return null;
+        // Rejected contacts still sway, including normal matches against a full flower.
+        StartHitSway(lily);
+        if (lily.progress.RemainingPetals == 0) return null; // Grass still owns its normal damage rules.
+        bool specialHit = context == ObstacleHitContext.SpecialActivation;
+        if (!specialHit && context != ObstacleHitContext.NormalMatch) return false;
         bool stored = lily.stored != TileSpecial.None;
+        // Every swallowed special requires a special hit to open, including a second swallow.
+        // Keep it protected until the existing release flight has placed that special safely.
+        if (!specialHit && (stored || lily.progress.RemainingPetals == 4)) return false;
         int previous = lily.progress.RemainingPetals;
         bool releaseOnly = lily.progress.Hit(stored);
         if (stored) { lily.releasePending = true; needsIdlePass = true; }
@@ -257,7 +279,42 @@ public sealed class GrassWaterLilyService : MonoBehaviour
         lily.to = fxRoot.InverseTransformPoint(destination);
         Vector3 direction = transform.InverseTransformVector(destination - lily.rect.position);
         lily.spitDirection = new Vector2(direction.x, direction.y).normalized;
+        ConfigureSpitArc(lily);
         return true;
+    }
+
+    private void ConfigureSpitArc(Lily lily)
+    {
+        Vector2 delta = lily.to - lily.from;
+        Vector2 direction = delta.sqrMagnitude > 0.001f ? delta.normalized : Vector2.up;
+        Vector2 side = new Vector2(-direction.y, direction.x);
+        // Bend toward the board interior when the target lies vertically above/below the mouth.
+        float inward = lily.cell % board.Width < board.Width * 0.5f ? 1f : -1f;
+        if (Mathf.Abs(side.y) > 0.05f)
+        {
+            if (side.y < 0) side *= -1f; // Side bend and upward lift must reinforce, not cancel.
+        }
+        else if (side.x * inward < 0) side *= -1f;
+        float distance = Vector3.Distance(lily.from, lily.to);
+        float height = Mathf.Clamp(distance * 0.18f, tileSize * 0.28f, tileSize * 0.9f);
+        float bend = Mathf.Clamp(distance * 0.16f, tileSize * 0.28f, tileSize * 0.7f);
+        // A late safe target continues from the visible hover instead of popping a second time.
+        lily.spitPopDuration = lily.age > SpitWindup ? 0f : SpitPopSeconds;
+        lily.spitLaunch = lily.from;
+        if (lily.spitPopDuration > 0)
+            lily.spitLaunch += Vector3.up * (tileSize * 0.85f);
+        lily.spitControlA = Vector3.Lerp(lily.spitLaunch, lily.to, 0.2f)
+            + Vector3.up * height + (Vector3)side * bend;
+        lily.spitControlB = Vector3.Lerp(lily.spitLaunch, lily.to, 0.78f)
+            + Vector3.up * (height * 0.6f) + (Vector3)side * (bend * 0.65f);
+    }
+
+    private static Vector3 SpitArcPosition(Lily lily, float t)
+    {
+        float inv = 1f - t;
+        return lily.spitLaunch * (inv * inv * inv)
+            + lily.spitControlA * (3f * inv * inv * t)
+            + lily.spitControlB * (3f * inv * t * t) + lily.to * (t * t * t);
     }
     private void EnsureFlight(Lily lily)
     {
@@ -353,6 +410,7 @@ public sealed class GrassWaterLilyService : MonoBehaviour
         float dt = Time.deltaTime;
         foreach (var lily in flowers)
         {
+            RemoveHitSway(lily);
             if (lily.age >= 0)
             {
                 lily.age += dt;
@@ -363,16 +421,19 @@ public sealed class GrassWaterLilyService : MonoBehaviour
                 }
                 else
                 {
-                    float t = Mathf.Clamp01(lily.age / SwallowSeconds), k = Smooth(t);
-                    var rt = lily.flight.rectTransform;
-                    rt.localPosition = Vector3.Lerp(lily.from, lily.to, k) + Vector3.up * (Mathf.Sin(t * Mathf.PI) * tileSize * 0.55f);
-                    rt.localScale = Vector3.one * Mathf.Lerp(1, 0.12f, k);
-                    lily.pose = t;
-                    if (!lily.progress.IsDead && !lily.completed) SetFrame(lily, Mathf.Min(4, (int)(t * 5)));
-                    float bend = Mathf.Sin(t * Mathf.PI);
-                    lily.rect.localRotation = Quaternion.Euler(-lily.lean.y * 18f * bend, lily.lean.x * 18f * bend, -lily.lean.x * 9f * bend);
-                    if (t >= 1) CompleteFlight(lily);
+                    AnimateSwallow(lily);
                 }
+            }
+            AnimateHitSway(lily, dt);
+            if (lily.breakingGrass != null)
+            {
+                lily.grassBreakAge += dt;
+                // Retain the bush silhouette for the first half, then fade its final visual only.
+                var color = lily.breakingGrass.color;
+                color.a = lily.grassBreakAlpha * (1f - Smooth(Mathf.Clamp01(
+                    (lily.grassBreakAge - HitSwaySeconds * 0.5f) / (HitSwaySeconds * 0.5f))));
+                lily.breakingGrass.color = color;
+                if (lily.grassBreakAge >= HitSwaySeconds) FinishGrassBreak(lily);
             }
         }
         for (int i = petalCount - 1; i >= 0; i--)
@@ -391,6 +452,26 @@ public sealed class GrassWaterLilyService : MonoBehaviour
     {
         if (frame == lily.lastFrame) return;
         lily.lastFrame = frame; lily.image.sprite = frames[frame];
+    }
+    private void AnimateSwallow(Lily lily)
+    {
+        float t = Mathf.Clamp01(lily.age / SwallowSeconds);
+        float reach = Smooth(Mathf.Clamp01(t / 0.45f))
+            * (1f - Smooth(Mathf.Clamp01((t - 0.66f) / 0.34f)));
+        float bite = Smooth(Mathf.Clamp01((t - 0.42f) / 0.28f));
+        // The special stays at its original cell; the mouth reaches it, closes, then returns.
+        var rt = lily.flight.rectTransform;
+        rt.localPosition = lily.from;
+        rt.localScale = Vector3.one * Mathf.Lerp(1f, 0.02f, bite);
+        lily.pose = t;
+        if (!lily.progress.IsDead && !lily.completed)
+            SetFrame(lily, Mathf.Min(4, (int)(Mathf.Clamp01((t - 0.32f) / 0.42f) * 5)));
+        lily.rect.anchoredPosition = lily.home + lily.swallowOffset * (0.9f * reach);
+        lily.rect.localScale = new Vector3(1f + Mathf.Abs(lily.lean.x) * 0.18f * reach,
+            1f + Mathf.Abs(lily.lean.y) * 0.18f * reach, 1f);
+        lily.rect.localRotation = Quaternion.Euler(-lily.lean.y * 26f * reach,
+            lily.lean.x * 26f * reach, -lily.lean.x * 12f * reach);
+        if (t >= 1) CompleteFlight(lily);
     }
     private void AnimateSpit(Lily lily)
     {
@@ -417,31 +498,148 @@ public sealed class GrassWaterLilyService : MonoBehaviour
         {
             // No safe target yet: show the ejection now and hold the special above
             // its mouth. Target selection retries on idle/change, never per frame.
-            float rise = Smooth(Mathf.Clamp01((lily.age - SpitWindup) / 0.25f));
-            rt.localPosition = lily.from + Vector3.up * (tileSize * 0.7f * rise);
-            rt.localScale = Vector3.one * Mathf.Lerp(0.12f, 1, rise);
+            float rise = Smooth(Mathf.Clamp01((lily.age - SpitWindup) / SpitPopSeconds));
+            rt.localPosition = lily.from + Vector3.up * (tileSize * 0.85f * rise);
+            rt.localScale = Vector3.one * Mathf.Lerp(0.12f, SpitPeakScale, rise);
             return;
         }
-        float flight = Mathf.Clamp01((lily.age - lily.launchAge) / SpitTravel);
-        float k = Smooth(flight);
-        float height = Mathf.Clamp(Vector3.Distance(lily.from, lily.to) * 0.24f, tileSize * 0.7f, tileSize * 1.8f);
-        rt.localPosition = Vector3.Lerp(lily.from, lily.to, k) + Vector3.up * (Mathf.Sin(flight * Mathf.PI) * height);
+        float elapsed = Mathf.Max(0, lily.age - lily.launchAge);
+        float tilt = lily.spitDirection.x < 0 ? 16f : -16f;
+        if (lily.spitPopDuration > 0 && elapsed < lily.spitPopDuration)
+        {
+            float pop = Smooth(Mathf.Clamp01(elapsed / lily.spitPopDuration));
+            rt.localPosition = Vector3.Lerp(lily.from, lily.spitLaunch, pop);
+            rt.localScale = Vector3.one * Mathf.Lerp(lily.launchScale, SpitPeakScale, pop);
+            rt.localRotation = Quaternion.Euler(0, 0, tilt * pop);
+            return;
+        }
+        float flight = Mathf.Clamp01((elapsed - lily.spitPopDuration) / (SpitTravel - lily.spitPopDuration));
+        float k = 1f - (1f - flight) * (1f - flight); // Launch promptly, ease into the landing.
+        rt.localPosition = SpitArcPosition(lily, k);
         float settle = Mathf.Clamp01((lily.age - lily.launchAge - SpitTravel) / SpitLanding);
-        float scale = flight < 1 ? Mathf.Lerp(lily.launchScale, 1.12f, Smooth(Mathf.Clamp01(flight / 0.22f)))
-            : Mathf.Lerp(1.12f, 1, Smooth(settle));
+        float peak = lily.spitPopDuration > 0 ? SpitPeakScale : lily.launchScale;
+        float scale = Mathf.Lerp(peak, 1f, k * k);
+        if (flight >= 1)
+        {
+            float bounce = Mathf.Sin(settle * Mathf.PI) * (1f - settle);
+            rt.localPosition = lily.to + Vector3.up * (tileSize * 0.055f * bounce);
+            scale = 1f + 0.06f * bounce;
+        }
         rt.localScale = Vector3.one * scale;
-        rt.localRotation = Quaternion.Euler(0, 0, Mathf.Sin(flight * Mathf.PI) * 24f * (lily.spitDirection.x < 0 ? -1 : 1));
+        rt.localRotation = Quaternion.Euler(0, 0,
+            (lily.spitPopDuration > 0 ? tilt * (1f - k) : 0f) + Mathf.Sin(flight * Mathf.PI) * tilt * 0.5f);
     }
     private static void ResetPose(Lily lily)
     {
+        RemoveHitSway(lily);
         lily.rect.anchoredPosition = lily.home;
         lily.rect.localScale = Vector3.one;
         lily.rect.localRotation = Quaternion.identity;
+    }
+
+    // GridSpawner binds the actual standard Grass Image, including redraw/reveal replacements.
+    public void BindGrassVisual(int cell, RectTransform grass)
+    {
+        if (!byCell.TryGetValue(cell, out var lily) || lily.grass == grass) return;
+        RemoveHitSway(lily);
+        lily.grass = grass;
+        if (grass == null) return;
+        lily.grassHome = grass.anchoredPosition;
+        lily.grassRotation = grass.localRotation;
+        lily.grassPivotOffset = grass.localRotation * new Vector3(
+            (0.5f - grass.pivot.x) * grass.sizeDelta.x,
+            (0.5f - grass.pivot.y) * grass.sizeDelta.y, 0);
+    }
+
+    private void StartHitSway(Lily lily)
+    {
+        RemoveHitSway(lily);
+        lily.swayAge = 0;
+        float direction = Mathf.Abs(lily.swayVelocity) > 1f
+            ? (lily.swayVelocity < 0 ? -1f : 1f) : (((lily.cell + move) & 1) == 0 ? 1f : -1f);
+        lily.swayVelocity = Mathf.Clamp(lily.swayVelocity + direction * HitSwayImpulse, -320f, 320f);
+    }
+
+    // Gameplay has already cleared this cell. Only its existing Image survives briefly;
+    // no lock, job, clone or coroutine is needed for the last bush shake.
+    public bool TryPlayGrassBreak(int cell, Image grass)
+    {
+        if (!bound || !isActiveAndEnabled || grass == null
+            || !byCell.TryGetValue(cell, out var lily)) return false;
+        if (lily.breakingGrass != null) return true;
+        BindGrassVisual(cell, grass.rectTransform);
+        lily.breakingGrass = grass;
+        lily.grassBreakAge = 0;
+        lily.grassBreakAlpha = grass.color.a;
+        grass.raycastTarget = false;
+        StartHitSway(lily);
+        return true;
+    }
+
+    private void FinishGrassBreak(Lily lily)
+    {
+        RemoveHitSway(lily);
+        if (lily.breakingGrass != null) Destroy(lily.breakingGrass.gameObject);
+        lily.breakingGrass = null;
+        lily.grass = null;
+        lily.swayAge = -1;
+    }
+
+    private static void RemoveHitSway(Lily lily)
+    {
+        if (!lily.swayApplied) return;
+        if (lily.rect != null) lily.rect.localRotation = lily.flowerRotation;
+        if (lily.grass != null)
+        {
+            lily.grass.localRotation = lily.grassRotation;
+            lily.grass.anchoredPosition = lily.grassHome;
+        }
+        lily.swayApplied = false;
+    }
+
+    private static void AnimateHitSway(Lily lily, float dt)
+    {
+        if (lily.swayAge < 0 || (lily.completed && lily.breakingGrass == null)) return;
+        lily.swayAge += dt;
+        if (lily.swayAge >= HitSwaySeconds)
+        {
+            lily.swayAge = -1;
+            lily.swayAngle = lily.swayVelocity = 0;
+            return;
+        }
+
+        // Analytic damped spring: repeated hits add an impulse without snapping the angle.
+        // Stable at different frame rates; overlays the swallow/spit pose instead of replacing it.
+        const float damping = 8f, frequency = 50f; // ~8 Hz, about 2.5 cycles in the short burst.
+        float sin = Mathf.Sin(frequency * dt), cos = Mathf.Cos(frequency * dt);
+        float decay = Mathf.Exp(-damping * dt);
+        float angle = lily.swayAngle, velocity = lily.swayVelocity;
+        lily.swayAngle = Mathf.Clamp(decay * (angle * cos + (velocity + damping * angle) / frequency * sin),
+            -HitSwayMaxAngle, HitSwayMaxAngle);
+        lily.swayVelocity = decay * (velocity * cos
+            - (damping * velocity + (frequency * frequency + damping * damping) * angle) / frequency * sin);
+        angle = lily.swayAngle;
+        lily.flowerRotation = lily.rect.localRotation;
+        lily.rect.localRotation = lily.flowerRotation * Quaternion.Euler(-angle * 0.3f, angle * 0.45f, angle);
+        if (lily.grass != null)
+        {
+            var rotation = Quaternion.Euler(0, 0, angle);
+            lily.grass.localRotation = rotation * lily.grassRotation;
+            // Grass uses a top-left pivot. Compensate so it sways around its centre, not a corner.
+            lily.grass.anchoredPosition = lily.grassHome
+                + (Vector2)(lily.grassPivotOffset - rotation * lily.grassPivotOffset);
+        }
+        lily.swayApplied = true;
     }
     private void Cleared(int cell)
     {
         if (!byCell.TryGetValue(cell, out var lily)) return;
         lily.completed = true;
+        if (lily.breakingGrass == null)
+        {
+            RemoveHitSway(lily);
+            lily.swayAge = -1;
+        }
         if (lily.image != null) lily.image.gameObject.SetActive(false);
         byCell.Remove(cell);
     }
@@ -459,6 +657,8 @@ public sealed class GrassWaterLilyService : MonoBehaviour
             ReleaseHolds(lily);
             var job = lily.job; lily.job = null; job?.Dispose(); lily.age = -1;
             ResetPose(lily);
+            if (lily.breakingGrass != null) FinishGrassBreak(lily);
+            lily.swayAge = -1; lily.swayAngle = lily.swayVelocity = 0;
             if (lily.flight != null) UiVfxPool.Return(FlightPool, lily.flight.gameObject, 128);
             lily.flight = null;
         }

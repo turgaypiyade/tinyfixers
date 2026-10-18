@@ -57,14 +57,16 @@ public static class AndroidPlayerSetup
             }
             else
             {
-                Debug.LogWarning($"[AndroidPlayerSetup] İkon bulunamadı: {IconPath}");
+                if (GameDiagnostics.EditorTools)
+                    Debug.LogWarning($"[AndroidPlayerSetup] İkon bulunamadı: {IconPath}");
             }
         }
 
         if (changed)
         {
             AssetDatabase.SaveAssets();
-            Debug.Log("[AndroidPlayerSetup] Android paket adı / ikonları ayarlandı.");
+            if (GameDiagnostics.EditorTools)
+                Debug.Log("[AndroidPlayerSetup] Android paket adı / ikonları ayarlandı.");
         }
     }
 }

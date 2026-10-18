@@ -88,7 +88,8 @@ public sealed class BarrelSpreadAction : BoardAction
                 }
                 else
                 {
-                    Debug.LogWarning("[Barrel] BarrelSplatterAnimator component NOT found on BoardController GameObject — mud stamped without animation.");
+                    if (GameDiagnostics.CriticalErrors)
+                        Debug.LogWarning("[Barrel] BarrelSplatterAnimator component NOT found on BoardController GameObject — mud stamped without animation.");
                     for (int t = 0; t < targets.Count; t++)
                         OnLand(targets[t]);
                 }

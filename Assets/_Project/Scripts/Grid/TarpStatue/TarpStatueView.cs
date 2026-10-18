@@ -30,7 +30,7 @@ public sealed class TarpStatueView : MonoBehaviour, ICollectionFxTarget
     private const int ChipsPerHit = 8;
 
     private Image baseImage;
-    private RectTransform stone, tarp, frame, tag, counterRoot;
+    private RectTransform stone, tarp, frame, tagRoot, counterRoot;
     private Image stoneImage, tarpImage;
     private TextMeshProUGUI counter, counterShadow;
     private TarpStatueColor color;
@@ -73,13 +73,13 @@ public sealed class TarpStatueView : MonoBehaviour, ICollectionFxTarget
         tarpImage.fillMethod = Image.FillMethod.Vertical;
         tarpImage.fillOrigin = (int)Image.OriginVertical.Top;   // alt kenar yukarı kalkar
         frame = Layer("Frame", Load("Frame"));
-        tag = Layer("Tag", Load(TagNames[(int)tagColor]));
+        tagRoot = Layer("Tag", Load(TagNames[(int)tagColor]));
 
         // Sayaç: plaka merkezinde beyaz sayı + koyu kontur + ayrı gölge kopyası (mühür sayacıyla aynı okunurluk).
         var go = new GameObject("Counter", typeof(RectTransform));
         go.layer = gameObject.layer;
         counterRoot = (RectTransform)go.transform;
-        counterRoot.SetParent(tag, false);
+        counterRoot.SetParent(tagRoot, false);
         counterRoot.anchorMin = counterRoot.anchorMax = PlateCenter;
         counterRoot.pivot = new Vector2(0.5f, 0.5f);
         counterShadow = NewText("CounterShadow", CounterDark);
@@ -109,7 +109,7 @@ public sealed class TarpStatueView : MonoBehaviour, ICollectionFxTarget
         covered = remaining > 0;
         counter.text = counterShadow.text = Mathf.Max(0, remaining).ToString();
         tarp.gameObject.SetActive(covered);
-        tag.gameObject.SetActive(covered);
+        tagRoot.gameObject.SetActive(covered);
         if (covered)
         {
             tarpImage.fillAmount = 1f;
@@ -153,23 +153,23 @@ public sealed class TarpStatueView : MonoBehaviour, ICollectionFxTarget
 
     private IEnumerator CoDropTag()
     {
-        var start = tag.anchoredPosition;
+        var start = tagRoot.anchoredPosition;
         float h = ((RectTransform)transform).rect.height;
         float vy = h * 0.6f, spin = Random.Range(-220f, 220f);
-        var graphics = tag.GetComponentsInChildren<Graphic>();
+        var graphics = tagRoot.GetComponentsInChildren<Graphic>();
         const float life = 0.6f;
         for (float t = 0f; t < life; t += Time.deltaTime)
         {
             vy -= h * 4f * Time.deltaTime;
-            tag.anchoredPosition += new Vector2(0f, vy * Time.deltaTime);
-            tag.localRotation = Quaternion.Euler(0f, 0f, spin * t);
+            tagRoot.anchoredPosition += new Vector2(0f, vy * Time.deltaTime);
+            tagRoot.localRotation = Quaternion.Euler(0f, 0f, spin * t);
             float a = 1f - Mathf.Clamp01((t - life * 0.5f) / (life * 0.5f));
             foreach (var g in graphics) { var c = g.color; c.a = a; g.color = c; }
             yield return null;
         }
-        tag.gameObject.SetActive(false);
-        tag.anchoredPosition = start;
-        tag.localRotation = Quaternion.identity;
+        tagRoot.gameObject.SetActive(false);
+        tagRoot.anchoredPosition = start;
+        tagRoot.localRotation = Quaternion.identity;
     }
 
     // ── Taş evresi ───────────────────────────────────────────────────

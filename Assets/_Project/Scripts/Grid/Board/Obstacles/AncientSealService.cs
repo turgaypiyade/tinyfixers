@@ -135,6 +135,16 @@ public sealed class AncientSealService : MonoBehaviour
     public int GetActiveLock(int origin) => seals.TryGetValue(origin, out var s) ? s.active : -1;
     public int GetRemaining(int origin, int color)
         => seals.TryGetValue(origin, out var s) && color >= 0 && color < LockCount ? s.remaining[color] : 0;
+    /// Bir mühür bu rengin taşlarını hâlâ bekliyor mu (sıradaki adımlar dahil)? Wonder Boya Kovası bu rengi çıkaramaz.
+    public bool NeedsColor(TileType type)
+    {
+        int color = type == TileType.Core ? 0 : type == TileType.Gear ? 1 : type == TileType.Plate ? 2 : -1;
+        if (color < 0) return false;
+        foreach (var pair in seals)
+            if (pair.Value.remaining[color] > 0) return true;
+        return false;
+    }
+
     public int GetRemainingTotal(int origin)
         => GetRemaining(origin, 0) + GetRemaining(origin, 1) + GetRemaining(origin, 2);
 

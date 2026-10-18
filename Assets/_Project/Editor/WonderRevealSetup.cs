@@ -26,7 +26,8 @@ public static class WonderRevealSetup
         var wonder = AssetDatabase.LoadAssetAtPath<WonderDefinition>("Assets/_Project/Settings/Wonders/Wonder_mis1.asset");
         if (overlay == null || wonder == null)
         {
-            Debug.LogWarning("Restoration preview requires MainMenu in Play Mode and Wonder_mis1.");
+            if (GameDiagnostics.EditorTools)
+                Debug.LogWarning("Restoration preview requires MainMenu in Play Mode and Wonder_mis1.");
             return;
         }
         overlay.PreviewRustRestoration(wonder);
@@ -195,7 +196,8 @@ public static class WonderRevealSetup
             ? AssetDatabase.LoadAssetAtPath<WonderBirdProfile>(BirdProfilePath) : null;
         if (style == AgentStyle.Bird && (birdProfile == null || birdProfile.body == null))
         {
-            Debug.LogError("Bird profile or body sprite missing: " + BirdProfilePath);
+            if (GameDiagnostics.EditorTools)
+                Debug.LogError("Bird profile or body sprite missing: " + BirdProfilePath);
             return;
         }
         var placeholder = AssetDatabase.LoadAssetAtPath<Sprite>(

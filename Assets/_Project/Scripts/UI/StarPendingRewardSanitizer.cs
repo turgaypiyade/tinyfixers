@@ -19,9 +19,8 @@ public static class StarPendingRewardSanitizer
         if (pendingAfter == walletTotal)
             return;
 
-        Debug.LogWarning(
-            $"[StarPendingRewardSanitizer] Stale pending star reward cleared. " +
-            $"reward={pendingReward}, before={pendingBefore}, after={pendingAfter}, wallet={walletTotal}");
+        if (GameDiagnostics.CriticalErrors)
+            Debug.LogWarning($"[StarPendingRewardSanitizer] Stale pending star reward cleared. " + $"reward={pendingReward}, before={pendingBefore}, after={pendingAfter}, wallet={walletTotal}");
         StarFlyToWalletAnimator.ClearPendingReward();
     }
 }

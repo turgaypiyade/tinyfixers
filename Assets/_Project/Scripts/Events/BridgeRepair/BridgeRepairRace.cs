@@ -165,7 +165,7 @@ public static class BridgeRepairRace
         return names;
     }
 
-    /// Oyuncu + botlar; karakter ve köprü (şerit) ataması koşu seed'inden (her koşuda farklı, koşu içinde sabit).
+    /// Oyuncu karakteri profil avatarından; rakip karakterleri ve şeritler koşu seed'inden gelir.
     public static List<BridgeContestant> BuildContestants(BridgeRepairConfig config)
     {
         int count = Mathf.Max(1, config.contestantCount);
@@ -176,6 +176,12 @@ public static class BridgeRepairRace
         int characterCount = Mathf.Max(1, config.characters != null ? config.characters.Count : 1);
         var characterOrder = Shuffled(characterCount, rng);
         var laneOrder = Shuffled(count, rng);
+
+        // Oyuncunun hayvanı rastgele değildir. Onu ilk koltuğa taşı; mevcut farklı bot
+        // karakterlerini koru ve şerit/bot zamanlaması için yeni rastgele sayı tüketme.
+        int playerCharacterSlot = characterOrder.IndexOf(ResolvePlayerCharacterIndex(config));
+        if (playerCharacterSlot > 0)
+            (characterOrder[0], characterOrder[playerCharacterSlot]) = (characterOrder[playerCharacterSlot], characterOrder[0]);
 
         var list = new List<BridgeContestant>(count);
         for (int i = 0; i < count; i++)
@@ -194,6 +200,17 @@ public static class BridgeRepairRace
             });
         }
         return list;
+    }
+
+    private static int ResolvePlayerCharacterIndex(BridgeRepairConfig config)
+    {
+        var characters = config.characters;
+        string characterId = PlayerAvatarProvider.CurrentCharacterId;
+        if (characters != null && !string.IsNullOrEmpty(characterId))
+            for (int i = 0; i < characters.Count; i++)
+                if (characters[i] != null && string.Equals(characters[i].id, characterId, StringComparison.OrdinalIgnoreCase))
+                    return i;
+        return 0; // Eksik tanımda sabit fallback; oyuncuya tekrar rastgele karakter verme.
     }
 
     private static List<int> Shuffled(int n, System.Random rng)

@@ -79,7 +79,10 @@ public class BoardBreakFxService
     public void PlayObstacleBreak(ObstacleVisualChange change)
     {
         if (board.BoardFlowTraceEnabled)
-            Debug.Log($"[ObstacleFX] id={change.obstacleId} cleared={change.cleared} remaining={change.remainingHits} hitPrefab={(board.ObstacleHitFxPrefab != null ? board.ObstacleHitFxPrefab.name : "NULL")}");
+            {
+                if (GameDiagnostics.BoardFlow)
+                    Debug.Log($"[ObstacleFX] id={change.obstacleId} cleared={change.cleared} remaining={change.remainingHits} hitPrefab={(board.ObstacleHitFxPrefab != null ? board.ObstacleHitFxPrefab.name : "NULL")}");
+            }
 
         // Çiçekli çimin ilk vuruşu: çim değil çiçekler dökülür (animasyonu GrassFlowerOverlayService
         // oynar). Çimin hit parçacıkları/sesi çalmaz; GrassFlower def'inde ses varsa o çalar.
@@ -114,7 +117,8 @@ public class BoardBreakFxService
 
         if (prefab == null)
         {
-            Debug.LogWarning($"[ObstacleFX] Abort: prefab NULL. cleared={change.cleared}");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogWarning($"[ObstacleFX] Abort: prefab NULL. cleared={change.cleared}");
             return;
         }
 
@@ -135,7 +139,10 @@ public class BoardBreakFxService
             if (def != null && AreHitParticlesSuppressed(def, change))
             {
                 if (board.BoardFlowTraceEnabled)
-                    Debug.Log($"[ObstacleFX] Suppressed for id={change.obstacleId} remaining={change.remainingHits}");
+                    {
+                        if (GameDiagnostics.BoardFlow)
+                            Debug.Log($"[ObstacleFX] Suppressed for id={change.obstacleId} remaining={change.remainingHits}");
+                    }
                 return;
             }
         }
@@ -144,7 +151,8 @@ public class BoardBreakFxService
         if (board.BoardFlowTraceEnabled)
         {
             string spriteNames = particleSprites != null ? string.Join(",", System.Linq.Enumerable.Select(particleSprites, s => s != null ? s.name : "null")) : "null";
-            Debug.Log($"[ObstacleFX] sprites={particleSprites?.Count ?? 0} id={change.obstacleId} names=[{spriteNames}]");
+            if (GameDiagnostics.BoardFlow)
+                Debug.Log($"[ObstacleFX] sprites={particleSprites?.Count ?? 0} id={change.obstacleId} names=[{spriteNames}]");
         }
 
         FxLog(
@@ -838,13 +846,19 @@ public class BoardBreakFxService
             }
 
             if (board.BoardFlowTraceEnabled)
-                Debug.Log($"[ObstacleFX] PS={ps.gameObject.name} validSprites={validCount} sprite={(firstValidSprite != null ? firstValidSprite.name : "null")} tex={(firstValidSprite?.texture != null ? firstValidSprite.texture.name : "null")}");
+                {
+                    if (GameDiagnostics.BoardFlow)
+                        Debug.Log($"[ObstacleFX] PS={ps.gameObject.name} validSprites={validCount} sprite={(firstValidSprite != null ? firstValidSprite.name : "null")} tex={(firstValidSprite?.texture != null ? firstValidSprite.texture.name : "null")}");
+                }
 
             ps.Clear(true);
             ps.Play(true);
 
             if (board.BoardFlowTraceEnabled)
-                Debug.Log($"[ObstacleFX] PS played={ps.isPlaying} particleCount={ps.particleCount}");
+                {
+                    if (GameDiagnostics.BoardFlow)
+                        Debug.Log($"[ObstacleFX] PS played={ps.isPlaying} particleCount={ps.particleCount}");
+                }
         }
     }
 
@@ -939,14 +953,15 @@ public class BoardBreakFxService
     private static void FxLog(string message)
     {
 #if OBSTACLE_FX_DEBUG
-        Debug.Log(message);
+        ;
 #endif
     }
 
     private static void FxWarn(string message)
     {
 #if OBSTACLE_FX_DEBUG
-        Debug.LogWarning(message);
+        if (GameDiagnostics.CriticalErrors)
+            Debug.LogWarning(message);
 #endif
     }
 }

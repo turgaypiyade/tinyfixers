@@ -46,7 +46,6 @@ public class SlowMoDebug : MonoBehaviour
         Time.timeScale = scale;
         if (scale > 0f)
             lastNonZeroScale = scale;
-        Debug.Log($"[SlowMoDebug] Time.timeScale = {scale:0.000}");
     }
 
     private void OnDisable()

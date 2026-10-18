@@ -122,7 +122,6 @@ public class BootLoader : MonoBehaviour
                 if (!restoreDone)
                 {
                     bool offline = Application.internetReachability == NetworkReachability.NotReachable;
-                    Debug.Log($"[Boot] Cloud restore {(offline ? "offline" : "timeout")} — yerel veriyle devam.");
                 }
                 break;
             }
@@ -133,6 +132,10 @@ public class BootLoader : MonoBehaviour
         // Sync kapısını aç: bundan sonra kazanılan altın/yıldız "offline delta" olarak sayılır.
         // Restore hiç çözülmediyse (offline) VE hiç senkron olmamışsa (brand-new): yerel taban
         // benimsensin ki ilk-açılış hibeleri güvenilir değere yazılsın.
+        // Şartlar/Gizlilik kabulü ana menüden ÖNCE (bulut kayıt geldikten sonra → yeniden kuran oyuncuya tekrar
+        // sorulmaz). Ana menünün öğretici/etkinlik pencereleri kabul edilene dek başlamaz.
+        yield return LegalConsent.RunBootGate();
+
         if (!FirebaseCloudSaveService.RestoreResolved && !CurrencyLedger.EverSynced)
             CurrencyLedger.AdoptLocalAsBase();
         CurrencyLedger.OpenSyncGate();

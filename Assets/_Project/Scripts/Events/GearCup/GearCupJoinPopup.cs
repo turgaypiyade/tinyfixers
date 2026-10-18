@@ -166,7 +166,7 @@ public sealed class GearCupJoinPopup : MonoBehaviour
         title = Text(panel, "Title", 76, Color.white, config.headingFont);
         CommonPopupView.Region(title.rectTransform, new Rect(0.21f, 0.875f, 0.58f, 0.10f));
         title.textWrappingMode = TextWrappingModes.NoWrap;
-        title.gameObject.AddComponent<TextArcEffect>().SetArcAngle(-10f);
+        title.gameObject.AddComponent<TextArcEffect>().SetArcAngle(15f);
         // Reuse the event's exact arena sprite. The rounded mask clips only this static
         // backdrop; the animated hero keeps its separate canvas outside the mask subtree.
         var viewport = Picture("ArenaViewport", panel, config.rowBackground);

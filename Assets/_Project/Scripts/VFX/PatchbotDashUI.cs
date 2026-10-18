@@ -400,7 +400,7 @@ public class PatchbotDashUI : MonoBehaviour
             Mathf.Min(size.x, size.y) * takeoffLiftFactor);
 
         if (board != null && board.BoardFlowTraceEnabled)
-            Debug.Log($"[PatchbotDashUI] DRONE_DASH from={req.from} to={req.to} takeoff={takeoffDuration:0.000} hover={hoverDuration:0.000} dive={diveDuration:0.000}");
+            {}
 
         var motion = new DashMotionState();
         yield return RunTakeoffBurst(rt, carryRt, size, sprite, start, takeoff, takeoffDuration, motion);

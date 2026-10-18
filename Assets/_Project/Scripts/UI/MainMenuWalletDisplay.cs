@@ -69,7 +69,8 @@ public sealed class MainMenuWalletDisplay : MonoBehaviour
         if (chipMoneyText == null && !hasWarnedMissingText)
         {
             hasWarnedMissingText = true;
-            Debug.LogWarning("[MainMenuWalletDisplay] ChipMoney text not found. Wallet display will be skipped.");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogWarning("[MainMenuWalletDisplay] ChipMoney text not found. Wallet display will be skipped.");
         }
     }
 

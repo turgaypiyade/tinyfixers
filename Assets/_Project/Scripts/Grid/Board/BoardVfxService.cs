@@ -59,6 +59,8 @@ public class BoardVfxService
         board.BeginSystemOverrideWave(new Vector2Int(originX, originY));
         if (vfx == null) return 0f;
 
+        vfx.SetTurnSources(ta != null ? ta.OverrideSpecialView : null,
+            tb != null ? tb.OverrideSpecialView : null);
         vfx.gameObject.SetActive(true);
         if (vfxSpace != null)
         {

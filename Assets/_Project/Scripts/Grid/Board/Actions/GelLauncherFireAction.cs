@@ -24,27 +24,30 @@ public sealed class GelLauncherFireAction : BoardAction
     private const float GelCellFactor = 0.7f;       // jel aynı eğriyle, kapaktan biraz hızlı (11 hücrede onu geçmez)
     private const float CompletionTimeout = 6f;
     private const string CapSpritePath = "GelLauncher/GelLauncherCap";
-    // Basınç: kapaklı gövde yay gibi boyca %40 sıkışır (taban sabit, ağız tarafı içeri çekilir), yanlardan
-    // %20 şişer ve giderek titrer; sonra serbest kalır → ileri atılır, kapak fırlar, gövde geri seker.
-    private const float PressureSeconds = 0.4f;
-    private const float PressureBulge = 0.20f;
-    private const float PressureShorten = 0.40f;
-    private const float PressureTremorDeg = 3f;
+    private const string CapPoolKey = "GelLauncher.Cap";
+    private const string BodyPoolKey = "GelLauncher.Body";
+    private static Sprite capSprite;
+    // Çatlak ve kapaklı gövde bütünüyle geri çekilirken yanlara şişer; atışa kadar kapak açılmaz.
+    private const float PressureSeconds = 0.34f;
+    private const float PullbackCells = 0.28f;
+    private const float PressureBulge = 0.24f;
+    private const float PressureShorten = 0.18f;
     private const float ReleaseSeconds = 0.18f;
-    // İleri atılma: sıkışmadan bir anda ağız yönüne fırlar (kapak bu anın tepesinde kopar), sonra geri seker.
-    private const float LungeSeconds = 0.07f;
-    private const float LungeCells = 0.22f;
+    // İlk konumu biraz geçince kapak HEMEN fırlar. Gövde kısa bir takip hareketiyle ileri devam eder.
+    private const float LungeSeconds = 0.075f;
+    private const float LungeCells = 0.14f;
     private const float LungeAxis = 1.08f;
     private const float LungePerp = 0.92f;
-    // Kapak ağızda bir an "patlar" (büyüyüp dışarı itilir), sonra yola çıkar.
-    private const float CapPopSeconds = 0.09f;
-    private const float CapPopScale = 1.35f;
+    private const float FollowThroughSeconds = 0.035f;
+    private const float FollowThroughCells = 0.24f;
+    private const float CapLaunchScale = 1.15f;
 
     private readonly BoardController board;
     private readonly Vector2Int origin;
     private readonly ObstacleId launcherId;
     // Kartuşun iki hücresi: gövde görseli sönene dek taş girmez (yoksa şişme düşen taşların altında kalır).
     private CellHold bodyHold;
+    private bool bodyVisualDone;
 
     public GelLauncherFireAction(BoardController board, Vector2Int origin, ObstacleId launcherId)
     {
@@ -61,6 +64,10 @@ public sealed class GelLauncherFireAction : BoardAction
         var level = board.LevelData;
         var job = board.BeginJob(BoardController.BoardJobKind.ObstacleSpread);
         RectTransform cap = null;
+        RectTransform body = null;
+        bool pooledBody = false;
+        Coroutine releaseRoutine = null;
+        Coroutine gelRoutine = null;
         try
         {
             Vector2Int dir = GelLauncherFx.Direction(launcherId);
@@ -80,32 +87,36 @@ public sealed class GelLauncherFireAction : BoardAction
             if (footprint.Count < 2 || step.sqrMagnitude < 0.0001f)
                 step = CellStepFallback(dir);
 
-            // Atış öncesi: kapaklı gövde gazla şişer (taban sabit), sonra kapak fırlar ve kapaksız gövdeye geçer.
+            // Atış öncesi: kapaklı çatlak gövde geriye çekilip şişer, sonra ileri atılır.
             Vector3 bodyCenter = (frontWorld + board.GetCellWorldCenterPosition(back.x, back.y)) * 0.5f;
             if (footprint.Count < 2) bodyCenter = frontWorld;
             // Gerçek kartuş görseli: veri kırılımı (bu aksiyonu başlatan) görsel devrinden ÖNCE gelir →
             // GridSpawner'ın devretmesini birkaç kare bekle (görsel o sırada yerinde durur). Yoksa yedek kopya.
-            RectTransform body = null;
             for (int f = 0; f < 4 && body == null; f++)
             {
                 body = TakeRealBody();
                 if (body == null) yield return null;
             }
-            if (!IsCurrent(level)) { if (body != null) Object.Destroy(body.gameObject); yield break; }
+            if (!IsCurrent(level)) yield break;
             if (body != null) bodyCenter = body.position;
-            else body = CreateBody(level, step, bodyCenter);
+            else
+            {
+                body = CreateBody(level, step, bodyCenter);
+                pooledBody = body != null;
+            }
             if (body != null)
             {
-                yield return Pressure(body, bodyCenter, step);
-                yield return Lunge(body, bodyCenter, step);
+                // Son hasar tek olayda iki stage'i geçmiş olsa da hazırlık kapaklı çatlak sprite ile oynar.
+                var cracked = CrackedSprite(level);
+                if (cracked != null) body.GetComponent<Image>().sprite = cracked;
+                yield return Pressure(body, bodyCenter, step, level);
+                if (!IsCurrent(level)) yield break;
+                yield return Lunge(body, bodyCenter, step, level);
             }
-            if (!IsCurrent(level))
-            {
-                if (body != null) Object.Destroy(body.gameObject);
-                yield break;
-            }
+            if (!IsCurrent(level)) yield break;
 
-            Vector3 from = frontWorld + step * (0.5f + (body != null ? LungeCells : 0f));   // ağız (atılmış hâlde)
+            // Deforme olmuş gerçek ağız: hem ileri kaymayı hem boyuna esnemeyi içerir.
+            Vector3 from = body != null ? MouthWorldPosition(body) : frontWorld + step * 0.5f;
             var parent = board.BreakFxParent;
             if (parent != null)
             {
@@ -117,7 +128,7 @@ public sealed class GelLauncherFireAction : BoardAction
             {
                 var openSprite = GelLauncherFx.LoadOpenSprite(launcherId);
                 if (openSprite != null) body.GetComponent<Image>().sprite = openSprite;
-                board.StartCoroutine(ReleaseAndFade(body, bodyCenter, step));
+                releaseRoutine = board.StartCoroutine(ReleaseAndFade(body, bodyCenter, step, level));
             }
             else
             {
@@ -128,14 +139,13 @@ public sealed class GelLauncherFireAction : BoardAction
             if (cap != null)
             {
                 cap.position = from;
-                yield return CapPop(cap, from, step);
-                if (cap != null) from = cap.position;
+                cap.localScale = Vector3.one * CapLaunchScale;
             }
 
             for (int i = 0; i < path.Count; i++)
             {
                 Vector3 to = board.GetCellWorldCenterPosition(path[i].x, path[i].y);
-                yield return Fly(cap, from, to, CellSeconds(i), i == 0);
+                yield return Fly(cap, from, to, i == 0 ? MinCellSeconds : CellSeconds(i), i == 0);
                 if (!IsCurrent(level)) yield break;
                 from = to;
 
@@ -149,22 +159,23 @@ public sealed class GelLauncherFireAction : BoardAction
                 if (!gelStarted && i + 1 >= GelLagCells)
                 {
                     gelStarted = true;
-                    board.StartCoroutine(RunGel(level, GelCells(footprint, front, path), deferred, () => gelDone = true));
+                    gelRoutine = board.StartCoroutine(RunGel(level, GelCells(footprint, front, path), deferred, () => gelDone = true));
                 }
             }
             if (!gelStarted)
             {
                 gelStarted = true;
-                board.StartCoroutine(RunGel(level, GelCells(footprint, front, path), deferred, () => gelDone = true));
+                gelRoutine = board.StartCoroutine(RunGel(level, GelCells(footprint, front, path), deferred, () => gelDone = true));
             }
 
             // Kapak tahtadan çıkıp söner.
             yield return FlyOut(cap, from, from + step, MinCellSeconds * 1.5f);
-            if (cap != null) { Object.Destroy(cap.gameObject); cap = null; }
+            if (cap != null) { ReturnImage(cap, CapPoolKey); cap = null; }
 
             // Jel ve kapak patlamalarının bitmesini bekle; o an engel altında kalan hücreleri sonra boya.
             float waited = 0f;
-            while (waited < CompletionTimeout && IsCurrent(level) && (!gelDone || !AllCompleted(blasts)))
+            while (waited < CompletionTimeout && IsCurrent(level)
+                && (!gelDone || !AllCompleted(blasts) || (releaseRoutine != null && !bodyVisualDone)))
             {
                 waited += Time.deltaTime;
                 yield return null;
@@ -176,7 +187,15 @@ public sealed class GelLauncherFireAction : BoardAction
         }
         finally
         {
-            if (cap != null) Object.Destroy(cap.gameObject);
+            // Sürücü durmadan görsel havuza dönmez: eski coroutine yeniden kiralanan görseli oynatamaz.
+            if (releaseRoutine != null && board != null) board.StopCoroutine(releaseRoutine);
+            if (gelRoutine != null && board != null) board.StopCoroutine(gelRoutine);
+            if (cap != null) ReturnImage(cap, CapPoolKey);
+            if (body != null)
+            {
+                if (pooledBody) ReturnImage(body, BodyPoolKey);
+                else Object.Destroy(body.gameObject);
+            }
             ReleaseBodyCells();
             job.Dispose();
             if (IsCurrent(level))
@@ -274,14 +293,21 @@ public sealed class GelLauncherFireAction : BoardAction
     // ── Gövde (atış animasyonu) ──────────────────────────────────────────────
 
     // Gerçek engel görseli yıkıldığı anda yerine konan geçici gövde: çatlak sprite ile başlar.
+    private Sprite CrackedSprite(LevelData level)
+    {
+        var def = level.obstacleLibrary != null ? level.obstacleLibrary.Get(launcherId) : null;
+        return def != null && def.stages != null && def.stages.Count > 1 ? def.stages[1].sprite : null;
+    }
+
     private RectTransform CreateBody(LevelData level, Vector3 worldStep, Vector3 worldCenter)
     {
         var parent = board.BreakFxParent;
-        var def = level.obstacleLibrary != null ? level.obstacleLibrary.Get(launcherId) : null;
-        Sprite cracked = def != null && def.stages != null && def.stages.Count > 1 ? def.stages[1].sprite : null;
+        Sprite cracked = CrackedSprite(level);
         if (parent == null || cracked == null) return null;
 
-        var go = new GameObject("GelLauncherBody", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        var img = UiVfxPool.RentImage(BodyPoolKey, parent, "GelLauncherBody");
+        if (img == null) return null;
+        var go = img.gameObject;
         go.layer = parent.gameObject.layer;
         var rt = (RectTransform)go.transform;
         rt.SetParent(parent, false);
@@ -292,35 +318,33 @@ public sealed class GelLauncherFireAction : BoardAction
         rt.sizeDelta = GelLauncherFx.IsVertical(launcherId) ? new Vector2(cell, cell * 2f) : new Vector2(cell * 2f, cell);
         rt.position = worldCenter;
 
-        var img = go.GetComponent<Image>();
         img.sprite = cracked;
         img.raycastTarget = false;
         return rt;
     }
 
-    // axis: boy ölçeği, perp: en ölçeği. Taban (ağzın tersi) sabit kalır.
-    // push: ağız yönüne kayma (hücre cinsinden; ileri atılma).
+    // Boy/en ve merkez hareketi ayrı: geri çekilme yalnız ağzın sıkışması gibi görünmez.
     private void SetShape(RectTransform body, Vector3 center, Vector3 step, float axis, float perp, float tiltDeg = 0f, float push = 0f)
     {
         body.localScale = GelLauncherFx.IsVertical(launcherId) ? new Vector3(perp, axis, 1f) : new Vector3(axis, perp, 1f);
-        body.position = center - step * (1f - axis) + step * push;
+        body.position = center + step * push;
         body.localRotation = Quaternion.Euler(0f, 0f, tiltDeg);
     }
 
     // Sıkışık hâlden bir anda ileri: boy uzar, en daralır, gövde ağız yönüne fırlar.
-    private IEnumerator Lunge(RectTransform body, Vector3 center, Vector3 step)
+    private IEnumerator Lunge(RectTransform body, Vector3 center, Vector3 step, LevelData level)
     {
         for (float t = 0f; t < LungeSeconds; t += Time.deltaTime)
         {
-            if (body == null) yield break;
+            if (body == null || !IsCurrent(level)) yield break;
             float k = t / LungeSeconds;
             float e = 1f - (1f - k) * (1f - k);
             SetShape(body, center, step,
                 Mathf.Lerp(1f - PressureShorten, LungeAxis, e),
-                Mathf.Lerp(1f + PressureBulge, LungePerp, e), 0f, LungeCells * e);
+                Mathf.Lerp(1f + PressureBulge, LungePerp, e), 0f, Mathf.Lerp(-PullbackCells, LungeCells, e));
             yield return null;
         }
-        if (body != null) SetShape(body, center, step, LungeAxis, LungePerp, 0f, LungeCells);
+        if (body != null && IsCurrent(level)) SetShape(body, center, step, LungeAxis, LungePerp, 0f, LungeCells);
     }
 
     // GridSpawner'ın devrettiği gerçek görsel: bekleme nabzı durdurulur, pivot merkeze alınır (konum korunur).
@@ -329,72 +353,101 @@ public sealed class GelLauncherFireAction : BoardAction
         var img = GelLauncherFx.TakeBody(origin.y * board.Width + origin.x);
         if (img == null) return null;
         var idle = img.GetComponent<GelLauncherIdleFx>();
-        if (idle != null) Object.Destroy(idle);
+        if (idle != null)
+        {
+            idle.StopAllCoroutines();
+            idle.enabled = false;
+            Object.Destroy(idle);
+        }
         var rt = img.rectTransform;
+        Vector3 worldCenter = rt.TransformPoint(rt.rect.center);
         rt.localScale = Vector3.one;
         rt.localRotation = Quaternion.identity;
-        Vector3 worldCenter = rt.TransformPoint(rt.rect.center);
         rt.pivot = new Vector2(0.5f, 0.5f);
         rt.position = worldCenter;
         rt.SetAsLastSibling();
         return rt;
     }
 
-    // Gaz birikimi: yavaş başlayıp hızlanan şişme, sona doğru artan titreme.
-    private IEnumerator Pressure(RectTransform body, Vector3 center, Vector3 step)
+    // Kapaklı gövde geriye giderken genişler; titreme ileri atılmanın okunmasını bozmaz.
+    private IEnumerator Pressure(RectTransform body, Vector3 center, Vector3 step, LevelData level)
     {
         for (float t = 0f; t < PressureSeconds; t += Time.deltaTime)
         {
-            if (body == null) yield break;
+            if (body == null || !IsCurrent(level)) yield break;
             float k = t / PressureSeconds;
             float e = k * k * (3f - 2f * k);                     // baştan görünür, sonda dolar
-            float tremor = Mathf.Sin(t * 70f) * PressureTremorDeg * k * k;
-            SetShape(body, center, step, 1f - PressureShorten * e, 1f + PressureBulge * e, tremor);
+            SetShape(body, center, step, 1f - PressureShorten * e, 1f + PressureBulge * e, 0f, -PullbackCells * e);
             yield return null;
         }
-        if (body != null) SetShape(body, center, step, 1f - PressureShorten, 1f + PressureBulge);
+        if (body != null && IsCurrent(level))
+            SetShape(body, center, step, 1f - PressureShorten, 1f + PressureBulge, 0f, -PullbackCells);
     }
 
-    private IEnumerator ReleaseAndFade(RectTransform body, Vector3 center, Vector3 step)
+    private Vector3 MouthWorldPosition(RectTransform body)
     {
-        // Kapak koptu: atılmış hâlden geri seker (hafif geriye taşar), yerine oturur.
-        for (float t = 0f; t < ReleaseSeconds; t += Time.deltaTime)
-        {
-            if (body == null) yield break;
-            float k = t / ReleaseSeconds;
-            float axis, perp, push;
-            if (k < 0.5f)
-            {
-                float u = k / 0.5f;
-                axis = Mathf.Lerp(LungeAxis, 0.96f, u);
-                perp = Mathf.Lerp(LungePerp, 1.05f, u);
-                push = Mathf.Lerp(LungeCells, -0.05f, u);
-            }
-            else
-            {
-                float u = (k - 0.5f) / 0.5f;
-                axis = Mathf.Lerp(0.96f, 1f, u);
-                perp = Mathf.Lerp(1.05f, 1f, u);
-                push = Mathf.Lerp(-0.05f, 0f, u);
-            }
-            SetShape(body, center, step, axis, perp, 0f, push);
-            yield return null;
-        }
-        if (body == null) { ReleaseBodyCells(); yield break; }
-        SetShape(body, center, step, 1f, 1f);
+        var rect = body.rect;
+        float halfLength = (GelLauncherFx.IsVertical(launcherId) ? rect.height : rect.width) * 0.5f;
+        Vector2 mouth = rect.center + GelLauncherFx.UiDirection(launcherId) * halfLength;
+        return body.TransformPoint(new Vector3(mouth.x, mouth.y, 0f));
+    }
 
-        yield return new WaitForSeconds(0.3f);
-        var img = body != null ? body.GetComponent<Image>() : null;
-        SpawnBreakShards(body, img != null ? img.sprite : null);
-        const float fade = 0.25f;
-        for (float t = 0f; t < fade && body != null; t += Time.deltaTime)
+    private IEnumerator ReleaseAndFade(RectTransform body, Vector3 center, Vector3 step, LevelData level)
+    {
+        try
         {
-            if (img != null) { var c = img.color; c.a = 1f - t / fade; img.color = c; }
-            body.localScale = Vector3.one * Mathf.Lerp(1f, 0.85f, t / fade);
-            yield return null;
+            // Kapak ayrıldığı karede hâlâ ileri hareket vardır; ağızda bekleyen ayrı bir pop evresi yoktur.
+            for (float t = 0f; t < FollowThroughSeconds; t += Time.deltaTime)
+            {
+                if (body == null || !IsCurrent(level)) yield break;
+                float k = t / FollowThroughSeconds;
+                SetShape(body, center, step, LungeAxis, LungePerp, 0f, Mathf.Lerp(LungeCells, FollowThroughCells, k));
+                yield return null;
+            }
+            // Kapak koptu: ileri takipten geri seker (hafif geriye taşar), yerine oturur.
+            for (float t = 0f; t < ReleaseSeconds; t += Time.deltaTime)
+            {
+                if (body == null || !IsCurrent(level)) yield break;
+                float k = t / ReleaseSeconds;
+                float axis, perp, push;
+                if (k < 0.5f)
+                {
+                    float u = k / 0.5f;
+                    axis = Mathf.Lerp(LungeAxis, 0.96f, u);
+                    perp = Mathf.Lerp(LungePerp, 1.05f, u);
+                    push = Mathf.Lerp(FollowThroughCells, -0.05f, u);
+                }
+                else
+                {
+                    float u = (k - 0.5f) / 0.5f;
+                    axis = Mathf.Lerp(0.96f, 1f, u);
+                    perp = Mathf.Lerp(1.05f, 1f, u);
+                    push = Mathf.Lerp(-0.05f, 0f, u);
+                }
+                SetShape(body, center, step, axis, perp, 0f, push);
+                yield return null;
+            }
+            if (body == null || !IsCurrent(level)) yield break;
+            SetShape(body, center, step, 1f, 1f);
+
+            yield return new WaitForSeconds(0.3f);
+            if (body == null || !IsCurrent(level)) yield break;
+            var img = body != null ? body.GetComponent<Image>() : null;
+            SpawnBreakShards(body, img != null ? img.sprite : null);
+            const float fade = 0.25f;
+            for (float t = 0f; t < fade && body != null && IsCurrent(level); t += Time.deltaTime)
+            {
+                if (img != null) { var c = img.color; c.a = 1f - t / fade; img.color = c; }
+                body.localScale = Vector3.one * Mathf.Lerp(1f, 0.85f, t / fade);
+                yield return null;
+            }
+            if (img != null) { var c = img.color; c.a = 0f; img.color = c; }
         }
-        if (body != null) Object.Destroy(body.gameObject);
-        ReleaseBodyCells();   // gövde söndü: kartuş hücrelerine taş akabilir
+        finally
+        {
+            bodyVisualDone = true;
+            ReleaseBodyCells();   // gövde söndü/iptal edildi: kartuş hücrelerine taş akabilir
+        }
     }
 
     private void ReleaseBodyCells()
@@ -403,22 +456,12 @@ public sealed class GelLauncherFireAction : BoardAction
         bodyHold = null;
     }
 
-    // Kapak ağızdan dışarı itilip büyür (basıncın boşaldığı an), yola bu noktadan çıkar.
-    private static IEnumerator CapPop(RectTransform cap, Vector3 mouth, Vector3 step)
+    private static void ReturnImage(RectTransform target, string poolKey)
     {
-        Vector3 pushed = mouth + step * 0.3f;
-        for (float t = 0f; t < CapPopSeconds; t += Time.deltaTime)
-        {
-            if (cap == null) yield break;
-            float k = t / CapPopSeconds;
-            float e = 1f - (1f - k) * (1f - k);
-            cap.position = Vector3.Lerp(mouth, pushed, e);
-            cap.localScale = Vector3.one * Mathf.Lerp(0.7f, CapPopScale, e);
-            yield return null;
-        }
-        if (cap == null) yield break;
-        cap.position = pushed;
-        cap.localScale = Vector3.one * CapPopScale;
+        if (target == null) return;
+        var image = target.GetComponent<Image>();
+        if (image != null) image.sprite = null;
+        UiVfxPool.Return(poolKey, target.gameObject, 32);
     }
 
     // Tüp kaybolurken gövdeden parçalar saçılır + son bir buhar (WaterTank parça efektiyle aynı).
@@ -444,11 +487,13 @@ public sealed class GelLauncherFireAction : BoardAction
 
     private RectTransform CreateCap(Vector2Int dir, Vector3 worldStep)
     {
-        var sprite = Resources.Load<Sprite>(CapSpritePath);
+        if (capSprite == null) capSprite = Resources.Load<Sprite>(CapSpritePath);
         var parent = board.BreakFxParent;
-        if (sprite == null || parent == null) return null;
+        if (capSprite == null || parent == null) return null;
 
-        var go = new GameObject("GelLauncherCap", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        var img = UiVfxPool.RentImage(CapPoolKey, parent, "GelLauncherCap");
+        if (img == null) return null;
+        var go = img.gameObject;
         go.layer = parent.gameObject.layer;
         var rt = (RectTransform)go.transform;
         rt.SetParent(parent, false);
@@ -460,8 +505,7 @@ public sealed class GelLauncherFireAction : BoardAction
         float angle = dir.y < 0 ? 0f : dir.y > 0 ? 180f : dir.x > 0 ? -90f : 90f;
         rt.localRotation = Quaternion.Euler(0f, 0f, angle);
 
-        var img = go.GetComponent<Image>();
-        img.sprite = sprite;
+        img.sprite = capSprite;
         img.preserveAspect = true;
         img.raycastTarget = false;
         return rt;
@@ -476,7 +520,7 @@ public sealed class GelLauncherFireAction : BoardAction
             float k = t / seconds;
             cap.position = Vector3.LerpUnclamped(from, to, k);
             // Fırlama anında küçük bir "pop".
-            float s = launch ? Mathf.Lerp(CapPopScale, 1.15f, k) : 1.15f;
+            float s = launch ? Mathf.Lerp(CapLaunchScale, 1f, k) : 1f;
             cap.localScale = Vector3.one * s;
             yield return null;
         }

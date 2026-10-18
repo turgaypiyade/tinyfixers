@@ -24,7 +24,8 @@ public class ProgressEventService : MonoBehaviour, IProgressEventService
             s_pendingConfig = Resources.Load<ProgressEventConfig>("Events/ProgressEventConfig");
             if (s_pendingConfig == null)
             {
-                Debug.LogWarning("[ProgressEvent] Resources/Events/ altında ne ProgressEventScheduler ne de ProgressEventConfig bulunamadı.");
+                if (GameDiagnostics.CriticalErrors)
+                    Debug.LogWarning("[ProgressEvent] Resources/Events/ altında ne ProgressEventScheduler ne de ProgressEventConfig bulunamadı.");
                 return;
             }
         }
@@ -91,7 +92,10 @@ public class ProgressEventService : MonoBehaviour, IProgressEventService
     public ProgressEventState                  State         { get; private set; }
     public TimeSpan                            TimeRemaining => ComputeTimeRemaining();
     public IReadOnlyList<ProgressGoalRuntime>  Goals         => goals;
-    public string                              EventName     => config != null ? config.eventName : "";
+    // Sunucu sezonu oyuncunun dilinde ad verdiyse o; yoksa çeviri (asset'teki eventName Türkçe sabit, yalnız son çare).
+    public string                              EventName     => config == null ? ""
+        : remoteSeason != null && !string.IsNullOrEmpty(config.eventName) ? config.eventName
+        : GameLocalization.GetOr("progress_event_name", config.eventName);
     public Sprite EventIcon
     {
         get
@@ -99,7 +103,7 @@ public class ProgressEventService : MonoBehaviour, IProgressEventService
             if (config == null || config.goals == null || config.goals.Count == 0) return null;
             var g = config.goals[0];
             if (g == null) return null;
-            return g.goalIcon != null ? g.goalIcon : (g.reward != null ? g.reward.ResolveIcon() : null);
+            return g.ResolveGoalIcon();
         }
     }
 
@@ -347,7 +351,7 @@ public class ProgressEventService : MonoBehaviour, IProgressEventService
             ApplySignal(stagedEvents[i], fireGainEvent: false);
 
         if (stagedGainTotal > 0)
-            Debug.Log($"[ProgressEvent] Staged commit: {stagedGainTotal} event puanı kalıcılaştı.");
+            {}
 
         stagedEvents.Clear();
         stagedGainTotal = 0;
@@ -367,7 +371,7 @@ public class ProgressEventService : MonoBehaviour, IProgressEventService
     public void DiscardStagedGains()
     {
         if (stagedGainTotal > 0)
-            Debug.Log($"[ProgressEvent] Staged discard: {stagedGainTotal} event puanı kaybedildi (level fail).");
+            {}
 
         stagingActive = false;
         stagedEvents.Clear();
@@ -592,7 +596,6 @@ public class ProgressEventService : MonoBehaviour, IProgressEventService
         saveStore.Save(KeyGoals, "");
         sessionGains.Clear();
         BuildGoals();
-        Debug.Log($"[ProgressEvent] Basamak turu {ladderRound + 1}/{remoteSeason.MaxRounds} açıldı.");
     }
 
     // ── Helpers ──────────────────────────────────────────────────
@@ -600,8 +603,8 @@ public class ProgressEventService : MonoBehaviour, IProgressEventService
     private static void GrantProgressReward(ProgressGoalDefinition def)
     {
         if (def.reward == null) return;
-        if (def.rewardDurationMinutes > 0)
-            TimedRewardService.Grant(def.reward.type, def.rewardDurationMinutes);
+        if (def.EffectiveRewardDurationMinutes > 0)
+            TimedRewardService.Grant(def.reward.type, def.EffectiveRewardDurationMinutes);
         else
             DailySlotRewardService.Grant(def.reward);
     }
@@ -670,7 +673,6 @@ public class ProgressEventService : MonoBehaviour, IProgressEventService
         string savedCycleKey = saveStore.Load(KeyCycleKey, "");
         if (savedCycleKey != currentCycleKey)
         {
-            Debug.Log($"[ProgressEvent] Yeni döngü: '{savedCycleKey}' → '{currentCycleKey}'. Goal'ler sıfırlanıyor.");
             saveStore.Save(KeyCycleKey, currentCycleKey);
             saveStore.Save(KeyGoals, "");
             saveStore.Save(KeyRound, "0");

@@ -34,6 +34,8 @@ public class SettingsPanel : MonoBehaviour
     [SerializeField] private Button followInstagramButton;
     [Tooltip("\"Bizi Değerlendir\" — mağazanın yorum sayfasını açar (StoreReviewService).")]
     [SerializeField] private Button rateUsButton;
+    [Tooltip("\"Terms&Privacy\" — boşsa panelde 'TermsButton' adlı buton bulunur. Kullanım Şartları / Gizlilik seçimi açar.")]
+    [SerializeField] private Button termsButton;
 
     [Header("Save Progress Feedback")]
     [Tooltip("Save sonrası kısa süreliğine görünür olacak \"Kaydedildi\" etiketi (opsiyonel).")]
@@ -42,7 +44,7 @@ public class SettingsPanel : MonoBehaviour
 
     [Header("Instagram")]
     [Tooltip("Instagram URL'i. Bir kez takip edip altın aldıktan sonra buton disable olur.")]
-    [SerializeField] private string instagramUrl = "https://www.instagram.com/tinyfixers";
+    [SerializeField] private string instagramUrl = "https://www.instagram.com/wondigames/";
     [SerializeField, Min(1)] private int instagramFollowRewardCoins = 100;
     [Tooltip("Instagram takip edildikten sonra butonun \"Takip ediliyor\" görsel state'i (opsiyonel).")]
     [SerializeField] private GameObject instagramFollowedBadge;
@@ -75,10 +77,11 @@ public class SettingsPanel : MonoBehaviour
         if (helpSupportButton != null)
         {
             helpSupportButton.onClick.AddListener(OnHelpSupportClicked);
-            helpSupportButton.interactable = false; // şimdilik devre dışı
         }
         if (followInstagramButton != null)   followInstagramButton.onClick.AddListener(OnFollowInstagramClicked);
         if (rateUsButton != null)            rateUsButton.onClick.AddListener(StoreReviewService.OpenStorePage);
+        if (termsButton == null)             termsButton = FindButton("TermsButton");
+        if (termsButton != null)             termsButton.onClick.AddListener(OnTermsClicked);
 
         if (savedConfirmationLabel != null) savedConfirmationLabel.SetActive(false);
     }
@@ -185,7 +188,6 @@ public class SettingsPanel : MonoBehaviour
 
         // Gerçek kayıt = bulut: manifest verisini hemen Firestore'a it (P1 cloud save).
         FirebaseCloudSaveService.Push();
-        Debug.Log("[Settings] Progress saved (PlayerPrefs + cloud push).");
 
         // P4 (referans RM akışı): giriş popup'ı — Facebook/Google/Apple ile hesabı bağla.
         // Bağlıysa popup durumu gösterir; SDK'sı gelmeyen provider "Yakında" görünür.
@@ -204,10 +206,61 @@ public class SettingsPanel : MonoBehaviour
 
     // ── Help & Support ───────────────────────────────────────────────────────
 
+    // Canlı destek: Tawk.to sohbet sayfası (çevrimdışıyken mesaj bileti olur). Oyuncunun arkadaş kodu ile ilk mesaj
+    // yazılabilsin diye kod panoya kopyalanmaz — oyuncu profil ekranında görür.
+    private const string SupportChatUrl = "https://tawk.to/chat/6ad344724cf72734cbfe452f/1k54k6oid";
+
     private void OnHelpSupportClicked()
     {
-        // Şimdilik disable; ileride mailto/in-game ticket sistemi açılacak.
-        Debug.Log("[Settings] Help & Support clicked (no-op).");
+        Application.OpenURL(SupportChatUrl);
+    }
+
+    // ── Terms & Privacy ──────────────────────────────────────────────────────
+
+    // "Can bitti" penceresiyle aynı kart düzeni: belgeler açılıp kapanınca bu pencereye dönülür (KeepOpen);
+    // "Hesabımı Sil" uyarı alt yazılı ayrı bir kart, ardından onay penceresi (Vazgeç → buraya geri döner).
+    private void OnTermsClicked()
+    {
+        RuntimeChoicePopup.ShowOffer(GameLocalization.Get("settings_terms_title"), GameLocalization.Get("settings_terms_body"),
+            new[]
+            {
+                new RuntimeChoicePopup.OfferButton(GameLocalization.Get("settings_terms_open_terms"),
+                    GameLocalization.Get("legal_card_terms_sub"), () => LegalDocumentView.Show("terms"), keepOpen: true),
+                new RuntimeChoicePopup.OfferButton(GameLocalization.Get("settings_terms_open_privacy"),
+                    GameLocalization.Get("legal_card_privacy_sub"), () => LegalDocumentView.Show("privacy"), keepOpen: true),
+                new RuntimeChoicePopup.OfferButton(GameLocalization.Get("settings_delete_account"),
+                    GameLocalization.Get("settings_delete_account_sub"), ConfirmDeleteAccount),
+            },
+            GameLocalization.Get("common_close"), null);
+    }
+
+    // ── Hesabı sil (App Store 5.1.1(v)) ──────────────────────────────────────
+
+    private void ConfirmDeleteAccount()
+    {
+        RuntimeChoicePopup.Show(GameLocalization.Get("account_delete_title"), GameLocalization.Get("account_delete_body"),
+            new RuntimeChoicePopup.Choice(GameLocalization.Get("account_delete_confirm"), StartDeleteAccount),
+            new RuntimeChoicePopup.Choice(GameLocalization.Get("common_cancel"), () => { if (this != null) OnTermsClicked(); },
+                primary: true));
+    }
+
+    private static void StartDeleteAccount()
+    {
+        // Butonsuz bekleme penceresi yok: tek "Tamam" kapatır, silme arka planda sürer; başarıda oyun baştan açılır.
+        RuntimeChoicePopup.Show(GameLocalization.Get("account_delete_title"), GameLocalization.Get("account_delete_working"));
+        AccountDeletionService.DeleteAccount((ok, error) =>
+        {
+            if (!ok)
+                RuntimeChoicePopup.Show(GameLocalization.Get("account_delete_title"), error);
+        });
+    }
+
+    private Button FindButton(string objectName)
+    {
+        // Panel kökü (SettingsPanel) altında ara: TermsFrame/TermsButton panelRoot'un kardeşi olabilir.
+        foreach (var b in GetComponentsInChildren<Button>(true))
+            if (b.name == objectName) return b;
+        return null;
     }
 
     // ── Instagram Follow Reward ──────────────────────────────────────────────
@@ -233,7 +286,6 @@ public class SettingsPanel : MonoBehaviour
         {
             PlayerWallet.AddCoins(instagramFollowRewardCoins);
             GameSettings.InstagramFollowed = true;
-            Debug.Log($"[Settings] Instagram follow reward granted: {instagramFollowRewardCoins} coins.");
         }
 
         SyncInstagramButtonState();

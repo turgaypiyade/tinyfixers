@@ -43,7 +43,8 @@ public static class First10TutorialLevelGenerator
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
 
-        Debug.Log($"First10TutorialLevelGenerator: Created {createdCount}, skipped {skippedCount}. Existing LevelA assets were not touched.");
+        if (GameDiagnostics.EditorTools)
+            Debug.Log($"First10TutorialLevelGenerator: Created {createdCount}, skipped {skippedCount}. Existing LevelA assets were not touched.");
     }
 
     private static void CreateLevelAsset(LevelSpec spec, ObstacleLibrary obstacleLibrary, string path)
@@ -401,7 +402,8 @@ public static class First10TutorialLevelGenerator
 
         if (guids == null || guids.Length == 0)
         {
-            Debug.LogWarning($"First10TutorialLevelGenerator: No {typeof(T).Name} asset found.");
+            if (GameDiagnostics.EditorTools)
+                Debug.LogWarning($"First10TutorialLevelGenerator: No {typeof(T).Name} asset found.");
             return null;
         }
 

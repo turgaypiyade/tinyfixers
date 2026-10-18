@@ -52,7 +52,8 @@ public static class PreLevelEventPromoRegistry
         {
             PreLevelEventPromo? promo = null;
             try { promo = provider?.Invoke(); }
-            catch (Exception e) { Debug.LogWarning($"[PreLevelEventPromoRegistry] provider hata: {e.Message}"); }
+            catch (Exception e) { if (GameDiagnostics.CriticalErrors)
+                Debug.LogWarning($"[PreLevelEventPromoRegistry] provider hata: {e.Message}"); }
             if (promo.HasValue && promo.Value.Join != null)
                 result.Add(promo.Value);
         }

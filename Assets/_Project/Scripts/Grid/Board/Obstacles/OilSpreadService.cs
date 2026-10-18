@@ -64,7 +64,6 @@ public sealed class OilSpreadService
 
         if (oilHitCellsThisMove != null && oilHitCellsThisMove.Count > 0)
         {
-            Debug.Log($"[Oil] Spread skipped. Oil hit this move: {oilHitCellsThisMove.Count}");
             return result;
         }
 
@@ -74,7 +73,6 @@ public sealed class OilSpreadService
 
         if (oilCells.Count >= SpreadCap)
         {
-            Debug.Log($"[Oil] Spread skipped. Cap reached: {oilCells.Count}/{SpreadCap}");
             return result;
         }
 
@@ -89,7 +87,6 @@ public sealed class OilSpreadService
             {
                 reserved.Add(target);
                 result.Add(new OilSpreadPair(oil, target));
-                Debug.Log($"[Oil] Spread source=({oil.x},{oil.y}) target=({target.x},{target.y})");
                 break;
             }
         }
@@ -131,7 +128,7 @@ public sealed class OilSpreadService
         reserved.Remove(candidate);
 
         if (!hasPlayableMove)
-            Debug.Log($"[Oil] Spread target ({candidate.x},{candidate.y}) skipped; it would leave no playable move.");
+            {}
 
         return hasPlayableMove;
     }

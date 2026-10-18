@@ -37,8 +37,6 @@ public class BotService
         int activeBotCount = CalculateActiveBotCount();
         for (int i = 0; i < activeBotCount; i++)
             pool.Add(CreateBot(i));
-
-        Debug.Log($"[BotService] {pool.Count} bot hazırlandı (gerçek kullanıcı: {RealUserCount})");
     }
 
     private BotPlayer CreateBot(int index)

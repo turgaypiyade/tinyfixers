@@ -81,7 +81,8 @@ public static class MobileTextureCompressionTool
                       $"Elle override edilmiş, atlanan: {skippedManual}.");
         foreach (var p in plans.OrderByDescending(p => p.before - p.after).Take(25))
             sb.AppendLine($"  -{Mb(p.before - p.after),8}  {p.format,-9} {p.importer.assetPath}");
-        Debug.Log(sb.ToString());
+        if (GameDiagnostics.EditorTools)
+            Debug.Log(sb.ToString());
 
         if (!apply || plans.Count == 0) return;
 

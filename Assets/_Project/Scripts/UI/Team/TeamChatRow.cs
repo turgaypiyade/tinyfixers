@@ -250,6 +250,8 @@ public sealed class TeamChatRow : MonoBehaviour
             rt.anchoredPosition = new Vector2(m.isMine ? -2f : 2f, 46f);
         }
 
+        BindModerationMenu(m);
+
         if (senderText != null) senderText.color = SenderColor(m.senderName);
         if (messageText != null) messageText.color = MessageColor;
         if (timeText != null) timeText.color = TimeColor;
@@ -258,6 +260,37 @@ public sealed class TeamChatRow : MonoBehaviour
             if (theme.headingFont != null && senderText != null) senderText.font = theme.headingFont;
             if (theme.bodyFont != null && messageText != null) messageText.font = theme.bodyFont;
         }
+    }
+
+    // Gerçek oyuncunun (başkasının) mesajı: balona dokununca Şikâyet Et / Engelle (App Store 1.2).
+    private void BindModerationMenu(TeamChatMessage m)
+    {
+        if (bubble == null || m.isMine || string.IsNullOrEmpty(m.senderId)) return;
+        if (!bubble.TryGetComponent<Button>(out var button)) button = bubble.gameObject.AddComponent<Button>();
+        button.transition = Selectable.Transition.None;
+        button.targetGraphic = bubble;
+        bubble.raycastTarget = true;
+        button.onClick.RemoveAllListeners();
+        button.onClick.AddListener(() => ShowModerationMenu(m));
+    }
+
+    private static void ShowModerationMenu(TeamChatMessage m)
+    {
+        RuntimeChoicePopup.Show(m.senderName, GameLocalization.Get("moderation_menu_body"),
+            new RuntimeChoicePopup.Choice(GameLocalization.Get("moderation_report"), () =>
+                ChatModeration.Report(m.senderId, m.senderName, m.teamId, m.messageId, m.text, ok =>
+                    RuntimeChoicePopup.Show(GameLocalization.Get("moderation_title"),
+                        GameLocalization.Get(ok ? "moderation_report_thanks" : "moderation_report_failed")))),
+            new RuntimeChoicePopup.Choice(GameLocalization.Get("moderation_block"), () =>
+                RuntimeChoicePopup.Show(GameLocalization.Get("moderation_block"),
+                    GameLocalization.GetFormat("moderation_block_confirm", m.senderName),
+                    new RuntimeChoicePopup.Choice(GameLocalization.Get("moderation_block"), () =>
+                    {
+                        ChatModeration.Block(m.senderId);
+                        RuntimeChoicePopup.Show(GameLocalization.Get("moderation_title"), GameLocalization.Get("moderation_blocked"));
+                    }),
+                    new RuntimeChoicePopup.Choice(GameLocalization.Get("common_cancel"), null, primary: true))),
+            new RuntimeChoicePopup.Choice(GameLocalization.Get("common_cancel"), null, primary: true));
     }
 
     private static Color SenderColor(string name)

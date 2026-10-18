@@ -104,13 +104,15 @@ public sealed class ProfilePageController : MonoBehaviour
     {
         if (musicNameText == null)
         {
-            Debug.LogWarning("[Profile] Müzik adı görünmüyor: MusicTXT, ProfilePageController'daki 'Music Name Text' alanına ATANMAMIŞ.");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogWarning("[Profile] Müzik adı görünmüyor: MusicTXT, ProfilePageController'daki 'Music Name Text' alanına ATANMAMIŞ.");
             return;
         }
         var lib = musicLibrary != null ? musicLibrary : MusicState.Library;
         if (lib == null || lib.Count == 0)
         {
-            Debug.LogWarning("[Profile] Müzik adı görünmüyor: MusicLibrary yok. Bir MusicLibrary asset'i oluşturup MainMenuMusicStarter'ın (veya ProfilePageController'ın) 'library' alanına ata.");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogWarning("[Profile] Müzik adı görünmüyor: MusicLibrary yok. Bir MusicLibrary asset'i oluşturup MainMenuMusicStarter'ın (veya ProfilePageController'ın) 'library' alanına ata.");
             return;
         }
         var track = lib.Get(MusicState.SelectedTrack);
@@ -198,6 +200,13 @@ public sealed class ProfilePageController : MonoBehaviour
     private void CommitName(string value)
     {
         if (!PlayerProfile.CustomizationUnlocked) return;
+        // Uygunsuz ad kabul edilmez (diğer oyuncular görür): eski ad kalır, kısa uyarı.
+        if (ChatModeration.ContainsBlocked(value))
+        {
+            if (nameInput != null) nameInput.SetTextWithoutNotify(PlayerProfile.PlayerName);
+            RuntimeChoicePopup.Show(GameLocalization.Get("moderation_title"), GameLocalization.Get("moderation_name_rejected"));
+            return;
+        }
         PlayerProfile.PlayerName = value;   // boş ise PlayerProfile default'a çevirir
         if (nameInput != null) nameInput.SetTextWithoutNotify(PlayerProfile.PlayerName);
     }

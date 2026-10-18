@@ -76,10 +76,16 @@ public static class AdService
         MobileAds.RaiseAdEventsOnUnityMainThread = true;
         ConsentInformation.Update(new ConsentRequestParameters(), updateError =>
         {
-            if (updateError != null) Debug.LogWarning($"[Ads] Onay bilgisi alınamadı: {updateError.Message}");
+            if (updateError != null) {
+                if (GameDiagnostics.Backend)
+                    Debug.LogWarning($"[Ads] Onay bilgisi alınamadı: {updateError.Message}");
+            }
             ConsentForm.LoadAndShowConsentFormIfRequired(formError =>
             {
-                if (formError != null) Debug.LogWarning($"[Ads] Onay formu: {formError.Message}");
+                if (formError != null) {
+                    if (GameDiagnostics.Backend)
+                        Debug.LogWarning($"[Ads] Onay formu: {formError.Message}");
+                }
                 StartSdkIfAllowed();
             });
         });
@@ -91,7 +97,6 @@ public static class AdService
         MobileAds.Initialize(_ =>
         {
             sdkReady = true;
-            Debug.Log("[Ads] SDK hazır.");
             LoadRewarded();
         });
     }
@@ -105,7 +110,8 @@ public static class AdService
             loading = false;
             if (error != null || ad == null)
             {
-                Debug.LogWarning($"[Ads] Reklam yüklenemedi: {error?.GetMessage()}");
+                if (GameDiagnostics.Backend)
+                    Debug.LogWarning($"[Ads] Reklam yüklenemedi: {error?.GetMessage()}");
                 Host.StartCoroutine(RetryLoad());
                 return;
             }
@@ -146,10 +152,15 @@ public static class AdService
         ad.OnAdFullScreenContentClosed += Finish;
         ad.OnAdFullScreenContentFailed += err =>
         {
-            Debug.LogWarning($"[Ads] Reklam gösterilemedi: {err?.GetMessage()}");
+            if (GameDiagnostics.Backend)
+                Debug.LogWarning($"[Ads] Reklam gösterilemedi: {err?.GetMessage()}");
             Finish();
         };
-        ad.Show(_ => earned = true);
+        ad.Show(_ =>
+        {
+            earned = true;
+            LevelAssist.RecordRewardedAdCompleted();
+        });
     }
 #else
     public static bool IsReady =>
@@ -165,7 +176,8 @@ public static class AdService
         if (IsShowing) { onDone?.Invoke(false); return; }
         Host.StartCoroutine(Simulate(onDone));
 #else
-        Debug.LogWarning("[Ads] Reklam SDK'sı bağlı değil (TF_ADMOB yok).");
+        if (GameDiagnostics.Backend)
+            Debug.LogWarning("[Ads] Reklam SDK'sı bağlı değil (TF_ADMOB yok).");
         onDone?.Invoke(false);
 #endif
     }
@@ -173,7 +185,6 @@ public static class AdService
     private static IEnumerator Simulate(Action<bool> onDone)
     {
         IsShowing = true;
-        Debug.Log("[Ads] Reklam simülasyonu…");
         yield return new WaitForSecondsRealtime(SimulatedSeconds);
         IsShowing = false;
         onDone?.Invoke(true);

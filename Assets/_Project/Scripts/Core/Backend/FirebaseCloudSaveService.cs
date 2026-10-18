@@ -70,6 +70,9 @@ public static class FirebaseCloudSaveService
     /// <summary>Kalıcı oyuncu verisi değişti — bir sonraki döngüde buluta yazılır.</summary>
     public static void MarkDirty() => dirty = true;
 
+    /// Hesap silinirken itme durur: silinen kayıt eski UID'ye geri yazılmasın (AccountDeletionService).
+    internal static bool SuspendForDeletion;
+
     /// Hidden level-selector action. Initial restore and older writes must finish first.
     public static bool TryResetProgress(int maxLevel, out string error)
     {
@@ -100,7 +103,8 @@ public static class FirebaseCloudSaveService
         {
             if (task.IsFaulted || task.IsCanceled)
             {
-                Debug.LogWarning($"[CloudSave] restore fetch hatası, tekrar denenecek: {task.Exception?.GetBaseException().Message}");
+                if (GameDiagnostics.Backend)
+                    Debug.LogWarning($"[CloudSave] restore fetch hatası, tekrar denenecek: {task.Exception?.GetBaseException().Message}");
                 CloudSaveBehaviour.Instance?.ScheduleRetry(FetchRetryDelay, StartRestore);
                 return;
             }
@@ -137,9 +141,6 @@ public static class FirebaseCloudSaveService
                 MusicState.ReloadFromPrefs();
                 // Altın/yıldız: level kararından BAĞIMSIZ olarak bulut-otoriter (base) + offline delta.
                 ReconcileCurrencyFromCloud(hasData, cloudData, forceLocalWins);
-                Debug.Log(force
-                    ? $"[CloudSave] RESTORE (force) ✅ admin bulut düzenlemesi uygulandı ({cloudData.Count} anahtar)"
-                    : $"[CloudSave] RESTORE ✅ bulut ilerlemesi/sıfırlama sürümü uygulandı (bulut level {cloudLevel}, yerel {localLevel}; {cloudData.Count} anahtar)");
                 RestoreResolved = true;
                 CurrencyLedger.OpenSyncGate();
                 if (force) ClearForceFlag();   // tek sefer uygulansın
@@ -153,9 +154,6 @@ public static class FirebaseCloudSaveService
                     PlayerPrefs.SetInt(CloudSaveManifest.PendingProgressResetKey, 1);
                     PlayerPrefs.Save();
                 }
-                // Yerel ileride (veya bulut boş) → yereli buluta it. Coins/stars yine bulut-otoriter:
-                // bulutta değer varsa base=bulut+delta, yoksa yerel taban benimsenir.
-                Debug.Log($"[CloudSave] restore kararı: yerel kazandı (yerel {localLevel}, bulut {(snap.Exists ? "var" : "yok")}) → push");
                 ReconcileCurrencyFromCloud(hasData, cloudData, forceLocalWins);
                 RestoreResolved = true;
                 CurrencyLedger.OpenSyncGate();
@@ -195,7 +193,7 @@ public static class FirebaseCloudSaveService
     public static void Push()
     {
         if (RuntimeSimulationSession.IsActive) return;
-        if (!RestoreResolved || !FirebaseAuthService.IsReady || pushInFlight) return;
+        if (!RestoreResolved || !FirebaseAuthService.IsReady || pushInFlight || SuspendForDeletion) return;
 
         // Anti-hack: buluta GÜVENİLİR coins/stars (base+delta) gitsin — Collect ham (belki
         // mid-session hilelenmiş) player_coins'i okumadan önce güvenilir değere hizala.
@@ -235,7 +233,8 @@ public static class FirebaseCloudSaveService
             if (task.IsFaulted || task.IsCanceled)
             {
                 dirty = true;   // sıradaki döngüde tekrar dene (offline'da SDK zaten kuyruklar)
-                Debug.LogWarning($"[CloudSave] push hatası: {task.Exception?.GetBaseException().Message}");
+                if (GameDiagnostics.Backend)
+                    Debug.LogWarning($"[CloudSave] push hatası: {task.Exception?.GetBaseException().Message}");
             }
             else
             {

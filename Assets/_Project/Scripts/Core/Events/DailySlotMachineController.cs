@@ -120,12 +120,14 @@ public class DailySlotMachineController : MonoBehaviour
         if (isSpinning) return;
         if (!HasAvailableSpin())
         {
-            Debug.LogWarning("[DailySlot] Spin hakkı yok.");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogWarning("[DailySlot] Spin hakkı yok.");
             return;
         }
         if (rewardConfig == null || rewardConfig.rewards.Count == 0)
         {
-            Debug.LogWarning("[DailySlot] rewardConfig boş.");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogWarning("[DailySlot] rewardConfig boş.");
             return;
         }
 
@@ -133,7 +135,8 @@ public class DailySlotMachineController : MonoBehaviour
         selectedReward = rewardConfig.PickRandom();
         if (selectedReward == null)
         {
-            Debug.LogError("[DailySlot] PickRandom null döndü.");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogError("[DailySlot] PickRandom null döndü.");
             return;
         }
 
@@ -274,7 +277,6 @@ public class DailySlotMachineController : MonoBehaviour
     {
         PlayerPrefs.DeleteKey(KeyLastSpinDate);
         PlayerPrefs.Save();
-        Debug.Log("[DailySlot] Daily spin reset.");
     }
 #endif
 }

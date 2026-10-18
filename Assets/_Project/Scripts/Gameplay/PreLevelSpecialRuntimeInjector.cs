@@ -70,7 +70,6 @@ public sealed class PreLevelSpecialRuntimeInjector : MonoBehaviour
         }
 
         existing.Initialize(selected);
-        Debug.Log($"[PreLevelSpecialRuntimeInjector] EnsureForSelection count={selected.Count}");
         return existing;
     }
 
@@ -88,7 +87,6 @@ public sealed class PreLevelSpecialRuntimeInjector : MonoBehaviour
         }
 
         initialized = true;
-        Debug.Log($"[PreLevelSpecialRuntimeInjector] Initialized with {pendingSelection.Count} selected specials.");
     }
 
     private void Awake()
@@ -105,7 +103,6 @@ public sealed class PreLevelSpecialRuntimeInjector : MonoBehaviour
 
         if (selected.Count == 0)
         {
-            Debug.Log("[PreLevelSpecialRuntimeInjector] No selected specials; destroying injector.");
             Destroy(gameObject);
             yield break;
         }
@@ -128,7 +125,8 @@ public sealed class PreLevelSpecialRuntimeInjector : MonoBehaviour
             board = FindFirstObjectByType<BoardController>();
         if (board == null)
         {
-            Debug.LogWarning($"[PreLevelSpecialRuntimeInjector] Board yok; teslimat atlandı. {GetBoardStatus()}");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogWarning($"[PreLevelSpecialRuntimeInjector] Board yok; teslimat atlandı. {GetBoardStatus()}");
             Destroy(gameObject);
             yield break;
         }
@@ -169,9 +167,8 @@ public sealed class PreLevelSpecialRuntimeInjector : MonoBehaviour
                 if (!waitReasonLogged && waitedForRoom > 2f)
                 {
                     waitReasonLogged = true;
-                    Debug.LogWarning($"[PreLevelSpecialRuntimeInjector] Teslimat bekliyor ({waitedForRoom:0.0}s): " +
-                                     $"busy={board.IsBusy} blockJobs={board.BlockingBackgroundJobs} " +
-                                     $"eligible={HasEligibleCandidate()} state={board.CurrentState} {GetBoardStatus()}");
+                    if (GameDiagnostics.CriticalErrors)
+                        Debug.LogWarning($"[PreLevelSpecialRuntimeInjector] Teslimat bekliyor ({waitedForRoom:0.0}s): " + $"busy={board.IsBusy} blockJobs={board.BlockingBackgroundJobs} " + $"eligible={HasEligibleCandidate()} state={board.CurrentState} {GetBoardStatus()}");
                 }
 
                 yield return null;
@@ -205,7 +202,7 @@ public sealed class PreLevelSpecialRuntimeInjector : MonoBehaviour
 
                 totalPlaced++;
                 placedThisVisit++;
-                PlayPlacementSfx(special);
+                PlayPlacementSfx(special, placedThisVisit - 1);
 
                 // UFO ışını: bu hücreye at (Reveal'den önce). Reveal harici görselce bastırılabilir.
                 OnSpecialPlaced?.Invoke(tile, special);
@@ -219,8 +216,6 @@ public sealed class PreLevelSpecialRuntimeInjector : MonoBehaviour
 
             OnPlacementFinished?.Invoke();
 
-            Debug.Log($"[PreLevelSpecialRuntimeInjector] Visit placed {placedThisVisit}; remaining pending={pendingSelection.Count}");
-
             // Güvenlik: bu ziyaret hiç yerleştiremediyse (beklenmez — HasEligibleCandidate true'ydu)
             // sıkı döngüye girme, bir kare bekle.
             if (placedThisVisit == 0)
@@ -229,8 +224,6 @@ public sealed class PreLevelSpecialRuntimeInjector : MonoBehaviour
 
         if (totalPlaced > 0 && !SuppressSelectionStateClear)
             PreLevelSpecialSelectionState.Clear();
-
-        Debug.Log($"[PreLevelSpecialRuntimeInjector] Finished. placed={totalPlaced}, leftover={pendingSelection.Count}");
         Destroy(gameObject);
     }
 
@@ -557,14 +550,21 @@ public sealed class PreLevelSpecialRuntimeInjector : MonoBehaviour
         return true;
     }
 
-    private void PlayPlacementSfx(TileSpecial special)
+    // Varsayılan: her yerleşen taş nota dizisinde bir sonrakini çalar (PlacementChime, yükselen arpej).
+    // Inspector'dan özel placeSfx atanmışsa o çalar (eski davranış).
+    private void PlayPlacementSfx(TileSpecial special, int noteIndex)
     {
-        if (audioSource != null)
+        if (audioSource != null && placeSfx != null)
         {
-            AudioClip clip = placeSfx != null ? placeSfx : audioSource.clip;
-            if (clip != null && GameSettings.SoundEnabled)
-                audioSource.PlayOneShot(clip, placeSfxVolume);
+            if (GameSettings.SoundEnabled)
+                audioSource.PlayOneShot(placeSfx, placeSfxVolume);
+            return;
+        }
 
+        var chimeSource = audioSource != null ? audioSource : board != null ? board.SfxSource : null;
+        if (chimeSource != null)
+        {
+            PlacementChime.Play(chimeSource, noteIndex, 0.75f * placeSfxVolume);
             return;
         }
 

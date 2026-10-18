@@ -47,8 +47,14 @@ public static class SimLevelAudit
         sb.AppendLine($"SONUÇ: {broken} level KAZANILAMAZ, {warned} level uyarılı, " +
                       $"{levels.Count - broken - warned} level temiz.");
 
-        if (broken > 0) Debug.LogWarning(sb.ToString());
-        else Debug.Log(sb.ToString());
+        if (broken > 0) {
+            if (GameDiagnostics.EditorTools)
+                Debug.LogWarning(sb.ToString());
+        }
+        else {
+            if (GameDiagnostics.EditorTools)
+                Debug.Log(sb.ToString());
+        }
     }
 
     private static List<string> Inspect(LevelData level, out bool fatal)

@@ -454,7 +454,8 @@ public class ObstacleLibrary : ScriptableObject
 
                 if (!seen.Add(obstacle.id))
                 {
-                    Debug.LogWarning($"ObstacleLibrary '{name}': Duplicate ObstacleId '{obstacle.id}' at index {i}. First entry will be used.", this);
+                    if (GameDiagnostics.CriticalErrors)
+                        Debug.LogWarning($"ObstacleLibrary '{name}': Duplicate ObstacleId '{obstacle.id}' at index {i}. First entry will be used.", this);
                 }
             }
         }

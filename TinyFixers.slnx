@@ -6,6 +6,7 @@
   <Project Path="Unity.Mathematics.csproj" />
   <Project Path="Unity.Multiplayer.Center.Editor.csproj" />
   <Project Path="Unity.2D.Psdimporter.Editor.csproj" />
+  <Project Path="Unity.MemoryProfiler.Editor.csproj" />
   <Project Path="Unity.Purchasing.PaymentProviderService.csproj" />
   <Project Path="Unity.VisualScripting.Core.Editor.csproj" />
   <Project Path="Unity.RenderPipelines.Universal.Editor.csproj" />
@@ -117,10 +118,12 @@
   <Project Path="Unity.Services.Deployment.Editor.Shared.csproj" />
   <Project Path="Unity.VisualScripting.Shared.Editor.csproj" />
   <Project Path="Unity.AI.Pbr.Srp.csproj" />
+  <Project Path="Unity.Profiling.Core.csproj" />
   <Project Path="glTFast.Editor.csproj" />
   <Project Path="Unity.2D.Aseprite.Common.csproj" />
   <Project Path="Unity.Services.Core.Analytics.csproj" />
   <Project Path="UnityEditor.UI.Analytics.csproj" />
+  <Project Path="Unity.EditorCoroutines.Editor.csproj" />
   <Project Path="AppleAuth.Editor.csproj" />
   <Project Path="Unity.Purchasing.SecurityStub.csproj" />
   <Project Path="Unity.Mathematics.Editor.csproj" />
@@ -150,6 +153,7 @@
   <Project Path="Unity.Services.Core.Networking.csproj" />
   <Project Path="Unity.AI.Generators.Contexts.csproj" />
   <Project Path="Unity.AI.Generators.IO.Srp.csproj" />
+  <Project Path="Unity.MemoryProfiler.Editor.MemoryProfilerModule.csproj" />
   <Project Path="Unity.AI.Animate.Motion.Runtime.csproj" />
   <Project Path="Unity.Rendering.LightTransport.Editor.csproj" />
   <Project Path="Unity.Collections.Editor.csproj" />
@@ -170,6 +174,7 @@
   <Project Path="Unity.RenderPipelines.Universal.Shaders.csproj" />
   <Project Path="Unity.RenderPipelines.Core.Runtime.Shared.csproj" />
   <Project Path="Unity.RenderPipelines.Core.Editor.Shared.csproj" />
+  <Project Path="Unity.MemoryProfiler.csproj" />
   <Project Path="Assembly-CSharp-Editor-firstpass-testable.csproj" />
   <Project Path="Unity.RenderPipelines.Universal.Config.Runtime.csproj" />
 </Solution>

@@ -44,6 +44,11 @@ public partial class CascadeLogic
 
     private int spawnSequence;
     private bool[,] diagonalFeedReachable;
+    // Synchronous planner scratch only. Paths retained by asynchronous FallActions keep ownership.
+    private readonly List<int> resolvableSlotBuffer = new(16);
+    private readonly List<int> segmentSlotBuffer = new(16);
+    private readonly List<VirtualTile> segmentTileBuffer = new(16);
+    private readonly List<Vector2Int> gapRemovalBuffer = new(16);
 
     // Unassisted random refill discourages accidental 4+ runs using settled below/left cells.
     // Mercy's scored color selection deliberately bypasses this limit to enable natural specials.
@@ -464,20 +469,21 @@ public partial class CascadeLogic
                 int topY = segmentBottom + 1;
                 bool touchesSpawn = IsSegmentConnectedToSpawnEdge(x, topY);
                 int sourceTiles = 0;
-                List<int> slotYs = null;
+                var slotYs = resolvableSlotBuffer;
+                slotYs.Clear();
 
                 for (int y = segmentTop; y >= topY; y--)
                 {
                     if (!IsTileSlotCell(x, y))
                         continue;
 
-                    (slotYs ??= new List<int>()).Add(y);
+                    slotYs.Add(y);
 
                     if (board.Tiles[x, y] != null)
                         sourceTiles++;
                 }
 
-                if (slotYs != null)
+                if (slotYs.Count > 0)
                 {
                     if (touchesSpawn)
                     {
@@ -587,7 +593,8 @@ public partial class CascadeLogic
             bool touchesSpawn = IsSegmentConnectedToSpawnEdge(x, topY);
 
             // 1. Compact segment
-            List<VirtualTile> segmentTiles = new List<VirtualTile>();
+            var segmentTiles = segmentTileBuffer;
+            segmentTiles.Clear();
             for (int y = segmentTop; y >= topY; y--)
             {
                 if (!IsTileSlotCell(x, y)) continue;
@@ -598,7 +605,8 @@ public partial class CascadeLogic
                 }
             }
 
-            List<int> slotYs = new List<int>();
+            var slotYs = segmentSlotBuffer;
+            slotYs.Clear();
             for (int y = segmentTop; y >= topY; y--)
             {
                 if (IsTileSlotCell(x, y)) slotYs.Add(y);
@@ -904,7 +912,8 @@ public partial class CascadeLogic
     {
         if (verticalOnlyGaps.Count == 0) return;
 
-        List<Vector2Int> toRemove = new List<Vector2Int>();
+        var toRemove = gapRemovalBuffer;
+        toRemove.Clear();
         foreach (var gap in verticalOnlyGaps)
         {
             bool stillEmpty = IsSlotEmpty(virtualBoard, gap.x, gap.y);

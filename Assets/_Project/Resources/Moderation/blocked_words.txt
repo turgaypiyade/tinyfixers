@@ -1,0 +1,76 @@
+# Sohbet / oyuncu adı / takım adı filtresi (ChatModeration). Satır başına bir kelime, küçük harf.
+# "=" ile başlayan satır: yalnız TAM KELİME eşleşir (kısa kelimeler, "ass" → "class" yakalanmasın).
+# Diğer satırlar kelimenin İÇİNDE de aranır (çekimli hâller: "orospunun" ← "orospu").
+# Harf oyunları otomatik çözülür (0→o, 1/!→i, 3→e, 4/@→a, 5/$→s, 7→t) ve tekrarlar teke indirilir ("siiik" → "sik").
+# --- Türkçe ---
+amcık
+amcik
+=amk
+=aq
+=ananı
+=ananin
+=ananızı
+orospu
+oruspu
+piç
+sikerim
+sikeyim
+siktir
+sikik
+=sik
+sikiş
+sikis
+yarrak
+=yarak
+=yarram
+götveren
+gotveren
+=göt
+gavat
+kahpe
+kaltak
+pezevenk
+ibne
+=ipne
+puşt
+=pust
+şerefsiz
+serefsiz
+haysiyetsiz
+dalyarak
+taşak
+tasak
+siktiğim
+siktigim
+yavşak
+yavsak
+=oç
+gerizekalı
+gerizekali
+# --- English ---
+fuck
+fucker
+fucking
+motherfucker
+=fck
+shit
+bitch
+bastard
+=ass
+asshole
+=dick
+dickhead
+=cock
+cunt
+pussy
+=whore
+=slut
+=fag
+faggot
+nigger
+nigga
+retard
+=twat
+wanker
+=porn
+porno

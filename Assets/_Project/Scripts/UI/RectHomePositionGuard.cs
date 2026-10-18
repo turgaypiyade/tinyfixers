@@ -47,9 +47,10 @@ public sealed class RectHomePositionGuard : MonoBehaviour
             return;
 
         if (logOnDrift)
-            Debug.LogWarning(
-                $"[RectHomeGuard] '{name}' pozisyonu kaydı: {current} (ev {home}, frame {Time.frameCount}) — geri alındı. " +
-                "Bu uyarının zamanı kaymayı tetikleyen akışı gösterir.", this);
+            {
+                if (GameDiagnostics.CriticalErrors)
+                    Debug.LogWarning($"[RectHomeGuard] '{name}' pozisyonu kaydı: {current} (ev {home}, frame {Time.frameCount}) — geri alındı. " + "Bu uyarının zamanı kaymayı tetikleyen akışı gösterir.", this);
+            }
 
         rt.anchoredPosition = home;
     }

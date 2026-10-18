@@ -2,9 +2,9 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 
 /// <summary>
-/// Booster (0=Hammer/Single, 1=Row, 2=Column, 3=Shuffle) kilit + free-oyun + hak kuralları —
+/// Booster (0=Hammer/Single, 1=Row, 2=Column, 3=Shuffle, 4=PaintBucket) kilit + free-oyun + hak kuralları —
 /// TEK merkez. PreLevelSpecialPopup ile aynı desen:
-///   - Booster kendi unlock level'ına kadar kilitli (8 / 13 / 18 / 24).
+///   - Booster kendi unlock level'ına kadar kilitli (8 / 13 / 18 / 24 / 30).
 ///   - Unlock SONRASI girilen İLK oyun o booster için FREE: kullanım hak düşürmez.
 ///     Free, oyuna girmekle tüketilir (kullanılmasa bile o oyuna özeldir).
 ///   - Unlock ile birlikte tek seferlik 3 hak hediye edilir (free oyun bunları harcamaz).
@@ -13,8 +13,9 @@ using UnityEngine.SceneManagement;
 /// </summary>
 public static class BoosterAccessService
 {
-    private const int BoosterCount = 4;
-    private static readonly int[] UnlockLevels = { 8, 13, 18, 24 };
+    private const int BoosterCount = 5;
+    private static readonly int[] UnlockLevels = { 8, 13, 18, 24, 30 };
+    public const int PaintBucketIndex = 4;
     private const string LevelPrefsKey = "current_level";
 
     private static readonly bool[] sessionFree = new bool[BoosterCount];
@@ -123,6 +124,7 @@ public static class BoosterAccessService
         1 => BoardController.BoosterMode.Row,
         2 => BoardController.BoosterMode.Column,
         3 => BoardController.BoosterMode.Shuffle,
+        4 => BoardController.BoosterMode.PaintBucket,
         _ => BoardController.BoosterMode.None
     };
 
@@ -132,6 +134,7 @@ public static class BoosterAccessService
         BoardController.BoosterMode.Row     => 1,
         BoardController.BoosterMode.Column  => 2,
         BoardController.BoosterMode.Shuffle => 3,
+        BoardController.BoosterMode.PaintBucket => 4,
         _ => -1
     };
 

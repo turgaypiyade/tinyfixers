@@ -476,7 +476,8 @@ public sealed class HamsterObstacleService : MonoBehaviour
         }
         catch (System.Exception e)
         {
-            Debug.LogWarning($"[Hamster] hedef seçilemedi: {e.Message}");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogWarning($"[Hamster] hedef seçilemedi: {e.Message}");
             return null;
         }
     }

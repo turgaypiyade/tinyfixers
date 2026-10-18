@@ -158,6 +158,25 @@ public sealed class BossDuelController : MonoBehaviour
     [Tooltip("Boşsa runtime'da otomatik AudioSource eklenir.")]
     [SerializeField] private AudioSource sfxSource;
 
+    // ~50 hamlelik düelloda her hamle aynı savurma+isabet ikilisi kulağı yoruyordu. Ses vuruşun gücüne
+    // (hasar / düşman canı) bağlanır: küçük vuruş kısık, biraz tiz ve savurmasız; büyük vuruş tam ve tok.
+    // Arka arkaya küçük isabetler kademeli kısılır, sessizlikte toparlanır; büyük/bitirici vuruş hep tam.
+    [Header("Boss Duel Sounds — tekrar yorgunluğu")]
+    [Tooltip("Düşman canının bu oranı kadar hasar 'tam güç' vuruş sayılır.")]
+    [SerializeField, Range(0.05f, 1f)] private float fullHitHpFraction = 0.25f;
+    [Tooltip("En zayıf vuruşun ses çarpanı (tam güç = 1).")]
+    [SerializeField, Range(0f, 1f)] private float smallHitVolumeScale = 0.45f;
+    [Tooltip("Bu güçten zayıf vuruşlarda savurma (vuş) sesi çalmaz, yalnız isabet.")]
+    [SerializeField, Range(0f, 1f)] private float swingMinStrength = 0.3f;
+    [Tooltip("Arka arkaya her küçük isabette ses bu kadar kısılır.")]
+    [SerializeField, Range(0f, 0.5f)] private float repeatFatigueStep = 0.12f;
+    [Tooltip("Kısılmanın alt sınırı.")]
+    [SerializeField, Range(0.2f, 1f)] private float repeatFatigueFloor = 0.55f;
+    [Tooltip("Sessiz geçen bu süre sonunda ses tamamen toparlanır (sn).")]
+    [SerializeField, Min(0.5f)] private float repeatRecoverSeconds = 4f;
+    private float hitFatigue = 1f;
+    private float lastPlayerHitTime = -99f;
+
     [Tooltip("Vurulunca robotun geri sarsılma süresi.")]
     [SerializeField, Min(0f)] private float robotHitKnockDuration = 0.18f;
     [Tooltip("Vurulunca robotun geri itilme mesafesi (px).")]
@@ -282,7 +301,8 @@ public sealed class BossDuelController : MonoBehaviour
         int totalEnemyHp = ReadBossGoalAmount(level);
         if (totalEnemyHp <= 0)
         {
-            Debug.LogWarning("[Battlefield] BossDamage goal'ü yok/0 — düello çalışamaz. Level goals'a Collectible=BossDamage ekleyin.");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogWarning("[Battlefield] BossDamage goal'ü yok/0 — düello çalışamaz. Level goals'a Collectible=BossDamage ekleyin.");
             intro?.HideImmediate();
             enabled = false;
             yield break;
@@ -753,11 +773,11 @@ public sealed class BossDuelController : MonoBehaviour
             if (playerCharacterView != null)
                 yield return playerCharacterView.Attack(enemyRobot, () => LandAnimalPlayerStrike(damage),
                     () => IsOver() || waveTransitionActive, damage, () => ShouldPlayFinishingStrike(damage),
-                    () => PlaySfx(playerAttackSfx, attackVolume));
+                    () => PlayPlayerSwing(HitStrength(damage)));
             else
             {
                 if (IsOver() || waveTransitionActive) yield break;
-                PlaySfx(playerAttackSfx, attackVolume);
+                PlayPlayerSwing(HitStrength(damage));
                 yield return new WaitForSeconds(0.3f);
                 if (!IsOver() && !waveTransitionActive) LandAnimalPlayerStrike(damage);
             }
@@ -779,15 +799,45 @@ public sealed class BossDuelController : MonoBehaviour
     private void LandAnimalPlayerStrike(int damage)
     {
         if (IsOver() || waveTransitionActive) return;
-        SpawnMeleeImpact(enemyRobot, playerHitSfx);
+        float strength = HitStrength(damage);
+        // Dalgayı bitiren (bitirici) ya da çok güçlü vuruş her zaman tam ve yorgunluğu sıfırlar.
+        bool big = strength >= 0.8f || (long)damage >= (long)enemyHp + enemyProtection;
+        float volume = hitVolume * Mathf.Lerp(smallHitVolumeScale, 1f, strength) * NextHitFatigue(big);
+        SpawnMeleeImpact(enemyRobot, playerHitSfx, volume, (0.5f - strength) * 0.12f);
         ApplyEnemyDamage(damage);
     }
 
     private void SpawnMeleeImpact(RectTransform target, AudioClip impactSfx)
+        => SpawnMeleeImpact(target, impactSfx, hitVolume, 0f);
+
+    private void SpawnMeleeImpact(RectTransform target, AudioClip impactSfx, float volume, float pitchOffset)
     {
         if (target != null && vfxRoot != null)
             SpawnImpact(WorldToAnchoredIn(vfxRoot, target.position), new Color(1f, 0.85f, 0.45f, 1f));
-        PlaySfx(impactSfx != null ? impactSfx : hitSfx, hitVolume);
+        PlaySfx(impactSfx != null ? impactSfx : hitSfx, volume, pitchOffset);
+    }
+
+    // 0..1: hasar / (düşman canı × fullHitHpFraction).
+    private float HitStrength(int damage)
+        => enemyMaxHp <= 0 ? 1f : Mathf.Clamp01(damage / (enemyMaxHp * fullHitHpFraction));
+
+    private void PlayPlayerSwing(float strength)
+    {
+        if (strength < swingMinStrength) return;
+        PlaySfx(playerAttackSfx, attackVolume * Mathf.Lerp(smallHitVolumeScale, 1f, strength));
+    }
+
+    // Bu isabetin yorgunluk çarpanı; sonra bir sonrakini kısar. Son isabetten beri geçen süre toparlar.
+    private float NextHitFatigue(bool big)
+    {
+        float now = Time.unscaledTime;
+        float recovered = (now - lastPlayerHitTime) / repeatRecoverSeconds * (1f - repeatFatigueFloor);
+        hitFatigue = Mathf.Min(1f, hitFatigue + Mathf.Max(0f, recovered));
+        lastPlayerHitTime = now;
+        if (big) { hitFatigue = 1f; return 1f; }
+        float current = hitFatigue;
+        hitFatigue = Mathf.Max(repeatFatigueFloor, hitFatigue - repeatFatigueStep);
+        return current;
     }
 
     private IEnumerator AnimalEnemyStrike(int damage)
@@ -890,7 +940,8 @@ public sealed class BossDuelController : MonoBehaviour
         ObstacleId id = PickToolThreatType(level);
         if (level.obstacleLibrary == null || level.obstacleLibrary.Get(id) == null)
         {
-            Debug.LogWarning($"[BossDuel] ObstacleLibrary'de {id} tanımı yok; alet tehdidi konamadı.");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogWarning($"[BossDuel] ObstacleLibrary'de {id} tanımı yok; alet tehdidi konamadı.");
             yield break;
         }
         if (board.IsExplicitlyLocked) yield break;
@@ -1116,11 +1167,8 @@ public sealed class BossDuelController : MonoBehaviour
             if (shouldHold && Time.unscaledTime - endEvalHoldStartTime > 10f && !endEvalHoldWarned)
             {
                 endEvalHoldWarned = true;
-                Debug.LogWarning(
-                    $"[BossDuel] End-eval hold 10sn+ ilerlemedi. animalTurn={animalTurnActive} " +
-                    $"playerAttack={playerAttackActive} enemyMelee={enemyMeleeActive} " +
-                    $"waveTransition={waveTransitionActive} defeatAnims={defeatAnimationsActive} " +
-                    $"bossMode={bossModeActive} isOver={IsOver()} power={accumulatedPower} moveOpen={playerMoveOpen}");
+                if (GameDiagnostics.CriticalErrors)
+                    Debug.LogWarning($"[BossDuel] End-eval hold 10sn+ ilerlemedi. animalTurn={animalTurnActive} " + $"playerAttack={playerAttackActive} enemyMelee={enemyMeleeActive} " + $"waveTransition={waveTransitionActive} defeatAnims={defeatAnimationsActive} " + $"bossMode={bossModeActive} isOver={IsOver()} power={accumulatedPower} moveOpen={playerMoveOpen}");
             }
             return;
         }
@@ -2240,7 +2288,7 @@ public sealed class BossDuelController : MonoBehaviour
     }
 
     // Atış/isabet sesi. AudioSource yoksa kendi oluşturur. Hafif perde sapmasıyla monotonluk kırılır.
-    private void PlaySfx(AudioClip clip, float volume)
+    private void PlaySfx(AudioClip clip, float volume, float pitchOffset = 0f)
     {
         if (clip == null || volume <= 0f) return;
         if (!GameSettings.SoundEnabled) return;
@@ -2254,7 +2302,7 @@ public sealed class BossDuelController : MonoBehaviour
             sfxSource.dopplerLevel = 0f;
         }
 
-        sfxSource.pitch = 1f + Random.Range(-pitchJitter, pitchJitter);
+        sfxSource.pitch = 1f + pitchOffset + Random.Range(-pitchJitter, pitchJitter);
         sfxSource.PlayOneShot(clip, Mathf.Clamp01(volume));
     }
 

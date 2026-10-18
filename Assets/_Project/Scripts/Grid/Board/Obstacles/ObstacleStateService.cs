@@ -2052,7 +2052,8 @@ public class ObstacleStateService : ISimObstacleQuery
 
             if (candidateTargets.Contains(toIdx))
             {
-                Debug.LogWarning($"[Obstacle] Movable batch hedef çakışması ({to.x},{to.y}) — sonraki hareket korunup atlandı.");
+                if (GameDiagnostics.CriticalErrors)
+                    Debug.LogWarning($"[Obstacle] Movable batch hedef çakışması ({to.x},{to.y}) — sonraki hareket korunup atlandı.");
                 continue;
             }
 
@@ -2081,7 +2082,8 @@ public class ObstacleStateService : ISimObstacleQuery
                 if (!IsMovableObstacleAt(tx, ty) || candidateSources.Contains(toIdx))
                     continue;
 
-                Debug.LogWarning($"[Obstacle] Movable batch hedefi ({tx},{ty}) canlı movable ile dolu — hareket korunup atlandı.");
+                if (GameDiagnostics.CriticalErrors)
+                    Debug.LogWarning($"[Obstacle] Movable batch hedefi ({tx},{ty}) canlı movable ile dolu — hareket korunup atlandı.");
                 candidateSources.Remove(candidates[i].fromIdx);
                 candidateTargets.Remove(toIdx);
                 candidates.RemoveAt(i);
@@ -2124,7 +2126,8 @@ public class ObstacleStateService : ISimObstacleQuery
             int ty = toIdx / level.width;
             if (IsMovableObstacleAt(tx, ty))
             {
-                Debug.LogWarning($"[Obstacle] Movable {id} hedefi ({tx},{ty}) başka bir movable ({destId}) tarafından dolu — yerleştirme atlandı.");
+                if (GameDiagnostics.CriticalErrors)
+                    Debug.LogWarning($"[Obstacle] Movable {id} hedefi ({tx},{ty}) başka bir movable ({destId}) tarafından dolu — yerleştirme atlandı.");
                 return;
             }
             else
@@ -2791,7 +2794,7 @@ public class ObstacleStateService : ISimObstacleQuery
     {
         bool added = TrySpawnSingleCellObstacleAt(x, y, ObstacleId.Oil);
         if (added)
-            Debug.Log($"[Oil] Added at ({x},{y}). Total oil: {CountAliveOrigins(ObstacleId.Oil)}");
+            {}
         return added;
     }
 
@@ -2848,7 +2851,6 @@ public class ObstacleStateService : ISimObstacleQuery
                 if (IsGroundLayer(bottom.Id, bottom.Remaining)) return false;   // zemin zaten örtülü
                 layers.Insert(0, new StampedBeneath(obstacleId, idx, bottom.Origin, hits));
             }
-            Debug.Log($"[{obstacleId}] Added at the bottom of a {layers.Count}-layer stack at ({x},{y}).");
             return true;
         }
 
@@ -2857,7 +2859,6 @@ public class ObstacleStateService : ISimObstacleQuery
             return false;
 
         RegisterStampedBeneath(idx, obstacleId, idx, overOrigin);
-        Debug.Log($"[{obstacleId}] Added beneath over-tile obstacle at ({x},{y}). Total alive/stamped: {CountAliveOrStampedOrigins(obstacleId)}");
         return true;
     }
 
@@ -2882,7 +2883,6 @@ public class ObstacleStateService : ISimObstacleQuery
         if (!IsOilAt(x, y)) return false;
         int idx = level.Index(x, y);
         ClearObstacleFromLevel(idx, ObstacleId.Oil);
-        Debug.Log($"[Oil] Removed at ({x},{y}). Total oil: {CountAliveOrigins(ObstacleId.Oil)}");
         return true;
     }
 

@@ -134,9 +134,7 @@ public sealed class StreakBoosterMenuBadge : MonoBehaviour
         if (progressFill != null) progressFill.fillAmount = displayedFill;
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-        Debug.Log($"[StreakBadge] streak={PlayerStats.CurrentStreak} stage={StreakBoosterEvent.CurrentStage} " +
-                  $"fill={displayedFill:0.00} progressFill={(progressFill != null ? progressFill.name : "NULL")} " +
-                  $"sprite={(progressFill != null && progressFill.sprite != null ? progressFill.sprite.name : "NULL")}");
+        ;
 #endif
     }
 

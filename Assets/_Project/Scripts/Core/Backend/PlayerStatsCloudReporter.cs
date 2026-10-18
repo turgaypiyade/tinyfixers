@@ -46,7 +46,10 @@ public static class PlayerStatsCloudReporter
         if (!LevelTelemetryStore.BindOwner(uid))
         {
             if (!ownerMismatchLogged)
-                Debug.LogWarning("[StatsReporter] Pending stats belong to a different account; retaining them locally.");
+                {
+                    if (GameDiagnostics.Backend)
+                        Debug.LogWarning("[StatsReporter] Pending stats belong to a different account; retaining them locally.");
+                }
             ownerMismatchLogged = true;
             return;
         }
@@ -114,7 +117,8 @@ public static class PlayerStatsCloudReporter
     {
         failures = Math.Min(failures + 1, 6);
         retryAfter = Time.realtimeSinceStartup + Math.Min(300, 5 * (1 << failures));
-        Debug.LogWarning($"[StatsReporter] Upload deferred; saved data will retry: {message}");
+        if (GameDiagnostics.Backend)
+            Debug.LogWarning($"[StatsReporter] Upload deferred; saved data will retry: {message}");
     }
 
     private sealed class Hook : MonoBehaviour

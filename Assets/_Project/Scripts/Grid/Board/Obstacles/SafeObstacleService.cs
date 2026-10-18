@@ -131,10 +131,6 @@ public sealed class SafeObstacleService : MonoBehaviour
 
         // 2) Goal (Obstacle/Safe) ilerlesin.
         state?.NotifySafeBroken(safeOrigin);
-
-        // 3) Açılan boş hücreler, devam eden resolve/cascade ile gravity+spawn'dan dolar
-        //    (kasa kırılması bir match-clear sırasında olur). Gerekirse board kendi akışında refill eder.
-        Debug.Log($"[Safe] REVEALED origin={safeOrigin}");
     }
 
     public bool HasSafe(int origin)  => _byOrigin.ContainsKey(origin);

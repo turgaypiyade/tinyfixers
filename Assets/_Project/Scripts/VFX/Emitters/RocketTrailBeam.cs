@@ -58,8 +58,6 @@ public class RocketTrailBeam : MonoBehaviour
 
         lr.positionCount = 0;
 
-        Debug.Log($"[RocketTrailBeam.Init] origin={origin} scale={transform.localScale}");
-
         ApplyGradient();
     }
 
@@ -73,7 +71,6 @@ public class RocketTrailBeam : MonoBehaviour
     public void FadeOutAndDestroy()
     {
         if (!alive || this == null) return;
-        Debug.Log($"[RocketTrailBeam.FadeOut] origin={origin} head={head}");
         fadingOut = true;
         fadeTimer = 0f;
     }

@@ -332,8 +332,8 @@ public class PreLevelSpecialPopupController : MonoBehaviour
             // Böylece ikon görünmeyip sadece sayı görünmesi engellenir.
             if (goalIcon == null)
             {
-                Debug.LogWarning(
-                    $"[PreLevelSpecialPopup] Goal preview skipped because icon is missing. index={i}, targetType={goal.targetType}");
+                if (GameDiagnostics.CriticalErrors)
+                    Debug.LogWarning($"[PreLevelSpecialPopup] Goal preview skipped because icon is missing. index={i}, targetType={goal.targetType}");
                 continue;
             }
 
@@ -605,8 +605,6 @@ public class PreLevelSpecialPopupController : MonoBehaviour
         var timedSpecials = PreLevelAutoSpecials.Collect();
         var combined = new List<TileSpecial>(timedSpecials);
         combined.AddRange(userSelected);
-
-        Debug.Log($"[PreLevelSpecialPopup] Continue userSelected={userSelected.Count} timedAuto={timedSpecials.Count}");
         PreLevelSpecialSelectionState.SetSelection(userSelected);
         PreLevelSpecialRuntimeInjector.EnsureForSelection(combined);
         RefreshCounts();

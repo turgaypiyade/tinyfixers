@@ -4,8 +4,8 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// LeftEventPanel'deki Bostan Hasadı ikonu. 25. seviye kapısından sonra hep görünür; logonun
-/// alt bandında açıkken sezon bitişine, ara günlerde açılışa kalan süre, köşe rozetinde kullanılabilir kürek sayısı (kürek varsa).
+/// LeftEventPanel'deki Bostan Hasadı ikonu. Yalnız aktif sezonda görünür;
+/// köşe rozetinde kullanılabilir kürek sayısı yer alır.
 /// </summary>
 public sealed class HarvestEventButton : MonoBehaviour
 {
@@ -47,20 +47,26 @@ public sealed class HarvestEventButton : MonoBehaviour
     {
         var cfg = HarvestConfig.Shared;
         DateTime now = DateTime.UtcNow;
-        // İkon level kapısından sonra hep görünür: açıkken sezon bitişine, ara günlerde açılışa geri sayar.
         bool unlocked = HarvestState.IsUnlocked(cfg);
-        if (visibilityRoot != null && visibilityRoot.activeSelf != unlocked)
+        bool isLive = unlocked && HarvestState.IsLive(cfg, now);
+        if (visibilityRoot != null && visibilityRoot.activeSelf != isLive)
         {
-            visibilityRoot.SetActive(unlocked);
+            visibilityRoot.SetActive(isLive);
             force = true;
         }
         if (!unlocked) return;
 
-        bool isLive = HarvestState.IsLive(cfg, now);
         if (isLive != live) { live = isLive; force = true; }
         // Kapalıyken de: pencere kapandıysa sezon sonu dönüşümü (kalan kürek → altın) burada olur.
         if (force) HarvestState.SyncCycle(cfg, now);
         if (force) AnnounceLeftoverGold();
+
+        if (!isLive)
+        {
+            if (labelText != null) labelText.text = "";
+            RefreshBadge();
+            return;
+        }
 
         DateTime target = live ? HarvestState.WindowEnd(cfg, now) : HarvestSchedule.GetNextStart(cfg, now);
         TimeSpan remaining = target == DateTime.MinValue ? TimeSpan.Zero : target - now;

@@ -42,6 +42,7 @@ public sealed class GearCupPreviewScreen : MonoBehaviour
         public Button info;
         public TeamRow[] teams;
         public RewardCard[] rewards;
+        public RectTransform hero;
     }
 
     [SerializeField] private GearCupPreviewConfig config;
@@ -52,17 +53,23 @@ public sealed class GearCupPreviewScreen : MonoBehaviour
     private float continuePulseStarted;
     private bool bound;
     private bool layoutPending;
+    private bool frameBuilt;
+    private RectTransform titlePlate;
+    private bool heroCaptured;
+    private float heroHomeY;
     private GearCupJoinPopup joinPopup;
     private EventScreenIris iris;
 
     public void ConfigureLauncher(RectTransform value) => launcher = value;
+    public bool IsInvitationVisible => joinPopup != null && joinPopup.gameObject.activeInHierarchy;
 
     public TimeSpan PreviewTimeRemaining
     {
         get
         {
             var cfg = config != null ? config : GearCupPreviewConfig.Shared;
-            DateTime end = GearCupState.HasJoined ? GearCupState.End :
+            if (cfg == null) return TimeSpan.Zero;
+            DateTime end = GearCupState.HasJoined && !GearCupState.CanShowInvitation ? GearCupState.End :
                 GearCupRules.SeasonStart(DateTime.UtcNow, cfg.seasonHours).AddHours(cfg.seasonHours);
             var remaining = end - DateTime.UtcNow;
             return remaining > TimeSpan.Zero ? remaining : TimeSpan.Zero;
@@ -122,7 +129,8 @@ public sealed class GearCupPreviewScreen : MonoBehaviour
 
     public void Open()
     {
-        if (config == null) { Debug.LogWarning("[GearCup] Preview config is missing."); return; }
+        if (config == null) { if (GameDiagnostics.CriticalErrors)
+            Debug.LogWarning("[GearCup] Preview config is missing."); return; }
         if (iris != null && iris.IsRunning) return;
         if (!GearCupState.IsUnlocked || !config.eventEnabled)
         {
@@ -131,13 +139,19 @@ public sealed class GearCupPreviewScreen : MonoBehaviour
                 new RuntimeChoicePopup.Choice(L("common_ok", "OK"), null));
             return;
         }
-        if (!GearCupState.HasJoined)
+        if (GearCupState.CanShowInvitation)
         {
-            if (joinPopup == null) joinPopup = GearCupJoinPopup.Create(transform.parent, config);
-            joinPopup.Show(this);
+            ShowInvitation();
             return;
         }
         OpenEvent();
+    }
+
+    public bool TryShowPendingResult()
+    {
+        if (!GearCupState.HasPendingResult || gameObject.activeInHierarchy || IsInvitationVisible) return false;
+        OpenEvent();
+        return true;
     }
 
     // Invitation acceptance persists enrollment before opening the real standings.
@@ -181,7 +195,8 @@ public sealed class GearCupPreviewScreen : MonoBehaviour
         var levelLauncher = FindFirstObjectByType<MainMenuLevelButtonController>(FindObjectsInactive.Include);
         if (levelLauncher == null)
         {
-            Debug.LogWarning("[GearCup] MainMenuLevelButtonController bulunamadı — Devam iptal.");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogWarning("[GearCup] MainMenuLevelButtonController bulunamadı — Devam iptal.");
             return;
         }
 
@@ -221,7 +236,110 @@ public sealed class GearCupPreviewScreen : MonoBehaviour
         view.safeArea.offsetMin = view.safeArea.offsetMax = Vector2.zero;
         var size = view.safeArea.rect.size;
         float scale = Mathf.Min(size.x / 1080f, size.y / 1920f);
-        if (scale > 0f) view.design.localScale = Vector3.one * scale;
+        if (scale <= 0f) return;
+        view.design.localScale = Vector3.one * scale;
+
+        BuildFrame();
+        if (config == null) return;
+        // Spare safe-area height above the centred design, in design units (0 on 16:9 and wider screens).
+        float lift = Mathf.Clamp((size.y / scale - 1920f) * 0.5f, 0f, config.maxHeaderLift);
+        float titleY = config.titleY + lift;
+        SetY(view.title != null ? view.title.rectTransform : null, titleY);
+        SetY(titlePlate, titleY);
+        SetY(view.timer != null ? view.timer.rectTransform.parent as RectTransform : null, config.timerY + lift);
+        SetY(view.info != null ? (RectTransform)view.info.transform : null, titleY);
+        SetY(view.close != null ? (RectTransform)view.close.transform : null, titleY);
+
+        if (view.previewLabel != null)
+        {
+            // Spare space below the design equals the space above it (the design is centred).
+            float spare = Mathf.Max(0f, (size.y / scale - 1920f) * 0.5f);
+            var notice = view.previewLabel;
+            notice.fontSizeMax = config.noticeFontSize;
+            notice.rectTransform.sizeDelta = new Vector2(notice.rectTransform.sizeDelta.x, config.noticeFontSize * 1.3f);
+            SetY(notice.rectTransform, Mathf.Min(config.noticeMaxY, -1920f - spare + config.noticeBottomInset));
+        }
+
+        if (view.hero != null)
+        {
+            // Keep the hero clear of the header: shrink around the platform bottom only when space runs out.
+            if (!heroCaptured) { heroHomeY = view.hero.anchoredPosition.y; heroCaptured = true; }
+            float headerBottom = config.timerY + lift - 33f;
+            float span = config.heroTopY - config.heroBottomY;
+            float heroScale = span > 0f ? Mathf.Clamp((headerBottom - config.heroBottomY) / span, 0.75f, 1f) : 1f;
+            view.hero.localScale = Vector3.one * heroScale;
+            SetY(view.hero, config.heroBottomY + (heroHomeY - config.heroBottomY) * heroScale);
+        }
+    }
+
+    // One-time runtime chrome over the scene-authored layout: framed team list and tilted title plate.
+    private void BuildFrame()
+    {
+        if (frameBuilt || config == null) return;
+        frameBuilt = true;
+        var sprite = config.listPanel;
+
+        if (view.teams != null && view.teams.Length > 0)
+        {
+            float center = (config.listPanelTop + config.listPanelBottom) * 0.5f;
+            float first = center + config.teamRowStep * (view.teams.Length - 1) * 0.5f;
+            RectTransform firstRow = null;
+            for (int i = 0; i < view.teams.Length; i++)
+            {
+                var root = view.teams[i]?.rank != null ? view.teams[i].rank.rectTransform.parent as RectTransform : null;
+                if (root == null) continue;
+                if (firstRow == null) firstRow = root;
+                SetY(root, first - i * config.teamRowStep);
+                root.localScale = Vector3.one * config.teamRowScale;
+            }
+            if (sprite != null && firstRow != null)
+            {
+                var rowSize = firstRow.rect.size * config.teamRowScale;
+                var panel = FramePiece("TeamListPanel", sprite, config.listPanelBorderScale, firstRow.GetSiblingIndex());
+                panel.anchoredPosition = new Vector2(0f, center);
+                panel.sizeDelta = new Vector2(rowSize.x + config.listPanelPadding * 2f,
+                    config.teamRowStep * (view.teams.Length - 1) + rowSize.y + config.listPanelPaddingY * 2f);
+            }
+        }
+
+        if (view.title != null)
+        {
+            var tilt = new Vector3(0f, 0f, config.titleTilt);
+            var title = view.title.rectTransform;
+            title.sizeDelta = config.titleTextSize;
+            title.localEulerAngles = tilt;
+            if (sprite != null)
+            {
+                titlePlate = FramePiece("TitlePlate", sprite, config.titlePlateBorderScale, title.GetSiblingIndex());
+                titlePlate.anchoredPosition = new Vector2(title.anchoredPosition.x, title.anchoredPosition.y);
+                titlePlate.sizeDelta = config.titlePlateSize;
+                titlePlate.localEulerAngles = tilt;
+            }
+        }
+    }
+
+    private RectTransform FramePiece(string name, Sprite sprite, float borderScale, int siblingIndex)
+    {
+        var go = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        go.layer = view.design.gameObject.layer;
+        var rect = (RectTransform)go.transform;
+        rect.SetParent(view.design, false);
+        rect.SetSiblingIndex(siblingIndex);
+        rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 1f);
+        var image = go.GetComponent<Image>();
+        image.sprite = sprite;
+        image.type = Image.Type.Sliced;
+        image.pixelsPerUnitMultiplier = borderScale;
+        image.raycastTarget = false;
+        return rect;
+    }
+
+    private static void SetY(RectTransform target, float y)
+    {
+        if (target == null) return;
+        var position = target.anchoredPosition;
+        position.y = y;
+        target.anchoredPosition = position;
     }
 
     private void Refresh()
@@ -347,8 +465,18 @@ public sealed class GearCupPreviewScreen : MonoBehaviour
     {
         if (DateTime.UtcNow < GearCupState.End) return;
         Hide();
+        ShowInvitation();
+    }
+
+    private void ShowInvitation()
+    {
+        if (IsInvitationVisible) return;
         if (joinPopup == null) joinPopup = GearCupJoinPopup.Create(transform.parent, config);
         joinPopup.Show(this);
+        if (!joinPopup.gameObject.activeInHierarchy) return;
+        string cycle = GearCupRules.SeasonKey(GearCupRules.SeasonStart(DateTime.UtcNow, config.seasonHours));
+        PlayerPrefs.SetString(GearCupState.InvitationAskedKey, cycle);
+        PlayerPrefs.Save();
     }
 
     private void PresentResult()

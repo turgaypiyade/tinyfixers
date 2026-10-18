@@ -5,6 +5,18 @@
       "code": "tr",
       "entries": [
         {
+          "key": "hint_obstacle_rhodes_statue_name",
+          "value": "Rodos Heykeli"
+        },
+        {
+          "key": "hint_obstacle_rhodes_statue",
+          "value": "Bu 2×2 heykel yalnız special ile hasar alır. Her vuruşta bir aşaması parçalanır; dört special vuruşuyla tamamen kalkar. Normal eşleşmeler ve güçlendiriciler hasar vermez."
+        },
+        {
+          "key": "welcome_back_reward_title",
+          "value": "TEKRAR HOŞ GELDİN!"
+        },
+        {
           "key": "gearcup_unlock",
           "value": "{0}. seviyede açılır."
         },
@@ -1561,6 +1573,34 @@
           "value": "Wonder Karıştırıcı!"
         },
         {
+          "key": "joker_title_paint",
+          "value": "Wonder Boya Kovası!"
+        },
+        {
+          "key": "joker_hint_paint",
+          "value": "Bir taşa dokun: o renk 3 hamle boyunca tahtadan çıkar!"
+        },
+        {
+          "key": "joker_paint_reject_goal",
+          "value": "Bu renk hedeflerinde var, başka bir renk seç!"
+        },
+        {
+          "key": "joker_paint_reject_min",
+          "value": "Bu seviyede en az iki renk kalmalı."
+        },
+        {
+          "key": "joker_paint_reject_active",
+          "value": "Boya kovası zaten çalışıyor!"
+        },
+        {
+          "key": "joker_paint_reject_tile",
+          "value": "Normal bir taşa dokun."
+        },
+        {
+          "key": "shop_reward_paint",
+          "value": "Boya Kovası"
+        },
+        {
           "key": "lives_offer_title",
           "value": "Canın Bitti"
         },
@@ -2297,6 +2337,122 @@
           "value": "Terms&Privacy"
         },
         {
+          "key": "settings_terms_title",
+          "value": "Şartlar ve Gizlilik"
+        },
+        {
+          "key": "settings_terms_body",
+          "value": "Belgeleri okuyabilir ya da hesabını silebilirsin."
+        },
+        {
+          "key": "settings_terms_open_terms",
+          "value": "Kullanım Şartları"
+        },
+        {
+          "key": "settings_terms_open_privacy",
+          "value": "Gizlilik Politikası"
+        },
+        {
+          "key": "legal_title",
+          "value": "Hoş geldin!"
+        },
+        {
+          "key": "legal_body",
+          "value": "Oynamaya başlamadan önce Kullanım Şartları'nı ve Gizlilik Politikası'nı okuyup kabul etmen gerekiyor."
+        },
+        {
+          "key": "legal_body_update",
+          "value": "Kullanım Şartları'mızı ve Gizlilik Politikamızı güncelledik. Devam etmek için okuyup kabul etmen gerekiyor."
+        },
+        {
+          "key": "legal_accept",
+          "value": "Kabul Ediyorum"
+        },
+        {
+          "key": "legal_open_web",
+          "value": "Web'de Aç"
+        },
+        {
+          "key": "moderation_title",
+          "value": "Topluluk"
+        },
+        {
+          "key": "moderation_menu_body",
+          "value": "Bu mesajla ilgili ne yapmak istersin?"
+        },
+        {
+          "key": "moderation_report",
+          "value": "Şikâyet Et"
+        },
+        {
+          "key": "moderation_report_thanks",
+          "value": "Teşekkürler! Şikâyetini aldık; en geç 24 saat içinde inceleyeceğiz."
+        },
+        {
+          "key": "moderation_report_failed",
+          "value": "Şikâyet gönderilemedi. İnternet bağlantını kontrol edip tekrar dene."
+        },
+        {
+          "key": "moderation_block",
+          "value": "Oyuncuyu Engelle"
+        },
+        {
+          "key": "moderation_block_confirm",
+          "value": "{0} engellensin mi? Bu oyuncunun mesajlarını artık görmeyeceksin."
+        },
+        {
+          "key": "moderation_blocked",
+          "value": "Oyuncu engellendi."
+        },
+        {
+          "key": "moderation_name_rejected",
+          "value": "Bu ad uygunsuz kelimeler içeriyor. Lütfen başka bir ad seç."
+        },
+        {
+          "key": "settings_delete_account",
+          "value": "Hesabımı Sil"
+        },
+        {
+          "key": "settings_delete_account_sub",
+          "value": "İlerlemen kalıcı olarak silinir"
+        },
+        {
+          "key": "legal_card_terms_sub",
+          "value": "Oyunun kuralları ve hakların"
+        },
+        {
+          "key": "legal_card_privacy_sub",
+          "value": "Verilerini nasıl kullanıyor ve koruyoruz"
+        },
+        {
+          "key": "legal_card_viewed",
+          "value": "Göz attın"
+        },
+        {
+          "key": "account_delete_title",
+          "value": "Hesabı Sil"
+        },
+        {
+          "key": "account_delete_body",
+          "value": "Hesabın ve tüm verilerin kalıcı olarak silinecek: ilerlemen, altınların, jokerlerin, satın aldıkların, takım üyeliğin ve sohbet mesajların. Bu işlem geri alınamaz."
+        },
+        {
+          "key": "account_delete_confirm",
+          "value": "Kalıcı Olarak Sil"
+        },
+        {
+          "key": "account_delete_working",
+          "value": "Hesabın siliniyor… Bitince oyun baştan açılacak."
+        },
+        {
+          "key": "account_delete_failed",
+          "value": "Hesap silinemedi. İnternet bağlantını kontrol edip tekrar dene ya da hello@wondigames.com adresine yaz."
+        },
+        {
+          "key": "account_delete_offline",
+          "value": "Hesabı silmek için internet bağlantısı gerekiyor. Bağlanıp tekrar dene."
+        },
+        {
           "key": "settings_title",
           "value": "Ayarlar"
         },
@@ -2601,6 +2757,42 @@
           "value": "Manzara Noktasını Tamamla"
         },
         {
+          "key": "wonder_mis7_name",
+          "value": "Ayasofya"
+        },
+        {
+          "key": "wonder_mis7_task_1",
+          "value": "İskeleyi Kur"
+        },
+        {
+          "key": "wonder_mis7_task_2",
+          "value": "Temeli Güçlendir"
+        },
+        {
+          "key": "wonder_mis7_task_3",
+          "value": "Duvarları Onar"
+        },
+        {
+          "key": "wonder_mis7_task_4",
+          "value": "Pencereleri Yenile"
+        },
+        {
+          "key": "wonder_mis7_task_5",
+          "value": "Yarım Kubbeleri Onar"
+        },
+        {
+          "key": "wonder_mis7_task_6",
+          "value": "Ana Kubbeyi Kapla"
+        },
+        {
+          "key": "wonder_mis7_task_7",
+          "value": "Minareyi Restore Et"
+        },
+        {
+          "key": "wonder_mis7_task_8",
+          "value": "Meydanı Düzenle"
+        },
+        {
           "key": "purchase_celebration_title",
           "value": "HARİKA!"
         },
@@ -2729,6 +2921,14 @@
           "value": "Düşman bu aleti tahtaya fırlatır! Yanında KENDİ RENGİNDEKİ taşlarla eşleşme yap ya da özel taş kullan. Üstündeki sayı her düşman turunda azalır. Sayı bitmeden kıramazsan alet ekranına fırlar: 3 saniye hamle yapamazsın ve düşman yeniden saldırır."
         },
         {
+          "key": "hint_obstacle_colorcrate_name",
+          "value": "Renkli Sandık"
+        },
+        {
+          "key": "hint_obstacle_colorcrate",
+          "value": "Yalnızca KENDİ RENGİNDEKİ taşlarla yanında eşleşme yaparak ya da special ile kırılır. Üç vuruşta parçalanır: sağlam, çatlak, kırık."
+        },
+        {
           "key": "hint_obstacle_lasercannon_name",
           "value": "Lazer Topu"
         },
@@ -2783,12 +2983,100 @@
         {
           "key": "tutorial_override_activated_desc",
           "value": "Spark Orb'u bir taşla değiştir: o renkteki tüm taşları temizler!"
+        },
+        {
+          "key": "hint_obstacle_waterlily_name",
+          "value": "Nilüfer"
+        },
+        {
+          "key": "hint_obstacle_waterlily",
+          "value": "Dört yapraklı nilüfere yalnız special hasar verir. İlk yaprak düşünce kalan yaprakları normal eşleşmeler veya special ile dökebilirsin. Yanındaki special bir hamle daha kalırsa onu yutar. Yuttuğu special yalnız special vuruşuyla dışarı çıkar ve tahtada yeniden kullanılabilir. Son olarak altındaki çimi temizle."
+        },
+        {
+          "key": "hint_obstacle_billiardpocket_name",
+          "value": "Bilardo Deliği"
+        },
+        {
+          "key": "hint_obstacle_billiardpocket",
+          "value": "Yakındaki taşları temizleyerek bilardo toplarını deliğe yönlendir. Delik kırılmaz; içine giren toplar toplanır."
+        },
+        {
+          "key": "progress_goal_LineH",
+          "value": "{0} yatay roket kullan"
+        },
+        {
+          "key": "progress_event_name",
+          "value": "Haftalık Görevler"
+        },
+        {
+          "key": "progress_info_title",
+          "value": "Etkinlik Görevi"
+        },
+        {
+          "key": "progress_info_progress",
+          "value": "İlerleme: {0} / {1}"
+        },
+        {
+          "key": "progress_goal_LineV",
+          "value": "{0} dikey roket kullan"
+        },
+        {
+          "key": "progress_goal_LineAny",
+          "value": "{0} roket kullan"
+        },
+        {
+          "key": "progress_goal_TileCleared_Gear",
+          "value": "{0} sarı taş kır"
+        },
+        {
+          "key": "progress_goal_TileCleared_Core",
+          "value": "{0} kırmızı taş kır"
+        },
+        {
+          "key": "progress_goal_TileCleared_Bolt",
+          "value": "{0} mavi taş kır"
+        },
+        {
+          "key": "progress_goal_TileCleared_Plate",
+          "value": "{0} yeşil taş kır"
+        },
+        {
+          "key": "progress_goal_TileCleared_Any",
+          "value": "{0} renkli taş kır"
+        },
+        {
+          "key": "progress_goal_ObstacleCleared",
+          "value": "{0} engel temizle"
+        },
+        {
+          "key": "progress_goal_SpecialCreated",
+          "value": "{0} special oluştur"
+        },
+        {
+          "key": "progress_goal_LevelWon",
+          "value": "{0} seviye kazan"
+        },
+        {
+          "key": "progress_goal_FirstTryWin",
+          "value": "{0} seviyeyi ilk denemede kazan"
         }
       ]
     },
     {
       "code": "en",
       "entries": [
+        {
+          "key": "hint_obstacle_rhodes_statue_name",
+          "value": "Rhodes Statue"
+        },
+        {
+          "key": "hint_obstacle_rhodes_statue",
+          "value": "Only specials damage this 2×2 statue. Each hit breaks another stage; four special hits clear it completely. Normal matches and boosters do not damage it."
+        },
+        {
+          "key": "welcome_back_reward_title",
+          "value": "WELCOME BACK!"
+        },
         {
           "key": "gearcup_unlock",
           "value": "Unlocks at level {0}."
@@ -3191,7 +3479,7 @@
         },
         {
           "key": "rising_title",
-          "value": "TIRMANIŞ"
+          "value": "THE CLIMB"
         },
         {
           "key": "rising_level",
@@ -3275,7 +3563,7 @@
         },
         {
           "key": "level_end_loss_safari",
-          "value": "TIRMANIŞ"
+          "value": "THE CLIMB"
         },
         {
           "key": "level_end_loss_alliance",
@@ -4346,6 +4634,34 @@
           "value": "Wonder Shuffler!"
         },
         {
+          "key": "joker_title_paint",
+          "value": "Wonder Paint Bucket!"
+        },
+        {
+          "key": "joker_hint_paint",
+          "value": "Tap a tile: that color leaves the board for 3 moves!"
+        },
+        {
+          "key": "joker_paint_reject_goal",
+          "value": "This color is in your goals, pick another one!"
+        },
+        {
+          "key": "joker_paint_reject_min",
+          "value": "At least two colors must stay on this level."
+        },
+        {
+          "key": "joker_paint_reject_active",
+          "value": "The paint bucket is already working!"
+        },
+        {
+          "key": "joker_paint_reject_tile",
+          "value": "Tap a regular tile."
+        },
+        {
+          "key": "shop_reward_paint",
+          "value": "Paint Bucket"
+        },
+        {
           "key": "lives_offer_title",
           "value": "Out of Lives"
         },
@@ -4743,7 +5059,7 @@
         },
         {
           "key": "rising_intro_title",
-          "value": "TIRMANIŞ IS STARTING!"
+          "value": "THE CLIMB IS STARTING!"
         },
         {
           "key": "rising_intro_ready",
@@ -4783,7 +5099,7 @@
         },
         {
           "key": "safari_reward_event",
-          "value": "TIRMANIŞ COMPLETE"
+          "value": "CLIMB COMPLETE"
         },
         {
           "key": "safari_reward_title",
@@ -4815,7 +5131,7 @@
         },
         {
           "key": "safari_join_title",
-          "value": "TIRMANIŞ"
+          "value": "THE CLIMB"
         },
         {
           "key": "safari_join_prize",
@@ -4907,7 +5223,7 @@
         },
         {
           "key": "rising_icon_label",
-          "value": "TIRMANIŞ"
+          "value": "THE CLIMB"
         },
         {
           "key": "prelevel_booster_select",
@@ -5080,6 +5396,122 @@
         {
           "key": "settings_terms",
           "value": "Terms&Privacy"
+        },
+        {
+          "key": "settings_terms_title",
+          "value": "Terms & Privacy"
+        },
+        {
+          "key": "settings_terms_body",
+          "value": "Read our documents or delete your account."
+        },
+        {
+          "key": "settings_terms_open_terms",
+          "value": "Terms of Service"
+        },
+        {
+          "key": "settings_terms_open_privacy",
+          "value": "Privacy Policy"
+        },
+        {
+          "key": "legal_title",
+          "value": "Welcome!"
+        },
+        {
+          "key": "legal_body",
+          "value": "Before you start playing, please read and accept our Terms of Service and Privacy Policy."
+        },
+        {
+          "key": "legal_body_update",
+          "value": "We have updated our Terms of Service and Privacy Policy. Please read and accept them to continue."
+        },
+        {
+          "key": "legal_accept",
+          "value": "I Accept"
+        },
+        {
+          "key": "legal_open_web",
+          "value": "Open on Web"
+        },
+        {
+          "key": "moderation_title",
+          "value": "Community"
+        },
+        {
+          "key": "moderation_menu_body",
+          "value": "What would you like to do with this message?"
+        },
+        {
+          "key": "moderation_report",
+          "value": "Report"
+        },
+        {
+          "key": "moderation_report_thanks",
+          "value": "Thanks! We've received your report and will review it within 24 hours."
+        },
+        {
+          "key": "moderation_report_failed",
+          "value": "We couldn't send the report. Check your internet connection and try again."
+        },
+        {
+          "key": "moderation_block",
+          "value": "Block Player"
+        },
+        {
+          "key": "moderation_block_confirm",
+          "value": "Block {0}? You won't see this player's messages anymore."
+        },
+        {
+          "key": "moderation_blocked",
+          "value": "Player blocked."
+        },
+        {
+          "key": "moderation_name_rejected",
+          "value": "This name contains inappropriate words. Please choose another one."
+        },
+        {
+          "key": "settings_delete_account",
+          "value": "Delete My Account"
+        },
+        {
+          "key": "settings_delete_account_sub",
+          "value": "Your progress is deleted for good"
+        },
+        {
+          "key": "legal_card_terms_sub",
+          "value": "The rules of the game and your rights"
+        },
+        {
+          "key": "legal_card_privacy_sub",
+          "value": "How we use and protect your data"
+        },
+        {
+          "key": "legal_card_viewed",
+          "value": "Viewed"
+        },
+        {
+          "key": "account_delete_title",
+          "value": "Delete Account"
+        },
+        {
+          "key": "account_delete_body",
+          "value": "Your account and all your data will be permanently deleted: your progress, coins, boosters, purchases, team membership and chat messages. This cannot be undone."
+        },
+        {
+          "key": "account_delete_confirm",
+          "value": "Delete Permanently"
+        },
+        {
+          "key": "account_delete_working",
+          "value": "Deleting your account… The game will restart when it is done."
+        },
+        {
+          "key": "account_delete_failed",
+          "value": "We couldn't delete your account. Check your internet connection and try again, or email hello@wondigames.com."
+        },
+        {
+          "key": "account_delete_offline",
+          "value": "You need an internet connection to delete your account. Connect and try again."
         },
         {
           "key": "settings_title",
@@ -5386,6 +5818,42 @@
           "value": "Complete the Scenic Lookout"
         },
         {
+          "key": "wonder_mis7_name",
+          "value": "Hagia Sophia"
+        },
+        {
+          "key": "wonder_mis7_task_1",
+          "value": "Set Up the Scaffolding"
+        },
+        {
+          "key": "wonder_mis7_task_2",
+          "value": "Reinforce the Foundation"
+        },
+        {
+          "key": "wonder_mis7_task_3",
+          "value": "Repair the Walls"
+        },
+        {
+          "key": "wonder_mis7_task_4",
+          "value": "Restore the Windows"
+        },
+        {
+          "key": "wonder_mis7_task_5",
+          "value": "Repair the Half-Domes"
+        },
+        {
+          "key": "wonder_mis7_task_6",
+          "value": "Reseal the Main Dome"
+        },
+        {
+          "key": "wonder_mis7_task_7",
+          "value": "Restore the Minaret"
+        },
+        {
+          "key": "wonder_mis7_task_8",
+          "value": "Tidy Up the Square"
+        },
+        {
           "key": "purchase_celebration_title",
           "value": "AWESOME!"
         },
@@ -5399,7 +5867,7 @@
         },
         {
           "key": "notif_event_rising_title",
-          "value": "TIRMANIŞ has started! 🎉"
+          "value": "The Climb has started! 🎉"
         },
         {
           "key": "notif_event_rising_body",
@@ -5415,7 +5883,7 @@
         },
         {
           "key": "notif_event_name_rising",
-          "value": "TIRMANIŞ"
+          "value": "The Climb"
         },
         {
           "key": "notif_event_name_bridge",
@@ -5514,6 +5982,14 @@
           "value": "The enemy throws this tool onto the board! Match pieces of ITS COLOR next to it, or use a special. The number drops every enemy turn. If you don't break it in time, the tool flies at your screen: you can't move for 3 seconds and the enemy attacks again."
         },
         {
+          "key": "hint_obstacle_colorcrate_name",
+          "value": "Color Crate"
+        },
+        {
+          "key": "hint_obstacle_colorcrate",
+          "value": "Breaks only with matches of ITS OWN COLOR next to it, or with specials. Takes three hits: solid, cracked, broken."
+        },
+        {
           "key": "hint_obstacle_lasercannon_name",
           "value": "Laser Cannon"
         },
@@ -5568,6 +6044,82 @@
         {
           "key": "tutorial_override_activated_desc",
           "value": "Swap the Spark Orb with a tile: it clears every tile of that color!"
+        },
+        {
+          "key": "hint_obstacle_waterlily_name",
+          "value": "Water Lily"
+        },
+        {
+          "key": "hint_obstacle_waterlily",
+          "value": "Four petals need a special hit. Once a petal falls, matches or specials remove the remaining petals. A nearby special is swallowed if it stays for another move. Only a special hit releases it onto a reusable board cell. Clear the grass underneath to finish."
+        },
+        {
+          "key": "hint_obstacle_billiardpocket_name",
+          "value": "Billiard Pocket"
+        },
+        {
+          "key": "hint_obstacle_billiardpocket",
+          "value": "Guide billiard balls into the pocket by clearing nearby stones. The pocket cannot be broken; each ball that enters is collected."
+        },
+        {
+          "key": "progress_goal_LineH",
+          "value": "Use {0} horizontal rockets"
+        },
+        {
+          "key": "progress_event_name",
+          "value": "Weekly Missions"
+        },
+        {
+          "key": "progress_info_title",
+          "value": "Event Goal"
+        },
+        {
+          "key": "progress_info_progress",
+          "value": "Progress: {0} / {1}"
+        },
+        {
+          "key": "progress_goal_LineV",
+          "value": "Use {0} vertical rockets"
+        },
+        {
+          "key": "progress_goal_LineAny",
+          "value": "Use {0} rockets"
+        },
+        {
+          "key": "progress_goal_TileCleared_Gear",
+          "value": "Clear {0} yellow stones"
+        },
+        {
+          "key": "progress_goal_TileCleared_Core",
+          "value": "Clear {0} red stones"
+        },
+        {
+          "key": "progress_goal_TileCleared_Bolt",
+          "value": "Clear {0} blue stones"
+        },
+        {
+          "key": "progress_goal_TileCleared_Plate",
+          "value": "Clear {0} green stones"
+        },
+        {
+          "key": "progress_goal_TileCleared_Any",
+          "value": "Clear {0} colored stones"
+        },
+        {
+          "key": "progress_goal_ObstacleCleared",
+          "value": "Clear {0} obstacles"
+        },
+        {
+          "key": "progress_goal_SpecialCreated",
+          "value": "Create {0} specials"
+        },
+        {
+          "key": "progress_goal_LevelWon",
+          "value": "Win {0} levels"
+        },
+        {
+          "key": "progress_goal_FirstTryWin",
+          "value": "Win {0} levels on the first attempt"
         }
       ]
     }

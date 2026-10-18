@@ -62,7 +62,8 @@ public static class TopHudApplyTool
         var img = topBar != null ? topBar.GetComponent<Image>() : null;
         if (img == null)
         {
-            Debug.LogWarning($"[TopHud] {label}: TopBar/Image bulunamadı, atlandı.");
+            if (GameDiagnostics.EditorTools)
+                Debug.LogWarning($"[TopHud] {label}: TopBar/Image bulunamadı, atlandı.");
             return 0;
         }
 
@@ -82,7 +83,10 @@ public static class TopHudApplyTool
         if (content != null)
             content.offsetMax = new Vector2(content.offsetMax.x, -ContentTop);
         else
-            Debug.LogWarning($"[TopHud] {label}: Body/ScrollView bulunamadı — içerik el ile kaydırılmalı.");
+            {
+                if (GameDiagnostics.EditorTools)
+                    Debug.LogWarning($"[TopHud] {label}: Body/ScrollView bulunamadı — içerik el ile kaydırılmalı.");
+            }
 
         EditorSceneManager.MarkSceneDirty(panel.gameObject.scene);
         return 1;

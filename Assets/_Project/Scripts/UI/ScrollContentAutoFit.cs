@@ -36,7 +36,6 @@ public sealed class ScrollContentAutoFit : MonoBehaviour
             c.sizeDelta = size;
             c.position = worldPos;          // yerini koru
         }
-        Debug.Log($"[ScrollContentAutoFit] {content.childCount} çocuk sabit anchor'a çevrildi.", this);
     }
 
     [ContextMenu("2) Fit Content To Children")]
@@ -62,7 +61,5 @@ public sealed class ScrollContentAutoFit : MonoBehaviour
                 if (c != null) c.anchoredPosition -= shift;
             }
         }
-
-        Debug.Log($"[ScrollContentAutoFit] Content boyutu ayarlandı: {size} (çocuk kutusu {b.size}).", this);
     }
 }

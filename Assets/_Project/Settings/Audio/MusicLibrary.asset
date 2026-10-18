@@ -13,12 +13,12 @@ MonoBehaviour:
   m_Name: MusicLibrary
   m_EditorClassIdentifier: Assembly-CSharp::MusicLibrary
   tracks:
-  - displayName: Bolt Patch Brigade
+  - displayName: "Paws on Deck"
     clip: {fileID: 8300000, guid: a75116037af37490bb9f00591892d8d6, type: 3}
-    volume: 0.657
-  - displayName: Relaxing Sound
+    volume: 0.7
+  - displayName: "Sunset over the Wonders"
     clip: {fileID: 8300000, guid: 8a52f294a8fce4f9da78cec97ffa7a72, type: 3}
-    volume: 0.646
-  - displayName: Scotish Sound
+    volume: 0.7
+  - displayName: "Rumbo's Riot"
     clip: {fileID: 8300000, guid: 7dcc735726b4f421ab410e3a791e6a44, type: 3}
-    volume: 0.903
+    volume: 0.7

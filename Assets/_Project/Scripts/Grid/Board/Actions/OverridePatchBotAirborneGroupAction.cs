@@ -84,29 +84,23 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
             yield break;
 
         float startTime = Time.realtimeSinceStartup;
-        Debug.Log($"[OverridePatchBotAirborne] BEGIN sources={sourceCells.Count}");
 
         var patchbotService = new PatchbotComboService(board);
         var coordinator = new PatchBotTargetCoordinator(board, patchbotService);
         var bots = BuildAndLiftBots(coordinator);
         ClearPulseSourceForPulseMode();
 
-        Debug.Log($"[OverridePatchBotAirborne] takeoff count={bots.Count} t={Time.realtimeSinceStartup - startTime:0.000}s");
-
         if (bots.Count == 0)
             yield break;
 
         // Cascade boyunca botlar hover'da, board match'leri ve düşüşü çalışır.
         yield return RunInitialCascadeWhileHovering(sequencer);
-        Debug.Log($"[OverridePatchBotAirborne] cascade_done t={Time.realtimeSinceStartup - startTime:0.000}s");
 
         // Cascade bitti. Her bot intent'ini yeniden değerlendirir, dive hedefini netleştirir.
         ResolveAllDiveTargets(bots, coordinator);
-        Debug.Log($"[OverridePatchBotAirborne] targets_resolved t={Time.realtimeSinceStartup - startTime:0.000}s");
 
         // Tüm botlar AYNI ANDA dive eder, AYNI ANDA iner. Hepsi indikten sonra TEK clear.
         yield return SynchronizedDiveAndClear(sequencer, bots, patchbotService, coordinator);
-        Debug.Log($"[OverridePatchBotAirborne] END t={Time.realtimeSinceStartup - startTime:0.000}s");
 
         DestroyGhosts(bots);
     }
@@ -451,7 +445,6 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
     private IEnumerator RunInitialCascadeWhileHovering(ActionSequencer sequencer)
     {
         var cascades = board.CascadeLogic.CalculateCascades();
-        Debug.Log($"[OverridePatchBotAirborne] source_cascade actions={(cascades != null ? cascades.Count : 0)}");
 
         if (cascades == null || cascades.Count == 0)
             yield break;
@@ -477,11 +470,8 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
             if (!RefreshDiveTarget(bot, coordinator))
             {
                 bot.hasTarget = false;
-                Debug.Log($"[OverridePatchBotAirborne] no_target step={i} from={bot.sourceCell}");
                 continue;
             }
-
-            Debug.Log($"[OverridePatchBotAirborne] target_resolved step={i} from={bot.sourceCell} target=({bot.targetX},{bot.targetY})");
         }
     }
 
@@ -527,15 +517,11 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
             board.StartCoroutine(CoSynchronizedDive(bot, coordinator));
         }
 
-        Debug.Log($"[OverridePatchBotAirborne] sync_dive_start count={diveCount} duration={SYNC_DIVE_DURATION}");
-
         if (diveCount == 0)
             yield break;
 
         // ─── PHASE 2: Tüm dive'lar bitene kadar sabit süreli bekle ───
         yield return new WaitForSeconds(SYNC_DIVE_DURATION);
-
-        Debug.Log($"[OverridePatchBotAirborne] all_arrived");
 
         // ─── PHASE 2.5: Ghost'ları hedef konuma SNAP et ve ANINDA gizle ───
         // SetActive(false) immediate'tır — Object.Destroy'un aksine end-of-frame'e
@@ -624,8 +610,6 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
             }
         }
 
-        Debug.Log($"[OverridePatchBotAirborne] group_clear affected={groupCtx.Affected.Count} cells={groupCtx.AffectedCells.Count}");
-
         // ─── PHASE 5: TEK MatchClearAction — sequencer'ı bypass eden direct call ───
         if (groupCtx.Affected.Count > 0 || groupCtx.AffectedCells.Count > 0 || groupCtx.ImpactCells.Count > 0)
         {
@@ -670,7 +654,6 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
         if (!board.TryStartFlowGravity())
         {
             var cascades = board.CascadeLogic.CalculateCascades();
-            Debug.Log($"[OverridePatchBotAirborne] final_cascade actions={(cascades != null ? cascades.Count : 0)}");
             if (cascades != null)
             {
                 for (int i = 0; i < cascades.Count; i++)
@@ -711,7 +694,6 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
 
         if (impactBot != null && pulseRuntime != null && pulseCoreSpecial != null)
         {
-            Debug.Log($"[OverridePatchBotAirborne] pulsecore_impact target=({impactBot.targetX},{impactBot.targetY})");
 
             if (pulseRuntime.BuildPulseBurstChain != null)
             {
@@ -780,7 +762,6 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
         if (!board.TryStartFlowGravity())
         {
             var cascades = board.CascadeLogic.CalculateCascades();
-            Debug.Log($"[OverridePatchBotAirborne] final_cascade actions={(cascades != null ? cascades.Count : 0)}");
             if (cascades != null)
             {
                 for (int i = 0; i < cascades.Count; i++)

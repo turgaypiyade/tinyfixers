@@ -54,7 +54,8 @@ public static class GameLocalization
         if (TryGetValue(defaultLanguage, key, out value))
             return value;
 
-        Debug.LogWarning($"[GameLocalization] Key not found: '{key}'");
+        if (GameDiagnostics.CriticalErrors)
+            Debug.LogWarning($"[GameLocalization] Key not found: '{key}'");
         return key;
     }
 

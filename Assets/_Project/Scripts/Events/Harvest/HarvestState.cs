@@ -95,7 +95,6 @@ public static class HarvestState
         PlayerPrefs.SetInt(KeyPendingTrowels, PlayerPrefs.GetInt(KeyPendingTrowels, 0) + trowels);
         PlayerPrefs.SetInt(KeyPendingGold, PlayerPrefs.GetInt(KeyPendingGold, 0) + gold);
         GameAnalytics.LogEvent("harvest_trowels_to_gold", ("trowels", trowels), ("gold", gold));
-        Debug.Log($"[Harvest] Event bitti → {trowels} kürek = {gold} altın.");
     }
 
     /// Duyurulmamış sezon sonu dönüşümü varsa alır ve temizler (ana menü bir kez gösterir).
@@ -151,7 +150,6 @@ public static class HarvestState
         if (IsFinished(cfg)) return;
         int amount = TrowelsForWin(cfg, PlayerStats.LastClearWasFirstTry, IsBossLevelActive());
         AddTrowels(amount);
-        Debug.Log($"[Harvest] Level kazanıldı → +{amount} kürek (toplam {Trowels}).");
     }
 
     // Kazanılan/oynanan level boss düellosu mu? (oyun sahnesindeki board'dan okunur)

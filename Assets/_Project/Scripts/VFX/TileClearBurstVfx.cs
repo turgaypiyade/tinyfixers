@@ -40,7 +40,6 @@ public static class TileClearBurstVfx
     private static readonly Color SHARD_COLOR_B = new Color(1f, 0.65f, 0.05f, 1f); // koyu altın
 
     // Debug: Koordinat sorununu araştırırken true yap, sonra false'a çevir
-    public static bool DebugPositionLogging = false;
 
     /// <summary>
     /// Taşın bulunduğu yerde burst efektini oynatır.
@@ -150,10 +149,6 @@ public static class TileClearBurstVfx
             rootRt.position = worldPosition;
         }
 
-        if (DebugPositionLogging)
-        {
-            Debug.Log($"[Burst] parent={parent.name} target_world={worldPosition:F2} actual_world={rootRt.position:F2} anchored={rootRt.anchoredPosition:F2}");
-        }
 
         // === 1) Halka (glow ring) ===
         var ring = CreateRing(rootRt, tileSize);

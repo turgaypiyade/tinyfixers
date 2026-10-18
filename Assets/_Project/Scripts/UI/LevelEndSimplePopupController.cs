@@ -134,6 +134,16 @@ public class LevelEndSimplePopupController : MonoBehaviour
     private bool failSecondStage;   // false: ilk cancel kayıpları kaydırır; true: ikinci cancel → ana menü
     private bool _hasLosses;        // gösterilecek kayıp var mı (RefreshFailLossSummary set eder)
 
+    // Balon sayfaları: balona en fazla lossItemsPerPage öğe sığar. Fazlası varsa X → balon sola kayıp çıkar,
+    // sıradaki öğelerle sağdan yeniden gelir; son sayfadan sonraki X gerçekten vazgeçirir.
+    [Tooltip("Kayıp balonunda bir seferde gösterilen öğe sayısı (fazlası X ile sıradaki sayfada).")]
+    [SerializeField, Min(1)] private int lossItemsPerPage = 3;
+    private System.Collections.Generic.List<(Sprite icon, string label, int amount, bool achieved)> _lossItems;
+    private int _lossPage;
+    private bool _lossPaging;       // sayfa geçiş animasyonu sürüyor → X yok sayılır (çift tık sayfa atlamasın)
+    private bool _lossPanelHomeSet;
+    private Vector2 _lossPanelHome; // panelin sahnedeki yazılı konumu (kaydırmalar buna göre)
+
     [Header("Success - Star Images")]
     [SerializeField] private Image[] starImages;
     [SerializeField] private Sprite starFilledSprite;
@@ -363,6 +373,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
         successPopupShown = false;
         successReturnQueued = false;
         failSecondStage = false;
+        _lossPaging = false;
         failSettleWaitRunning = false;
         failConfirmRunning = false;
         isBonusRoundRunning = false;
@@ -406,7 +417,6 @@ public class LevelEndSimplePopupController : MonoBehaviour
         // Arka plan job'ları (deferred Override/PulseCore clear'ları) da bitmiş olmalı.
         if (!IsBoardWorkingForLevelEnd())
         {
-            Debug.Log("[LevelEnd] Update fallback: board idle, moves exhausted, evaluating.");
             endCheckQueued = false;
             EvaluateAndShowIfEnded();
             return;
@@ -416,8 +426,6 @@ public class LevelEndSimplePopupController : MonoBehaviour
         bool tapped = UnityEngine.InputSystem.Pointer.current != null
             && UnityEngine.InputSystem.Pointer.current.press.wasPressedThisFrame;
         if (!tapped) return;
-
-        Debug.Log("[LevelEnd] User tap: skipping out-of-moves animation, showing popup now.");
         levelEndForceDeadlineUnscaled = Time.unscaledTime;
         endCheckQueued = false;
         EvaluateAndShowIfEnded();
@@ -487,6 +495,9 @@ public class LevelEndSimplePopupController : MonoBehaviour
             return;
         }
 
+        if (_lossPaging)
+            return;
+
         // 1. cancel: kaybedecekleri sağdan kaydırıp göster (ana menüye gitme). BtnContinue aynı kalır.
         if (!failSecondStage && _hasLosses && lossSlidePanel != null)
         {
@@ -503,8 +514,54 @@ public class LevelEndSimplePopupController : MonoBehaviour
             return;
         }
 
+        // Balonda gösterilmemiş kayıp kaldıysa: sıradaki sayfa (sola çık → sağdan gel).
+        if (failSecondStage && lossSlidePanel != null && HasNextLossPage())
+        {
+            StartCoroutine(ShowNextLossPage());
+            return;
+        }
+
         // 2. cancel (veya gösterilecek kayıp yok): hamle eklemeyi reddetti → GERÇEKTEN vazgeçti.
         GiveUpLevel();
+    }
+
+    private bool HasNextLossPage()
+        => _lossItems != null && (_lossPage + 1) * Mathf.Max(1, lossItemsPerPage) < _lossItems.Count;
+
+    private System.Collections.IEnumerator ShowNextLossPage()
+    {
+        _lossPaging = true;
+        yield return SlideOutToLeft(lossSlidePanel, lossSlideDuration * 0.8f);
+        RenderLossPage(_lossPage + 1);
+        yield return SlideInFromRight(lossSlidePanel, lossSlideDuration);
+        _lossPaging = false;
+    }
+
+    private System.Collections.IEnumerator SlideOutToLeft(RectTransform panel, float dur)
+    {
+        Vector2 home = LossPanelHome(panel);
+        float dist = (panel.parent is RectTransform p && p.rect.width > 1f) ? p.rect.width : Mathf.Max(panel.rect.width, 600f);
+        Vector2 end = home - new Vector2(dist, 0f);
+        float t = 0f, d = Mathf.Max(0.05f, dur);
+        while (t < d && panel != null)
+        {
+            t += Time.unscaledDeltaTime;
+            float k = Mathf.Clamp01(t / d);
+            panel.anchoredPosition = Vector2.LerpUnclamped(home, end, k * k * k);   // ease-in
+            yield return null;
+        }
+        if (panel != null) panel.anchoredPosition = end;
+    }
+
+    // Panelin sahnedeki (hedef) konumu bir kez alınır: kaydırma ortasında okunursa sayfa geçişi kayardı.
+    private Vector2 LossPanelHome(RectTransform panel)
+    {
+        if (!_lossPanelHomeSet && panel != null)
+        {
+            _lossPanelHome = panel.anchoredPosition;
+            _lossPanelHomeSet = true;
+        }
+        return _lossPanelHome;
     }
 
     // Devam reddedildi → level kaybedilmiş sayılır (hak zaten fail popup açılırken düştü).
@@ -558,7 +615,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
     private System.Collections.IEnumerator SlideInFromRight(RectTransform panel, float dur)
     {
-        Vector2 target = panel.anchoredPosition;   // sahnedeki yazılı (hedef) konum
+        Vector2 target = panel == lossSlidePanel ? LossPanelHome(panel) : panel.anchoredPosition;   // sahnedeki yazılı (hedef) konum
         float dist = (panel.parent is RectTransform p && p.rect.width > 1f) ? p.rect.width : Mathf.Max(panel.rect.width, 600f);
         Vector2 start = target + new Vector2(dist, 0f);
         panel.anchoredPosition = start;
@@ -634,7 +691,6 @@ public class LevelEndSimplePopupController : MonoBehaviour
             return;
 
         successReturnQueued = true;
-        Debug.Log("[LevelEnd] Success queued. Waiting board settle...");
 
         // Level kazanıldı: staging'deki event item'larını kalıcılaştır. Bonus round
         // bundan sonra koşar; oradaki temizlikler canlı (staging'siz) sayılır.
@@ -662,9 +718,8 @@ public class LevelEndSimplePopupController : MonoBehaviour
                 initialSettleElapsed += Time.unscaledDeltaTime;
                 if (initialSettleElapsed >= initialSettleTimeoutSeconds)
                 {
-                    Debug.LogWarning(
-                        $"[LevelEnd] Success initial settle timeout. " +
-                        DescribeBoardWorkForLevelEnd());
+                    if (GameDiagnostics.CriticalErrors)
+                        Debug.LogWarning($"[LevelEnd] Success initial settle timeout. " + DescribeBoardWorkForLevelEnd());
                     break;
                 }
             }
@@ -726,13 +781,10 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
         if (!goalsWereCompleted)
         {
-            Debug.LogWarning("[LevelEnd] Success cancelled; goals were not completed before bonus round.");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogWarning("[LevelEnd] Success cancelled; goals were not completed before bonus round.");
             yield break;
         }
-
-        Debug.Log(hardSkipBonusRoundRequested
-            ? "[LevelEnd] Bonus round hard skipped. Showing success popup."
-            : "[LevelEnd] Board settled. Showing success popup.");
 
         ShowSuccessPopup();
     }
@@ -746,9 +798,8 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
             if (elapsed >= timeoutSeconds)
             {
-                Debug.LogWarning(
-                    $"[LevelEnd] Wait timeout. context={context}, " +
-                    DescribeBoardWorkForLevelEnd());
+                if (GameDiagnostics.CriticalErrors)
+                    Debug.LogWarning($"[LevelEnd] Wait timeout. context={context}, " + DescribeBoardWorkForLevelEnd());
                 yield break;
             }
 
@@ -760,7 +811,6 @@ public class LevelEndSimplePopupController : MonoBehaviour
         if (successAnimationPlayer != null)
         {
             SetBlockerVisible(true);
-            Debug.Log("[LevelEnd] successAnimationPlayer assigned; animation starts.");
             yield return StartCoroutine(successAnimationPlayer.Play());
             ReturnToMainMenu();
             yield break;
@@ -768,7 +818,6 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
         if (!playSuccessVideoBeforeMainMenu || successVideoRoot == null || successVideoPlayer == null)
         {
-            Debug.Log("[LevelEnd] Success video disabled or missing references. Returning to main menu.");
             ReturnToMainMenu();
             yield break;
         }
@@ -782,7 +831,8 @@ public class LevelEndSimplePopupController : MonoBehaviour
         void HandleFinished(VideoPlayer player) => finished = true;
         void HandleError(VideoPlayer player, string message)
         {
-            Debug.LogWarning($"[LevelEnd] Success video error: {message}");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogWarning($"[LevelEnd] Success video error: {message}");
             finished = true;
         }
 
@@ -806,14 +856,13 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
         if (!successVideoPlayer.isPrepared)
         {
-            Debug.LogWarning("[LevelEnd] Success video prepare timeout. Returning to main menu.");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogWarning("[LevelEnd] Success video prepare timeout. Returning to main menu.");
             successVideoPlayer.loopPointReached -= HandleFinished;
             successVideoPlayer.errorReceived -= HandleError;
             ReturnToMainMenu();
             yield break;
         }
-
-        Debug.Log("[LevelEnd] Success video prepared. Playing.");
         successVideoPlayer.Play();
 
         float timer = 0f;
@@ -977,13 +1026,10 @@ public class LevelEndSimplePopupController : MonoBehaviour
         // Deadline'ı ilk 0-hamle sinyalinde başlat. Aksi halde RunAfterIdle'in 3sn timeout'u
         // force-deadline'a eklenip safe reveal / geç efekt durumlarında fail beklemesi uzardı.
         StartLevelEndForceDeadlineIfOutOfMoves();
-
-        Debug.Log("[LevelEnd] RequestEvaluate queued. Waiting idle...");
         endCheckQueued = true;
 
         board.RunAfterIdle(() =>
         {
-            Debug.Log("[LevelEnd] Board idle -> Evaluate");
             endCheckQueued = false;
             EvaluateAndShowIfEnded();
         });
@@ -1023,12 +1069,6 @@ public class LevelEndSimplePopupController : MonoBehaviour
             }
             return;
         }
-
-        Debug.Log(
-            $"[LevelEnd] Evaluate. " +
-            $"RemainingMoves={board.RemainingMoves}, " +
-            $"GoalsCompleted={topHud.AreAllGoalsCompleted}, " +
-            DescribeBoardWorkForLevelEnd());
             
         if (topHud.AreAllGoalsCompleted)
         {
@@ -1047,8 +1087,6 @@ public class LevelEndSimplePopupController : MonoBehaviour
             BeginFailConfirmation();
             return;
         }
-
-        Debug.Log($"[LevelEndSimplePopupController] End check skipped. RemainingMoves={board.RemainingMoves}, GoalsCompleted={topHud.AreAllGoalsCompleted}");
     }
 
     private void StartLevelEndForceDeadlineIfOutOfMoves()
@@ -1148,17 +1186,13 @@ public class LevelEndSimplePopupController : MonoBehaviour
         // oynamaya devam edebiliyordu. Sınırlı sayıda ertele, sonra fail akışı ilerlesin.
         if (failResolveDeferCount >= MaxFailResolveDefers)
         {
-            Debug.LogWarning(
-                $"[LevelEnd] Pending auto-resolve {failResolveDeferCount} kez ertelendi ama hâlâ pending " +
-                $"({board.DescribePendingAutoResolveForLevelEnd()}) — fail akışına devam ediliyor.");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogWarning($"[LevelEnd] Pending auto-resolve {failResolveDeferCount} kez ertelendi ama hâlâ pending " + $"({board.DescribePendingAutoResolveForLevelEnd()}) — fail akışına devam ediliyor.");
             failResolveDeferCount = 0;
             return false;
         }
 
         failResolveDeferCount++;
-        Debug.Log(
-            $"[LevelEnd] Pending auto-resolve before fail (defer {failResolveDeferCount}/{MaxFailResolveDefers}): " +
-            $"{board.DescribePendingAutoResolveForLevelEnd()}");
         board.RequestResolveAfterActionSequence();
 
         if (!failSettleWaitRunning)
@@ -1216,9 +1250,8 @@ public class LevelEndSimplePopupController : MonoBehaviour
                     asyncLingerElapsed += Time.unscaledDeltaTime;
                     if (asyncLingerElapsed >= asyncLeakSeconds)
                     {
-                        Debug.LogWarning(
-                            $"[LevelEnd] Async job {asyncLeakSeconds:0}s+ takılı (leak) — force-drain edip " +
-                            $"karar veriliyor. {DescribeBoardWorkForLevelEnd()}");
+                        if (GameDiagnostics.CriticalErrors)
+                            Debug.LogWarning($"[LevelEnd] Async job {asyncLeakSeconds:0}s+ takılı (leak) — force-drain edip " + $"karar veriliyor. {DescribeBoardWorkForLevelEnd()}");
                         board.ForceDrainAllJobs();
                         break;
                     }
@@ -1230,9 +1263,8 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
                 if (workingElapsed >= leakDiagnosticSeconds)
                 {
-                    Debug.LogError(
-                        $"[LevelEnd] Board {leakDiagnosticSeconds:0}s+ boyunca çalışıyor — olası takılma/leak. " +
-                        $"Force-drain edip değerlendiriliyor. {DescribeBoardWorkForLevelEnd()}");
+                    if (GameDiagnostics.CriticalErrors)
+                        Debug.LogError($"[LevelEnd] Board {leakDiagnosticSeconds:0}s+ boyunca çalışıyor — olası takılma/leak. " + $"Force-drain edip değerlendiriliyor. {DescribeBoardWorkForLevelEnd()}");
                     board.ForceDrainAllJobs();
                     break;
                 }
@@ -1337,6 +1369,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
         // Gerçek fail değerlendirme state'ini temiz bırak (ShowFailPopup guard'ı tekrar çalışabilsin).
         failPopupShown = false;
         failSecondStage = false;
+        _lossPaging = false;
 
         HideAllPopups();
         if (board != null) board.ForceFullBoardSync();
@@ -1450,7 +1483,6 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
     private void ShowFailPopup()
     {
-        Debug.Log("[LevelEnd] ShowFailPopup CALLED");
         if (failPopupShown)
             return;
 
@@ -1482,6 +1514,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
         // Aşama 1: kayıp paneli gizli; ilk cancel'da sağdan kaydırılır.
         failSecondStage = false;
+        _lossPaging = false;
         if (lossSlidePanel != null) lossSlidePanel.gameObject.SetActive(false);
         if (failMessageText != null) failMessageText.gameObject.SetActive(true);
 
@@ -1491,11 +1524,11 @@ public class LevelEndSimplePopupController : MonoBehaviour
         {
             failPopupRoot.SetActive(true);
             PlayPopupEntrance(failPopupRoot, PopupSlideFrom.Right);
-            Debug.Log("[LevelEnd] fail popup set active true");
         }
         else
         {
-            Debug.LogError("[LevelEndSimplePopupController] failPopupRoot is NULL. Fail popup cannot be shown.");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogError("[LevelEndSimplePopupController] failPopupRoot is NULL. Fail popup cannot be shown.");
         }
 
         if (successPopupRoot != null)
@@ -1518,14 +1551,28 @@ public class LevelEndSimplePopupController : MonoBehaviour
     // Her kayıp öğesi için lossRowPrefab instantiate edilir. Prefab/container yoksa metne düşer.
     private void RefreshFailLossSummary()
     {
+        _lossItems = BuildLossItems();
+        _hasLosses = _lossItems.Count > 0;
+        RenderLossPage(0);
+    }
+
+    // Bir sayfanın (en fazla lossItemsPerPage öğe) satırlarını + balon cümlesini çizer.
+    private void RenderLossPage(int page)
+    {
         // Eski satırları temizle
         for (int i = 0; i < _lossRows.Count; i++)
             if (_lossRows[i] != null) Destroy(_lossRows[i]);
         _lossRows.Clear();
 
-        var items = BuildLossItems();
-        bool any = items.Count > 0;
-        _hasLosses = any;
+        var all = _lossItems ?? new System.Collections.Generic.List<(Sprite icon, string label, int amount, bool achieved)>();
+        bool any = all.Count > 0;
+        int per = Mathf.Max(1, lossItemsPerPage);
+        int pageCount = Mathf.Max(1, (all.Count + per - 1) / per);
+        _lossPage = Mathf.Clamp(page, 0, pageCount - 1);
+
+        // Balon modu sayfalı; prefab'sız metin yedeği tek seferde hepsini yazar.
+        bool paged = lossMessageText != null && lossRowPrefab != null && lossRowContainer != null;
+        var items = paged ? all.GetRange(_lossPage * per, Mathf.Min(per, all.Count - _lossPage * per)) : all;
 
         // Başlık ("Şunları kaybedeceksin") — kayıp varken göster.
         if (lossTitleText != null)
@@ -1659,8 +1706,6 @@ public class LevelEndSimplePopupController : MonoBehaviour
         ApplyRewardVisuals(stars, coins, score);
         SaveRewards(stars, coins, score);
         AdvanceToNextLevel();
-
-        Debug.Log($"[LevelEnd] Success - Stars: {stars}, Coin: {coins}, Score: {score}");
     }
 
     private int CalculateStars()
@@ -1749,12 +1794,10 @@ public class LevelEndSimplePopupController : MonoBehaviour
             PlayerPrefs.SetInt(StarFlyToWalletAnimator.PendingBeforeKey, starBefore);
             PlayerPrefs.SetInt(StarFlyToWalletAnimator.PendingAfterKey, starAfter);
             PlayerPrefs.Save();
-            Debug.Log($"[LevelEnd] Pending star reward saved. Level={currentLevel}, Previous={previousStars}, Earned={earnedStars}, Gained={gainedStars}, Before={starBefore}, After={starAfter}");
         }
         else
         {
             StarFlyToWalletAnimator.ClearPendingReward();
-            Debug.Log($"[LevelEnd] No pending star reward. Level={currentLevel}, Previous={previousStars}, Earned={earnedStars}, Before={starBefore}, After={starAfter}");
         }
 
         int coinBefore = PlayerWallet.Coins;
@@ -1827,7 +1870,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
         if (board == null) return;
 
         // Fail popup açılırken harcanan hakkı geri ver; oyuncu devam ediyor.
-        if (lifeDebitedForFailure) LivesManager.AddLives(1);
+        if (lifeDebitedForFailure) LivesManager.RefundFailureLife();
         lifeDebitedForFailure = false;
 
         LevelTelemetryStore.Continue(currentOfferAmount, coinsSpent, rewardedAd);
@@ -1844,6 +1887,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
         // deadline ise eski (geçmiş) değerinde kalıyordu → "0 hamleyle devam" tekrarlanıyordu.
         failPopupShown = false;
         failSecondStage = false;
+        _lossPaging = false;
         failConfirmRunning = false;
         failSettleWaitRunning = false;
         failResolveDeferCount = 0;
@@ -1948,7 +1992,8 @@ public class LevelEndSimplePopupController : MonoBehaviour
     {
         if (!inGameShop.IsValid)
         {
-            Debug.LogError("[LevelEnd] inGameShop referansları eksik — oyun içi market açılamadı.");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogError("[LevelEnd] inGameShop referansları eksik — oyun içi market açılamadı.");
             HandleBuyMovesClicked();
             return;
         }

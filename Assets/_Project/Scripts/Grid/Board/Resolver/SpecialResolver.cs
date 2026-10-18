@@ -76,7 +76,8 @@ public class SpecialResolver
             return actions;
         }
 
-        Debug.Log($"[ResolveSpecialSwap] a={((a != null) ? $"({a.X},{a.Y}) currentA={a.GetSpecial()}" : "null")} originalA={originalSa} | b={((b != null) ? $"({b.X},{b.Y}) currentB={b.GetSpecial()}" : "null")} originalB={originalSb}");
+        if (GameDiagnostics.SpecialChains)
+            Debug.Log($"[ResolveSpecialSwap] a={((a != null) ? $"({a.X},{a.Y}) currentA={a.GetSpecial()}" : "null")} originalA={originalSa} | b={((b != null) ? $"({b.X},{b.Y}) currentB={b.GetSpecial()}" : "null")} originalB={originalSb}");
 
         board.ShakeNextClear = true;
         board.LastSwapUserMove = false;
@@ -325,7 +326,8 @@ public class SpecialResolver
         bool originalSaIsOverrideSupported = originalSa == TileSpecial.LineH || originalSa == TileSpecial.LineV || originalSa == TileSpecial.PulseCore || originalSa == TileSpecial.PatchBot;
         bool originalSbIsOverrideSupported = originalSb == TileSpecial.LineH || originalSb == TileSpecial.LineV || originalSb == TileSpecial.PulseCore || originalSb == TileSpecial.PatchBot;
 
-        Debug.Log($"[ResolveSpecialSwap] OverrideRouting: aIsOvr={originalSaIsOverride} bIsOvr={originalSbIsOverride} aIsSupported={originalSaIsOverrideSupported} bIsSupported={originalSbIsOverrideSupported} bothOrigSpecial={bothOriginallySpecial}");
+        if (GameDiagnostics.SpecialChains)
+            Debug.Log($"[ResolveSpecialSwap] OverrideRouting: aIsOvr={originalSaIsOverride} bIsOvr={originalSbIsOverride} aIsSupported={originalSaIsOverrideSupported} bIsSupported={originalSbIsOverrideSupported} bothOrigSpecial={bothOriginallySpecial}");
 
         if (originalSaIsOverride && originalSbIsOverride)
         {
@@ -1000,7 +1002,8 @@ public class SpecialResolver
         if (b != null) sb.Append(" B=").Append(b.GetSpecial()).Append("@").Append(b.X).Append(",").Append(b.Y);
         sb.Append(" processed=").Append(ctx.Processed.Count);
         sb.Append(" affected=").Append(ctx.Affected.Count);
-        Debug.Log(sb.ToString());
+        if (GameDiagnostics.SpecialChains)
+            Debug.Log(sb.ToString());
 #endif
     }
 
@@ -1011,7 +1014,8 @@ public class SpecialResolver
     private void DrainDeferredLineOverrides(List<BoardAction> actions)
     {
         int deferredLineCount = ctx.DeferredLineHitOverrideCells != null ? ctx.DeferredLineHitOverrideCells.Count : 0;
-        Debug.Log($"[DrainDeferredLineOverrides] start count={deferredLineCount}");
+        if (GameDiagnostics.SpecialChains)
+            Debug.Log($"[DrainDeferredLineOverrides] start count={deferredLineCount}");
         if (ctx.DeferredLineHitOverrideCells == null || ctx.DeferredLineHitOverrideCells.Count == 0)
             return;
 
@@ -1030,7 +1034,8 @@ public class SpecialResolver
 
         foreach (var cell in deferred)
         {
-            Debug.Log($"[DrainDeferredLineOverrides] processing cell={cell}");
+            if (GameDiagnostics.SpecialChains)
+                Debug.Log($"[DrainDeferredLineOverrides] processing cell={cell}");
             if (cell.x < 0 || cell.x >= board.Width || cell.y < 0 || cell.y >= board.Height)
                 continue;
 

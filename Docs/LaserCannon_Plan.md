@@ -26,7 +26,7 @@ Lazer, hale ve kafes: kodla (kafes için Magnet'in `SpecialLocker` sprite'ı yen
 4. Kafes açılınca special **serbest kalır, patlamaz**. Açıldığı hamle sonunda yeniden hedeflenmez.
 5. İki top **aynı special'ı hedeflemez**.
 6. Hedef (goal) değil; ama **PatchBot onu hedef gibi arar** (`PatchBotTargetCoordinator`).
-7. **Yığın:** üstüne örtü gelebilir, **altına hiçbir şey konmaz** (editörde overlay olarak konamaz). Örtülüyken pasif.
+7. **Yığın (167 kullanıcı düzeltmesi):** üstüne örtü gelebilir; ayrıca altına gizli jel konabilir. Lazer 2×2 üst katman olarak yerleştirilir, tek hücrelik jel tabanı tamamen örter. Jel lazer kırılana kadar görünmez, yayılmaz ve kaplama hedefine sayılmaz; kırılınca mevcut beneath/reveal akışı açar. Editörde lazerin üst katman yasağı kaldırıldı; sıvı taban ve tam örtme kuralları korunur. Lazer kendi üstünde örtü varken pasiftir.
 8. Tanıtım: **Level 131**.
 Ek: top yıkılınca kafesledikleri serbest kalır (patlamaz).
 

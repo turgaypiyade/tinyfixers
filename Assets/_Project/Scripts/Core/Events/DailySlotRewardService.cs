@@ -53,8 +53,9 @@ public static class DailySlotRewardService
             case DailySlotRewardType.Booster_Shuffle:
                 BoosterInventory.Add(BoardController.BoosterMode.Shuffle, amt);
                 break;
+            case DailySlotRewardType.Booster_PaintBucket:
+                BoosterInventory.Add(BoardController.BoosterMode.PaintBucket, amt);
+                break;
         }
-
-        Debug.Log($"[DailySlot] Granted {amt}x {reward.type}");
     }
 }

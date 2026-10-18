@@ -111,7 +111,8 @@ public sealed class HarvestScreen : MonoBehaviour, IPointerClickHandler
     public void Open(RectTransform from)
     {
         cfg = HarvestConfig.Shared;
-        if (cfg == null) { Debug.LogWarning("[Harvest] HarvestConfig yok (Resources/Events)."); return; }
+        if (cfg == null) { if (GameDiagnostics.CriticalErrors)
+            Debug.LogWarning("[Harvest] HarvestConfig yok (Resources/Events)."); return; }
         HarvestState.SyncCycle(cfg, System.DateTime.UtcNow);
         gameObject.SetActive(true);
         if (root != null) root.SetActive(true);
@@ -842,7 +843,8 @@ public sealed class HarvestScreen : MonoBehaviour, IPointerClickHandler
     private void OnPlay()
     {
         var launcher = FindFirstObjectByType<MainMenuLevelButtonController>(FindObjectsInactive.Include);
-        if (launcher == null) { Debug.LogWarning("[Harvest] MainMenuLevelButtonController yok — Oyna iptal."); return; }
+        if (launcher == null) { if (GameDiagnostics.CriticalErrors)
+            Debug.LogWarning("[Harvest] MainMenuLevelButtonController yok — Oyna iptal."); return; }
         HideImmediate();
         if (launcher.StartLevel() == LevelStartResult.Suppressed) Open(origin);
     }

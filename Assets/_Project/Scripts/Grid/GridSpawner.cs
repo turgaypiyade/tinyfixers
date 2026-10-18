@@ -34,7 +34,7 @@ public class GridSpawner : MonoBehaviour
 
     [Header("Cell BG")]
     public GameObject cellBgPrefab;
-    [SerializeField] private Color underTileCellBgTint = new Color(0.72f, 0.86f, 1f, 1f);
+    [SerializeField] private Color underTileCellBgTint = new Color32(0x84, 0x83, 0xB9, 0xFF);
 
     [SerializeField, Range(0.5f, 1f)]
     private float iconScale = 0.95f;
@@ -74,7 +74,7 @@ public class GridSpawner : MonoBehaviour
     [SerializeField] private Color runtimeBoardBg = new Color(0.78f, 0.88f, 0.97f, 1f);
     [SerializeField] private Color runtimeNormalCell = new Color(1f, 1f, 1f, 0.16f);
     [SerializeField] private RectTransform gridLinesRoot;
-    [SerializeField] private Color runtimeGridLineColor = new Color(1f, 1f, 1f, 0.35f);
+    [SerializeField] private Color runtimeGridLineColor = new Color32(0x93, 0x92, 0xC3, 0xFF);
     [SerializeField, Min(1f)] private float runtimeGridLineThickness = 2f;
     [SerializeField] private bool gridJunctionEnabled = false;
     [Tooltip("Diamond boyutu. 0 = otomatik (çizgi kalınlığı × 2.5).")]
@@ -278,7 +278,8 @@ public class GridSpawner : MonoBehaviour
 
         if (board == null || resolvedLevel == null || tilePrefab == null || iconLibrary == null || cellBgPrefab == null)
         {
-            Debug.LogError("GridSpawner: Eksik referans var (board/resolvedLevel/tilePrefab/iconLibrary/cellBgPrefab).");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogError("GridSpawner: Eksik referans var (board/resolvedLevel/tilePrefab/iconLibrary/cellBgPrefab).");
             enabled = false;
             yield break;
         }
@@ -323,6 +324,7 @@ public class GridSpawner : MonoBehaviour
         board.ObstacleVisualChanged += HandleObstacleVisualChanged;
 
         BuildInitialGrid();
+        board.WarmTilePool();
 
         // Board şekli ne olursa olsun açılışta düşüş olmasın: ilk yerleşimi runtime gravity'yle
         // animasyonsuz oturt (ekran dışında, oyuncu görmeden).
@@ -337,7 +339,8 @@ public class GridSpawner : MonoBehaviour
     {
         if (MusicManager.Instance == null)
         {
-            Debug.LogWarning("GridSpawner: MusicManager sahnede yok, level müziği çalınamadı.");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogWarning("GridSpawner: MusicManager sahnede yok, level müziği çalınamadı.");
             return;
         }
 
@@ -678,7 +681,10 @@ public class GridSpawner : MonoBehaviour
                 {
                     // DEBUG: Mud bloklamamalı; bloklanıyorsa def'i veya stage flag'lerini logla.
                     if ((ObstacleId)resolvedLevel.obstacles[idx] == ObstacleId.Mud)
-                        Debug.LogError($"[MudDebug] Cell ({x},{y}) Mud OLMASINA RAĞMEN blocked sayıldı → hole olarak işaretleniyor!");
+                        {
+                            if (GameDiagnostics.CriticalErrors)
+                                Debug.LogError($"[MudDebug] Cell ({x},{y}) Mud OLMASINA RAĞMEN blocked sayıldı → hole olarak işaretleniyor!");
+                        }
                     board.SetHole(x, y, true);
                     continue;
                 }
@@ -812,7 +818,6 @@ public class GridSpawner : MonoBehaviour
                 }
                 sb.AppendLine();
             }
-            UnityEngine.Debug.Log(sb.ToString());
         }
         // ─── END DEBUG ─────────────────────────────────────────────────────
 
@@ -1032,7 +1037,8 @@ public class GridSpawner : MonoBehaviour
         var view = tile.GetComponent<TileView>();
         if (view == null)
         {
-            Debug.LogError("GridSpawner: TileView yok (movable obstacle).");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogError("GridSpawner: TileView yok (movable obstacle).");
             Destroy(tile);
             return;
         }
@@ -1331,7 +1337,8 @@ public class GridSpawner : MonoBehaviour
         }
         catch (System.Exception e)
         {
-            Debug.LogError($"[GelDraw] EXCEPTION jel çiziminde: {e}");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogError($"[GelDraw] EXCEPTION jel çiziminde: {e}");
         }
     }
 
@@ -1506,8 +1513,6 @@ public class GridSpawner : MonoBehaviour
             grassOverlayRoot.gameObject.layer = lyr;
             foreach (Transform ch in grassOverlayRoot) ch.gameObject.layer = lyr;
         }
-
-        Debug.Log($"[Grass] {spawned} view doğdu. sprite={(grassOverlayService.GetSpriteForCell(0, 0) != null ? "VAR" : "YOK")}");
     }
 
     private void SpawnGrassOverlayCell(int x, int y, int maxHits)
@@ -1828,6 +1833,10 @@ public class GridSpawner : MonoBehaviour
         root.gameObject.layer = grassOverlayRoot.gameObject.layer;
         waterLilyService = root.gameObject.AddComponent<GrassWaterLilyService>();
         waterLilyService.Init(board, cells, tileSize);
+        foreach (int cell in cells)
+            if (obstacleViewsByOrigin.TryGetValue(cell, out var grass) && grass != null
+                && IsTrackedObstacleViewFor(cell, ObstacleId.Grass))
+                waterLilyService.BindGrassVisual(cell, grass.rectTransform);
     }
 
     // Menekşeler grass kökünün çocuğu olan ayrı bir kökte çizilir: grass ile birlikte border'ın üstüne
@@ -1930,19 +1939,19 @@ public class GridSpawner : MonoBehaviour
 
             if (!topVisualIndexByCell.TryGetValue(p.cell, out int topIndex) || topIndex != i)
             {
-                if (mudTrace && isMud) Debug.Log($"[MudBeneath] SKIP cell={p.cell} reason=dedup(topIndex={topIndex} i={i})");
+                if (mudTrace && isMud) {}
                 continue;
             }
 
             if (p.beneathId == ObstacleId.None) continue;
             if (p.cell != p.beneathOrigin)
             {
-                if (mudTrace && isMud) Debug.Log($"[MudBeneath] SKIP cell={p.cell} reason=not-origin(beneathOrigin={p.beneathOrigin})");
+                if (mudTrace && isMud) {}
                 continue;              // beneath'i yalnızca origin'inde çiz
             }
             if (beneathViewsByCell.ContainsKey(p.cell))
             {
-                if (mudTrace && isMud) Debug.Log($"[MudBeneath] SKIP cell={p.cell} reason=already-view");
+                if (mudTrace && isMud) {}
                 continue;
             }
 
@@ -1953,7 +1962,7 @@ public class GridSpawner : MonoBehaviour
             var overlayHere = (ObstacleId)resolvedLevel.obstacles[p.cell];
             if (overlayHere == ObstacleId.Safe || overlayHere == ObstacleId.AncientSeal || overlayHere == ObstacleId.OverrideBatteryBox)
             {
-                if (mudTrace && isMud) Debug.Log($"[MudBeneath] SKIP cell={p.cell} reason=overlay={overlayHere}");
+                if (mudTrace && isMud) {}
                 continue;
             }
 
@@ -2032,8 +2041,7 @@ public class GridSpawner : MonoBehaviour
         }
 
         if (mudTrace)
-            Debug.Log($"[MudBeneath] SUMMARY total_mud_entries={mudTotal} spawned={mudSpawned} " +
-                      $"(spawned<total ise guard'lar eliyor; spawned==total ama görünmüyorsa render/z-order)");
+            {}
 
         // Örtülü mud hücreleri DrawMudOverlays'in RefreshAllBorders'ından SONRA eklendi → görünür
         // mud komşuları onları görsün + yeni hücreler bevel/köşe alsın diye tek yetkili geçiş.
@@ -2500,6 +2508,12 @@ public class GridSpawner : MonoBehaviour
             case ObstacleId.Magnet: AddRoot(magnetRoot); break;
             case ObstacleId.Mud: AddRoot(mudOverlayRoot); break;
             case ObstacleId.Grass: AddRoot(grassOverlayRoot); break;
+            case ObstacleId.GrassWaterLily:
+                if (waterLilyService != null) AddRoot(waterLilyService.transform);
+                break;
+            case ObstacleId.GrassFlower:
+                if (grassFlowerOverlayService != null) AddRoot(grassFlowerOverlayService.transform);
+                break;
             case ObstacleId.SpreadingGel: AddRoot(spreadingGelOverlayRoot); break;
             case ObstacleId.Wall:
             case ObstacleId.MetalWall:
@@ -2623,7 +2637,11 @@ public class GridSpawner : MonoBehaviour
         if (IsTrackedObstacleViewFor(originIndex, obstacleId))
         {
             if (obstacleViewsByOrigin.TryGetValue(originIndex, out var image) && image != null)
-                Destroy(image.gameObject);
+            {
+                if (obstacleId != ObstacleId.Grass || waterLilyService == null
+                    || !waterLilyService.TryPlayGrassBreak(originIndex, image))
+                    Destroy(image.gameObject);
+            }
 
             obstacleViewsByOrigin.Remove(originIndex);
             obstacleDefsByOrigin.Remove(originIndex);
@@ -2991,7 +3009,8 @@ public class GridSpawner : MonoBehaviour
         var view = tile.GetComponent<TileView>();
         if (view == null)
         {
-            Debug.LogError("GridSpawner: TileView yok.");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogError("GridSpawner: TileView yok.");
             Destroy(tile);
             return;
         }
@@ -3743,11 +3762,13 @@ public class GridSpawner : MonoBehaviour
         var img = go.GetComponent<Image>();
         img.sprite = sprite;
         img.type = Image.Type.Simple;
-        img.preserveAspect = false;
+        img.preserveAspect = def.id == ObstacleId.RhodesStatue;
 
         // Grass dekoratiftir: raycast'i kapat + click proxy ekleme, alttaki taşın tıklaması engellenmesin.
         bool isGrassDecor = def.id == ObstacleId.Grass;
         img.raycastTarget = !isGrassDecor;
+        if (isGrassDecor && waterLilyService != null && waterLilyService.isActiveAndEnabled)
+            waterLilyService.BindGrassVisual(y * width + x, rt);
 
         if (!isGrassDecor)
         {
@@ -3768,6 +3789,15 @@ public class GridSpawner : MonoBehaviour
                 ? state.GetRemainingHitsAt(x, y) : 0;
             var view = LaserCannonView.Ensure(img, def, remaining > 0 ? remaining : def.hits);
             LaserCannonService.Ensure(board).Register(y * width + x, view);
+        }
+
+        // Rodos heykeli: Image aşamanın tabanını gösterir; kılıç + kalkan RhodesStatueView child'ları.
+        if (def.id == ObstacleId.RhodesStatue && board != null)
+        {
+            var state = board.ObstacleStateService;
+            int remaining = state != null && state.GetObstacleIdAt(x, y) == ObstacleId.RhodesStatue
+                ? state.GetRemainingHitsAt(x, y) : 0;
+            RhodesStatueView.Ensure(img, remaining > 0 ? remaining : def.hits);
         }
 
         // Brandalı heykel: Image iç zemini gösterir; taş/branda/çerçeve/etiket TarpStatueView child'ları.
@@ -4063,7 +4093,9 @@ public class GridSpawner : MonoBehaviour
             else
             {
                 PlayObstacleShatter(change, image);
-                Destroy(image.gameObject);
+                if (change.obstacleId != ObstacleId.Grass || waterLilyService == null
+                    || !waterLilyService.TryPlayGrassBreak(change.originIndex, image))
+                    Destroy(image.gameObject);
             }
 
             obstacleViewsByOrigin.Remove(change.originIndex);
@@ -4081,6 +4113,14 @@ public class GridSpawner : MonoBehaviour
         if (change.obstacleId == ObstacleId.PaintCanBox)
         {
             UpdatePaintCanBoxView(image, change.remainingHits);
+            return;
+        }
+
+        // Rodos heykeli: aşama değişir, kılıç savrulur, kalkan yalpalar + kısa sarsıntı.
+        if (change.obstacleId == ObstacleId.RhodesStatue && image.TryGetComponent<RhodesStatueView>(out var rhodes))
+        {
+            rhodes.OnHit(change.remainingHits);
+            PlayObstacleHitShake(change.originIndex, image.rectTransform);
             return;
         }
 

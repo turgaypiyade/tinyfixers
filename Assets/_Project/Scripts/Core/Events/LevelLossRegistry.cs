@@ -87,7 +87,8 @@ public static class LevelLossRegistry
         foreach (var pending in resultScreens.Values)
         {
             try { if (pending()) return true; }
-            catch (Exception e) { Debug.LogWarning($"[LevelLossRegistry] result screen hata: {e.Message}"); }
+            catch (Exception e) { if (GameDiagnostics.CriticalErrors)
+                Debug.LogWarning($"[LevelLossRegistry] result screen hata: {e.Message}"); }
         }
         return false;
     }
@@ -99,7 +100,8 @@ public static class LevelLossRegistry
         {
             IEnumerable<LevelLossItem> items = null;
             try { items = provider?.Invoke(); }
-            catch (Exception e) { Debug.LogWarning($"[LevelLossRegistry] provider hata: {e.Message}"); }
+            catch (Exception e) { if (GameDiagnostics.CriticalErrors)
+                Debug.LogWarning($"[LevelLossRegistry] provider hata: {e.Message}"); }
 
             if (items == null)
                 continue;

@@ -48,6 +48,18 @@ public sealed class PopupEntranceAnimator : MonoBehaviour
     // Sahneye gömülü, SetActive ile yeniden açılan popup'lar her açılışta oynasın.
     public bool PlayOnEnable { get => playOnEnable; set => playOnEnable = value; }
 
+    public bool IsVisible
+    {
+        get
+        {
+            if (!isActiveAndEnabled) return false;
+            for (Transform node = transform; node != null; node = node.parent)
+                if (node.TryGetComponent<CanvasGroup>(out var group) && group.alpha <= 0.01f)
+                    return false;
+            return true;
+        }
+    }
+
     private CanvasGroup panelGroup;
     private float dimTargetAlpha = -1f;
     private Vector2 panelHome;

@@ -590,7 +590,10 @@ public static class WallSprites
     {
         if (cache.TryGetValue(name, out var s)) return s;
         s = Resources.Load<Sprite>("Wall/" + name);
-        if (s == null) Debug.LogWarning($"[Wall] Sprite bulunamadı: Resources/Wall/{name}");
+        if (s == null) {
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogWarning($"[Wall] Sprite bulunamadı: Resources/Wall/{name}");
+        }
         cache[name] = s;
         return s;
     }

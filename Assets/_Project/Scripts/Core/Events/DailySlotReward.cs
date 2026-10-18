@@ -17,6 +17,7 @@ public enum DailySlotRewardType
     Booster_Row          = 21,
     Booster_Column       = 22,
     Booster_Shuffle      = 23,
+    Booster_PaintBucket  = 24,
 }
 
 [System.Serializable]

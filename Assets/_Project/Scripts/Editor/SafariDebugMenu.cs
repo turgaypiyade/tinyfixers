@@ -10,7 +10,8 @@ public static class SafariDebugMenu
         var screen = Object.FindFirstObjectByType<RisingMapScreen>(FindObjectsInactive.Include);
         if (screen == null)
         {
-            Debug.LogWarning("[SafariDebug] Sahnede RisingMapScreen yok — MainMenu sahnesinde Play modunda çalıştır.");
+            if (GameDiagnostics.EditorTools)
+                Debug.LogWarning("[SafariDebug] Sahnede RisingMapScreen yok — MainMenu sahnesinde Play modunda çalıştır.");
             return;
         }
         screen.PreviewFinalReward();

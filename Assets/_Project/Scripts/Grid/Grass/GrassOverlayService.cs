@@ -150,8 +150,6 @@ public class GrassOverlayService : MonoBehaviour
         int hy = change.originIndex >= 0 ? change.originIndex / gridWidth : -1;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         bool _found = cellsByIndex.TryGetValue(change.originIndex, out var _c) && _c.view != null;
-        Debug.Log($"[GrassVis] origin={change.originIndex} (x={change.originIndex % gridWidth},y={change.originIndex / gridWidth}) " +
-                  $"cleared={change.cleared} found={_found} tracked={cellsByIndex.Count} gridW={gridWidth}");
 #endif
         if (!cellsByIndex.TryGetValue(change.originIndex, out var cell) || cell.view == null)
         {

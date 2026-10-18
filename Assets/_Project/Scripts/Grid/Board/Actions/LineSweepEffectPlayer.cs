@@ -38,7 +38,8 @@ public sealed class LineSweepEffectPlayer : IClearEffectPlayer
         if (board.BoardFlowTraceEnabled)
         {
             float actTime = Time.realtimeSinceStartup;
-            Debug.Log($"[LineV Trace] Activation time={actTime:0.000}s strikes={strikes.Count}");
+            if (GameDiagnostics.BoardFlow)
+                Debug.Log($"[LineV Trace] Activation time={actTime:0.000}s strikes={strikes.Count}");
         }
 #endif
 
@@ -69,7 +70,8 @@ public sealed class LineSweepEffectPlayer : IClearEffectPlayer
         if (board.BoardFlowTraceEnabled)
         {
             float coreClearTime = Time.realtimeSinceStartup;
-            Debug.Log($"[LineV Trace] Core clear completion time={coreClearTime:0.000}s beamFullOpacityEnd={(coreClearTime + 7f/60f):0.000}s beamFadeEnd={(coreClearTime + 17f/60f):0.000}s");
+            if (GameDiagnostics.BoardFlow)
+                Debug.Log($"[LineV Trace] Core clear completion time={coreClearTime:0.000}s beamFullOpacityEnd={(coreClearTime + 7f / 60f):0.000}s beamFadeEnd={(coreClearTime + 17f / 60f):0.000}s");
         }
 #endif
 

@@ -421,7 +421,8 @@ public class BoosterService
         // BoosterFxParent = BoardMask ve grid'e MASKELİYOR (çizginin ~12px altı kırpılır) → makasın
         // tabanı/altı kesiliyordu. Makası maskenin DIŞINA (BoardMask.parent) koyuyoruz → kırpılmaz,
         // çizginin altına serbestçe iner. Mask'in hemen ÖNÜNE koyup board üstünde görünür yaparız.
-        RectTransform maskParent = GetBoosterFxParent();
+        // Makas kendi yolunda kalır: maskenin ebeveynine, maskenin hemen önüne (savrulan taşlar da aynı katmanı kullanır).
+        RectTransform maskParent = board.BoosterFxParent;
         RectTransform parent = maskParent != null ? maskParent.parent as RectTransform : null;
         int inFrontIndex = -1;
         if (parent != null && maskParent != null)
@@ -1157,14 +1158,17 @@ public class BoosterService
             -cell.y * size - size * 0.5f);
     }
 
+    // Joker efektleri tahta maskesinin DIŞINDA çizilir (UnclippedFxRoot): çekiç üst satıra inerken, matkap/roket
+    // kenardan girip çıkarken yarısı kırpılmasın. Konumlar dünya koordinatından hesaplandığı için kök değişimi şeffaf.
     private RectTransform GetBoosterFxParent()
     {
+        var unclipped = board.UnclippedFxRoot;
+        if (unclipped != null) return unclipped;
+
         RectTransform parent = board.BoosterFxParent;
         RectTransform contentRoot = board.ContentRoot;
-
         if (parent != null && parent != board.TilesRoot && contentRoot != null && parent.parent == contentRoot)
             parent.SetAsLastSibling();
-
         return parent;
     }
 
@@ -1437,7 +1441,6 @@ public class BoosterService
 
     public IEnumerator SafeShuffleBoardRoutine(BoardInitService boardInitService)
     {
-        Debug.Log("[Shuffle] SafeShuffleBoardRoutine START");
         board.BeginBusy();
         // Shuffle tahtayı toptan yeniden yazar: bitene dek akış pompası yeni iş başlatmasın.
         using var flowPause = board.PauseFlowPump();
@@ -1461,11 +1464,11 @@ public class BoosterService
         for (int y = 0; y < board.Height; y++)
             for (int x = 0; x < board.Width; x++)
                 if (!lockedMask[x, y]) unlockedCount++;
-        Debug.Log($"[Shuffle] Unlocked cells: {unlockedCount} / {board.Width * board.Height}");
 
         if (boardInitService == null)
         {
-            Debug.LogError("[Shuffle] boardInitService NULL! Shuffle çalışmaz.");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogError("[Shuffle] boardInitService NULL! Shuffle çalışmaz.");
             board.EndBusy();
             yield break;
         }
@@ -1481,7 +1484,6 @@ public class BoosterService
         {
             finalTypes = permuted;
             ok = true;
-            Debug.Log("[Shuffle] Permutation shuffle (animasyonlu, görünür).");
         }
         else
         {
@@ -1496,7 +1498,6 @@ public class BoosterService
 
             finalTypes = simResult;
             ok = finalTypes != null;
-            Debug.Log($"[Shuffle] Permutation başarısız → SimulateInitialTypes fallback ok={ok}");
         }
 
         if (ok)
@@ -1504,7 +1505,6 @@ public class BoosterService
             var sourceForDest = new Vector2Int[board.Width, board.Height];
 
             bool hasMapping = BuildShuffleSourceMap(currentTypes, finalTypes, lockedMask, sourceForDest);
-            Debug.Log($"[Shuffle] BuildShuffleSourceMap hasMapping={hasMapping}");
 
             if (hasMapping)
             {
@@ -1522,7 +1522,8 @@ public class BoosterService
                     // Bayat harita commit edilirse hücreler null/çift referans alır → ekranda
                     // boş hücre. Onun yerine: görsel-veri bütünlüğünü onar, sonra CANLI board
                     // üzerinden yerinde (referans taşımadan) yeniden karıştır.
-                    Debug.LogWarning("[Shuffle] Board shuffle sırasında değişti → harita iptal, yerinde karıştırılıyor.");
+                    if (GameDiagnostics.CriticalErrors)
+                        Debug.LogWarning("[Shuffle] Board shuffle sırasında değişti → harita iptal, yerinde karıştırılıyor.");
 
                     board.RepairTileGridIntegrity("shuffle-stale-map", snapPositions: true);
 
@@ -1540,7 +1541,8 @@ public class BoosterService
             }
             else
             {
-                Debug.LogWarning("[Shuffle] Mapping failed, applying types directly (no animation)");
+                if (GameDiagnostics.CriticalErrors)
+                    Debug.LogWarning("[Shuffle] Mapping failed, applying types directly (no animation)");
                 ApplyShuffledTypes(finalTypes, lockedMask);
             }
 
@@ -1550,11 +1552,11 @@ public class BoosterService
             board.RepairTileGridIntegrity("shuffle-commit");
             board.RefreshAllTileObstacleVisuals();
             board.RefreshAllSortingOrders();
-            Debug.Log("[Shuffle] COMPLETE");
         }
         else
         {
-            Debug.LogWarning("[Shuffle] TryBuildSafeShuffleTypes FAILED — board değişmedi.");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogWarning("[Shuffle] TryBuildSafeShuffleTypes FAILED — board değişmedi.");
         }
 
         board.EndBusy();

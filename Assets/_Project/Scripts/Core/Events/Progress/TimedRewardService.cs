@@ -9,15 +9,18 @@ public static class TimedRewardService
 
     // ── Grant ────────────────────────────────────────────────────────────────
 
+    public static bool SupportsTimed(DailySlotRewardType type) => type == DailySlotRewardType.Lives
+        || type == DailySlotRewardType.Joker_LineH || type == DailySlotRewardType.Joker_Line
+        || type == DailySlotRewardType.Joker_PulseCore || type == DailySlotRewardType.Joker_SystemOverride;
+
     public static void Grant(DailySlotRewardType type, int minutes)
     {
-        if (minutes <= 0) return;
+        if (minutes <= 0 || !SupportsTimed(type)) return;
         // Aktif süre varsa ÜSTÜNE eklenir (ikinci paket/ödül süreyi ezmesin, uzatsın).
         DateTime start = DateTime.UtcNow + GetRemaining(type);
         long expiry = start.AddMinutes(minutes).Ticks;
         PlayerPrefs.SetString(Key(type), expiry.ToString());
         PlayerPrefs.Save();
-        Debug.Log($"[TimedReward] {type} → {minutes} dk ücretsiz.");
     }
 
     // ── Sorgulama ─────────────────────────────────────────────────────────────

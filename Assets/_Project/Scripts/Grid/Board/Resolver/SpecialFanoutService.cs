@@ -82,7 +82,8 @@ public class SpecialFanoutService
                 ctx.OverrideFanoutNormalSelectionPulse,
                 deferredPulseExplosionCells: null,
                 deferredPatchBotCells: new List<Vector2Int>(ctx.OverrideDeferredPatchBotDashes),
-                launchPatchBots: patchBotLauncher));
+                launchPatchBots: patchBotLauncher,
+                sourceOverrideTile: ctx.OverrideFanoutOrigin));
         }
         else if (ctx.PendingOverrideImplants.Count > 0)
         {

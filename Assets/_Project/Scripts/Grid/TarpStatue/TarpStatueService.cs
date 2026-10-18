@@ -120,6 +120,16 @@ public sealed class TarpStatueService : MonoBehaviour
 
     // ── Branda: renk toplama ─────────────────────────────────────────
 
+    /// Tahtada bu rengi hâlâ toplayan (branda kalkmamış) bir heykel var mı? Wonder Boya Kovası bu rengi çıkaramaz.
+    public bool NeedsColor(TileType type)
+    {
+        var color = ColorOf(type);
+        if (color == null) return false;
+        foreach (var pair in statues)
+            if (pair.Value.color == color.Value && pair.Value.remaining > 0) return true;
+        return false;
+    }
+
     private static TarpStatueColor? ColorOf(TileType type) => type switch
     {
         TileType.Core => TarpStatueColor.Red,

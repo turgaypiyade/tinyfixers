@@ -84,9 +84,20 @@ public static class LivesManager
             _nextLifeTime = DateTime.UtcNow.AddMinutes(RegenIntervalMinutes);
 
         _lives--;
+        LevelAttemptStats.RecordLifeSpent(CurrentLevel.Global);
         Save();
         OnLivesChanged?.Invoke();
         return true;
+    }
+
+    /// A continue refunds the failed attempt's debit; it is not a life spent toward mercy.
+    public static void RefundFailureLife()
+    {
+        EnsureInit();
+        LevelAttemptStats.RefundLifeSpent(CurrentLevel.Global);
+        _lives = Mathf.Min(MaxLives, _lives + 1);
+        Save();
+        OnLivesChanged?.Invoke();
     }
 
     /// <summary>Her kaynaktan gelen canı ortak 10 can sınırına uygular.</summary>
@@ -202,5 +213,6 @@ public static class LivesManager
         PlayerPrefs.SetInt(KeyLives, _lives);
         PlayerPrefs.SetString(KeyNextTicks, _nextLifeTime.Ticks.ToString());
         PlayerPrefs.Save();
+        FirebaseCloudSaveService.MarkDirty();
     }
 }

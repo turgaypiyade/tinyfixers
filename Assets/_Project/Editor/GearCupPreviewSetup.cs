@@ -40,7 +40,8 @@ public static class GearCupPreviewSetup
         var scene = SceneManager.GetActiveScene();
         if (Application.isPlaying || scene.name != "MainMenu")
         {
-            Debug.LogWarning("[GearCup] Play kapalıyken Assets/_Project/Scenes/MainMenu.unity sahnesini açıp tekrar çalıştır.");
+            if (GameDiagnostics.EditorTools)
+                Debug.LogWarning("[GearCup] Play kapalıyken Assets/_Project/Scenes/MainMenu.unity sahnesini açıp tekrar çalıştır.");
             return;
         }
         Canvas canvas = null;
@@ -49,12 +50,14 @@ public static class GearCupPreviewSetup
             if (candidate.gameObject.scene != scene || candidate.rootCanvas != candidate) continue;
             if (canvas == null || candidate.name == "Canvas") canvas = candidate;
         }
-        if (canvas == null) { Debug.LogError("[GearCup] MainMenu Canvas bulunamadı."); return; }
+        if (canvas == null) { if (GameDiagnostics.EditorTools)
+            Debug.LogError("[GearCup] MainMenu Canvas bulunamadı."); return; }
 
         var cfg = EnsureConfig();
         if (cfg.background == null || cfg.rabbitFrames[0] == null || cfg.gear == null)
         {
-            Debug.LogError("[GearCup] Gerekli görseller bulunamadı. Missions/GearCup klasörünü kontrol et.");
+            if (GameDiagnostics.EditorTools)
+                Debug.LogError("[GearCup] Gerekli görseller bulunamadı. Missions/GearCup klasörünü kontrol et.");
             return;
         }
         int group = Undo.GetCurrentGroup();
@@ -124,8 +127,8 @@ public static class GearCupPreviewSetup
         AssetDatabase.SaveAssets();
         Undo.CollapseUndoOperations(group);
         Selection.activeGameObject = root.gameObject;
-        Debug.Log("[GearCup] Gear Cup kuruldu. Sahneyi kaydet, Play'e bas ve Gear Cup ikonuna dokun. " +
-            "TinyFixers/Gear Cup/2 - Önizlemeyi Aç (Play) de kullanılabilir. Gear Cup canlı etkinliği hazır.");
+        if (GameDiagnostics.EditorTools)
+            Debug.Log("[GearCup] Gear Cup kuruldu. Sahneyi kaydet, Play'e bas ve Gear Cup ikonuna dokun. " + "TinyFixers/Gear Cup/2 - Önizlemeyi Aç (Play) de kullanılabilir. Gear Cup canlı etkinliği hazır.");
     }
 
     [MenuItem("TinyFixers/Gear Cup/2 - Önizlemeyi Aç (Play)")]
@@ -133,7 +136,10 @@ public static class GearCupPreviewSetup
     {
         var screen = Object.FindFirstObjectByType<GearCupPreviewScreen>(FindObjectsInactive.Include);
         if (screen != null && Application.isPlaying) screen.Open();
-        else Debug.LogWarning("[GearCup] Önce MainMenu'de ekranı kur ve Play'e bas.");
+        else {
+            if (GameDiagnostics.EditorTools)
+                Debug.LogWarning("[GearCup] Önce MainMenu'de ekranı kur ve Play'e bas.");
+        }
     }
 
     private static void BuildHero(RectTransform design, GearCupPreviewConfig cfg)

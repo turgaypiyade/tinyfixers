@@ -31,7 +31,8 @@ public static class SimBatchRunner
 
     private static async System.Threading.Tasks.Task RunBatch(bool allProfiles)
     {
-        if (_cancellation != null) { Debug.LogWarning("[SimBatch] Bir koşu zaten çalışıyor."); return; }
+        if (_cancellation != null) { if (GameDiagnostics.EditorTools)
+            Debug.LogWarning("[SimBatch] Bir koşu zaten çalışıyor."); return; }
         var cancellation = new System.Threading.CancellationTokenSource();
         _cancellation = cancellation;
         try
@@ -44,8 +45,10 @@ public static class SimBatchRunner
             }
             else await RunAll(SimPlayerProfile.Average, "_SimStats.csv", cancellation.Token);
         }
-        catch (System.OperationCanceledException) { Debug.Log("[SimBatch] İptal edildi. Tamamlanan leveller CSV'ye kaydedildi."); }
-        catch (System.Exception ex) { Debug.LogException(ex); }
+        catch (System.OperationCanceledException) { if (GameDiagnostics.EditorTools)
+            Debug.Log("[SimBatch] İptal edildi. Tamamlanan leveller CSV'ye kaydedildi."); }
+        catch (System.Exception ex) { if (GameDiagnostics.EditorTools)
+            Debug.LogException(ex); }
         finally { _cancellation = null; cancellation.Dispose(); }
     }
 
@@ -62,7 +65,8 @@ public static class SimBatchRunner
 
         if (levels.Count == 0)
         {
-            Debug.LogError($"[SimBatch] {Dir} altında LevelData bulunamadı.");
+            if (GameDiagnostics.EditorTools)
+                Debug.LogError($"[SimBatch] {Dir} altında LevelData bulunamadı.");
             return;
         }
 
@@ -81,7 +85,8 @@ public static class SimBatchRunner
         {
             cancellationToken.ThrowIfCancellationRequested();
             var level = levels[i];
-            Debug.Log($"[SimBatch] {profile.Name}: {level.name} ({i + 1}/{levels.Count}) — TinyFixers/Sim — Cancel Batch ile durdurulabilir.");
+            if (GameDiagnostics.EditorTools)
+                Debug.Log($"[SimBatch] {profile.Name}: {level.name} ({i + 1}/{levels.Count}) — TinyFixers/Sim — Cancel Batch ile durdurulabilir.");
             var s = await SimRunner.RunAsync(level, GamesPerLevel, profile, Seed, true, cancellationToken);
             csv.AppendLine(SimRunner.CsvRow(s));
 
@@ -111,7 +116,8 @@ public static class SimBatchRunner
 
         console.AppendLine();
         console.AppendLine($"Süre: {sw.ElapsedMilliseconds} ms → {path}");
-        Debug.Log(console.ToString());
+        if (GameDiagnostics.EditorTools)
+            Debug.Log(console.ToString());
         }
     }
 }

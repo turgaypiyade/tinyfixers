@@ -716,8 +716,10 @@ public static class RisingMockupSetup
         list.Sort((a, b) => a.rect.x.CompareTo(b.rect.x));
 
         if (list.Count == 0)
-            Debug.LogError($"[{LogTag}] Helmet sheet dilimlenmemiş: {HelmetSheetPath} " +
-                           "(Inspector > Sprite Mode: Multiple + Sprite Editor > Slice).");
+            {
+                if (GameDiagnostics.EditorTools)
+                    Debug.LogError($"[{LogTag}] Helmet sheet dilimlenmemiş: {HelmetSheetPath} " + "(Inspector > Sprite Mode: Multiple + Sprite Editor > Slice).");
+            }
         return list.ToArray();
     }
 
@@ -733,7 +735,8 @@ public static class RisingMockupSetup
     {
         var so = new SerializedObject(target);
         var p = so.FindProperty(field);
-        if (p == null) { Debug.LogError($"[RisingMockupSetup] '{field}' alanı {target} üzerinde yok."); return; }
+        if (p == null) { if (GameDiagnostics.EditorTools)
+            Debug.LogError($"[RisingMockupSetup] '{field}' alanı {target} üzerinde yok."); return; }
         p.boolValue = value;
         so.ApplyModifiedPropertiesWithoutUndo();
     }
@@ -742,7 +745,8 @@ public static class RisingMockupSetup
     {
         var so = new SerializedObject(target);
         var p = so.FindProperty(field);
-        if (p == null) { Debug.LogError($"[RisingMockupSetup] '{field}' alanı {target} üzerinde yok."); return; }
+        if (p == null) { if (GameDiagnostics.EditorTools)
+            Debug.LogError($"[RisingMockupSetup] '{field}' alanı {target} üzerinde yok."); return; }
         p.intValue = value;
         so.ApplyModifiedPropertiesWithoutUndo();
     }
@@ -751,7 +755,8 @@ public static class RisingMockupSetup
     {
         var so = new SerializedObject(target);
         var p = so.FindProperty(field);
-        if (p == null) { Debug.LogError($"[RisingMockupSetup] '{field}' alanı {target} üzerinde yok."); return; }
+        if (p == null) { if (GameDiagnostics.EditorTools)
+            Debug.LogError($"[RisingMockupSetup] '{field}' alanı {target} üzerinde yok."); return; }
         p.floatValue = value;
         so.ApplyModifiedPropertiesWithoutUndo();
     }

@@ -75,7 +75,8 @@ public class BoardBorderThemeApplier : MonoBehaviour
         BorderSpriteSet set = borderSpriteLibrary.Get(borderColor);
         if (set == null)
         {
-            Debug.LogWarning($"BoardBorderThemeApplier: Border sprite set not found for {borderColor}.", this);
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogWarning($"BoardBorderThemeApplier: Border sprite set not found for {borderColor}.", this);
             return;
         }
 

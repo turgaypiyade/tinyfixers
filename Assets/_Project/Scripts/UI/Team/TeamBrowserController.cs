@@ -300,6 +300,14 @@ public sealed class TeamBrowserController : MonoBehaviour
             return;
         }
 
+        // Takım adı/açıklaması herkese görünür: uygunsuz kelime varsa altın harcanmadan reddedilir.
+        if (ChatModeration.ContainsBlocked(name) ||
+            (createDescInput != null && ChatModeration.ContainsBlocked(createDescInput.text)))
+        {
+            SetFeedback(GameLocalization.Get("moderation_name_rejected"));
+            return;
+        }
+
         if (!PlayerWallet.SpendCoins(CreateCostCoins))
         {
             SetFeedback(GameLocalization.GetFormat("team_create_no_gold", CreateCostCoins));

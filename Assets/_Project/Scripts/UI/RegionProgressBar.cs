@@ -39,6 +39,8 @@ public sealed class RegionProgressBar : MonoBehaviour
              "oturur; bu kadar yukarı alınır ki çubuğun ortasına hizalı dursun. Sahneden bağımsız (kodla uygulanır).")]
     [SerializeField] private float chestRaise = 26f;
     private bool chestRaised;
+    private bool chestAnimating;
+    private RewardChestMotion.Home chestHome;
 
     private void Awake()
     {
@@ -131,6 +133,9 @@ public sealed class RegionProgressBar : MonoBehaviour
 
     private void OnDisable()
     {
+        StopAllCoroutines();
+        if (chestAnimating) chestHome.Restore();
+        chestAnimating = false;
         if (worldMap != null) worldMap.OnRegionUnlocked -= HandleRegionUnlocked;
     }
 
@@ -195,20 +200,25 @@ public sealed class RegionProgressBar : MonoBehaviour
         if (fillImage != null) fillImage.fillAmount = target;
         UpdateText();
 
-        if (worldMap.AllUnlocked && chestImage != null)
+        if (worldMap.AllUnlocked && chestImage != null && !chestAnimating)
             yield return PlayChestPop();
     }
 
     private IEnumerator PlayChestPop()
     {
         var rt = chestImage.rectTransform;
+        chestAnimating = true;
+        chestHome = new RewardChestMotion.Home(rt);
         Vector3 startScale = rt.localScale;
+        yield return RewardChestMotion.Anticipate(rt);
+        if (chestOpenedSprite != null) chestImage.sprite = chestOpenedSprite;
         Vector3 peak = startScale * chestPopScale;
         float half = chestPopDuration * 0.5f, t = 0f;
         while (t < half) { t += Time.unscaledDeltaTime; rt.localScale = Vector3.Lerp(startScale, peak, Mathf.SmoothStep(0f,1f,t/half)); yield return null; }
         t = 0f;
         while (t < half) { t += Time.unscaledDeltaTime; rt.localScale = Vector3.Lerp(peak, startScale, Mathf.SmoothStep(0f,1f,t/half)); yield return null; }
         rt.localScale = startScale;
-        if (chestOpenedSprite != null) chestImage.sprite = chestOpenedSprite;
+        chestHome.Restore();
+        chestAnimating = false;
     }
 }

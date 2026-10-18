@@ -61,7 +61,6 @@ public class DynamicBoardBorder : MonoBehaviour
     public bool debugMasks = false;
     [Tooltip("Her köşe node'una hangi prefabın kullanıldığını siyah fontla yazar (örn. outer_lb, inner_rt).")]
     public bool debugCornerNames = false;
-    public bool debugBorderLogs = false;
     [Tooltip("Her border sprite'ın etrafına outline çizer (gerçek konumu görmek için).")]
     public bool debugDrawOutlines = false;
     public Font debugFont;
@@ -215,9 +214,6 @@ public class DynamicBoardBorder : MonoBehaviour
                       center,
                       new Vector2(rawLen, borderThickness));
 
-        if (debugBorderLogs)
-            Debug.Log($"[Border][H] cell=({cx},{nodeY}) below={solidIsBelow} " +
-                      $"pos=({center.x:F1},{center.y:F1}) base=({centerX:F1},{centerY:F1}) len={rawLen:F1} tL={trimL} tR={trimR}");
     }
 
     private void PlaceStraightV(int nodeX, int cy, bool solidIsRight, bool[] blocked)
@@ -242,9 +238,6 @@ public class DynamicBoardBorder : MonoBehaviour
                       center,
                       new Vector2(borderThickness, rawLen));
 
-        if (debugBorderLogs)
-            Debug.Log($"[Border][V] node=({nodeX},{cy}) right={solidIsRight} " +
-                      $"pos=({center.x:F1},{center.y:F1}) base=({centerX:F1},{centerY:F1}) len={rawLen:F1} tT={trimT} tB={trimB}");
     }
 
     private GameObject PickHorizontalPrefab(bool solidIsBelow)
@@ -379,8 +372,6 @@ public class DynamicBoardBorder : MonoBehaviour
             img.type = Image.Type.Simple;
         }
         if (debugDrawOutlines) SpawnDebugOutline(center, size, new Color(1f, 0f, 0f, 0.9f));
-        if (debugBorderLogs)
-            Debug.Log($"[Border][Corner] mask={mask} center=({center.x:F2}, {center.y:F2}) size=({size.x:F2}, {size.y:F2})");
     }
 
     private void SpawnStraight(GameObject prefab, Vector2 center, Vector2 size)

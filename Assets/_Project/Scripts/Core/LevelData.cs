@@ -286,8 +286,20 @@ public enum ObstacleId : int
     TarpStatue = 68,
 
     // Grass-backed water lily. Eats adjacent specials; special hits return the stored special,
-    // then remove four petals permanently. The goal completes only after its grass is cleared.
+    // then remove four petals permanently. Empty flowers accept normal/special hits; a stored
+    // special can only be released by another special. The goal completes after grass clears.
     GrassWaterLily = 69,
+
+    // Fixed 2x2 colossus: four damage stages, special activation only. Shared origin/goal.
+    RhodesStatue = 70,
+
+    // Renkli sandık: sabit 1x1, 3 aşama (sağlam → çatlak → ahşabı görünen). YALNIZ kendi rengindeki komşu
+    // eşleşme + special kırar (ObstacleDef.restrictNormalMatchTileType). Renk sırası ToolThreat ile aynı:
+    // Sarı=Gear, Kırmızı=Core, Mavi=Bolt, Yeşil=Plate.
+    ColorCrateYellow = 71,
+    ColorCrateRed = 72,
+    ColorCrateBlue = 73,
+    ColorCrateGreen = 74,
 }
 
 public enum TubeDirection { Up, Down, Left, Right }

@@ -22,6 +22,7 @@ public sealed class RewardChestRevealOverlay : MonoBehaviour
     private const string OpenedResourcePath = "UI/RewardChestOpened";
 
     private static RewardChestRevealOverlay _instance;
+    public static bool IsShowing => _instance != null;
 
     [Header("Zamanlama (sn)")]
     [SerializeField] private float dimFadeIn      = 0.25f;
@@ -45,11 +46,12 @@ public sealed class RewardChestRevealOverlay : MonoBehaviour
     private Action _onDone;
     private bool _finished;
     private bool _tapAllowed;
+    private string _titleKey;
 
     // ─────────────────────────────────────────────────────────────────
 
     public static void Show(IReadOnlyList<DailySlotReward> rewards, Action onDone = null,
-                            Sprite chestClosed = null, Sprite chestOpened = null)
+                            Sprite chestClosed = null, Sprite chestOpened = null, string titleKey = null)
     {
         if (_instance != null)
             Destroy(_instance.gameObject);
@@ -69,6 +71,7 @@ public sealed class RewardChestRevealOverlay : MonoBehaviour
         var overlay = root.AddComponent<RewardChestRevealOverlay>();
         overlay._rewards = rewards ?? Array.Empty<DailySlotReward>();
         overlay._onDone = onDone;
+        overlay._titleKey = titleKey;
         overlay._closedSprite = chestClosed != null ? chestClosed : Resources.Load<Sprite>(ClosedResourcePath);
         overlay._openedSprite = chestOpened != null ? chestOpened : Resources.Load<Sprite>(OpenedResourcePath);
 
@@ -104,6 +107,24 @@ public sealed class RewardChestRevealOverlay : MonoBehaviour
         _group = gameObject.AddComponent<CanvasGroup>();
         _group.alpha = 0f;
         _group.blocksRaycasts = true;
+
+        if (!string.IsNullOrEmpty(_titleKey))
+        {
+            var title = NewRect("Title", transform);
+            title.anchoredPosition = new Vector2(0f, 650f);
+            title.sizeDelta = new Vector2(960f, 130f);
+            var label = title.gameObject.AddComponent<TextMeshProUGUI>();
+            label.text = GameLocalization.Get(_titleKey);
+            if (_font != null) label.font = _font;
+            label.fontSize = 60f;
+            label.enableAutoSizing = true;
+            label.fontSizeMin = 30f;
+            label.fontSizeMax = 60f;
+            label.fontStyle = FontStyles.Bold;
+            label.alignment = TextAlignmentOptions.Center;
+            label.color = new Color(1f, 0.88f, 0.36f);
+            label.raycastTarget = false;
+        }
 
         // Ödül sırası (sandığın üstünde, ortalanmış yatay dizilim).
         _rewardRow = NewRect("RewardRow", transform);
@@ -179,32 +200,14 @@ public sealed class RewardChestRevealOverlay : MonoBehaviour
         yield return Animate(chestPopIn, t => _chest.localScale = Vector3.one * EaseOutBack(t));
         _chest.localScale = Vector3.one;
 
-        // 3) Sarsılma + ŞİŞME — şiddet ve boyut artarak (patlama öncesi kriz hissi).
-        Vector2 home = _chest.anchoredPosition;
-        float st = 0f;
-        while (st < shakeDuration)
-        {
-            st += Time.unscaledDeltaTime;
-            float k = Mathf.Clamp01(st / shakeDuration);
-            float amp = Mathf.Lerp(3f, 16f, k * k);
-            _chest.anchoredPosition = home + new Vector2(
-                (Mathf.PerlinNoise(st * 34f, 0.3f) - 0.5f) * 2f * amp,
-                (Mathf.PerlinNoise(0.7f, st * 34f) - 0.5f) * 2f * amp * 0.6f);
-            _chest.localEulerAngles = new Vector3(0f, 0f, (Mathf.PerlinNoise(st * 28f, 5f) - 0.5f) * 2f * amp * 0.45f);
-
-            // Şişme: sallanırken hafif nefes alıp giderek büyür (1 → ~1.16), tepesinde patlar.
-            float swell = Mathf.Lerp(1f, 1.16f, k * k) + Mathf.Sin(st * 22f) * 0.02f * k;
-            _chest.localScale = Vector3.one * swell;
-            yield return null;
-        }
-        _chest.anchoredPosition = home;
-        _chest.localEulerAngles = Vector3.zero;
+        // 3) İki nefes, hızlanan sağ-sol sarsıntı, son sıkışma.
+        yield return RewardChestMotion.Anticipate(_chest, shakeDuration);
 
         // 4) Açılış: flash + sprite swap + şişmeden PATLAMA (swell → 1, üstüne pop).
         if (_openedSprite != null) _chestImage.sprite = _openedSprite;
         GameEventSfx.PlayChestOpen();
         StartCoroutine(FlashOnce(0.35f));
-        float startS = _chest.localScale.x;   // ~1.16 (şişmiş hal)
+        float startS = _chest.localScale.x;
         yield return Animate(openPunch, t =>
         {
             float s = Mathf.Lerp(startS, 1f, t) + 0.22f * Mathf.Sin(t * Mathf.PI);

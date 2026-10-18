@@ -54,13 +54,15 @@ public static class EventSfxLibrarySetup
 
         EditorUtility.SetDirty(lib);
         AssetDatabase.SaveAssets();
-        Debug.Log($"[EventSfx] Kütüphane kuruldu: {AssetPath}");
+        if (GameDiagnostics.EditorTools)
+            Debug.Log($"[EventSfx] Kütüphane kuruldu: {AssetPath}");
     }
 
     private static void Bind(string file, Action<EventSfxCue> assign, float volume, float maxDuration)
     {
         var clip = LoadClip(file, loop: false);
-        if (clip == null) { Debug.LogWarning($"[EventSfx] Klip yok: {ClipDir}{file}.wav"); return; }
+        if (clip == null) { if (GameDiagnostics.EditorTools)
+            Debug.LogWarning($"[EventSfx] Klip yok: {ClipDir}{file}.wav"); return; }
         assign(new EventSfxCue
         {
             clips = new[] { clip },

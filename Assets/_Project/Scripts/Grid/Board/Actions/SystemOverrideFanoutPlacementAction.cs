@@ -56,9 +56,10 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
     private const float PostPlacementBreathHoldSeconds = 0.22f;
     // Origin override fanout sırasında "kanallama" hissi: origin taşın görseli tahtadan hafif YUKARI
     // kalkar ve ışınlar/yerleşim boyunca yukarıda durur. DÖNME, taşın kendi idle/creation spin'idir
-    // (OverrideSpecialView.PlayCreation) — burada tetiklenir, ayrı bir Z-spin UYGULANMAZ.
+    // (OverrideSpecialView.BeginActivation) — burada tetiklenir, ayrı bir Z-spin UYGULANMAZ.
     private const float OriginLiftCells = 0.16f;        // tile boyutunun oranı = yukarı kalkma miktarı
     private const float OriginLiftRiseSeconds = 0.14f;  // kalkış easing süresi
+    private const float OriginMarkScale = 1.25f;
     private const float OriginBobPixels = 0.05f;        // yukarıdayken hafif salınım (tile oranı)
     private static Sprite laserImpactSprite;
     // Kaynak ikon sprite'ı → beyaz silüet (RGB=beyaz, alpha=ikon) cache'i. Halo bunu kullanır.
@@ -70,6 +71,8 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
 
     private readonly BoardController board;
     private readonly Vector2Int origin;
+    private readonly TileView sourceOverrideTile;
+    private readonly int sourceOverrideLifetime;
     private readonly List<Vector2Int> targets;
     private readonly List<Vector2Int> deferredPulseExplosionCells;
     private readonly List<Vector2Int> deferredPatchBotCells;
@@ -82,10 +85,18 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
         bool doPulse,
         List<Vector2Int> deferredPulseExplosionCells = null,
         List<Vector2Int> deferredPatchBotCells = null,
-        System.Func<List<Vector2Int>, IEnumerator> launchPatchBots = null)
+        System.Func<List<Vector2Int>, IEnumerator> launchPatchBots = null,
+        TileView sourceOverrideTile = null)
     {
         this.board = board;
         this.origin = origin;
+        // Line/Pulse remove the source from the grid while building the action list.
+        // Retain its real view now; a later cell lookup would find null or a refill tile.
+        this.sourceOverrideTile = sourceOverrideTile;
+        if (this.sourceOverrideTile == null && board != null
+            && origin.x >= 0 && origin.x < board.Width && origin.y >= 0 && origin.y < board.Height)
+            this.sourceOverrideTile = board.Tiles[origin.x, origin.y];
+        sourceOverrideLifetime = this.sourceOverrideTile != null ? this.sourceOverrideTile.LifetimeVersion : -1;
         this.targets = targets;
         this.deferredPulseExplosionCells = deferredPulseExplosionCells ?? new List<Vector2Int>();
         this.deferredPatchBotCells = deferredPatchBotCells ?? new List<Vector2Int>();
@@ -94,120 +105,131 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
 
     public override IEnumerator ExecuteVisuals(ActionSequencer sequencer)
     {
-        if (targets == null || targets.Count == 0)
+        if (board == null || !board.isActiveAndEnabled || targets == null || targets.Count == 0)
             yield break;
 
-        TileView originTile = null;
-        if (origin.x >= 0 && origin.x < board.Width && origin.y >= 0 && origin.y < board.Height)
-            originTile = board.Tiles[origin.x, origin.y];
+        TileView originTile = ResolveOriginTile();
 
         var implantBreaths = new List<ImplantBreathHandle>();
 
         // Origin override: ışınlar çıkarken tahtadan hafif yukarı kalkıp döner (kanallama).
         var originLift = StartOriginLift(originTile);
-
-        // Geçerli hedefleri süz.
-        var validTargets = new List<Vector2Int>(targets.Count);
-        foreach (var pos in targets)
+        try
         {
-            if (pos.x < 0 || pos.x >= board.Width || pos.y < 0 || pos.y >= board.Height)
-                continue;
-            if (board.Tiles[pos.x, pos.y] == null)
-                continue;
-            validTargets.Add(pos);
-        }
+            // Geçerli hedefleri süz.
+            var validTargets = new List<Vector2Int>(targets.Count);
+            foreach (var pos in targets)
+            {
+                if (pos.x < 0 || pos.x >= board.Width || pos.y < 0 || pos.y >= board.Height)
+                    continue;
+                if (board.Tiles[pos.x, pos.y] == null)
+                    continue;
+                validTargets.Add(pos);
+            }
 
-        // Tören boyunca origin ve hedefler yerinde kalır (ışın hedefin gördüğü hücreye iner).
-        var heldCells = new List<Vector2Int>(validTargets) { origin };
-        using var ceremonyHold = board.HoldForFlow(heldCells);
+            // Tören boyunca origin ve hedefler yerinde kalır (ışın hedefin gördüğü hücreye iner).
+            var heldCells = new List<Vector2Int>(validTargets) { origin };
+            using var ceremonyHold = board.HoldForFlow(heldCells);
 
-        var beamTiming = BuildBeamTiming(validTargets.Count);
-        var pending = new int[1];
+            var beamTiming = BuildBeamTiming(validTargets.Count);
+            var pending = new int[1];
 
-        for (int i = 0; i < validTargets.Count; i++)
-        {
-            while (pending[0] >= beamTiming.MaxConcurrent)
+            for (int i = 0; i < validTargets.Count; i++)
+            {
+                while (pending[0] >= beamTiming.MaxConcurrent)
+                    yield return null;
+
+                pending[0]++;
+                board.StartCoroutine(RunAndSignal(
+                    CoFireBeamAtTarget(originTile, validTargets[i], implantBreaths, beamTiming, i), pending));
+
+                if (beamTiming.LaunchIntervalSeconds > 0f && i < validTargets.Count - 1)
+                {
+                    float wait = board.ApplySpecialChainTempo(beamTiming.LaunchIntervalSeconds);
+                    if (wait > 0f)
+                        yield return new WaitForSeconds(wait);
+                }
+            }
+
+            while (pending[0] > 0)
                 yield return null;
 
-            pending[0]++;
-            board.StartCoroutine(RunAndSignal(
-                CoFireBeamAtTarget(originTile, validTargets[i], implantBreaths, beamTiming), pending));
+            yield return new WaitForSeconds(board.ApplySpecialChainTempo(0.002f));
+            if (beamTiming.PostPlacementFadeLeadSeconds > 0f)
+                yield return new WaitForSeconds(board.ApplySpecialChainTempo(beamTiming.PostPlacementFadeLeadSeconds));
 
-            if (beamTiming.LaunchIntervalSeconds > 0f && i < validTargets.Count - 1)
+            if (implantBreaths.Count > 0)
             {
-                float wait = board.ApplySpecialChainTempo(beamTiming.LaunchIntervalSeconds);
-                if (wait > 0f)
-                    yield return new WaitForSeconds(wait);
+                float hold = board.ApplySpecialChainTempo(beamTiming.PostPlacementBreathHoldSeconds);
+                if (hold > 0f)
+                    yield return new WaitForSeconds(hold);
             }
+
+            StopImplantBreaths(implantBreaths);
+
+            if (deferredPulseExplosionCells != null && deferredPulseExplosionCells.Count > 0)
+            {
+                // Yerleşim bitti → tetikleme başlıyor: tam 1 vuruşluk nefes (okunabilir geçiş).
+                yield return new WaitForSeconds(board.CellTime);
+
+                for (int i = 0; i < deferredPulseExplosionCells.Count; i++)
+                {
+                    var cell = deferredPulseExplosionCells[i];
+
+                    if (cell.x < 0 || cell.x >= board.Width || cell.y < 0 || cell.y >= board.Height)
+                        continue;
+
+                    var tile = board.Tiles[cell.x, cell.y];
+                    if (tile == null)
+                        continue;
+
+                    // Sadece görsel patlama — chain tetikleme OverrideSpecializedCombo
+                    // tarafından PulseCoreSpecial üzerinden zaten yapıldı.
+                    PlayPulseCoreExplosionVfx(tile);
+
+                    // Patlamalar arası da metronom (¾ vuruş) — yerleşimle aynı ritim.
+                    yield return new WaitForSeconds(board.CellTime * 0.75f);
+                }
+            }
+
+            if (deferredPatchBotCells != null && deferredPatchBotCells.Count > 0)
+            {
+                if (launchPatchBots != null)
+                {
+                    // PatchBotSpecial.Execute akışını kullan — yeni animasyonlar (blade spinner,
+                    // body separation, afterimage) PatchbotDashUI üzerinden otomatik çalışır.
+                    // Preparation spans frames. Do not release ceremonyHold or advance
+                    // to source clear/gravity while some bots are still read by old cells.
+                    yield return launchPatchBots(deferredPatchBotCells);
+                    // Uçuşlar arka planda (PatchbotDashUI background dash) çalışır;
+                    // board resolve sonrası cascade'i PatchBotSpecial arrival callback'i tetikler.
+                }
+                else
+                {
+                    // Fallback: eski toplu uçuş.
+                    var airborne = new OverridePatchBotAirborneGroupAction(board, deferredPatchBotCells);
+                    yield return airborne.ExecuteVisuals(sequencer);
+                }
+            }
+
+            // Kanallama biter → görseli sıfırla, sonra tile'ı gizle.
+            StopOriginLift(originLift);
+            originLift = null;
+            if (ResolveOriginTile() != null)
+                SpecialVisualService.HideTileVisualForCombo(originTile);
         }
-
-        while (pending[0] > 0)
-            yield return null;
-
-        yield return new WaitForSeconds(board.ApplySpecialChainTempo(0.002f));
-        if (beamTiming.PostPlacementFadeLeadSeconds > 0f)
-            yield return new WaitForSeconds(board.ApplySpecialChainTempo(beamTiming.PostPlacementFadeLeadSeconds));
-
-        if (implantBreaths.Count > 0)
+        finally
         {
-            float hold = board.ApplySpecialChainTempo(beamTiming.PostPlacementBreathHoldSeconds);
-            if (hold > 0f)
-                yield return new WaitForSeconds(hold);
+            // Also release the sustained cosmetic effect if the action is disposed/cancelled.
+            StopImplantBreaths(implantBreaths);
+            StopOriginLift(originLift);
         }
-
-        StopImplantBreaths(implantBreaths);
-
-        if (deferredPulseExplosionCells != null && deferredPulseExplosionCells.Count > 0)
-        {
-            // Yerleşim bitti → tetikleme başlıyor: tam 1 vuruşluk nefes (okunabilir geçiş).
-            yield return new WaitForSeconds(board.CellTime);
-
-            for (int i = 0; i < deferredPulseExplosionCells.Count; i++)
-            {
-                var cell = deferredPulseExplosionCells[i];
-
-                if (cell.x < 0 || cell.x >= board.Width || cell.y < 0 || cell.y >= board.Height)
-                    continue;
-
-                var tile = board.Tiles[cell.x, cell.y];
-                if (tile == null)
-                    continue;
-
-                // Sadece görsel patlama — chain tetikleme OverrideSpecializedCombo
-                // tarafından PulseCoreSpecial üzerinden zaten yapıldı.
-                PlayPulseCoreExplosionVfx(tile);
-
-                // Patlamalar arası da metronom (¾ vuruş) — yerleşimle aynı ritim.
-                yield return new WaitForSeconds(board.CellTime * 0.75f);
-            }
-        }
-
-        if (deferredPatchBotCells != null && deferredPatchBotCells.Count > 0)
-        {
-            if (launchPatchBots != null)
-            {
-                // PatchBotSpecial.Execute akışını kullan — yeni animasyonlar (blade spinner,
-                // body separation, afterimage) PatchbotDashUI üzerinden otomatik çalışır.
-                // Preparation spans frames. Do not release ceremonyHold or advance
-                // to source clear/gravity while some bots are still read by old cells.
-                yield return launchPatchBots(deferredPatchBotCells);
-                // Uçuşlar arka planda (PatchbotDashUI background dash) çalışır;
-                // board resolve sonrası cascade'i PatchBotSpecial arrival callback'i tetikler.
-            }
-            else
-            {
-                // Fallback: eski toplu uçuş.
-                var airborne = new OverridePatchBotAirborneGroupAction(board, deferredPatchBotCells);
-                yield return airborne.ExecuteVisuals(sequencer);
-            }
-        }
-
-        // Kanallama biter → görseli sıfırla, sonra tile'ı gizle.
-        StopOriginLift(originLift);
-
-        if (originTile != null)
-            SpecialVisualService.HideTileVisualForCombo(originTile);
     }
+
+    private TileView ResolveOriginTile()
+        => sourceOverrideTile != null && sourceOverrideTile.IsCurrentLifetime(sourceOverrideLifetime)
+            && sourceOverrideTile.GetSpecial() == TileSpecial.SystemOverride
+            ? sourceOverrideTile : null;
 
     private sealed class BeamTiming
     {
@@ -256,18 +278,22 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
         TileView originTile,
         Vector2Int pos,
         List<ImplantBreathHandle> implantBreaths,
-        BeamTiming timing)
+        BeamTiming timing,
+        int noteIndex)
     {
         TileView target = board.Tiles[pos.x, pos.y];
         if (target == null)
             yield break;
 
-        Vector3 lastOriginWorld = ResolveTrackedWorldCenter(originTile, origin, Vector3.zero);
+        Vector3 lastOriginWorld = originTile != null
+            ? board.GetTileWorldCenter(originTile)
+            : ResolveTrackedWorldCenter(null, origin, Vector3.zero);
         Vector3 lastTargetWorld = ResolveTrackedWorldCenter(target, pos, Vector3.zero);
 
         System.Func<Vector3> originProvider = () =>
         {
-            lastOriginWorld = ResolveTrackedWorldCenter(originTile, origin, lastOriginWorld);
+            var liveOrigin = ResolveOriginTile();
+            if (liveOrigin != null) lastOriginWorld = board.GetTileWorldCenter(liveOrigin);
             return lastOriginWorld;
         };
 
@@ -310,6 +336,8 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
 
         // 2) TAŞA DEĞDİ — çarpma kıvılcımı + su sıçraması + special yerleşir.
         PlayOverrideLaserImpact(targetProvider(), edgeColor);
+        // İşaretlenen her taş nota dizisinde bir sonrakini çalar (yükselen arpej; robot lazer sesi yerine).
+        PlacementChime.Play(board.SfxSource, noteIndex, 0.6f);
         board.SyncTileData(target.X, target.Y);
         target.RefreshIcon();
         StartImplantBreath(target, implantBreaths);
@@ -451,13 +479,20 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
 
     // ── Origin override lift + idle-spin (fanout kanallama) ───────────────────
     // Lift = görseli tahtadan hafif yukarı taşır (SADECE localPosition). Dönme = taşın kendi
-    // idle/creation spin'i (OverrideSpecialView.PlayCreation) — biz rotation'a DOKUNMAYIZ.
+    // OverrideSpecialView charge animation — biz rotation'a DOKUNMAYIZ.
+    private struct OriginVisualPose
+    {
+        public Vector3 Position, Scale;
+    }
     private sealed class OriginLiftHandle
     {
+        public TileView SourceTile;
+        public int SourceLifetime;
         public Transform[] Visuals;
-        public Vector3[] BasePositions;
+        public OriginVisualPose[] BasePoses;
         public OverrideSpecialView OverrideView;
         public Coroutine Routine;
+        public bool Stopped;
     }
 
     private OriginLiftHandle StartOriginLift(TileView originTile)
@@ -471,15 +506,19 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
 
         var handle = new OriginLiftHandle
         {
+            SourceTile = originTile,
+            SourceLifetime = originTile.LifetimeVersion,
             Visuals = visuals,
-            BasePositions = new Vector3[visuals.Length],
+            BasePoses = new OriginVisualPose[visuals.Length],
             OverrideView = originTile.OverrideSpecialView
         };
         for (int i = 0; i < visuals.Length; i++)
-            handle.BasePositions[i] = visuals[i] != null ? visuals[i].localPosition : Vector3.zero;
+            if (visuals[i] != null)
+                handle.BasePoses[i] = new OriginVisualPose { Position = visuals[i].localPosition, Scale = visuals[i].localScale };
 
-        // Dönme: taşın idle/creation spin-in animasyonunu tetikle (küre yarıları döner → birleşir).
-        handle.OverrideView?.PlayCreation();
+        // Keep the accelerating turn/rock/lightning alive throughout fanout, without an idle gap.
+        originTile.BeginOverrideActivationSorting();
+        handle.OverrideView?.BeginActivation();
 
         handle.Routine = board.StartCoroutine(OriginLiftRoutine(handle));
         return handle;
@@ -502,14 +541,14 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
             float rise = Smooth01(elapsed / Mathf.Max(0.0001f, OriginLiftRiseSeconds));
             float bob = rise * Mathf.Sin(elapsed * 5f) * bobPixels;
             float lift = liftPixels * rise + bob;
-            ApplyOriginLift(handle, lift);
+            ApplyOriginLift(handle, lift, Mathf.Lerp(1f, OriginMarkScale, rise));
             yield return null;
         }
     }
 
     private static bool HasAnyLiveOriginVisual(OriginLiftHandle handle)
     {
-        if (handle == null || handle.Visuals == null)
+        if (!IsCurrentOrigin(handle) || handle.Visuals == null)
             return false;
         for (int i = 0; i < handle.Visuals.Length; i++)
             if (handle.Visuals[i] != null)
@@ -517,32 +556,42 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
         return false;
     }
 
-    private static void ApplyOriginLift(OriginLiftHandle handle, float liftPixels)
+    private static bool IsCurrentOrigin(OriginLiftHandle handle)
+        => handle != null && handle.SourceTile != null
+            && handle.SourceTile.IsCurrentLifetime(handle.SourceLifetime);
+
+    private static void ApplyOriginLift(OriginLiftHandle handle, float liftPixels, float scale)
     {
-        if (handle == null || handle.Visuals == null)
+        if (!IsCurrentOrigin(handle) || handle.Visuals == null)
             return;
 
-        int count = Mathf.Min(handle.Visuals.Length, handle.BasePositions.Length);
+        int count = Mathf.Min(handle.Visuals.Length, handle.BasePoses.Length);
         for (int i = 0; i < count; i++)
         {
             var v = handle.Visuals[i];
             if (v == null)
                 continue;
-            // SADECE yukarı taşı — rotation/scale idle-spin'e (PlayCreation) bırakılır.
-            v.localPosition = handle.BasePositions[i] + Vector3.up * liftPixels;
+            // Scale the whole turn container; the frame animation keeps owning rotation.
+            v.localPosition = handle.BasePoses[i].Position + Vector3.up * liftPixels;
+            v.localScale = handle.BasePoses[i].Scale * scale;
         }
     }
 
     private void StopOriginLift(OriginLiftHandle handle)
     {
-        if (handle == null)
+        if (handle == null || handle.Stopped)
             return;
+        handle.Stopped = true;
 
         if (handle.Routine != null && board != null)
             board.StopCoroutine(handle.Routine);
 
+        // A pooled tile can already be serving a new move; leave its pose/view untouched.
+        if (!IsCurrentOrigin(handle)) return;
+
         // Idle-spin'in kendini tekrar oynatmasını (idleWatch) durdur ki gizlenen taş yeniden belirmesin.
         handle.OverrideView?.Stop();
+        handle.SourceTile.EndOverrideActivationSorting();
 
         int count = handle.Visuals != null ? handle.Visuals.Length : 0;
         for (int i = 0; i < count; i++)
@@ -550,7 +599,8 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
             var v = handle.Visuals[i];
             if (v == null)
                 continue;
-            v.localPosition = handle.BasePositions[i];
+            v.localPosition = handle.BasePoses[i].Position;
+            v.localScale = handle.BasePoses[i].Scale;
         }
     }
 
@@ -702,7 +752,8 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
                 }
                 catch (System.Exception e)
                 {
-                    Debug.LogWarning($"[OverrideImplantHalo] Beyaz silüet üretilemedi ({src.name}): {e.Message}");
+                    if (GameDiagnostics.CriticalErrors)
+                        Debug.LogWarning($"[OverrideImplantHalo] Beyaz silüet üretilemedi ({src.name}): {e.Message}");
                     result = null;   // fallback (çağıran ikonu kullanır — kare değil, renkli şekil)
                 }
                 finally

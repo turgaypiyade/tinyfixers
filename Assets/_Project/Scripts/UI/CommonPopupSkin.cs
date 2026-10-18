@@ -74,7 +74,8 @@ public sealed class CommonPopupSkin : ScriptableObject
             if (cached == null) cached = Resources.Load<CommonPopupSkin>("CommonPopupSkin");
             if (cached == null)
             {
-                Debug.LogError("[CommonPopup] Resources/CommonPopupSkin is missing.");
+                if (GameDiagnostics.CriticalErrors)
+                    Debug.LogError("[CommonPopup] Resources/CommonPopupSkin is missing.");
                 cached = CreateInstance<CommonPopupSkin>();
             }
             return cached;

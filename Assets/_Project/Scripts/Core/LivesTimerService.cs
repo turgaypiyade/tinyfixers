@@ -16,6 +16,8 @@ public class LivesTimerService : MonoBehaviour
     public static int InitialCoins { get; set; } = 500;
 
     private float _elapsed;
+    private bool hasFocus = true;
+    private bool paused;
 
     private const string KeyFirstLaunch = "first_launch_done";
 
@@ -41,6 +43,7 @@ public class LivesTimerService : MonoBehaviour
         DontDestroyOnLoad(gameObject);
 
         LivesManager.Initialize();
+        LevelAssist.ResumeActivity(System.DateTime.UtcNow);
         GrantFirstLaunchRewards();
     }
 
@@ -54,7 +57,6 @@ public class LivesTimerService : MonoBehaviour
         PlayerPrefs.Save();
 
         PlayerWallet.AddCoins(InitialCoins);
-        Debug.Log($"[LivesTimerService] İlk açılış — {InitialCoins} altın verildi.");
     }
 
     // ── Timer ─────────────────────────────────────────────────────────────────
@@ -66,5 +68,17 @@ public class LivesTimerService : MonoBehaviour
         _elapsed = 0f;
         LivesManager.TickRegen();
         BackendServices.TickTeamLives();
+        LevelAssist.TickActivity(System.DateTime.UtcNow);
+        if (!paused && hasFocus) WelcomeBackRewardPresenter.Tick();
+    }
+
+    private void OnApplicationPause(bool value) { paused = value; SyncActivity(); }
+    private void OnApplicationFocus(bool value) { hasFocus = value; SyncActivity(); }
+    private void OnApplicationQuit() => LevelAssist.SuspendActivity(System.DateTime.UtcNow);
+
+    private void SyncActivity()
+    {
+        if (!paused && hasFocus) LevelAssist.ResumeActivity(System.DateTime.UtcNow);
+        else LevelAssist.SuspendActivity(System.DateTime.UtcNow);
     }
 }

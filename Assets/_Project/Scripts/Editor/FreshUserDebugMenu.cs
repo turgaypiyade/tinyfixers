@@ -22,7 +22,8 @@ public static class FreshUserDebugMenu
         PlayerPrefs.DeleteAll();
         PlayerPrefs.Save();
         EditorPrefs.SetBool(TestLevelProgressionBootstrap.FreshUserNextLaunchKey, true);
-        Debug.Log($"[FreshUser] Çıkış yapıldı (eski UID: {oldUid ?? "yok"}). Bir sonraki Play yeni kullanıcıyla başlar.");
+        if (GameDiagnostics.EditorTools)
+            Debug.Log($"[FreshUser] Çıkış yapıldı (eski UID: {oldUid ?? "yok"}). Bir sonraki Play yeni kullanıcıyla başlar.");
         EditorApplication.isPlaying = false;
     }
 

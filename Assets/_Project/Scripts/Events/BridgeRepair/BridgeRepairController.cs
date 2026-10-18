@@ -102,7 +102,8 @@ public sealed class BridgeRepairController : MonoBehaviour
 
         if (config == null)
         {
-            Debug.LogWarning("[BridgeRepair] Config yok (Resources/Events/BridgeRepairConfig). Event devre dışı.");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogWarning("[BridgeRepair] Config yok (Resources/Events/BridgeRepairConfig). Event devre dışı.");
             eventButton?.SetVisible(false);
             return;
         }
@@ -165,7 +166,8 @@ public sealed class BridgeRepairController : MonoBehaviour
         BridgeRepairState.MarkAsked(UtcNow);
         if (joinPopup == null)
         {
-            Debug.LogWarning("[BridgeRepair] Katılım popup'ı yok — kurulumu (TinyFixers ▸ Mockup ▸ Bridge Repair Event) tekrar çalıştır.");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogWarning("[BridgeRepair] Katılım popup'ı yok — kurulumu (TinyFixers ▸ Mockup ▸ Bridge Repair Event) tekrar çalıştır.");
             OnJoinAccepted();
             return;
         }
@@ -176,7 +178,6 @@ public sealed class BridgeRepairController : MonoBehaviour
     {
         if (!IsEventAvailable) return;
         BridgeRepairState.BeginRun(UtcNow, BridgeRepairRace.GenerateBotNames(config));
-        Debug.Log("[BridgeRepair] Yarışa katıldı.");
         if (BridgeRepairState.HowToShownThisCycle) { OpenMap(animate: false); return; }
         BridgeRepairState.MarkHowToShown();
         ShowHowToPlay(() => OpenMap(animate: false));
@@ -279,7 +280,8 @@ public sealed class BridgeRepairController : MonoBehaviour
         var launcher = FindFirstObjectByType<MainMenuLevelButtonController>(FindObjectsInactive.Include);
         if (launcher == null)
         {
-            Debug.LogWarning("[BridgeRepair] MainMenuLevelButtonController bulunamadı — Oyna iptal.");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogWarning("[BridgeRepair] MainMenuLevelButtonController bulunamadı — Oyna iptal.");
             return;
         }
 

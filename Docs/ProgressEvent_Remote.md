@@ -39,7 +39,7 @@ Firebase Console → Firestore → `config` koleksiyonu → **`progressEvent`** 
 | `goals[].target` | Hedef sayısı (1–100000) |
 | `goals[].reward` | Ödül türü (aşağıda) |
 | `goals[].amount` | Ödül adedi |
-| `goals[].minutes` | >0 → süreli ödül (ör. `Lives` + 15 = 15 dk sınırsız can) |
+| `goals[].minutes` | Can ve level başı jokerlerde >0 → süreli ödül. Coin, yıldız ve board booster’larında süre yoktur; adet verilir. |
 | `goals[].descTr / descEn` | (İsteğe bağlı) bar açıklaması |
 
 **Hedef türleri:** `TileCleared_Gear` (sarı) · `TileCleared_Core` (kırmızı) · `TileCleared_Bolt` (mavi) ·
@@ -51,6 +51,26 @@ Firebase Console → Firestore → `config` koleksiyonu → **`progressEvent`** 
 
 Tanınmayan tür adı gelen hedef **atlanır** (eski sürümler yeni türlerle kırılmaz). İkonlar türden çözülür
 (oyundaki asset'te o türe atanmış görsel varsa o, yoksa ikon kütüphanesi) → indirme gerekmez.
+
+## Hedef/ödül tutarlılığı düzeltmesi — 2026-10-17
+
+ProgressGoalType içinde yıldız harcama hedefi yoktur; cüzdan harcama olayına da abone olunmaz. Yerel asset’te mavi taş hedefinin ikonu yanlış atanmış, ödülü 10 yıldız ve ödül ikonu da kalpmiş. Kırmızı taş hedefinde çekiç ikonu kullanılıyormuş. Hedef görselleri artık yerel/sunucu kaynağından bağımsız olarak ortak TileIconLibrary’deki gerçek hedef türünden çözülür; eksikse yalnız authored hedef ikonu kullanılabilir, ödül ikonu hedef yerine konmaz.
+
+Yerel yedek etkinlikte 250 mavi taş ödülü **150 altın** oldu. 250 kırmızı taşın çalışmayan **15 dakika çekiç** tanımı **1 çekiç** oldu. Diğer hedef sayıları ve süreleri korunarak mevcut hedef ilerlemesinin anlamı değişmedi; kayıt/claim geçmişi sıfırlanmadı, önceden verilen yıldızlar geri alınmadı.
+
+| Yerel hedef | Ödül |
+| --- | --- |
+| 150 sarı taş kır | 15 dakika sınırsız can |
+| 25 roket kullan | 15 dakika PulseCore |
+| 250 mavi taş kır | 150 altın |
+| 250 kırmızı taş kır | 1 çekiç |
+| 20 roket kullan | 1 PulseCore |
+
+Süreli ödül desteği Lives ve Joker_LineH/Line/PulseCore/SystemOverride ile sınırlıdır. Yanlış süre tanımı gelirse ProgressEvent gerçek adet ödülünü verir; kullanılmayan bir expiry kaydı yazmaz. Bu kontrol hem yerel hem remote hedeflerde geçerlidir. Sunucudaki `config/progressEvent` dokümanı okunup değiştirilmedi; remote açıkken hedef sayıları ve ödül türleri hâlâ o dokümanın kontrolündedir.
+
+Boş hedef açıklaması yerine 12 hedef türünün TR/EN açıklaması kullanılır. PEGoalRow prefabındaki eksik descriptionText bağlantısı eklendi; sayaçtan ayrı satırda görev yazılır. Sunucudan verilen özel açıklama korunur. UI ölçüleri statik kontrol edildi, Unity’de görsel testi yapılmadı.
+
+`Tools/check_progress_event_rules.csx`: 37 üretim metodu kontrolü (ikon, açıklama, süre/adet, sıralı sayım, staging, tek ödül). `check_progress_event_assets.py`: beş yerel hedef/ödül eşleşmesi, TR/EN anahtarları, prefab ID ve açıklama bağlantısı. Yeni per-frame arama, oyun VFX’i veya gameplay allocation eklenmedi. Build/Unity çalıştırılmadı.
 
 ## Hedef ayarı (makul seviye)
 

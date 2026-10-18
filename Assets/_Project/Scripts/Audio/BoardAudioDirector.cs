@@ -182,7 +182,7 @@ public class BoardAudioDirector : MonoBehaviour
             SuppressFallsFor(0.08f);
 
         if (debugLogs)
-            Debug.Log("[BoardAudioDirector] cue=" + request.Cue + " family=" + resolved.familyKey + " volume=" + volume.ToString("0.00"));
+            {}
     }
 
     private ResolvedPlay Resolve(BoardSfxRequest request)

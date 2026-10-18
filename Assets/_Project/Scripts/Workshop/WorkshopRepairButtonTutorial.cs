@@ -66,15 +66,14 @@ public class WorkshopRepairButtonTutorial : MonoBehaviour
         }
     }
 
-    private void Start()
+    private IEnumerator Start()
     {
-        Debug.Log($"[Tutorial] Start. IsSeen={IsSeen()}, gameObject.activeSelf={gameObject.activeSelf}, overlay={tutorialOverlay != null}");
+        if (IsSeen()) yield break;
 
-        if (IsSeen())
-        {
-            Debug.Log("[Tutorial] Workshop repair tutorial zaten görüldü, atlanıyor.");
-            return;
-        }
+        // İlk açılışta önce Şartlar/Gizlilik kabulü: öğretici tüm düğmeleri kapattığı için kabul ekranının
+        // düğmeleri de kapanıyor, iki ekran birbirini kilitliyordu. Kabul bitene dek bekle.
+        while (LegalConsent.NeedsAcceptance || LegalConsent.IsShowing) yield return null;
+        if (IsSeen()) yield break;
 
         // ÖNEMLİ: input'u HEMEN kilitle (gecikme öncesi). Yoksa 0.6 sn içinde kullanıcı
         // başka ekrana geçip RepairButton'ı kaybediyor ve tutorial tamamlanamıyor.
@@ -119,12 +118,12 @@ public class WorkshopRepairButtonTutorial : MonoBehaviour
 
     private void ShowTutorial()
     {
-        Debug.Log("[Tutorial] ShowTutorial() çağrıldı.");
 
         if (dismissed) return;
         if (repairButton == null)
         {
-            Debug.LogWarning("[Tutorial] repairButton atanmamış!");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogWarning("[Tutorial] repairButton atanmamış!");
             return;
         }
 
@@ -197,6 +196,8 @@ public class WorkshopRepairButtonTutorial : MonoBehaviour
         {
             if (btn == repairButton) continue;
             if (!btn.interactable) continue;
+            if (btn.GetComponentInParent<LegalConsent>(true) != null || btn.GetComponentInParent<LegalDocumentView>(true) != null)
+                continue;   // kabul / belge pencereleri her zaman kullanılabilir
             btn.interactable = false;
             blockedButtons.Add(btn);
         }

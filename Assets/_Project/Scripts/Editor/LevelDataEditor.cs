@@ -572,7 +572,8 @@ public class LevelDataEditor : Editor
             return true;   // yığındaki heykel: hücre basılmaz, boyut yalnız girişte
         if (!level.InBounds(ox + newSize - 1, oy + newSize - 1))
         {
-            Debug.LogWarning($"[LevelEditor] Heykel {newSize}x{newSize} tahtaya sığmıyor.");
+            if (GameDiagnostics.EditorTools)
+                Debug.LogWarning($"[LevelEditor] Heykel {newSize}x{newSize} tahtaya sığmıyor.");
             return false;
         }
         for (int y = oy; y < oy + newSize; y++)
@@ -582,7 +583,8 @@ public class LevelDataEditor : Editor
                 bool ownCell = level.obstacles[i] == (int)ObstacleId.TarpStatue && level.obstacleOrigins[i] == origin;
                 if (level.cells[i] != (int)CellType.Normal || (!ownCell && level.obstacles[i] != (int)ObstacleId.None))
                 {
-                    Debug.LogWarning($"[LevelEditor] Heykel {newSize}x{newSize}: ({x},{y}) dolu ya da hole.");
+                    if (GameDiagnostics.EditorTools)
+                        Debug.LogWarning($"[LevelEditor] Heykel {newSize}x{newSize}: ({x},{y}) dolu ya da hole.");
                     return false;
                 }
             }
@@ -766,7 +768,10 @@ public class LevelDataEditor : Editor
             var id = (ObstacleId)level.obstacles[i];
             if (id == ObstacleId.None) continue;
             if (library.Get(id) == null)
-                Debug.LogWarning($"{level.name}: Unknown obstacle id {id} ({(int)id}) at index {i}. It will not render in editor and may not block cascade correctly.", level);
+                {
+                    if (GameDiagnostics.EditorTools)
+                        Debug.LogWarning($"{level.name}: Unknown obstacle id {id} ({(int)id}) at index {i}. It will not render in editor and may not block cascade correctly.", level);
+                }
         }
     }
 
@@ -816,6 +821,8 @@ public class LevelDataEditor : Editor
         EditorGUILayout.Space(4);
         if (selectedObstacle == ObstacleId.GrassWaterLily)
             EditorGUILayout.HelpBox("GrassWaterLily tek parça yerleştirilir: çim + nilüfer birlikte gelir. Ayrı Grass ekleme.", MessageType.Info);
+        if (selectedObstacle == ObstacleId.RhodesStatue)
+            EditorGUILayout.HelpBox("RhodesStatue: tek seçimle 2×2 yerleşir. Yalnız special hasarı alır; dört vuruşta tamamen kalkar.", MessageType.Info);
         if (selectedObstacle == ObstacleId.TarpStatue)
             DrawTarpStatuePalette(level);
         if (selectedObstacle == ObstacleId.Hamster)
@@ -1398,7 +1405,8 @@ public class LevelDataEditor : Editor
         int h = Mathf.Max(1, selectedSafeH);
         if (bx + w > level.width || by + h > level.height)
         {
-            Debug.LogWarning($"[SafeEditor] Safe at ({bx},{by}) {w}x{h} grid dışına taşıyor.");
+            if (GameDiagnostics.EditorTools)
+                Debug.LogWarning($"[SafeEditor] Safe at ({bx},{by}) {w}x{h} grid dışına taşıyor.");
             return;
         }
 
@@ -1444,7 +1452,8 @@ public class LevelDataEditor : Editor
         int h = Mathf.Max(2, selectedSealH);
         if (bx + w > level.width || by + h > level.height)
         {
-            Debug.LogWarning($"[SealEditor] Ancient Seal at ({bx},{by}) {w}x{h} grid dışına taşıyor.");
+            if (GameDiagnostics.EditorTools)
+                Debug.LogWarning($"[SealEditor] Ancient Seal at ({bx},{by}) {w}x{h} grid dışına taşıyor.");
             return;
         }
 
@@ -1578,9 +1587,8 @@ public class LevelDataEditor : Editor
         {
             if (!top.TryGetValue(c, out var under) || under.isPath || under.id == ObstacleId.None) continue;
             if (under.cells.IsSubsetOf(newCells)) continue;
-            Debug.LogWarning($"[OverlayEditor] {newId} konamaz: ({c % level.width},{c / level.width}) hücresindeki " +
-                             $"{under.id} ({under.cells.Count} hücre) tamamen örtülmüyor. Üstteki katman alttaki engeli " +
-                             "aynı ya da daha çok hücreyle TAMAMEN kaplamalı.");
+            if (GameDiagnostics.EditorTools)
+                Debug.LogWarning($"[OverlayEditor] {newId} konamaz: ({c % level.width},{c / level.width}) hücresindeki " + $"{under.id} ({under.cells.Count} hücre) tamamen örtülmüyor. Üstteki katman alttaki engeli " + "aynı ya da daha çok hücreyle TAMAMEN kaplamalı.");
             return false;
         }
         return true;
@@ -1656,18 +1664,19 @@ public class LevelDataEditor : Editor
         if (selectedObstacle == ObstacleId.None) return;
         if (selectedObstacle == ObstacleId.AncientSeal)
         {
-            Debug.LogWarning("Ancient Seal için kendi sekmesini kullan; toplama sayıları orada ayarlanır.");
+            if (GameDiagnostics.EditorTools)
+                Debug.LogWarning("Ancient Seal için kendi sekmesini kullan; toplama sayıları orada ayarlanır.");
             return;
         }
 
-        // Zemin altı engeller (Mud, Jel, Su birikintisi) ve Lazer topu yığının daima EN ALTINDA — başka bir
-        // şeyin üstüne konamaz (topun üstüne örtü gelebilir, altına hiçbir şey konmaz).
+        // Zemin altı engeller daima en altta. Lazer ise örn. 167'de tek jel hücresini
+        // örtebilir; generic beneath yolu lazer kırılınca bu hücreyi açar.
         if (selectedObstacle == ObstacleId.Mud || selectedObstacle == ObstacleId.SpreadingGel
-            || selectedObstacle == ObstacleId.WaterPuddle || selectedObstacle == ObstacleId.LaserCannon
+            || selectedObstacle == ObstacleId.WaterPuddle
             || selectedObstacle == ObstacleId.BilliardPocket)
         {
-            Debug.LogWarning($"[OverlayEditor] {selectedObstacle} üst katman olamaz (daima en altta). " +
-                             "Obstacle modunda taban katmana boya.");
+            if (GameDiagnostics.EditorTools)
+                Debug.LogWarning($"[OverlayEditor] {selectedObstacle} üst katman olamaz (daima en altta). " + "Obstacle modunda taban katmana boya.");
             return;
         }
 
@@ -1675,7 +1684,8 @@ public class LevelDataEditor : Editor
         // Bilardo cebi yığına girmez: üstüne de bir şey konmaz (top cebe düşebilmeli).
         if (level.obstacles != null && level.obstacles[originIdx] == (int)ObstacleId.BilliardPocket)
         {
-            Debug.LogWarning("[OverlayEditor] Bilardo cebinin üstüne katman konamaz.");
+            if (GameDiagnostics.EditorTools)
+                Debug.LogWarning("[OverlayEditor] Bilardo cebinin üstüne katman konamaz.");
             return;
         }
         var def = level.obstacleLibrary != null ? level.obstacleLibrary.Get(selectedObstacle) : null;
@@ -1683,7 +1693,8 @@ public class LevelDataEditor : Editor
         int w = pfoot.x, h = pfoot.y;
         if (bx + w > level.width || by + h > level.height)
         {
-            Debug.LogWarning($"[OverlayEditor] Stacked {selectedObstacle} at ({bx},{by}) {w}x{h} grid dışına taşıyor.");
+            if (GameDiagnostics.EditorTools)
+                Debug.LogWarning($"[OverlayEditor] Stacked {selectedObstacle} at ({bx},{by}) {w}x{h} grid dışına taşıyor.");
             return;
         }
 
@@ -1759,7 +1770,8 @@ public class LevelDataEditor : Editor
         {
             tubeStatus = $"({bx},{by}) → {selectedTubeDir} yönünde {entry.length} hücre board dışına taşıyor. " +
                          "Yönü veya uzunluğu değiştir (Up = tıklanan hücreden YUKARI uzanır).";
-            Debug.LogWarning($"[TubeEditor] {tubeStatus}");
+            if (GameDiagnostics.EditorTools)
+                Debug.LogWarning($"[TubeEditor] {tubeStatus}");
             return;
         }
         foreach (int ci in cells)
@@ -1768,20 +1780,23 @@ public class LevelDataEditor : Editor
             if (level.cells[ci] != (int)CellType.Normal)
             {
                 tubeStatus = $"Tüp ({cx},{cy}) hücresinden geçiyor ama orası boş (mask) hücre.";
-                Debug.LogWarning($"[TubeEditor] {tubeStatus}");
+                if (GameDiagnostics.EditorTools)
+                    Debug.LogWarning($"[TubeEditor] {tubeStatus}");
                 return;
             }
             var existingObs = (ObstacleId)level.obstacles[ci];
             if (existingObs != ObstacleId.None && existingObs != ObstacleId.Tube)
             {
                 tubeStatus = $"Tüp ({cx},{cy}) hücresinden geçiyor ama orada {existingObs} var. Önce Erase ile temizle.";
-                Debug.LogWarning($"[TubeEditor] {tubeStatus}");
+                if (GameDiagnostics.EditorTools)
+                    Debug.LogWarning($"[TubeEditor] {tubeStatus}");
                 return;
             }
             if (TubeIndexAtCell(level, ci) >= 0)
             {
                 tubeStatus = $"Tüp ({cx},{cy}) hücresinde başka bir tüple çakışıyor.";
-                Debug.LogWarning($"[TubeEditor] {tubeStatus}");
+                if (GameDiagnostics.EditorTools)
+                    Debug.LogWarning($"[TubeEditor] {tubeStatus}");
                 return;
             }
         }
@@ -1850,7 +1865,8 @@ public class LevelDataEditor : Editor
         // girişlerinden kurar (GridSpawner generic görsel de çizmez) → görünmez, bozuk hücre olur.
         if (id == ObstacleId.Tube || id == ObstacleId.Magnet || id == ObstacleId.Safe || id == ObstacleId.AncientSeal)
         {
-            Debug.LogWarning($"[LevelEditor] {id} Obstacle modunda yerleştirilemez — kendi sekmesini ({id}) kullan.");
+            if (GameDiagnostics.EditorTools)
+                Debug.LogWarning($"[LevelEditor] {id} Obstacle modunda yerleştirilemez — kendi sekmesini ({id}) kullan.");
             return;
         }
 

@@ -13,7 +13,8 @@ public static class HarvestDebugMenu
     private static void Open()
     {
         var screen = Object.FindFirstObjectByType<HarvestScreen>(FindObjectsInactive.Include);
-        if (screen == null) { Debug.LogWarning("[Harvest] Sahnede HarvestScreen yok — TinyFixers ▸ Mockup ▸ Harvest Event."); return; }
+        if (screen == null) { if (GameDiagnostics.EditorTools)
+            Debug.LogWarning("[Harvest] Sahnede HarvestScreen yok — TinyFixers ▸ Mockup ▸ Harvest Event."); return; }
         screen.Open();
     }
 
@@ -26,6 +27,7 @@ public static class HarvestDebugMenu
         HarvestState.DebugReset();
         PlayerPrefs.DeleteKey("harvest_howto_cycle");   // "Nasıl oynanır" yeniden gösterilsin
         PlayerPrefs.Save();
-        Debug.Log("[Harvest] Durum sıfırlandı (kürek, hasat, kazılanlar, nasıl oynanır).");
+        if (GameDiagnostics.EditorTools)
+            Debug.Log("[Harvest] Durum sıfırlandı (kürek, hasat, kazılanlar, nasıl oynanır).");
     }
 }

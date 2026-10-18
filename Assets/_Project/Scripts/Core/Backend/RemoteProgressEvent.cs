@@ -154,7 +154,7 @@ public static class RemoteProgressEvent
             if (!TryParseEnum(g.reward, out DailySlotRewardType rewardType) || rewardType == DailySlotRewardType.Empty)
                 continue;
 
-            int minutes = Mathf.Clamp(g.minutes, 0, 24 * 60);
+            int minutes = TimedRewardService.SupportsTimed(rewardType) ? Mathf.Clamp(g.minutes, 0, 24 * 60) : 0;
             config.goals.Add(new ProgressGoalDefinition
             {
                 goalType = goalType,
@@ -177,11 +177,10 @@ public static class RemoteProgressEvent
         return null;
     }
 
-    private static string Pick(bool tr, string trText, string enText)
-    {
-        string first = tr ? trText : enText, second = tr ? enText : trText;
-        return !string.IsNullOrEmpty(first) ? first : (second ?? "");
-    }
+    // Yalnız oyuncunun dilindeki metin; yoksa "" → tüketici çeviri anahtarına düşer (ad: progress_event_name,
+    // açıklama: progress_goal_{tür}). Öbür dile DÜŞMEZ: eskiden İngilizce oyuncuya Türkçe ad/açıklama çıkıyordu
+    // ("Give up and you'll lose ... Haftalık Görevler ...").
+    private static string Pick(bool tr, string trText, string enText) => (tr ? trText : enText) ?? "";
 
     // Hedef ikonu: güncel ikon kütüphanesi (taş/special sanatı tek kaynak); kütüphanede yoksa oyundaki
     // asset'te o türe atanmış görsel. (Asset'teki eski atamalar tutarsızdı: mavi taş hedefinde yıldız vb.)
@@ -194,27 +193,7 @@ public static class RemoteProgressEvent
         return null;
     }
 
-    private static Sprite LibraryGoalIcon(ProgressGoalType type)
-    {
-        var lib = TileIconLibrary.Shared;
-        if (lib == null) return null;
-        return type switch
-        {
-            ProgressGoalType.TileCleared_Gear => lib.gear,
-            ProgressGoalType.TileCleared_Core => lib.core,
-            ProgressGoalType.TileCleared_Bolt => lib.bolt,
-            ProgressGoalType.TileCleared_Plate => lib.plate,
-            ProgressGoalType.TileCleared_Any => lib.gear,
-            ProgressGoalType.LineH => lib.lineH,
-            ProgressGoalType.LineV => lib.lineV,
-            ProgressGoalType.LineAny => lib.lineH,
-            ProgressGoalType.ObstacleCleared => lib.boosterHammer,
-            ProgressGoalType.SpecialCreated => lib.pulseCore,
-            ProgressGoalType.LevelWon => lib.star,
-            ProgressGoalType.FirstTryWin => lib.star,
-            _ => null,
-        };
-    }
+    private static Sprite LibraryGoalIcon(ProgressGoalType type) => ProgressGoalDefinition.LibraryGoalIcon(type);
 
     // Ödül ikonu: asset'te aynı tür VE aynı süreli/adetli biçimde atanmış görsel (ör. süreli can = sonsuz kalp);
     // yoksa null → DailySlotReward.ResolveIcon kütüphaneden çözer.
@@ -222,7 +201,7 @@ public static class RemoteProgressEvent
     {
         if (source?.goals != null)
             foreach (var d in source.goals)
-                if (d?.reward != null && d.reward.type == type && (d.rewardDurationMinutes > 0) == timed
+                if (d?.reward != null && d.reward.type == type && (d.EffectiveRewardDurationMinutes > 0) == timed
                     && d.reward.icon != null)
                     return d.reward.icon;
         return null;
@@ -282,7 +261,8 @@ public static class RemoteProgressEvent
                 s_fetchInFlight = false;
                 if (task.IsFaulted || task.IsCanceled)
                 {
-                    Debug.LogWarning($"[RemoteProgressEvent] okunamadı: {task.Exception?.GetBaseException().Message}");
+                    if (GameDiagnostics.Backend)
+                        Debug.LogWarning($"[RemoteProgressEvent] okunamadı: {task.Exception?.GetBaseException().Message}");
                     return;
                 }
 
@@ -293,14 +273,14 @@ public static class RemoteProgressEvent
                 if (!string.IsNullOrEmpty(json) && Parse(json) == null)
                 {
                     // Bozuk JSON: son geçerli sezon (önbellek) korunur.
-                    Debug.LogError("[RemoteProgressEvent] config/progressEvent.json okunamadı (JSON hatası) — önbellek korunuyor.");
+                    if (GameDiagnostics.Backend)
+                        Debug.LogError("[RemoteProgressEvent] config/progressEvent.json okunamadı (JSON hatası) — önbellek korunuyor.");
                     return;
                 }
 
                 Apply(json);
                 PlayerPrefs.SetString(CacheKey, json);
                 PlayerPrefs.Save();
-                Debug.Log($"[RemoteProgressEvent] Yüklendi: {(s_data == null ? "doküman yok → oyundaki asset" : $"{s_data.seasons?.Count ?? 0} sezon")}.");
                 OnChanged?.Invoke();
             });
     }
@@ -323,7 +303,8 @@ public static class RemoteProgressEvent
         try { return JsonUtility.FromJson<Data>(json); }
         catch (Exception e)
         {
-            Debug.LogWarning($"[RemoteProgressEvent] JSON hatası: {e.Message}");
+            if (GameDiagnostics.Backend)
+                Debug.LogWarning($"[RemoteProgressEvent] JSON hatası: {e.Message}");
             return null;
         }
     }

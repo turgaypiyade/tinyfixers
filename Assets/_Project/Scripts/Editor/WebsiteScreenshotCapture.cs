@@ -25,7 +25,8 @@ public static class WebsiteScreenshotCapture
         Directory.CreateDirectory(dir);
         string path = Path.Combine(dir, $"shot_{DateTime.Now:yyyyMMdd_HHmmss_fff}.png");
         ScreenCapture.CaptureScreenshot(path);
-        Debug.Log($"[WebsiteShot] Kare yakalandı → {path}");
+        if (GameDiagnostics.EditorTools)
+            Debug.Log($"[WebsiteShot] Kare yakalandı → {path}");
     }
 
     [MenuItem("TinyFixers/Website/Capture Screenshot %#k", true)]
@@ -44,7 +45,8 @@ public static class WebsiteScreenshotCapture
         {
             Time.timeScale = s_savedTimeScale;
         }
-        Debug.Log($"[WebsiteShot] Ağır çekim {(s_slowMotion ? "AÇIK" : "kapalı")} (timeScale {Time.timeScale:0.##})");
+        if (GameDiagnostics.EditorTools)
+            Debug.Log($"[WebsiteShot] Ağır çekim {(s_slowMotion ? "AÇIK" : "kapalı")} (timeScale {Time.timeScale:0.##})");
     }
 
     [MenuItem("TinyFixers/Website/Toggle Slow Motion %#j", true)]

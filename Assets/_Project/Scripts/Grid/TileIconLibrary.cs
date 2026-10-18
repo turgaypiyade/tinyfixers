@@ -32,6 +32,8 @@ public class TileIconLibrary : ScriptableObject
     public Sprite boosterColumn;
     [Tooltip("Shuffle booster (tahtayı karıştır).")]
     public Sprite boosterShuffle;
+    [Tooltip("Wonder Boya Kovası (bir taş türünü 3 hamle tahtadan çıkarır).")]
+    public Sprite boosterPaintBucket;
 
     [Header("Currency Icons")]
     [Tooltip("Altın ödülü (patili altın). Boşken ödül ekranları ikon yerine amber kare çizer.")]
@@ -146,6 +148,7 @@ public class TileIconLibrary : ScriptableObject
             case BoardController.BoosterMode.Row:     return boosterRow;
             case BoardController.BoosterMode.Column:  return boosterColumn;
             case BoardController.BoosterMode.Shuffle: return boosterShuffle;
+            case BoardController.BoosterMode.PaintBucket: return boosterPaintBucket;
             default:                                  return null;
         }
     }
@@ -167,6 +170,7 @@ public class TileIconLibrary : ScriptableObject
             case DailySlotRewardType.Booster_Row:          return boosterRow;
             case DailySlotRewardType.Booster_Column:       return boosterColumn;
             case DailySlotRewardType.Booster_Shuffle:      return boosterShuffle;
+            case DailySlotRewardType.Booster_PaintBucket:  return boosterPaintBucket;
 
             case DailySlotRewardType.Coins:                return coin;
             case DailySlotRewardType.Lives:                return life;

@@ -49,45 +49,64 @@ public static class StoreIap
         try
         {
             store = UnityIAPServices.StoreController();
+            // IAP requires this subscription before Connect; it also owns catalog loading.
+            store.OnStoreConnected += HandleStoreConnected;
             store.OnProductsFetched += HandleProductsFetched;
-            store.OnProductsFetchFailed += f => Debug.LogWarning($"[IAP] Ürünler alınamadı: {f.FailureReason}");
+            store.OnProductsFetchFailed += f =>
+            {
+                if (GameDiagnostics.Backend)
+                    Debug.LogWarning($"[IAP] Ürünler alınamadı: {f.FailureReason}");
+            };
             store.OnPurchasePending += HandlePurchasePending;
             store.OnPurchaseConfirmed += HandlePurchaseConfirmed;
             store.OnPurchaseFailed += HandlePurchaseFailed;
-            store.OnPurchaseDeferred += _ => { purchasingOffer = null; Debug.Log("[IAP] Satın alma ertelendi (onay bekliyor)."); };
-            store.OnStoreDisconnected += d => Debug.LogWarning($"[IAP] Mağaza bağlantısı koptu: {d.Message}");
-            store.OnStoreConnected += () => Debug.Log("[IAP] Mağazaya bağlanıldı.");
+            store.OnPurchaseDeferred += _ => { purchasingOffer = null; };
+            store.OnStoreDisconnected += d =>
+            {
+                productsReady = false;
+                if (GameDiagnostics.Backend)
+                    Debug.LogWarning($"[IAP] Mağaza bağlantısı koptu: {d.Message}");
+            };
             // Geçmiş alımlar: onaylanmamış olanlar OnPurchasePending ile gelir; burada yalnız kayıt.
             store.OnPurchasesFetched += _ => { };
-            store.OnPurchasesFetchFailed += f => Debug.LogWarning($"[IAP] Geçmiş alımlar alınamadı: {f.message}");
+            store.OnPurchasesFetchFailed += f =>
+            {
+                if (GameDiagnostics.Backend)
+                    Debug.LogWarning($"[IAP] Geçmiş alımlar alınamadı: {f.message}");
+            };
 
             await store.Connect();
-
-            var catalog = ShopCatalog.Shared;
-            var defs = new List<ProductDefinition>();
-            offersByProductId.Clear();
-            if (catalog != null)
-                foreach (var offer in catalog.RealMoneyOffers())
-                {
-                    string pid = offer.StoreProductId;
-                    if (offersByProductId.ContainsKey(pid)) continue;
-                    offersByProductId[pid] = offer;
-                    // Tekrar alınabilir paketler mağazada "consumable"; tek seferlik/günlük sınırı oyun tutar (ShopState).
-                    defs.Add(new ProductDefinition(pid, ProductType.Consumable));
-                }
-            if (defs.Count > 0) store.FetchProducts(defs);
-            else Debug.LogWarning("[IAP] Katalogda gerçek para teklifi yok.");
         }
         catch (Exception e)
         {
-            Debug.LogWarning($"[IAP] Mağazaya bağlanılamadı: {e.Message}");
+            if (GameDiagnostics.Backend)
+                Debug.LogWarning($"[IAP] Mağazaya bağlanılamadı: {e.Message}");
         }
+    }
+
+    private static void HandleStoreConnected()
+    {
+        productsReady = false;
+        var catalog = ShopCatalog.Shared;
+        var defs = new List<ProductDefinition>();
+        offersByProductId.Clear();
+        if (catalog != null)
+            foreach (var offer in catalog.RealMoneyOffers())
+            {
+                string pid = offer.StoreProductId;
+                if (offersByProductId.ContainsKey(pid)) continue;
+                offersByProductId[pid] = offer;
+                // Tekrar alınabilir paketler mağazada consumable olarak tutulur.
+                defs.Add(new ProductDefinition(pid, ProductType.Consumable));
+            }
+        if (defs.Count > 0) store.FetchProducts(defs);
+        else if (GameDiagnostics.Backend)
+            Debug.LogWarning("[IAP] Katalogda gerçek para teklifi yok.");
     }
 
     private static void HandleProductsFetched(List<Product> products)
     {
         productsReady = true;
-        Debug.Log($"[IAP] {products?.Count ?? 0} ürün hazır.");
         OnPricesUpdated?.Invoke();
         // Önceki oturumda onaylanmamış alımlar (ör. uygulama kapandı) OnPurchasePending ile yeniden gelir.
         store.FetchPurchases();
@@ -109,7 +128,8 @@ public static class StoreIap
         var product = store.GetProductById(offer.StoreProductId);
         if (product == null || !product.availableToPurchase)
         {
-            Debug.LogWarning($"[IAP] Ürün mağazada yok: {offer.StoreProductId}");
+            if (GameDiagnostics.Backend)
+                Debug.LogWarning($"[IAP] Ürün mağazada yok: {offer.StoreProductId}");
             return false;
         }
         purchasingOffer = offer;
@@ -127,7 +147,8 @@ public static class StoreIap
             string pid = item.Product?.definition?.id;
             if (pid == null || !offersByProductId.TryGetValue(pid, out var offer))
             {
-                Debug.LogWarning($"[IAP] Bilinmeyen ürün onaylanıyor: {pid}");
+                if (GameDiagnostics.Backend)
+                    Debug.LogWarning($"[IAP] Bilinmeyen ürün onaylanıyor: {pid}");
                 continue;
             }
             if (alreadyProcessed) continue;
@@ -142,7 +163,10 @@ public static class StoreIap
     private static void HandlePurchaseConfirmed(Order order)
     {
         if (order is FailedOrder failed)
-            Debug.LogWarning($"[IAP] Onay başarısız: {failed.FailureReason} {failed.Details}");
+        {
+            if (GameDiagnostics.Backend)
+                Debug.LogWarning($"[IAP] Onay başarısız: {failed.FailureReason} {failed.Details}");
+        }
     }
 
     private static void HandlePurchaseFailed(FailedOrder order)
@@ -150,7 +174,10 @@ public static class StoreIap
         var offer = purchasingOffer;
         purchasingOffer = null;
         bool cancelled = order.FailureReason == PurchaseFailureReason.UserCancelled;
-        if (!cancelled) Debug.LogWarning($"[IAP] Satın alma başarısız: {order.FailureReason} {order.Details}");
+        if (!cancelled) {
+            if (GameDiagnostics.Backend)
+                Debug.LogWarning($"[IAP] Satın alma başarısız: {order.FailureReason} {order.Details}");
+        }
         OnPurchaseFailed?.Invoke(offer, cancelled);
     }
 #else

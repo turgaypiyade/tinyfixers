@@ -146,7 +146,7 @@ public sealed class KeyGeneratorService : MonoBehaviour
             StartCoroutine(CoBuildIdleMachines());
 
         if (logDebug)
-            Debug.Log($"[KeyGenerator] Bound. capacity={ResolveKeyGoalAmount()} completed={completed}");
+            {}
     }
 
     // Hedef havuzu (PatchBot vb.) için: bir vuruş daha anahtar doğurur mu? HandleKeyGeneratorHit'in kota koşulu.
@@ -193,10 +193,6 @@ public sealed class KeyGeneratorService : MonoBehaviour
 
         if (logDebug)
         {
-            Debug.Log(
-                $"[KeyGenerator] hit origin={originIndex} committed={committedKeys}/{capacity} " +
-                $"landed={landedKeys} inFlight={inFlightKeys} " +
-                $"target=({targetCell.x},{targetCell.y})");
         }
 
         return true;

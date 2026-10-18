@@ -41,7 +41,7 @@ public readonly struct LevelAttemptResult
 ///  - Deneme = level tahtası kurulduğunda başlar (GridSpawner), kazanınca / vazgeçince biter
 ///    (PlayerStats.RecordLevelCleared / MarkCurrentLevelFailed tek kapıdan çağırır).
 ///  - "Devam" (hamle satın alma) aynı denemenin parçasıdır; yalnız vazgeçmek fail sayılır.
-///  - Mercy uses confirmed defeats separately; closing a fail popup is not required.
+///  - Mercy eligibility uses actual net life debits; confirmed struggles remain separate analytics.
 ///  - Level geçilince sayaçlar sıfırlanır. Cloud save'e dahildir (cihaz değişince yardım kademesi korunur).
 /// Tüketiciler: <see cref="LevelAssist"/> (gizli yardım), PlayerStatsCloudReporter + GameAnalytics (raporlama).
 /// </summary>
@@ -51,6 +51,7 @@ public static class LevelAttemptStats
     private const string KeyAttempts = "level_attempt_count";
     private const string KeyFails = "level_attempt_fails";
     private const string KeyStruggles = "level_attempt_struggles";
+    private const string KeyLivesSpent = "level_attempt_lives_spent";
 
     /// Tahta kuruldu, deneme başladı: (level, attempt).
     public static event Action<int, int> OnAttemptStarted;
@@ -66,6 +67,24 @@ public static class LevelAttemptStats
 
     public static bool HasActiveAttempt => s_activeLevel > 0;
 
+    public static int LivesSpentOn(int level) => level > 0 && PlayerPrefs.GetInt(KeyLevel, 0) == level
+        ? Mathf.Max(0, PlayerPrefs.GetInt(KeyLivesSpent, 0)) : 0;
+
+    // LivesManager saves these together with the actual debit/refund. Free lives never call this.
+    internal static void RecordLifeSpent(int level)
+    {
+        if (RuntimeSimulationSession.IsActive || s_activeLevel != level || level <= 0) return;
+        PlayerPrefs.SetInt(KeyLivesSpent, Mathf.Min(int.MaxValue - 1, LivesSpentOn(level)) + 1);
+        LevelAssist.RefreshAttemptEligibility(level);
+    }
+
+    internal static void RefundLifeSpent(int level)
+    {
+        if (RuntimeSimulationSession.IsActive || s_activeLevel != level || level <= 0) return;
+        PlayerPrefs.SetInt(KeyLivesSpent, Mathf.Max(0, LivesSpentOn(level) - 1));
+        LevelAssist.RefreshAttemptEligibility(level);
+    }
+
     /// Süren denemenin başında sabitlenen yardım kademesi.
     public static int ActiveAssistTier => s_activeAssistTier;
 
@@ -74,7 +93,7 @@ public static class LevelAttemptStats
         PlayerPrefs.GetInt(KeyLevel, 0) == level ? PlayerPrefs.GetInt(KeyFails, 0) : 0;
 
     /// Confirmed losses (out of moves / boss defeat), once per attempt.
-    /// Old saves retain their accumulated assistance on first migration.
+    /// Old saves retain their historical struggle count for analytics on first migration.
     public static int StrugglesOn(int level) =>
         PlayerPrefs.GetInt(KeyLevel, 0) == level
             ? Mathf.Max(0, PlayerPrefs.GetInt(KeyStruggles, ConsecutiveFails(level))) : 0;
@@ -92,7 +111,9 @@ public static class LevelAttemptStats
             PlayerPrefs.SetInt(KeyAttempts, 0);
             PlayerPrefs.SetInt(KeyFails, 0);
             PlayerPrefs.SetInt(KeyStruggles, 0);
+            PlayerPrefs.SetInt(KeyLivesSpent, 0);
         }
+        LevelAssist.BeginAttempt(level);
         // Freeze legacy migration before a later give-up changes the analytics counter.
         PlayerPrefs.SetInt(KeyStruggles, StrugglesOn(level));
         int attempt = PlayerPrefs.GetInt(KeyAttempts, 0) + 1;
@@ -155,6 +176,8 @@ public static class LevelAttemptStats
             PlayerPrefs.SetInt(KeyAttempts, 0);
             PlayerPrefs.SetInt(KeyFails, 0);
             PlayerPrefs.SetInt(KeyStruggles, 0);
+            PlayerPrefs.SetInt(KeyLivesSpent, 0);
+            LevelAssist.ClearAfterWin();
         }
         else
         {
@@ -164,6 +187,7 @@ public static class LevelAttemptStats
         PlayerPrefs.Save();
 
         s_activeLevel = -1;
+        FirebaseCloudSaveService.MarkDirty();
         OnAttemptEnded?.Invoke(result);
     }
 

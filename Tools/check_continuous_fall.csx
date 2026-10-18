@@ -33,6 +33,7 @@ using System.Collections.Generic;
  }
  public static class Time {public static float time;public static float unscaledTime=>time;}
  public static class Debug {public static void LogWarning(string s){} public static void LogException(Exception e){throw e;} }
+public static class GameDiagnostics {public static bool BoardFlow,CriticalErrors;}
 public enum TileRuntimeState {Idle,Falling,Clearing,Swapping}
 public class RectTransform {public Vector2 anchoredPosition;}
 public class GameObject {public bool activeInHierarchy=true;}
@@ -52,12 +53,15 @@ public class TileView {
  public bool IsCurrentLifetime(int v)=>v==LifetimeVersion;
  public bool IsMoveTokenCurrent(int v)=>v==token;public int ClaimMoveToken()=>++token;
  public void SetRuntimeState(TileRuntimeState s)=>RuntimeState=s;
+ public void ClearLandingPose(){} public int BeginLandingPose()=>1;
+ public bool ApplyLandingPose(int generation,float squash,float widen,float sink)=>true;
  public void ResetFallStretch(){resets++;}public void ApplyFallStretch(float f){}
  public void SnapToGrid(int s){RectTransform.anchoredPosition=GetFallCellPosition(X,Y,s);}
  public Vector2 GetFallCellPosition(int x,int y,int s)=>new Vector2(x*s,-y*s);
  public void PlayLandingSettle(int s,float d,float a){settles++;}
 }
 public class BoardController {
+ public float FallRiseStagger;public bool LandingResponseEnabled=false;public float LandingResponseDuration=.2f,LandingEchoRatio=.2f,LandingSquash=.1f,LandingWiden=.1f,LandingSinkCells=.03f;
  public bool IsActionSequencePlaying;public int DetachedSequencerActions;
  public bool UseContinuousFallMotion=true;public int jobs,FallGeneration=1;
  internal TileFallMotionSystem fallMotion;

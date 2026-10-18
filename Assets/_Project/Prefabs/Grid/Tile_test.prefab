@@ -477,9 +477,38 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7031deac10d45474caca7611e87a2155, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::OverrideSpecialView
-  topHalfSprite: {fileID: 21300000, guid: d567fdc25dad46ff872966bf34f5ba01, type: 3}
-  bottomHalfSprite: {fileID: 21300000, guid: f0e44ecb67e0455d9889334bba64270d, type: 3}
-  fullSphereSprite: {fileID: 21300000, guid: 8372e60e21b94daab02ea6e2d65dba7f, type: 3}
+  topHalfSprite: {fileID: 21300000, guid: 7ea94def3b3048a4a7022d9adb970b60, type: 3}
+  bottomHalfSprite: {fileID: 21300000, guid: 6811b89784bc4f7bbaab7fe549c204eb, type: 3}
+  fullSphereSprite: {fileID: 21300000, guid: 00a2e9877e78471ab8a425193a7ddfbf, type: 3}
+  fullSpriteSplitFromBottom: 0.4
+  topTurnFrames:
+  - {fileID: 21300000, guid: e4b61d28bfa742d9a2722769afb5b693, type: 3}
+  - {fileID: 21300002, guid: e4b61d28bfa742d9a2722769afb5b693, type: 3}
+  - {fileID: 21300004, guid: e4b61d28bfa742d9a2722769afb5b693, type: 3}
+  - {fileID: 21300006, guid: e4b61d28bfa742d9a2722769afb5b693, type: 3}
+  - {fileID: 21300008, guid: e4b61d28bfa742d9a2722769afb5b693, type: 3}
+  - {fileID: 21300010, guid: e4b61d28bfa742d9a2722769afb5b693, type: 3}
+  - {fileID: 21300012, guid: e4b61d28bfa742d9a2722769afb5b693, type: 3}
+  - {fileID: 21300014, guid: e4b61d28bfa742d9a2722769afb5b693, type: 3}
+  bottomTurnFrames:
+  - {fileID: 21300000, guid: 4c5ef07634104667832c6eda8a5a7b60, type: 3}
+  - {fileID: 21300002, guid: 4c5ef07634104667832c6eda8a5a7b60, type: 3}
+  - {fileID: 21300006, guid: 4c5ef07634104667832c6eda8a5a7b60, type: 3}
+  - {fileID: 21300004, guid: 4c5ef07634104667832c6eda8a5a7b60, type: 3}
+  - {fileID: 21300008, guid: 4c5ef07634104667832c6eda8a5a7b60, type: 3}
+  - {fileID: 21300010, guid: 4c5ef07634104667832c6eda8a5a7b60, type: 3}
+  turnFramesPerSecond: 120
+  turnFramesOnly: 1
+  staticIconImage: {fileID: 5310917763237610214}
+  topTurnReverse: 1
+  bottomTurnReverse: 0
+  rockingDegrees: 9
+  chargeLightning: 1
+  turnBlurStrength: 0.8
+  topTurnSizeRatio: {x: 0.991228, y: 0.651515}
+  topTurnOffsetRatio: {x: 0.000399, y: 0.169458}
+  bottomTurnSizeRatio: {x: 0.961722, y: 0.451356}
+  bottomTurnOffsetRatio: {x: -0.000797, y: -0.264753}
   spinTurns: 5
   spinDuration: 0.8
   spinSeparationRatio: 0.362

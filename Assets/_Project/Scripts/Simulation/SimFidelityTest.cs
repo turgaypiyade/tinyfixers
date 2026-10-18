@@ -36,7 +36,8 @@ public sealed class SimFidelityTest : MonoBehaviour
     {
         if (board == null)
         {
-            Debug.LogError("[SimFidelity] board is null — assign BoardController in inspector.");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogError("[SimFidelity] board is null — assign BoardController in inspector.");
             return;
         }
 
@@ -119,8 +120,11 @@ public sealed class SimFidelityTest : MonoBehaviour
 
         sb.Append(BuildBoardDump(w, h, holes, grid, liveCoords, simCoords));
 
-        if (pass) Debug.Log(sb.ToString());
-        else Debug.LogError(sb.ToString());
+        if (pass) {}
+        else {
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogError(sb.ToString());
+        }
     }
 
     private static string BuildBoardDump(

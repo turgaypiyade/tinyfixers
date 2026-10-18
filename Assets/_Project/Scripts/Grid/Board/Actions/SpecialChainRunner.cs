@@ -224,7 +224,6 @@ public sealed class SpecialChainRunner : BoardAction
 
         if (ReleaseAllAnchors())
         {
-            Debug.LogWarning($"[ChainSettle] Zincir ailesi bitti, artık anchor'lar bırakıldı (root={root.GetHashCode()}).");
             board.RequestResolveAfterActionSequence();
         }
     }

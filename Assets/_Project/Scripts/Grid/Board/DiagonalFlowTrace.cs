@@ -38,9 +38,8 @@ internal static class DiagonalFlowTrace
         bool enabled = !SessionState.GetBool(EnabledKey, false);
         SessionState.SetBool(EnabledKey, enabled);
         if (!enabled) Finish("disabled");
-        Debug.Log(enabled
-            ? "[DiagonalFlow] Döngüsel kayıt açık. Normal oyna; sorunu görünce Diagonal Flow > Save Now. Son 240 olay / 48 KB tutulur."
-            : "[DiagonalFlow] Döngüsel kayıt kapalı.");
+        if (GameDiagnostics.BoardFlow)
+            Debug.Log(enabled ? "[DiagonalFlow] Döngüsel kayıt açık. Normal oyna; sorunu görünce Diagonal Flow > Save Now. Son 240 olay / 48 KB tutulur." : "[DiagonalFlow] Döngüsel kayıt kapalı.");
     }
 
     [MenuItem(Menu + "Rolling Capture", true)]
@@ -63,7 +62,7 @@ internal static class DiagonalFlowTrace
     private static void Update()
     {
         if (armed && owner == null) Finish("board-destroyed");
-        if (!Application.isPlaying || armed || !SessionState.GetBool(EnabledKey, false)) return;
+        if (!GameDiagnostics.BoardFlow || !Application.isPlaying || armed || !SessionState.GetBool(EnabledKey, false)) return;
         owner = UnityEngine.Object.FindFirstObjectByType<BoardController>();
         if (owner == null) return;
         history.Clear();
@@ -73,7 +72,7 @@ internal static class DiagonalFlowTrace
         armed = true;
     }
 
-    internal static bool Enabled(BoardController board) => armed && owner == board;
+    internal static bool Enabled(BoardController board) => GameDiagnostics.BoardFlow && armed && owner == board;
 
     internal static void BeginPlan(BoardController board)
     {
@@ -177,6 +176,14 @@ internal static class DiagonalFlowTrace
     private static void Finish(string reason)
     {
         if (!armed) return;
+        if (!GameDiagnostics.BoardFlow)
+        {
+            armed = false;
+            owner = null;
+            pendingBefore = null;
+            history.Clear();
+            return;
+        }
         if (owner != null) Append(Snapshot(owner, "CAPTURE-END"));
         armed = false;
         var buffer = new StringBuilder();
@@ -191,11 +198,13 @@ internal static class DiagonalFlowTrace
         {
             Directory.CreateDirectory(Path.GetDirectoryName(OutputPath));
             File.WriteAllText(OutputPath, buffer.ToString());
-            Debug.Log($"[DiagonalFlow] Kayıt tamam: son {history.Count} olay, {reason}. Dosya: {OutputPath}");
+            if (GameDiagnostics.BoardFlow)
+                Debug.Log($"[DiagonalFlow] Kayıt tamam: son {history.Count} olay, {reason}. Dosya: {OutputPath}");
         }
         catch (Exception ex)
         {
-            Debug.LogWarning($"[DiagonalFlow] Kayıt yazılamadı: {ex.Message}");
+            if (GameDiagnostics.BoardFlow)
+                Debug.LogWarning($"[DiagonalFlow] Kayıt yazılamadı: {ex.Message}");
         }
         owner = null;
     }

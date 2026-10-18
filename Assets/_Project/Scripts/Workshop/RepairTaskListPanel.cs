@@ -93,7 +93,8 @@ public class RepairTaskListPanel : MonoBehaviour
     {
         if (workshop == null || workshop.StageData == null)
         {
-            Debug.LogWarning("[RepairPanel] Workshop veya StageData atanmamış.");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogWarning("[RepairPanel] Workshop veya StageData atanmamış.");
             return;
         }
 
@@ -142,23 +143,21 @@ public class RepairTaskListPanel : MonoBehaviour
     /// Aktif (üstteki) task'a tıklanınca çağrılır. RepairTaskItem button'unun listener'ı.
     public void OnActiveTaskClicked()
     {
-        Debug.Log($"[Cinematic] OnActiveTaskClicked. isAnimating={isAnimating}, workshop={(workshop != null)}, inWorkshopMode={inWorkshopMode}, items={items.Count}");
 
-        if (isAnimating) { Debug.Log("[Cinematic] Skip: already animating"); return; }
-        if (workshop == null) { Debug.LogWarning("[Cinematic] Skip: workshop null"); return; }
+        if (isAnimating) { return; }
+        if (workshop == null) { if (GameDiagnostics.CriticalErrors)
+            Debug.LogWarning("[Cinematic] Skip: workshop null"); return; }
 
         // Tıklanan butonun world pozisyonunu yakala (yıldızlar buradan uçacak)
         Vector3 starSourceWorldPos = (items.Count > 0 && items[0] != null)
             ? items[0].transform.position
             : transform.position;
-
-        Debug.Log($"[Cinematic] TryRepairCurrent: CurrentStage={workshop.CurrentStage}, Stars={PlayerWallet.TotalStars}");
         if (!workshop.TryRepairCurrent())
         {
-            Debug.LogWarning("[Cinematic] TryRepairCurrent returned FALSE. (Yetersiz yıldız? Son task? Already transitioning?)");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogWarning("[Cinematic] TryRepairCurrent returned FALSE. (Yetersiz yıldız? Son task? Already transitioning?)");
             return;
         }
-        Debug.Log("[Cinematic] TryRepairCurrent OK, starting cinematic flow.");
 
         // Cinematic akış: yıldızlar uç, panel kısa süreliğine fade out, workshop transition görünür,
         // sonra panel geri açılır. Workshop view mode'dan çıkmayız.

@@ -43,7 +43,7 @@ internal sealed class TileFallMotionSystem
         public readonly List<Vector2> points = new();
         public float velocity;          // hücre/sn
         public float delay;             // başlangıç stagger'ı (yalnız ilk kalkışta)
-        public bool restStart;          // yerinde dururken kalktı: altındaki taş FallRiseStagger kadar akmadan kalkmaz
+        public bool restStart;          // durgun kalkış (tahtadaki ya da yeni doğan): altındaki taş FallRiseStagger kadar akmadan kalkmaz
         public float elapsed;
         public float stretchEnv;
         public bool stationary;         // yalnız bu karelik engel: planlı/park etmiş, kıpırdamayan taş
@@ -332,7 +332,10 @@ internal sealed class TileFallMotionSystem
                 sequence = nextSequence++,
                 velocity = Mathf.Max(v0, landingVelocity),
                 delay = continuesLanding ? 0f : Mathf.Max(0f, delay),
-                restStart = !continuesLanding && !isSpawn,
+                // Yeni doğan taş da sıraya girer: yalnız tahtadaki taşlar sıralı kalkınca dikey eşleşme /
+                // sütun temizleme / üst sıra eşleşmesinde (düşenlerin hepsi yeni) sütun blok halinde iniyordu.
+                // Akan bir sütuna katılan spawn beklemez: öndekinin elapsed'i zaten rise'ı geçmiştir.
+                restStart = !continuesLanding,
             };
 
             // Board üzerindeki taş görsel konumundan başlar (sıralama dışı gelen eski planlar
@@ -490,19 +493,25 @@ internal sealed class TileFallMotionSystem
                 }
             }
 
-            // Sıralı kalkış (Royal ölçümü, ~2 kare): yerinde duran taş, hemen altında akan taş
-            // FallRiseStagger kadar yol almadan kalkmaz. Kural yerel → büyük patlamada pompanın her
-            // kare yeniden planlaması ya da havada yeniden hedefleme sırayı bozmaz; bekleyen taşın
-            // üstündeki de onu bekler (zincir). Akan/momentumlu/spawn taş beklemez.
+            // Sıralı kalkış (Royal ölçümü, ~2 kare): durgun kalkan taş (tahtadaki ya da yeni doğan), hemen
+            // altında akan taş FallRiseStagger kadar yol almadan kalkmaz. Kural yerel → büyük patlamada pompanın
+            // her kare yeniden planlaması ya da havada yeniden hedefleme sırayı bozmaz; bekleyen taşın üstündeki
+            // de onu bekler (zincir). Momentumla devam eden taş beklemez.
             if (m.restStart)
             {
                 if (rise > 0f && belowInColumn.TryGetValue(column, out var leader) && leader != null
-                    && !leader.stationary && leader.elapsed < rise
-                    && m.pos.y - leader.pos.y <= tileSize * 1.5f)
+                    && !leader.stationary && m.pos.y - leader.pos.y <= tileSize * 1.5f)
                 {
-                    m.velocity = v0;
-                    belowInColumn[column] = m;
-                    continue;
+                    if (leader.elapsed < rise)
+                    {
+                        m.velocity = v0;
+                        belowInColumn[column] = m;
+                        continue;
+                    }
+                    // Kalkış anı kare sınırına yuvarlanmaz: öndeki rise'ı bu karenin içinde geçtiyse bu taş yalnız
+                    // geçen kısım kadar yol alır. Yoksa kare süresi ≥ rise iken (düşük FPS, büyük patlamada kare
+                    // atlaması) öndeki ile arkadaki aynı karede birlikte kalkıp sıra bloğa dönüyordu.
+                    moveDt = Mathf.Min(moveDt, leader.elapsed - rise);
                 }
                 m.restStart = false;
             }
@@ -578,8 +587,8 @@ internal sealed class TileFallMotionSystem
         {
             if (Kick(tile))
             {
-                Debug.LogWarning($"[FallMotion] Taş ({tile.X},{tile.Y}) planlı düşüşü {OrphanPlanSeconds:0.#} sn başlamadı " +
-                                 "(sahibi çalışmadı); rota kendiliğinden başlatıldı.");
+                if (GameDiagnostics.CriticalErrors)
+                    Debug.LogWarning($"[FallMotion] Taş ({tile.X},{tile.Y}) planlı düşüşü {OrphanPlanSeconds:0.#} sn başlamadı " + "(sahibi çalışmadı); rota kendiliğinden başlatıldı.");
                 continue;
             }
             // Başlatılamayan plan (daha yeni nesil not edilmiş vb.): kaydı bırak, taşı yerine oturt.
@@ -589,7 +598,8 @@ internal sealed class TileFallMotionSystem
                 if (tile.RuntimeState == TileRuntimeState.Falling)
                     tile.SetRuntimeState(TileRuntimeState.Idle);
                 tile.SnapToGrid(board.TileSize);
-                Debug.LogWarning($"[FallMotion] Taş ({tile.X},{tile.Y}) sahipsiz planı başlatılamadı; yerine oturtuldu.");
+                if (GameDiagnostics.CriticalErrors)
+                    Debug.LogWarning($"[FallMotion] Taş ({tile.X},{tile.Y}) sahipsiz planı başlatılamadı; yerine oturtuldu.");
             }
         }
         orphanScratch.Clear();
@@ -626,9 +636,8 @@ internal sealed class TileFallMotionSystem
             : $"column-gap below=({b.tile.X},{b.tile.Y}) stationary={b.stationary} belowDelay={b.delay:0.00} " +
               $"belowPoints={b.points.Count} belowActive={active.ContainsKey(b.tile)} belowParked={parked.ContainsKey(b.tile)} " +
               $"belowPlanned={planned.ContainsKey(b.tile)} belowState={b.tile.RuntimeState}";
-        Debug.LogWarning($"[FallMotion] Taş ({m.tile.X},{m.tile.Y}) {StuckWarningSeconds:0}sn ilerleyemedi, güvenli aralık korunuyor. " +
-                         $"sebep={reason} hedef={m.target} pos={m.pos} next={next} kalanNokta={m.points.Count} " +
-                         $"active={active.Count} parked={parked.Count} planned={planned.Count} transits={diagonalTransits.Count}");
+        if (GameDiagnostics.CriticalErrors)
+            Debug.LogWarning($"[FallMotion] Taş ({m.tile.X},{m.tile.Y}) {StuckWarningSeconds:0}sn ilerleyemedi, güvenli aralık korunuyor. " + $"sebep={reason} hedef={m.target} pos={m.pos} next={next} kalanNokta={m.points.Count} " + $"active={active.Count} parked={parked.Count} planned={planned.Count} transits={diagonalTransits.Count}");
     }
 
     // Consume distance across path segments; vertical followers respect the current column.
@@ -959,7 +968,8 @@ internal sealed class TileFallMotionSystem
             // Recovery uses motion, never a visible snap across the board.
             parked.Remove(tile);
             kicked.Remove(tile);
-            Debug.LogWarning($"[FallMotion] Taş ({tile.X},{tile.Y}) yeni hareketini alamadı; hedefe düşüş yeniden başlatıldı.");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogWarning($"[FallMotion] Taş ({tile.X},{tile.Y}) yeni hareketini alamadı; hedefe düşüş yeniden başlatıldı.");
             Start(tile, p.lifetime, tile.PlannedFallGeneration,
                 new[] { p.pos, tile.GetFallCellPosition(tile.X, tile.Y, board.TileSize) },
                 new Vector2Int(tile.X, tile.Y), false, 0f, false, 0f, 0f);

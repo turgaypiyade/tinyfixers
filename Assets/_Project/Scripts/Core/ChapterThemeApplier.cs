@@ -60,12 +60,14 @@ public class ChapterThemeApplier : MonoBehaviour
         if (isGameScene)
         {
             SetSprite(backgroundImage,    theme.gameBackground);
+            MatchAspectFitter(backgroundImage);
             SetSprite(topHudImage,        theme.gameTopHud);
             SetSprite(bottomAreaImage,    theme.gameBottomArea);
         }
         else
         {
             SetSprite(backgroundImage,    theme.menuBackground);
+            MatchAspectFitter(backgroundImage);
             SetSprite(topHudImage,        theme.menuTopHud);
             SetSprite(bottomAreaImage,    theme.menuBottomArea);
             SetSprite(levelSelectorBtnImage, theme.menuLevelSelectorBtn);
@@ -92,6 +94,16 @@ public class ChapterThemeApplier : MonoBehaviour
     {
         if (successAnimationPlayer == null) return;
         successAnimationPlayer.SetBackground(theme.successAnimationBackground);
+    }
+
+    // Arka planın AspectRatioFitter'ı sahnede sabit (0.5625) yazılıydı: 9:16 olmayan yeni bir bölüm görseli
+    // sessizce esnerdi. Oran her tema uygulanışında görselin KENDİSİNDEN alınır.
+    private static void MatchAspectFitter(Image img)
+    {
+        if (img == null || img.sprite == null) return;
+        if (!img.TryGetComponent<AspectRatioFitter>(out var fitter)) return;
+        var r = img.sprite.rect;
+        if (r.height > 0.5f) fitter.aspectRatio = r.width / r.height;
     }
 
     private static void SetSprite(Image img, Sprite sprite)

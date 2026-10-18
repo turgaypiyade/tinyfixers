@@ -9966,7 +9966,7 @@ MonoBehaviour:
   borderDrawer: {fileID: 0}
   boardPadding: 2
   cellBgPrefab: {fileID: 5469896378372082776, guid: 24b7e8f0e6f6e924ba247a059d975e1b, type: 3}
-  underTileCellBgTint: {r: 0.6627451, g: 0.654902, b: 0.8509804, a: 1}
+  underTileCellBgTint: {r: 0.5176471, g: 0.5137255, b: 0.7254902, a: 1}
   iconScale: 0.89
   iconSize: {x: 95, y: 95}
   fullCellIcons: 0
@@ -10008,7 +10008,7 @@ MonoBehaviour:
   runtimeBoardBg: {r: 0.6627451, g: 0.654902, b: 0.8509804, a: 1}
   runtimeNormalCell: {r: 1, g: 1, b: 1, a: 1}
   gridLinesRoot: {fileID: 0}
-  runtimeGridLineColor: {r: 0.72156864, g: 0.7058824, b: 0.8666667, a: 1}
+  runtimeGridLineColor: {r: 0.5764706, g: 0.57254905, b: 0.7647059, a: 1}
   runtimeGridLineThickness: 3
   gridJunctionEnabled: 1
   gridJunctionSize: 4
@@ -10070,6 +10070,7 @@ MonoBehaviour:
   clearDuration: 0.08
   spawnFeedGap: 1
   swapDurationMultiplier: 1
+  swapLiftAmount: 0.2
   fallColumnStep: 0
   fallDurationMultiplier: 1.1
   fallVelocityCellsPerSecond: 22
@@ -15182,50 +15183,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2079720308}
   m_CullTransparentMesh: 1
---- !u!1 &2095271734
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 2095271736}
-  - component: {fileID: 2095271735}
-  m_Layer: 0
-  m_Name: SafariBoosterInjector
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &2095271735
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2095271734}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 923253c77566440a6bb55a98088737a7, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::SafariBoosterInjector
---- !u!4 &2095271736
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2095271734}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2097651874
 GameObject:
   m_ObjectHideFlags: 0
@@ -20086,4 +20043,3 @@ SceneRoots:
   - {fileID: 533975021}
   - {fileID: 685255517}
   - {fileID: 1519012591}
-  - {fileID: 2095271736}

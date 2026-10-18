@@ -39,8 +39,8 @@ public static class FontPresetAndLoadingSetup
         CreatePresetsInternal(out _, out _);
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
-        Debug.Log($"[Fonts] Presets ready:\n • {BakBakPresetPath}\n • {InterPresetPath}\n" +
-                  "Assign these as the text's Material Preset; editing the .mat updates every text using it.");
+        if (GameDiagnostics.EditorTools)
+            Debug.Log($"[Fonts] Presets ready:\n • {BakBakPresetPath}\n • {InterPresetPath}\n" + "Assign these as the text's Material Preset; editing the .mat updates every text using it.");
     }
 
     [MenuItem("TinyFixers/Fonts/Style Loading Prefab (remove panels + fonts)")]
@@ -50,14 +50,16 @@ public static class FontPresetAndLoadingSetup
                               out TMP_FontAsset inter, out Material interPreset);
         if (bakbak == null)
         {
-            Debug.LogError($"[Fonts] BakBak font not found at {BakBakFontPath}");
+            if (GameDiagnostics.EditorTools)
+                Debug.LogError($"[Fonts] BakBak font not found at {BakBakFontPath}");
             return;
         }
 
         var root = PrefabUtility.LoadPrefabContents(LoadingPrefabPath);
         if (root == null)
         {
-            Debug.LogError($"[Fonts] Loading prefab not found at {LoadingPrefabPath}");
+            if (GameDiagnostics.EditorTools)
+                Debug.LogError($"[Fonts] Loading prefab not found at {LoadingPrefabPath}");
             return;
         }
 
@@ -104,8 +106,8 @@ public static class FontPresetAndLoadingSetup
 
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
-        Debug.Log($"[Fonts] Loading prefab styled: blank text panels removed, fonts set to reference " +
-                  "(BakBak name / Inter info / BakBak loading). Backgrounds & layout untouched.");
+        if (GameDiagnostics.EditorTools)
+            Debug.Log($"[Fonts] Loading prefab styled: blank text panels removed, fonts set to reference " + "(BakBak name / Inter info / BakBak loading). Backgrounds & layout untouched.");
     }
 
     // ═══════════════════════════════════════════════════════════════════════════

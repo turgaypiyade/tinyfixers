@@ -18,6 +18,11 @@ var paths = new[] {
  "Assets/_Project/Scripts/Core/Backend/LevelTelemetryProjection.cs",
  "Assets/_Project/Scripts/Core/LevelAttemptStats.cs",
  "Assets/_Project/Scripts/Core/LevelAssist.cs",
+ "Assets/_Project/Scripts/Core/WelcomeBackReward.cs",
+ "Assets/_Project/Scripts/Core/PlayerWallet.cs",
+ "Assets/_Project/Scripts/Core/Backend/CurrencyLedger.cs",
+ "Assets/_Project/Scripts/Core/BoosterInventory.cs",
+ "Assets/_Project/Scripts/GamePlay/PreLevelSpecialInventory.cs",
  "Assets/_Project/Scripts/Core/LivesManager.cs",
  "Assets/_Project/Scripts/UI/Shop/ShopPurchaseService.cs",
  "Assets/_Project/Scripts/Core/Backend/CloudSaveManifest.cs"
@@ -32,6 +37,7 @@ using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Text;
 using System.Reflection;
+using System.Globalization;
 public static class Application {public static string version=""test"", platform=""Editor"";}
 public static class JsonUtility {
  public static string ToJson(object v)=>new System.Web.Script.Serialization.JavaScriptSerializer().Serialize(v);
@@ -39,9 +45,9 @@ public static class JsonUtility {
 }
 public static class PlayerPrefs {
  public static Dictionary<string, object> Data = new Dictionary<string,object>();
- public static int Saves;
- public static int GetInt(string k,int d=0)=>Data.ContainsKey(k)?(int)Data[k]:d;
- public static string GetString(string k,string d="""")=>Data.ContainsKey(k)?(string)Data[k]:d;
+ public static int Saves, Reads;
+ public static int GetInt(string k,int d=0){Reads++;return Data.ContainsKey(k)?(int)Data[k]:d;}
+ public static string GetString(string k,string d=""""){Reads++;return Data.ContainsKey(k)?(string)Data[k]:d;}
  public static bool HasKey(string k)=>Data.ContainsKey(k);
  public static void SetInt(string k,int v)=>Data[k]=v;
  public static void SetString(string k,string v)=>Data[k]=v;
@@ -60,15 +66,22 @@ public class GameObject { public GameObject(string s){} public T AddComponent<T>
 public static class ObjectStub {public static void DontDestroyOnLoad(object o){} }
 public static class Time {public static float unscaledDeltaTime;}
 public static class RuntimeSimulationSession {public static bool IsActive;}
+public static class FirebaseCloudSaveService {public static void MarkDirty(){}}
 public static class CurrentLevel {public static int Global=126;}
 public static class Debug {public static bool isDebugBuild;public static void Log(object s){} }
-public enum DailySlotRewardType { Lives }
-public static class TimedRewardService {public static bool Free;public static bool IsLivesFree()=>Free;}
+public enum RuntimeInitializeLoadType {SubsystemRegistration}
+public class RuntimeInitializeOnLoadMethodAttribute:Attribute {public RuntimeInitializeOnLoadMethodAttribute(RuntimeInitializeLoadType v){}}
+public static class StoreIap {public static bool IsAvailable=>false;public static bool IsPurchasing=>false;public static bool BeginPurchase(ShopOffer o)=>false;}
+public enum ObstacleId {None,GrassWaterLily}
+public enum DailySlotRewardType { Lives,Coins,Booster_Hammer,Booster_Shuffle,Joker_LineH,Joker_PulseCore }
+public enum TileSpecial {LineH,LineV,PulseCore,SystemOverride}
+public class BoardController {public enum BoosterMode {Single,Row,Column,Shuffle}}
+public class DailySlotReward {public DailySlotRewardType type;public int amount;}
+public static class TimedRewardService {public static bool Free;public static bool IsLivesFree()=>Free;public static bool IsSpecialFree(TileSpecial t)=>false;}
 public class ShopOffer {
  public enum PriceType {Coins, Stars, Free, RealMoney}
  public PriceType priceType;public int priceAmount;public string displayName=""test"";
 }
-public static class PlayerWallet {public static bool SpendCoins(int n)=>true;public static bool SpendStars(int n)=>true;}
 public static class ShopState {public static void RecordPurchase(ShopOffer o){} }
 public static class ShopRewardGranter {public static int Grants;public static void Grant(ShopOffer o){Grants++;} }
 ";
@@ -92,19 +105,21 @@ check(LevelAttemptStats.StrugglesOn(126)==1,""fail-screen app exit preserves eff
 LevelAttemptStats.BeginAttempt(126,20);
 LevelAttemptStats.RecordGiveUp(126);
 check(LevelAttemptStats.StrugglesOn(126)==1 && LevelAttemptStats.ConsecutiveFails(126)==1,""early abandon is not farmable mercy"");
+check(LevelAssist.TierFor(126)==0,""no-ad/no-purchase player gets no mercy from ordinary losses"");
+LevelAssist.RecordRewardedAdCompleted();
 for(int i=0;i<9;i++){
- LevelAttemptStats.BeginAttempt(126,20);LevelAttemptStats.RecordStruggle(126);LevelAttemptStats.RecordGiveUp(126);
+ LevelAttemptStats.BeginAttempt(126,20);LevelAttemptStats.RecordStruggle(126);LivesManager.AddLives(1);LivesManager.SpendLife();LevelAttemptStats.RecordGiveUp(126);
 }
 LevelAttemptStats.BeginAttempt(126,20);
-check(LevelAssist.RefillBias==0.45f,""returning after ten losses keeps capped assistance"");
+check(LevelAssist.RefillBias==0.15f&&LevelAttemptStats.LivesSpentOn(126)==9,""ad player qualifies only after nine actual life debits"");
 LevelAttemptStats.RecordStruggle(126);
-check(LevelAssist.RefillBias==0.45f,""current attempt tier stays fixed"");
+check(LevelAssist.RefillBias==0.15f,""current attempt tier stays fixed"");
 LevelAttemptStats.RecordWin(126);
 check(LevelAttemptStats.StrugglesOn(126)==0 && LevelAttemptStats.ConsecutiveFails(126)==0,""continued win clears mercy and fails"");
 check((long)CloudSaveManifest.Collect()[""level_attempt_struggles""]==0,""win sends explicit cloud reset"");
 PlayerPrefs.SetInt(""level_attempt_level"",126);PlayerPrefs.SetInt(""level_attempt_fails"",5);
 PlayerPrefs.DeleteKey(""level_attempt_struggles"");
-check(LevelAssist.TierFor(126)==2,""old save retains help"");
+check(LevelAssist.TierFor(126)==0,""legacy failures cannot stand in for actual life debits"");
 LevelAttemptStats.BeginAttempt(126,20);LevelAttemptStats.RecordGiveUp(126);
 check(LevelAttemptStats.StrugglesOn(126)==5,""migration freezes old fails independently"");
 LevelAttemptStats.BeginAttempt(127,20);
@@ -114,6 +129,7 @@ LevelAttemptStats.RecordStruggle(127);
 check(LevelAttemptStats.StrugglesOn(127)==0 && LevelAssist.RefillBias==0,""simulation cannot affect mercy"");
 RuntimeSimulationSession.IsActive=false;
 
+set(typeof(LivesManager),""_initialized"",false);
 PlayerPrefs.SetInt(""lives_current"",9);
 check(LivesManager.GrantPurchaseThanks(""store:txn-1"") && LivesManager.Current==10,""gift adds one life"");
 check(!LivesManager.GrantPurchaseThanks(""store:txn-1"") && LivesManager.PendingPurchaseThanks==0,""duplicate receipt ignored"");
@@ -123,7 +139,7 @@ set(typeof(LivesManager),""_initialized"",false);
 check(!LivesManager.GrantPurchaseThanks(""store:txn-2"") && LivesManager.PendingPurchaseThanks==1,""restarted app does not duplicate gift"");
 LivesManager.SpendLife();
 check(LivesManager.Current==9 && LivesManager.PendingPurchaseThanks==1,""fail life debit unaffected by pending gift"");
-LivesManager.AddLives(1);
+LivesManager.RefundFailureLife();
 check(LivesManager.Current==10 && LivesManager.PendingPurchaseThanks==1,""continue refund does not consume gift"");
 LivesManager.SpendLife();LivesManager.ClaimPendingPurchaseThanks();
 check(LivesManager.Current==10 && LivesManager.PendingPurchaseThanks==0,""next attempt claims gift within life cap"");
@@ -148,7 +164,7 @@ int pending=LivesManager.PendingPurchaseThanks;
 check(!ShopPurchaseService.NotifyVerifiedPurchaseFulfilled(real,""store:sim-ignored"") && LivesManager.PendingPurchaseThanks==pending,""simulation cannot grant thanks"");
 Console.WriteLine(""PASS: ""+checks+"" retention checks (production logic with Unity service stubs; no project build)."");
 ";
-await CSharpScript.RunAsync(stubs+production+tests+File.ReadAllText("Tools/level_telemetry_cases.csx"),
+await CSharpScript.RunAsync(stubs+production+tests+File.ReadAllText("Tools/mercy_eligibility_cases.csx")+File.ReadAllText("Tools/level_telemetry_cases.csx"),
  ScriptOptions.Default.AddReferences(typeof(System.Web.Script.Serialization.JavaScriptSerializer).Assembly));
 foreach(var path in new[]{"Assets/_Project/Scripts/Core/Backend/GameAnalytics.cs", "Assets/_Project/Scripts/UI/Shop/ShopPurchaseFeedback.cs", "Assets/_Project/Scripts/UI/LevelEndSimplePopupController.cs", "Assets/_Project/Scripts/Grid/GridSpawner.cs"}) {
  var errors=CSharpSyntaxTree.ParseText(File.ReadAllText(path)).GetDiagnostics().Where(d=>d.Severity==DiagnosticSeverity.Error).ToArray();

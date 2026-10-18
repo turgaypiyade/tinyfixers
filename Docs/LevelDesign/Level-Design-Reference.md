@@ -31,8 +31,8 @@ Taş renkleri: Gear sarı · Core kırmızı · Bolt mavi · Plate yeşil. Board
 
 ## 3. Katman (overlay) kuralları — kodda kilitli
 
-1. Mud / Gel / WaterPuddle **daima en altta**; başka bir şeyin üstüne konamaz.
-2. **Tam örtme:** üstteki katman alttaki engeli aynı ya da daha çok hücreyle kaplar. Grass/Oil saydam örtü: kısmi örtebilir, altı görünür.
+1. Mud / Oil / Gel / WaterPuddle **daima en altta**; başka bir şeyin üstüne konamaz. Kullanıcının 155 isteğiyle Oil de yeni tasarımlarda tabandır; sandık üstüne konmaz.
+2. **Tam örtme:** üstteki katman alttaki engeli aynı ya da daha çok hücreyle kaplar. Grass saydam örtü olarak kısmi örtebilir. Oil saydam görünse de sıvı taban kuralına uyar.
 3. Yığında **en fazla 1 hareketli** (movable) engel. Örn. Gold + PlasticTwoStage aynı yığında YASAK.
 4. Çok hücreli engelin bir hücresi bile örtülüyse **hiç vuruş almaz**. Örn. 2×2 sandık + üstünde grass: grass bitene dek kilitli.
 5. Vuruş yalnız **en üst katmana**; alt katman açılana dek "yok hükmünde".
@@ -46,7 +46,7 @@ Taş renkleri: Gear sarı · Core kırmızı · Bolt mavi · Plate yeşil. Board
 | Gizli zemin | Mud → chest3 | Sandık kırılınca çamur çıkar; iki hedef tek hücrede. 109 ve 111'de kullanıldı. |
 | Jel tohumu | Gel → SculptStone | Örtü kırılmadan jel yayılmaz; yayılma sırasını tasarlatır. 108 ve 116'da kullanıldı. |
 | Örtülü kale | Wall/MetalWall → GrassFlower | Önce çiçek, sonra duvar; 105, 119 ve 127'de kullanıldı (**dinlendir**). |
-| Saydam yağ | chest/Helmet → Oil | Yağ görünür ama alttaki engel kilitli. Oil uzun süredir yok, **taze**. |
+| Yağlı taban | Oil → chest | Önce katı sandık kırılır, alttaki yağ sonra temizlenir. Yeni tasarım kuralı (155). |
 | Üç katman (hard) | Mud → chest3 → Grass | Kullanıcı onaylı: "zor level'larda 3 katmanlı yığınlar". |
 | Kasa hazinesi | Gold → Safe / AncientSeal | Ödül; altın kalınca kazanma ertelenir (hamle devam). |
 
@@ -76,7 +76,7 @@ board'da kullanılabilir.
 
 ## 7. Hole, ada ve grup kuralları (kullanıcı, 2026-10-11)
 
-- **Hole silüeti zorunlu düşün:** düz dikdörtgen + tek desen "çok basit". Hole hem silüet hem zorluk (darboğaz, ayrık ada) verir.
+- **Güncel yön (2026-10-18):** Hole silueti zorunlu değildir. 161/162 isteğiyle geniş oynanabilir alan, bol kırılma/patlama ve engel/hamle bütçesiyle zorluk öne çıktı; yeni engelin ilk tanıtımı kolaydır. Aşağıdaki ada/hole notları uygun tasarımlarda kullanılabilecek tarihsel seçeneklerdir; önceki "hole silueti zorunlu" tercihi yeni yönün önüne geçmez.
 - **Adacıklar:** grid'i hole ile bağımsız adalara böl — ulaşması zor. Motor: hole'lar spawn için geçirgen
   (`IsSpawnPassThroughCell`), üstü yalnız hole olan ada kendi dolar; üst adadan alt adaya taş hole'dan düşer.
   Adayı yalnız üstündeki **engel** keser (o zaman çapraz dolum gerekir).
@@ -107,3 +107,20 @@ Akış: aşağı **daralan** (taç→gövde, kâse→ayak, kalkan) ve **alta otu
 - Yeni kullanım: **Onarım Kapısı 150 (Boss Duel)** — 9×10 simetrik kapı silueti; iki PaintCanBox, iki çim ayağı ve en altta altı kalkan saklayan 3×3 TarpStatue. 30 hamle, üç rakip/520 toplam can (ilk ayar).
 
 - Yeni kullanım: **Nilüfer Göleti 151** — 9×11 iki loblu simetrik gölet; iki kesintisiz beşli GrassWaterLily (69) sütunu, krem kask kemerleri ve çamurlu kıyılar. Alt kenarda iki yardımcı RocketBasket; başlangıç taşları rastgele, hazır special yok; 32 hamle / üç hedef (kullanıcı geri bildirimiyle zorlaştırıldı).
+
+- Yeni kullanım: **Renkli Sandıklar 154** — referansla aynı 8×8 düzen; üstte altı ColorChest, altta 24 HatLauncher’dan U ve 4×2 hole; 32 hamle / 48 enerji.
+- Yeni kullanım: **Nilüfer Tacı 155** — 9×11, sekiz nilüferli simetrik taç; 22 Mud → SculptingStone ve 6 Oil → chest3; 26 hamle, hazır special/yardımcı yok.
+- Yeni kullanım: **Kargo Kemerleri 156** — 9×9, iki basamaklı kemer; 12 Cargo'nun altında kırılabilir sandık rotaları; 24 chest2 + 9 chest1, 36 hamle.
+- Yeni kullanım: **Üç Atölye 157** — 8×9, üç boya kasası / üç porselen grubu / üç brandalı heykel, iki dar kanal; altta altı HatLauncher, 24 enerji, 36 hamle.
+
+- Yeni kullanım: **Kilitli Alet Çantası 158** — 9×11 çanta silueti; açık çamurlu sap, 22 chest2 çerçeve, ters kilit sıralı iki Safe ve Mud → HelmetPorcelain şeridi. 24 Mud / iki kasa / 22 sandık, 32 hamle; rastgele başlangıç, hazır special ve yardımcı yok. Katalogdaki eski test referansı değişti; test dosyası korundu.
+- Yeni kullanım: **Mor Mozaik 159** — 9×11 soyut beş ada; dört ayrı 2×3 SculptingSpecial odası, ortada 12 Gel → mor plastic ve iki açık jel kaynağı; iki bitişik yardımcı EggBird. 69 aktif hücrelik jel kaplama / 24 special-only engel / 12 plastik, 32 hamle; başlangıç rastgele.
+- Yeni kullanım: **Kızıl Köprü 160 (Boss Duel)** — 9×10 Golden Gate çağrışımlı çift kırmızı kule; 12 Mud → SculptingStone ayak hücresi, alt sırada altı kalkan ve merkezde iki yardımcı yumurta. 540 toplam rakip canı / 250 oyuncu canı / üç dalga / 30 hamle; fırlatma ve yağ tavanı 8, kulelerdeki kırmızı tür fırlatma havuzunda yok. Başlangıç rastgele; zorluk ve canlar oynanış için ilk ayar.
+- Yeni kullanım: **Rodos Atölyesi 161** — Rodos Heykeli (70) ilk production tanıtımı; tam 9×11, tek 2×2 heykel, 12 chest1, 28 hamle. Aynı satır/sütunda iki hazır LineH/LineV; diğer taşlar rastgele. Mevcut TR/EN ilk karşılaşma hint'i kullanılır. Örtü/yardımcı/boğaz yok, kolay ilk ayar.
+- Yeni kullanım: **Büyük Restorasyon 162** — tam 9×11; dört 2×2 Rodos, 20 Mud → turuncu plastic, 14 chest2; 24 hamle. Ortada hazır PulseCore + LineH, altta bitişik 2×2 OverrideBatteryBox / dört EggBird yardım bölgesi. 41 başlangıç taş hücresi ve 58 engelli hücre; ilk patlamalarla eşleşme alanı açılır. Hole/adacık yok; zorluk yük ve bütçeden gelir. Hamle sayısı ölçülmüş kazanma oranı değil, ilk ayardır.
+- Yeni kullanım: **Renkli Onarım 163** — tam 9×11; dört PaintCanBox ve 24 Mud → HelmetPorcelain, 28 hamle. Orta; beş sütunluk kesintisiz çalışma alanı, 59 rastgele taş hücresi, hazır special/yardımcı yok.
+- Yeni kullanım: **Mor Akıntı 164** — tam 9×11; 99 hücre jel kaplama, 20 SculptingSpecial, 16 jel üstü mor plastic; 26 hamle. Dört açık jel kaynağı, alt kenarda yukarı bakan iki GelLauncherUp ve hazır H+V. Zor; 59 taş hücresi, geniş merkez ve zincirlerle yayılma.
+- Yeni kullanım: **Çifte Hazine 165** — tam 9×11; altta farklı başlangıç renkli iki 3×3 AncientSeal, altlarında 18 altın; 22 Mud → SculptingStone. 30 hamle / orta-zor; mühür başına 6+6+6 renk, 59 rastgele taş hücresi, hazır special yok.
+- Yeni kullanım: **Usta Restoratör 166** — tam 9×11; iki Rodos, 24 Mud → SculptingSpecial, 12 chest3; 24 hamle / zor. Hazır Override+LineV, alt kenarda bitişik iki yardımcı RocketBasket, 53 taş hücresi. [163–166 toplu tasarım ve doğrulama](Levels163-166.md); bütün hamleler ilk denge ayarıdır.
+- Yeni kullanım: **Lazerli Restorasyon 167** — kullanıcı ekran görüntüsünden 9×11, 95 aktif / dört sol girinti hole'u. Üstte üç yatay tube ve sağda tek dikey tube; dört Rodos, dört lazer, iki 2×2 MetalWall bloğu, dört hamster. Sol alt lazerin 2×2 örtüsü altında yalnız (0,10)'da tek gizli jel; lazer kırılınca açılır. Gel cabinet yoktur. Hedef 95 hücrenin tamamını jellemek + 2 metal blok / 4 tube / 4 Rodos / 4 hamster; lazer ayrı goal değil. 22 normal hücre tamamen otomatik, hazır special yok; hamster eşiği 4, hamle 40 ilk ayar. [Yerleşim, akış ve kontroller](Level167-Lazerli-Restorasyon.md).
+- Yeni kullanım: **Zincir Atölyesi 168** — tam 9×11; iki eski Wardrobe (20 eşya), 26 Mud → chest2 ve altı PlasticTwoStage; 32 hamle / orta-zor ilk ayar. 51 otomatik taş hücresi, geniş orta sıra, hazır special yok. Alt kenarda bitişik tek OverrideBatteryBox, iki EggBird ve iki RocketBasket; sepetler `fireAllOnHit=1` ile üçlü salvo yapar. Yardımcılar goal değildir. Hedef iki dolap / 26 sandık / 26 çamur / altı fener; farklı anlarda kapak-eşya düşüşü, kuş dalışı, roket ve dalgayla hareket amaçlanır. [Tasarım ve kontroller](Level168-Zincir-Atolyesi.md).

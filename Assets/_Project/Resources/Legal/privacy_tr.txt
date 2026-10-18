@@ -1,0 +1,111 @@
+<size=150%><b>Gizlilik Politikası</b></size>
+
+<i>Son güncelleme: 17 Ekim 2026</i>
+
+Bu politika, <b>Wonder Fixers</b> ("Oyun") uygulamasının hangi bilgileri, neden topladığını ve hangi seçeneklere sahip olduğunuzu açıklar. Oyun, <b>Julvera Teknoloji A.Ş.</b>'nin oyun stüdyosu <b>Wondi Games</b> tarafından geliştirilmiştir ("biz"). Burada anlatılan kişisel verilerin veri sorumlusu Julvera Teknoloji A.Ş.'dir. Bu metin, 6698 sayılı Kişisel Verilerin Korunması Kanunu ("KVKK") kapsamındaki aydınlatma yükümlülüğümüzü de karşılar.
+
+<b>İletişim</b>
+Julvera Teknoloji A.Ş. (Wondi Games)
+Ünalan Mah. Ünalan Cad. No:1 İç Kapı No:10, Üsküdar, İstanbul, Türkiye
+MERSİS No: 0484229996100001 · İstanbul Ticaret Sicil No: 1061860
+E-posta: hello@wondigames.com
+
+<size=120%><b>1. Topladığımız bilgiler</b></size>
+
+<b>Hesap bilgileri</b>
+
+• Oyunu ilk açtığınızda rastgele bir kullanıcı kimliğiyle anonim bir hesap oluştururuz (Google Firebase Authentication). Oynamak için adınızı ya da e-postanızı istemeyiz.
+
+• İlerlemenizi kaydetmek için <b>Apple ile Giriş</b>'i seçerseniz, Apple kullanıcı kimliğinizi ve yalnızca paylaşmayı seçerseniz e-posta adresinizi alırız (Apple bu adresi gizli bir yönlendirme adresiyle saklayabilir).
+
+<b>Profil ve sosyal özellikler</b>
+
+• Seçtiğiniz oyuncu adı ve avatar, arkadaş kodunuz, seviye ilerlemeniz ve ülke ya da bölgeniz (cihazınızın dil ve bölge ayarından okunur, GPS kullanılmaz).
+
+• Bir takıma katılırsanız: takım üyeliğiniz, takım sohbetine yazdığınız mesajlar, istediğiniz ve gönderdiğiniz canlar.
+
+• Arkadaş listeniz ve sıralamalardaki yeriniz.
+
+• Bir sohbet mesajını şikâyet ederseniz: kullanıcı kimliğiniz, şikâyet edilen oyuncu ve mesaj. Engellediğiniz oyuncuların listesi kayıtlı ilerlemenizle birlikte saklanır.
+
+<b>Oyun ilerlemesi ve satın almalar</b>
+
+• Başka bir cihazda geri yüklenebilmesi için kayıtlı ilerlemeniz (seviyeler, yıldızlar, altınlar, jokerler, etkinlik ilerlemesi, ayarlar).
+
+• Ürünlerin bir kez teslim edilmesi için oyun içi satın alma kayıtları (ürün ve işlem kimliği). Ödemeleri Apple App Store ya da Google Play işler; <b>kart veya ödeme bilgileriniz bize hiçbir zaman ulaşmaz</b>.
+
+<b>Oyun istatistikleri ve analiz</b>
+
+• Seviyeleri nasıl oynadığınız: deneme sayısı, kazanma ve kaybetme, hamle ve süre, kullanılan jokerler. Bunları zorluk dengesini ayarlamak için kullanırız.
+
+• Google Firebase Analytics'in topladığı uygulama kullanım ve cihaz bilgileri: uygulama sürümü, cihaz modeli, işletim sistemi, dil, IP adresinden çıkarılan yaklaşık konum ve uygulama içi etkileşimler; Oyun kullanıcı kimliğinizle ilişkilendirilir.
+
+<b>Reklamlar</b>
+
+Oyun isteğe bağlı ödüllü video reklamlar sunabilir (örneğin ek hamle için). Reklamları Google AdMob gösterir; AdMob cihazınızın reklam kimliğini ve kullanım verilerini toplayabilir. AB, Birleşik Krallık ve İsviçre'de kişiselleştirilmiş reklamlardan önce Google'ın onay aracıyla izninizi isteriz. iOS'ta izleme yalnızca Apple'ın Uygulama İzleme Şeffaflığı penceresinde izin verirseniz yapılır.
+
+<b>Destek</b>
+
+Bize e-postayla ya da web sitemizdeki sohbet (tawk.to) üzerinden ulaşırsanız, gönderdiğiniz bilgileri (e-posta adresiniz ve mesajınızın içeriği gibi) alırız.
+
+<b>Bildirimler</b>
+
+Hatırlatmalar (örneğin "canların doldu") cihazınızda planlanan yerel bildirimlerdir. Oyunun ayarlarından ya da cihaz ayarlarından kapatabilirsiniz.
+
+<size=120%><b>2. Bilgileri ne için kullanırız</b></size>
+
+• Oyunu çalıştırmak ve özelliklerini sunmak: ilerlemenin kaydı ve geri yüklenmesi, takımlar, sohbet, arkadaşlar, sıralamalar ve etkinlikler (sözleşmenin ifası).
+
+• Satın almaları teslim etmek, dolandırıcılığı ve hileyi önlemek (meşru menfaat ve hukuki yükümlülük).
+
+• Oyunun nasıl oynandığını anlamak ve seviye dengesi dahil oyunu geliştirmek (meşru menfaat).
+
+• Reklam göstermek; izin verdiyseniz kişiselleştirilmiş reklam göstermek (açık rıza).
+
+• Destek taleplerinizi yanıtlamak.
+
+Kişisel verilerinizi satmayız.
+
+<size=120%><b>3. Kimlerle paylaşırız</b></size>
+
+• <b>Google Firebase (Authentication, Cloud Firestore, Analytics)</b>: Hesaplar, bulut kayıt, sosyal özellikler, analiz
+
+• <b>Apple App Store / Google Play</b>: İndirme ve ödemeler, Apple ile Giriş
+
+• <b>Google AdMob</b>: Gösterildiği durumlarda ödüllü reklamlar
+
+• <b>tawk.to</b>: Web sitesindeki destek sohbeti
+
+Diğer oyuncular oyuncu adınızı, avatarınızı, seviyenizi, takımınızı, sıralamadaki yerinizi ve takım sohbetine yazdığınız mesajları görebilir. Kanunen gerekli olduğunda bilgileri yetkili makamlarla paylaşabiliriz.
+
+<size=120%><b>4. Yurt dışına aktarım</b></size>
+
+Hizmet sağlayıcılarımız verileri Türkiye dışında, Avrupa Birliği ve Amerika Birleşik Devletleri dahil başka ülkelerdeki sunucularda saklayıp işleyebilir. Aktarımlar KVKK'nın 9. maddesine ve gerektiğinde standart sözleşmeler gibi uygun güvencelere uygun olarak yapılır.
+
+<size=120%><b>5. Ne kadar süre saklarız</b></size>
+
+• Hesap, profil ve ilerleme verileri: hesabınız etkin olduğu sürece. Hesabınızın silinmesini isterseniz, kanunen saklamamız gereken kayıtlar (örneğin satın alma kayıtları) dışında 30 gün içinde sileriz.
+
+• Takım sohbeti mesajları: takım ya da hesabınız silinene kadar.
+
+• Analiz verileri: en fazla 14 ay.
+
+<size=120%><b>6. Haklarınız ve seçenekleriniz</b></size>
+
+KVKK'nın 11. maddesi uyarınca kişisel verilerinizin işlenip işlenmediğini öğrenme, bilgi talep etme, düzeltilmesini ya da silinmesini isteme, işlemeye itiraz etme ve zararınızın giderilmesini talep etme haklarına sahipsiniz. Bulunduğunuz yere göre (örneğin AB'de GDPR kapsamında) veri taşınabilirliği ve verdiğiniz rızayı geri çekme hakkınız da vardır. Talepleriniz için hello@wondigames.com adresine yazın ve hesabınızı bulabilmemiz için Oyundaki profilinizde yazan <b>arkadaş kodunuzu</b> ekleyin. Kişisel Verileri Koruma Kurumu'na şikâyette bulunma hakkınız saklıdır.
+
+<b>Hesabınızı Oyun içinden silebilirsiniz:</b> Ayarlar → Şartlar ve Gizlilik → Hesabımı Sil. Bu işlem hesabınızı, ilerlemenizi, takım üyeliğinizi ve sohbet mesajlarınızı kalıcı olarak siler.
+
+Reklam kimliğinizi cihaz ayarlarından istediğiniz zaman sıfırlayabilir ya da reklam izlemeyi sınırlayabilirsiniz.
+
+<size=120%><b>7. Çocuklar</b></size>
+
+Oyun genel kitleye yöneliktir ve 13 yaşından küçük çocukları hedeflemez. 13 yaşından (ya da ülkenizde öngörülen daha yüksek yaştan) küçük çocuklardan bilerek kişisel veri toplamayız. Bir çocuğun bize kişisel veri verdiğini düşünüyorsanız bize yazın; bu verileri sileriz.
+
+<size=120%><b>8. Güvenlik</b></size>
+
+Verilerinizi erişimi denetlenen bulut hizmetleri ve şifreli bağlantılarla koruruz. Hiçbir sistem tamamen güvenli değildir; ancak bilgilerinizi korumak ve onlara kimlerin erişebileceğini sınırlamak için çalışırız.
+
+<size=120%><b>9. Değişiklikler</b></size>
+
+Bu politikayı güncelleyebiliriz. Güncellediğimizde en üstteki tarihi değiştiririz; önemli değişiklikleri Oyun içinde de bildiririz.

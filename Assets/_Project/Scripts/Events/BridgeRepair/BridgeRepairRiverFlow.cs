@@ -28,7 +28,8 @@ public sealed class BridgeRepairRiverFlow : IDisposable
         var template = Resources.Load<Material>("Events/BridgeRepairRiver");
         if (template == null || template.shader == null || !template.shader.isSupported)
         {
-            Debug.LogWarning("[BridgeRepair] River material unavailable; using the original background.");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogWarning("[BridgeRepair] River material unavailable; using the original background.");
             return;
         }
         previousMaterial = image.material;

@@ -45,6 +45,14 @@ public sealed class SafariEventController : MonoBehaviour
     [SerializeField] private Sprite promoIcon;
 
     private const string PromoKey = "safari";
+    private float nextVisibilityCheck;
+
+    private void Update()
+    {
+        if (Time.unscaledTime < nextVisibilityCheck) return;
+        nextVisibilityCheck = Time.unscaledTime + 1f;
+        eventButton?.SetVisible(IsEventAvailable);
+    }
 
     private void Awake()
     {
@@ -116,7 +124,8 @@ public sealed class SafariEventController : MonoBehaviour
 
         if (config == null)
         {
-            Debug.LogWarning("[Safari] SafariConfig yok (Resources/Events/SafariConfig). Event devre dışı.");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogWarning("[Safari] SafariConfig yok (Resources/Events/SafariConfig). Event devre dışı.");
             eventButton?.SetVisible(false);
             return;
         }
@@ -312,7 +321,8 @@ public sealed class SafariEventController : MonoBehaviour
         var launcher = FindFirstObjectByType<MainMenuLevelButtonController>(FindObjectsInactive.Include);
         if (launcher == null)
         {
-            Debug.LogWarning("[Safari] MainMenuLevelButtonController bulunamadı — Devam iptal, harita açık kalıyor.");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogWarning("[Safari] MainMenuLevelButtonController bulunamadı — Devam iptal, harita açık kalıyor.");
             return;
         }
 
@@ -330,12 +340,12 @@ public sealed class SafariEventController : MonoBehaviour
         var result = launcher.StartLevel();
         if (result == LevelStartResult.Started)
         {
-            Debug.Log("[Safari] Devam → level başlatıldı (AwaitingResult).");
             return;
         }
 
         // Başlamadı → turu GERİ AL, aksi halde oyuncu menüde kalır ve sonraki kazanç bu tura yazılır.
-        Debug.LogWarning($"[Safari] Devam → level başlamadı ({result}); tur geri alındı.");
+        if (GameDiagnostics.CriticalErrors)
+            Debug.LogWarning($"[Safari] Devam → level başlamadı ({result}); tur geri alındı.");
         SafariState.SetRunStatus(SafariRunStatus.Idle);
 
         // Can yoksa can/reklam akışı ekranda: üstüne harita açma. Diğer hallerde haritaya dön.
@@ -363,7 +373,6 @@ public sealed class SafariEventController : MonoBehaviour
             SafariState.SetPitstop(0);
             SafariState.SetRunStatus(SafariRunStatus.Fell);
             SafariState.StartFallCooldown(UtcNow, config.fallCooldownMinutes);
-            Debug.Log("[Safari] Tur sonucu: DÜŞTÜ → pitstop sıfırlandı, 30dk cooldown.");
             return SafariRoundOutcome.Fell;
         }
 
@@ -375,12 +384,10 @@ public sealed class SafariEventController : MonoBehaviour
             PrepareFinalReward(config.simulatedWinnerCount);
             SafariState.StartFallCooldown(UtcNow, 30);
             SafariState.SetRunStatus(SafariRunStatus.Completed);
-            Debug.Log("[Safari] Tur sonucu: TAMAMLANDI (7. pitstop).");
             return SafariRoundOutcome.Completed;
         }
 
         SafariState.SetRunStatus(SafariRunStatus.Idle);
-        Debug.Log($"[Safari] Tur sonucu: İLERLEDİ → pitstop {pit}.");
         return SafariRoundOutcome.Advanced;
     }
 
@@ -402,6 +409,5 @@ public sealed class SafariEventController : MonoBehaviour
         PlayerWallet.AddCoins(LastRewardShare);
         StoreReviewService.MarkHappyMoment();
         int pool = config != null ? config.prizePoolGold : 0;
-        Debug.Log($"[Safari] Ödül claim: {pool} altın / {winners} kazanan → oyuncu payı {LastRewardShare}.");
     }
 }

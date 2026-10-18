@@ -46,6 +46,10 @@ public sealed class ObstacleResolutionService
 
         if (!result.didHit && request.context == ObstacleHitContext.Booster)
         {
+            // This statue is explicitly special-only, including direct tool hits. Keep the
+            // existing booster fallback for other obstacle families.
+            if (obstacleStateService.GetObstacleIdAt(request.cell.x, request.cell.y) == ObstacleId.RhodesStatue)
+                return result;
             result = TryFallback(ObstacleHitContext.SpecialActivation);
             if (!result.didHit) result = TryFallback(ObstacleHitContext.NormalMatch);
         }

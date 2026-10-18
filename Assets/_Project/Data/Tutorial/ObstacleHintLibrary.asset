@@ -295,6 +295,30 @@ MonoBehaviour:
     fallbackTitle: Colored Tool Threat
     locKey: hint_obstacle_toolthreat_color
     fallbackText: 
+  - id: 71
+    iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_colorcrate_name
+    fallbackTitle: Color Crate
+    locKey: hint_obstacle_colorcrate
+    fallbackText: 
+  - id: 72
+    iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_colorcrate_name
+    fallbackTitle: Color Crate
+    locKey: hint_obstacle_colorcrate
+    fallbackText: 
+  - id: 73
+    iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_colorcrate_name
+    fallbackTitle: Color Crate
+    locKey: hint_obstacle_colorcrate
+    fallbackText: 
+  - id: 74
+    iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_colorcrate_name
+    fallbackTitle: Color Crate
+    locKey: hint_obstacle_colorcrate
+    fallbackText: 
   - id: 42
     iconOverride: {fileID: 0}
     titleLocKey: hint_obstacle_grass_name
@@ -385,3 +409,21 @@ MonoBehaviour:
     fallbackTitle: Covered Statue
     locKey: hint_obstacle_tarpstatue
     fallbackText: Collect stones of the tag's color anywhere on the board. When the number runs out, the tarp comes off. Then only specials can hit it - each hit carves the statue a little more.
+  - id: 70
+    iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_rhodes_statue_name
+    fallbackTitle: Rhodes Statue
+    locKey: hint_obstacle_rhodes_statue
+    fallbackText: Only specials damage this 2x2 statue. Each hit breaks another stage. Four special hits clear the whole statue.
+  - id: 69
+    iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_waterlily_name
+    fallbackTitle: Water Lily
+    locKey: hint_obstacle_waterlily
+    fallbackText: Four petals need a special hit. Once a petal falls, matches or specials remove the remaining petals. A nearby special is swallowed if it stays for another move. Only a special hit releases it onto a reusable board cell. Clear the grass underneath to finish.
+  - id: 67
+    iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_billiardpocket_name
+    fallbackTitle: Billiard Pocket
+    locKey: hint_obstacle_billiardpocket
+    fallbackText: Guide billiard balls into the pocket by clearing nearby stones. The pocket cannot be broken; each ball that enters is collected.

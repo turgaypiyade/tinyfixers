@@ -203,7 +203,8 @@ public class MainMenuLevelButtonController : MonoBehaviour, IPointerDownHandler,
             canvas = FindFirstObjectByType<Canvas>();
         if (canvas == null)
         {
-            Debug.LogWarning("[MainMenuLevelButtonController] Canvas bulunamadı; debug level selector açılamadı.");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogWarning("[MainMenuLevelButtonController] Canvas bulunamadı; debug level selector açılamadı.");
             return;
         }
 

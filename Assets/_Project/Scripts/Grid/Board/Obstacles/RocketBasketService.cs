@@ -94,7 +94,7 @@ public sealed class RocketBasketService : MonoBehaviour
         board.OnObstacleViewRestored += HandleObstacleRevealed;
 
         if (logHits)
-            Debug.Log($"[RocketBasket] Bound. baskets={loadedByOrigin.Count}");
+            {}
     }
 
     // Safe/Chest gibi bir cover'ın ALTINA konan basket, stamp sırasında authored obstacles[]'ta
@@ -115,7 +115,7 @@ public sealed class RocketBasketService : MonoBehaviour
         loadedByOrigin[origin] = set;
 
         if (logHits)
-            Debug.Log($"[RocketBasket] revealed basket charges origin={origin}");
+            {}
     }
 
     private void InitCharges()
@@ -231,7 +231,7 @@ public sealed class RocketBasketService : MonoBehaviour
             view.LaunchRocket(color);
 
         if (logHits)
-            Debug.Log($"[RocketBasket] launch origin={origin} color={color} remaining={loaded.Count}");
+            {}
 
         if (loaded.Count == 0)
         {

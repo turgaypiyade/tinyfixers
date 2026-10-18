@@ -69,6 +69,9 @@ public class BoardController {
 }
 public partial class CascadeLogic {
  readonly BoardController board; int spawnSequence; bool[,] diagonalFeedReachable;
+ readonly List<VirtualTile> segmentTileBuffer=new List<VirtualTile>();
+ readonly List<int> segmentSlotBuffer=new List<int>();
+ readonly List<Vector2Int> gapRemovalBuffer=new List<Vector2Int>();
  public CascadeLogic(BoardController b){board=b;}
  TileType PickRefillType(VirtualTile[,] vb,int x,int y)=>TileType.Gear;
  bool TryPickMovableGoalToSpawn(int x,bool spawned,Dictionary<ObstacleId,int> counts,out ObstacleId id){id=ObstacleId.None;return false;}

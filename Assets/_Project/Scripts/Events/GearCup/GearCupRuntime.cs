@@ -154,7 +154,10 @@ public sealed class GearCupRuntime : MonoBehaviour
     {
         failures = Math.Min(6, failures + 1);
         nextWork = Time.unscaledTime + Math.Min(120, 5 * (1 << failures));
-        if (failures == 1) Debug.LogWarning("[GearCup] Sync pending: " + error?.GetBaseException().Message);
+        if (failures == 1) {
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogWarning("[GearCup] Sync pending: " + error?.GetBaseException().Message);
+        }
     }
     public static IReadOnlyList<GearCupTeamScore> Standings()
     {

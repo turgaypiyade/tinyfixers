@@ -70,7 +70,8 @@ public class BoardController : MonoBehaviour
     public int FallGeneration { get; private set; } = 0;
     internal void IncrementFallGeneration() => FallGeneration++;
 
-    public enum BoosterMode { None, Single, Row, Column, Shuffle }
+    // Değerler serialize edilir (ShopCatalog vb.) — yalnız sona ekle.
+    public enum BoosterMode { None, Single, Row, Column, Shuffle, PaintBucket }
 
     [SerializeField] private TileIconLibrary iconLibrary;
     [SerializeField] private LevelData levelData;
@@ -87,6 +88,7 @@ public class BoardController : MonoBehaviour
 
     [Header("Movement Feel")]
     [SerializeField] private float swapDurationMultiplier = 1f;
+    [SerializeField, Range(0f, 0.4f)] private float swapLiftAmount = 0.20f;
     [SerializeField] private float fallColumnStep = 0.015f;
     [SerializeField] private float fallDurationMultiplier = 1f;
     [Tooltip("Cell/second cinsinden tek gerçek düşüş hızı. Dikey ve diyagonal tüm fall/slide süreleri bundan türetilir.")]
@@ -153,7 +155,6 @@ public class BoardController : MonoBehaviour
              "obstacle-yolu ve combo cascade'lerinde spawn hizalama/karışma sorunları yaşıyor (eksik/deneysel). " +
              "İvme zaten ActiveFallProfile ile geldiği için normalde açmaya gerek yok.")]
     [SerializeField] private bool useReferenceFallMotion = false;
-    [SerializeField] private bool debugReferenceFallMotionLogs;
     [Tooltip("Kapalıyken mevcut Tiny Fixers taş görsel boyutu korunur. Açılırsa normal taş ikonları cellSize * tileVisualFillRatio olur.")]
     [SerializeField] private bool applyReferenceTileVisualFillRatio = false;
     [SerializeField] private ReferenceFallMotionSettings referenceFallMotion = new ReferenceFallMotionSettings();
@@ -300,6 +301,44 @@ public class BoardController : MonoBehaviour
     internal float HammerScreenCrackChance => hammerScreenCrackChance;
     internal bool HammerScreenCrackOncePerBoard => hammerScreenCrackOncePerBoard;
     internal RectTransform BoosterFxParent => boosterFxParent != null ? boosterFxParent : ContentRoot ?? parent;
+
+    // Tahta maskesinin (RectMask2D, BoardMask) DIŞINDA, maskeyle birebir aynı kutuda duran efekt kökü. Joker efektleri
+    // (çekiç, matkap, asansör, roket) tahta kenarından taşar: maskenin içinde yarısı kırpılıyordu (ör. üst satıra çekiç).
+    // Maskenin hemen önüne (aynı ebeveyn, sonraki kardeş) konur; konum/boyut her erişimde maskeden kopyalanır.
+    private RectTransform unclippedFxRoot;
+    internal RectTransform UnclippedFxRoot
+    {
+        get
+        {
+            var masked = BoosterFxParent;
+            if (masked == null) return null;
+            var mask = masked.GetComponentInParent<RectMask2D>(true);
+            if (mask == null) return masked;   // maske yok → zaten kırpılmıyor
+            var maskRt = (RectTransform)mask.transform;
+            var host = maskRt.parent as RectTransform;
+            if (host == null) return masked;
+
+            if (unclippedFxRoot == null)
+            {
+                var go = new GameObject("UnclippedFx", typeof(RectTransform));
+                go.layer = maskRt.gameObject.layer;   // Screen Space Camera: layer 0'da doğarsa çizilmez
+                unclippedFxRoot = (RectTransform)go.transform;
+                unclippedFxRoot.SetParent(host, false);
+            }
+            if (unclippedFxRoot.parent != host) unclippedFxRoot.SetParent(host, false);
+            unclippedFxRoot.anchorMin = maskRt.anchorMin;
+            unclippedFxRoot.anchorMax = maskRt.anchorMax;
+            unclippedFxRoot.pivot = maskRt.pivot;
+            unclippedFxRoot.anchoredPosition = maskRt.anchoredPosition;
+            unclippedFxRoot.sizeDelta = maskRt.sizeDelta;
+            unclippedFxRoot.localRotation = maskRt.localRotation;
+            unclippedFxRoot.localScale = maskRt.localScale;
+            int want = maskRt.GetSiblingIndex() + 1;
+            if (unclippedFxRoot.GetSiblingIndex() != want) unclippedFxRoot.SetSiblingIndex(want);
+            // Yalnız maskenin ÇOCUĞU kırpılır: kök maskenin altına (ör. iç içe başka maske) düşmesin.
+            return unclippedFxRoot;
+        }
+    }
     internal Sprite HammerBoosterFallbackSprite => hammerBoosterFallbackSprite;
     internal Sprite PatchBotPropellerSprite => patchBotPropellerSprite;
     internal Sprite PatchBotPropellerHubSprite => patchBotPropellerHubSprite;
@@ -408,7 +447,8 @@ public class BoardController : MonoBehaviour
         if (columnFallVisualCounts[x] <= 0)
         {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-            Debug.LogWarning($"[ColumnFall] busy counter underflow x={x}");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogWarning($"[ColumnFall] busy counter underflow x={x}");
 #endif
             return;
         }
@@ -428,17 +468,13 @@ public class BoardController : MonoBehaviour
     }
 
     [Header("Debug / Tile Sync")]
-    [SerializeField] private bool enableTileSyncValidation = true;
-    [SerializeField] private bool enableSpecialChainTrace;
-    [SerializeField] private bool enableBoardFlowTrace;
 
     // ── Faz 0 perf logger (ölçüm-önce; Docs/UnifiedSpecialFlow_Plan.md) ──
     // Açıkken her frame'i örnekler: eşik üstü frame süresi VEYA GC-alloc sıçraması = [PerfSpike]
     // (board bağlamıyla: busy/specialPhase/jobs/seq → takılma NE ZAMAN + NE koşarken). Her ~3s
     // [PerfBaseline] (avg/worst ms + net GC). Cihazda repro → Editor.log'dan hotspot. Yeni component/
-    // sahne değişikliği yok, tek inspector bool.
+    // sahne değişikliği yok; Resources/GameDiagnostics → Performance anahtarı.
     [Header("Perf")]
-    [SerializeField] private bool enablePerfMonitor;
     [Tooltip("Bu ms üstü frame = spike log. 60fps→16.7, 30fps→33; 28 hitch'leri yakalar.")]
     [SerializeField] private float perfSpikeMs = 28f;
     [Tooltip("Bir frame'de bu KB üstü managed-heap artışı = alloc spike log.")]
@@ -447,7 +483,9 @@ public class BoardController : MonoBehaviour
     // Object pool (Docs/UnifiedSpecialFlow_Plan.md §3.3). Açıkken taşlar Instantiate/Destroy yerine
     // havuzdan alınır/iade edilir → match-3'ün yarat-yok-et GC spike'ı biter. Kapalı = eski davranış.
     [Tooltip("Taş havuzu: Instantiate/Destroy yerine havuzdan al/iade (GC spike fix). Kapalı=eski yol.")]
-    [SerializeField] private bool useTilePool;
+    [SerializeField] private bool useTilePool = true;
+    [Tooltip("İlk yerleşimden sonra ayrılan yedek taş sayısı. Tahta hücre sayısıyla sınırlanır.")]
+    [SerializeField, Min(0)] private int tilePoolWarmCount = 24;
 
     // Faz 2+ (Docs/UnifiedSpecialFlow_Plan.md): clear/special işleri FlowScheduler'a Activity olarak
     // kaydolur. Faz 2'de EK kayıt (eski job/bayrak da sürüyor) → davranış aynı, ama (a) bitişte otomatik
@@ -794,7 +832,7 @@ public class BoardController : MonoBehaviour
     private BoardAnimator boardAnimator;
     // Background-job accounting (typed handle/gate). One count slot per BoardJobKind; see BeginJob.
     // Level-end waits on the total (ActiveBackgroundJobs); resolve/input wait only on the Resolve slot.
-    private const int BoardJobKindCount = 11;
+    private const int BoardJobKindCount = 12;
     private readonly int[] _jobCounts = new int[BoardJobKindCount];
     private readonly Stack<System.IDisposable>[] _pairedFlowJobHandles = new Stack<System.IDisposable>[BoardJobKindCount];
     private int _jobEpoch = 0;
@@ -869,6 +907,7 @@ public class BoardController : MonoBehaviour
     internal float CellTime => 1f / FallVelocityCellsPerSecond;
     internal float FallSpawnStaggerMultiplier => Mathf.Clamp01(fallSpawnStaggerMultiplier);
     internal AnimationCurve SwapMoveCurve => swapMoveCurve;
+    internal float SwapLiftAmount => swapLiftAmount;
     internal AnimationCurve FallMoveCurve => fallMoveCurve;
     internal bool EnableFallSettle => enableFallSettle;
     internal float FallSettleDuration => Mathf.Max(0f, fallSettleDuration);
@@ -880,7 +919,7 @@ public class BoardController : MonoBehaviour
     // Reference fall motion is disabled until the whole diagonal/segmented flow is rebuilt
     // as one coherent system. Partial/hybrid use breaks dense diagonal boards such as LevelP_00060.
     internal bool UseReferenceFallMotion => useReferenceFallMotion;
-    internal bool DebugReferenceFallMotionLogs => debugReferenceFallMotionLogs;
+    internal bool DebugReferenceFallMotionLogs => GameDiagnostics.BoardFlow;
     internal bool ApplyReferenceTileVisualFillRatio => applyReferenceTileVisualFillRatio;
     internal ReferenceFallMotionSettings ReferenceFallMotion
     {
@@ -897,7 +936,7 @@ public class BoardController : MonoBehaviour
         get
         {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-            return enableBoardFlowTrace;
+            return GameDiagnostics.BoardFlow;
 #else
             return false;
 #endif
@@ -914,7 +953,13 @@ public class BoardController : MonoBehaviour
     // tilesRoot.parent = spawnParent; animasyon ghostları buraya parentlanırsa
     // gridLinesRoot ve obstaclesRoot'un üstünde render edilebilir.
     internal RectTransform ContentRoot => parent?.parent as RectTransform;
-    internal TileType[] RandomPool => randomPool;
+    // Wonder Boya Kovası ambargosu sürerken çıkarılan tür havuzda yoktur: dolum, mıknatıs, karıştırma hepsi buradan okur.
+    internal TileType[] RandomPool => paintBucket != null && paintBucket.FilteredPoolOrNull != null
+        ? paintBucket.FilteredPoolOrNull : randomPool;
+    private PaintBucketJoker paintBucket;
+    internal PaintBucketJoker PaintBucket => paintBucket;
+    /// Joker hedefi kabul edilmedi (hak düşmedi, joker seçili kalır). Argüman: yerelleştirme anahtarı.
+    public event Action<string> OnBoosterTargetRejected;
     internal LevelData LevelData => levelData;
     internal int PatchBotPulseComboSize => patchBotPulseComboSize;
     internal PatchBotPairGhostTuning PatchBotGhostTuning => patchBotPairGhostTuning.Sanitized;
@@ -971,7 +1016,7 @@ public class BoardController : MonoBehaviour
         set { isSpecialActivationPhase = value; if (value) hadSpecialActivityThisResolve = true; }
     }
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-    internal bool EnableSpecialChainTrace => enableSpecialChainTrace;
+    internal bool EnableSpecialChainTrace => GameDiagnostics.SpecialChains;
 #else
     internal bool EnableSpecialChainTrace => false;
 #endif
@@ -1345,14 +1390,18 @@ public class BoardController : MonoBehaviour
         EnsureMoveClearPraisePopup();
 
         if (lightningSpawner == null)
-            Debug.LogWarning("[Lightning][BoardController] lightningSpawner reference is not assigned and auto-resolve failed.");
+            {
+                if (GameDiagnostics.CriticalErrors)
+                    Debug.LogWarning("[Lightning][BoardController] lightningSpawner reference is not assigned and auto-resolve failed.");
+            }
 
         // Üretim akışı = pompa + kesintisiz düşüş + dynamic gate. Biri kapanırsa oyun sessizce eski
         // blocking resolve'a döner; bunu görünür kıl.
         if (!UseFlowPump || !useDynamicBoardInputGate || !UsePerColumnAsyncFalls)
-            Debug.LogError($"[BoardFlow] Üretim akış bayrakları kapalı → eski blocking resolve devrede. " +
-                           $"flowPump={useFlowPump} continuous={useContinuousFallMotion} reference={useReferenceFallMotion} " +
-                           $"dynamicGate={useDynamicBoardInputGate} perColumn={usePerColumnGravity}/{usePerColumnAsyncFalls}", this);
+            {
+                if (GameDiagnostics.CriticalErrors)
+                    Debug.LogError($"[BoardFlow] Üretim akış bayrakları kapalı → eski blocking resolve devrede. " + $"flowPump={useFlowPump} continuous={useContinuousFallMotion} reference={useReferenceFallMotion} " + $"dynamicGate={useDynamicBoardInputGate} perColumn={usePerColumnGravity}/{usePerColumnAsyncFalls}", this);
+            }
     }
 
     void EnsureServices()
@@ -1436,6 +1485,36 @@ public class BoardController : MonoBehaviour
     // GENEL bir sınıf). Tek otorite: her frame, board tam idle olunca bekleyen resolve'u kick et →
     // lost-wakeup sınıfı KÖKTEN biter. TryStart guard'lı (yalnız istek varsa + tam idle ise koşar),
     // istek yoksa saf no-op → maliyet ihmal edilebilir.
+    private bool watchdogApplicationPaused, watchdogApplicationUnfocused;
+    private int watchdogIgnoreThroughFrame = -1;
+
+    private void OnApplicationPause(bool paused)
+    {
+        watchdogApplicationPaused = paused;
+        watchdogIgnoreThroughFrame = Time.frameCount + 1;
+    }
+
+    private void OnApplicationFocus(bool focused)
+    {
+        watchdogApplicationUnfocused = !focused;
+        watchdogIgnoreThroughFrame = Time.frameCount + 1;
+    }
+
+    // Recovery measures opportunities for gameplay to advance, not time spent suspended.
+    // Pause/focus are independent: one resume callback must not override the other flag.
+    // Skip the transition and first following frame regardless of callback/Update ordering.
+    private float ActiveWatchdogDeltaTime
+    {
+        get
+        {
+            if (watchdogApplicationPaused || watchdogApplicationUnfocused || Time.timeScale <= 0f
+                || Time.frameCount <= watchdogIgnoreThroughFrame)
+                return 0f;
+            // Also bound an Editor-pause/OS scheduling gap where no lifecycle callback arrived.
+            return Mathf.Min(Time.unscaledDeltaTime, Time.maximumDeltaTime);
+        }
+    }
+
     private void Update()
     {
         // Hareket önce ilerler: aynı karede devam eden FallAction coroutine'leri güncel bileti görür.
@@ -1449,7 +1528,7 @@ public class BoardController : MonoBehaviour
         // bitse bile bekleyen resolve asılı kalmaz (lost-wakeup sınıfı yapısal olarak kapalı).
         Flow.Pump();
 
-        if (enablePerfMonitor)
+        if (GameDiagnostics.Performance)
             SamplePerf();
     }
 
@@ -1491,10 +1570,8 @@ public class BoardController : MonoBehaviour
             _perfSuppressedSpikes++;
             if (Time.realtimeSinceStartup - _perfLastSpikeLog >= 0.5f)
             {
-                Debug.Log($"[PerfSpike] t={Time.realtimeSinceStartup:0.000} frameMs={ms:0.0} gcKB={gcDeltaKB} " +
-                    $"(son 0.5s'de {_perfSuppressedSpikes} spike) " +
-                    $"| busy={IsBusy} specialPhase={IsSpecialActivationPhase} activeJobs={ActiveBackgroundJobs} " +
-                    $"blockJobs={BlockingBackgroundJobs} seq={IsActionSequencePlaying} state={CurrentState}");
+                if (GameDiagnostics.Performance)
+                    Debug.Log($"[PerfSpike] t={Time.realtimeSinceStartup:0.000} frameMs={ms:0.0} gcKB={gcDeltaKB} " + $"(son 0.5s'de {_perfSuppressedSpikes} spike) " + $"| busy={IsBusy} specialPhase={IsSpecialActivationPhase} activeJobs={ActiveBackgroundJobs} " + $"blockJobs={BlockingBackgroundJobs} seq={IsActionSequencePlaying} state={CurrentState}");
                 _perfLastSpikeLog = Time.realtimeSinceStartup;
                 _perfSuppressedSpikes = 0;
             }
@@ -1518,8 +1595,8 @@ public class BoardController : MonoBehaviour
             float avg = _perfWindowFrames > 0 ? _perfWindowSumMs / _perfWindowFrames : 0f;
             long netGcKB = (gc - _perfWindowStartGc) / 1024;
             float idleKbPerFrame = _perfIdleFrames > 0 ? (float)_perfIdleGcKB / _perfIdleFrames : 0f;
-            Debug.Log($"[PerfBaseline] {_perfWindowFrames}f/3s avgMs={avg:0.0} worstMs={_perfWindowWorstMs:0.0} " +
-                      $"netGcKB={netGcKB} | IDLE: {_perfIdleFrames}f alloc={idleKbPerFrame:0.0}KB/frame");
+            if (GameDiagnostics.Performance)
+                Debug.Log($"[PerfBaseline] {_perfWindowFrames}f/3s avgMs={avg:0.0} worstMs={_perfWindowWorstMs:0.0} " + $"netGcKB={netGcKB} | IDLE: {_perfIdleFrames}f alloc={idleKbPerFrame:0.0}KB/frame");
             _perfWindowStart = Time.realtimeSinceStartup;
             _perfWindowFrames = 0;
             _perfWindowSumMs = 0f;
@@ -1643,7 +1720,10 @@ public class BoardController : MonoBehaviour
         // async: duvar kontrollü yıkım görseli (~1-1.5 sn). Veri anında temizlenir, parça hücreleri
         // HoldCells ile HÜCRE bazında tutulur (taş girmez) → girdi kapıları bunu SAYMAZ; yalnız
         // level-end bekler. (ObstacleSpread kullanılıyordu → yıkım boyunca TÜM tahtada hamle reddediliyordu.)
-        ObstacleCollapse = 10
+        ObstacleCollapse = 10,
+        // Oil commits its target cell before flight. Only level-end waits for this visual;
+        // ObstacleSpread's legacy global input gate must not include it.
+        OilSpread = 11
     }
 
     private sealed class BoardJobHandle : System.IDisposable
@@ -1692,6 +1772,7 @@ public class BoardController : MonoBehaviour
             BoardJobKind.EggBirdFlight => Flow.BeginNonBlocking(BoardFlowScheduler.ActivityKind.Flight),
             BoardJobKind.BossStrikeDrain => Flow.BeginNonBlocking(BoardFlowScheduler.ActivityKind.Flight),
             BoardJobKind.PresentationFx => Flow.BeginNonBlocking(BoardFlowScheduler.ActivityKind.Presentation),
+            BoardJobKind.OilSpread => Flow.BeginNonBlocking(BoardFlowScheduler.ActivityKind.Presentation),
             BoardJobKind.DetachedFall => Flow.BeginNonBlocking(BoardFlowScheduler.ActivityKind.Fall),
             _ => null,
         };
@@ -1907,8 +1988,11 @@ public class BoardController : MonoBehaviour
     {
         fallMotion?.Reset();
         flowLive = false;
+        GetComponent<OilSpreadAnimator>()?.CancelSpreads();
         ClearAllPendingTriggeredSpecialCells();
         this.width = width; this.height = height; this.iconLibrary = iconLibrary;
+        if (paintBucket == null) paintBucket = PaintBucketJoker.Ensure(this);
+        paintBucket.ResetForLevel();
         tiles = new TileView[width, height];
         gridData = new TileData[width, height];
         holes = new bool[width, height];
@@ -2171,15 +2255,12 @@ public class BoardController : MonoBehaviour
         {
             if (elapsed >= timeoutSeconds)
             {
-                Debug.LogWarning(
-                    $"[Board] WaitForExclusiveBoardAccess timeout. " +
-                    $"ActiveBackgroundJobs={ActiveBackgroundJobs}, FlyingPatchBotDashes={FlyingPatchBotDashes}, " +
-                    $"FlyingGoalOrbs={FlyingGoalOrbs}, Spread={SpreadingObstacles}, " +
-                    $"ActionSequencePlaying={IsActionSequencePlaying}, Detached={DetachedSequencerActions}");
+                if (GameDiagnostics.CriticalErrors)
+                    Debug.LogWarning($"[Board] WaitForExclusiveBoardAccess timeout. " + $"ActiveBackgroundJobs={ActiveBackgroundJobs}, FlyingPatchBotDashes={FlyingPatchBotDashes}, " + $"FlyingGoalOrbs={FlyingGoalOrbs}, Spread={SpreadingObstacles}, " + $"ActionSequencePlaying={IsActionSequencePlaying}, Detached={DetachedSequencerActions}");
                 yield break;
             }
 
-            elapsed += Time.unscaledDeltaTime;
+            elapsed += ActiveWatchdogDeltaTime;
             yield return null;
         }
     }
@@ -2260,7 +2341,10 @@ public class BoardController : MonoBehaviour
         }
 
         if (repaired > 0)
-            Debug.LogWarning($"[BoardIntegrity] {context}: {repaired} bozuk hücre referansı onarıldı.");
+            {
+                if (GameDiagnostics.CriticalErrors)
+                    Debug.LogWarning($"[BoardIntegrity] {context}: {repaired} bozuk hücre referansı onarıldı.");
+            }
 
         return repaired;
     }
@@ -2277,8 +2361,8 @@ public class BoardController : MonoBehaviour
             for (int x = 0; x < width; x++)
                 if (ReferenceEquals(tiles[x, y], tile))
                 {
-                    Debug.LogWarning(
-                        $"[BoardIntegrity] Havuza iade edilen taş hâlâ ({x},{y}) hücresinde kayıtlıydı — hücre boşaltıldı.");
+                    if (GameDiagnostics.CriticalErrors)
+                        Debug.LogWarning($"[BoardIntegrity] Havuza iade edilen taş hâlâ ({x},{y}) hücresinde kayıtlıydı — hücre boşaltıldı.");
                     ClearCell(x, y);
                 }
     }
@@ -2305,17 +2389,12 @@ public class BoardController : MonoBehaviour
                 yield break;
             }
 
-            elapsed += Time.unscaledDeltaTime;
+            elapsed += ActiveWatchdogDeltaTime;
 
             if (elapsed >= timeoutSeconds)
             {
-                Debug.LogWarning(
-                    $"[Board] RunAfterIdle timeout. " +
-                    $"IsBusy={IsBusy}, CurrentState={CurrentState}, " +
-                    $"busyScopeDepth={busyScopeDepth}, ActiveBackgroundJobs={ActiveBackgroundJobs}, " +
-                    $"BlockingBackgroundJobs={BlockingBackgroundJobs}, FlyingGoalOrbs={FlyingGoalOrbs}, " +
-                    $"FlyingPatchBotDashes={FlyingPatchBotDashes}, DrainingBossStrikes={DrainingBossStrikes}, " +
-                    $"ActionSequencePlaying={IsActionSequencePlaying}");
+                if (GameDiagnostics.CriticalErrors)
+                    Debug.LogWarning($"[Board] RunAfterIdle timeout. " + $"IsBusy={IsBusy}, CurrentState={CurrentState}, " + $"busyScopeDepth={busyScopeDepth}, ActiveBackgroundJobs={ActiveBackgroundJobs}, " + $"BlockingBackgroundJobs={BlockingBackgroundJobs}, FlyingGoalOrbs={FlyingGoalOrbs}, " + $"FlyingPatchBotDashes={FlyingPatchBotDashes}, DrainingBossStrikes={DrainingBossStrikes}, " + $"ActionSequencePlaying={IsActionSequencePlaying}");
 
                 action?.Invoke();
                 yield break;
@@ -2411,10 +2490,6 @@ public class BoardController : MonoBehaviour
         TryResolveLightningSpawner();
         EnsureLineTravelVisualReady();
         float __dur = lineSweepService.PlayLightningLineStrikes(lightningSpawner, lineTravelPlayer, lineStrikes, onSweepCellReached);
-        Debug.Log($"[BonusDebug] gate4 PlayLightningLineStrikes strikes={(lineStrikes!=null?lineStrikes.Count:-1)} duration={__dur} " +
-                  $"lineTravelPlayer={(lineTravelPlayer==null?"NULL":"ok")} " +
-                  $"playerActive={(lineTravelPlayer!=null && lineTravelPlayer.gameObject.activeInHierarchy)} " +
-                  $"spawner={(lightningSpawner==null?"NULL":"ok")}");
         return __dur;
     }
 
@@ -2613,7 +2688,11 @@ public class BoardController : MonoBehaviour
         }
     }
 
-    public void SetHole(int x, int y, bool isHole) => holes[x, y] = isHole;
+    public void SetHole(int x, int y, bool isHole)
+    {
+        holes[x, y] = isHole;
+        matchFinder?.InvalidateRunCache();
+    }
     public TileView GetTileViewAt(int x, int y) { if (tiles == null || x < 0 || x >= width || y < 0 || y >= height) return null; return tiles[x, y]; }
     public Sprite GetIcon(TileType type) => iconLibrary != null ? iconLibrary.Get(type) : null;
     public Sprite GetSpecialIcon(TileSpecial special) => iconLibrary != null ? iconLibrary.GetSpecialIcon(special) : null;
@@ -2633,6 +2712,7 @@ public class BoardController : MonoBehaviour
     public void SyncTileData(int x, int y)
     {
         if (x < 0 || x >= width || y < 0 || y >= height) return;
+        matchFinder?.InvalidateRunCache();
         var tile = tiles[x, y];
         if (tile == null) { gridData[x, y] = null; return; }
         if (gridData[x, y] == null) gridData[x, y] = new TileData(x, y, tile.GetTileType());
@@ -2736,11 +2816,19 @@ public class BoardController : MonoBehaviour
         if (obstacleStateService == null) return;
         if (parent == null || tileSize <= 0) return;
 
+        var oilCells = obstacleStateService.GetAllOilCells();
+        var animator = GetComponent<OilSpreadAnimator>();
+        // Gameplay already owns/locks incoming cells. Their permanent overlay appears only
+        // after the flight, including when another move refreshes overlays during that flight.
+        if (animator != null)
+            for (int i = oilCells.Count - 1; i >= 0; i--)
+                if (animator.IsAnimatingTarget(oilCells[i]))
+                    oilCells.RemoveAt(i);
+
         // Temiz tile-set yolu: hücre başına fill, açık kenarlara JOverlaySon strip'i, köşelere ayrı PNG.
         if (useOilTileSet)
         {
             oilOverlayRenderer?.SetActive(false); // eski MudCellView oil'ini gizle (çakışma önle)
-            var animator = GetComponent<OilSpreadAnimator>();
             if (oilTileSetRenderer == null)
                 oilTileSetRenderer = new OilTileSetRenderer(
                     this, animator != null ? animator.OilInteriorTexture : null);
@@ -2749,7 +2837,7 @@ public class BoardController : MonoBehaviour
                 oilEdgeSprite, oilOuterCornerSprite,
                 oilCornerBottomRight, oilCornerBottomLeft, oilCornerTopRight, oilCornerTopLeft,
                 oilJunctionSizeRatio, oilOffsetBR, oilOffsetBL, oilOffsetTR, oilOffsetTL);
-            oilTileSetRenderer.Refresh(obstacleStateService.GetAllOilCells());
+            oilTileSetRenderer.Refresh(oilCells);
             return;
         }
 
@@ -2761,7 +2849,6 @@ public class BoardController : MonoBehaviour
         // kaldırıldı.
         if (oilOverlayRenderer == null)
         {
-            var animator = GetComponent<OilSpreadAnimator>();
             var oilDef = levelData != null ? levelData.obstacleLibrary?.Get(ObstacleId.Oil) : null;
             var oilStage = oilDef != null ? oilDef.GetStageRuleForRemainingHits(Mathf.Max(1, oilDef.hits)) : null;
             Sprite oilSprite = animator != null && animator.OilOverlaySprite != null
@@ -2777,7 +2864,7 @@ public class BoardController : MonoBehaviour
         oilOverlayRenderer.SetCornerSprites(
             oilCornerBottomRight, oilCornerBottomLeft, oilCornerTopRight, oilCornerTopLeft,
             oilJunctionSizeRatio, oilOffsetBR, oilOffsetBL, oilOffsetTR, oilOffsetTL);
-        oilOverlayRenderer.Refresh(obstacleStateService.GetAllOilCells());
+        oilOverlayRenderer.Refresh(oilCells);
     }
 
     internal void RestoreTilePresentation(TileView tile)
@@ -2875,6 +2962,7 @@ public class BoardController : MonoBehaviour
         if (x < 0 || x >= width || y < 0 || y >= height) return;
         tiles[x, y] = null;
         gridData[x, y] = null;
+        matchFinder?.InvalidateRunCache();
         ClearedCellCount++;
         // Anchor, special'ı patlayana dek yerinde tutmak içindir. Special tahtadan kalktıysa (kendi
         // emisyonu ayak izini zaten tuttu) hücreyi tüm zincir ailesinin bitmesine dek kilitli tutmak
@@ -2886,6 +2974,21 @@ public class BoardController : MonoBehaviour
     // useTilePool açıkken taş GameObject'leri yaratılıp yok edilmez; havuzdan alınıp iade edilir.
     // Havuz boşsa Instantiate ile dinamik büyür. Kapalıyken tam eski davranış (Instantiate/Destroy).
     private readonly Queue<TileView> _tilePool = new Queue<TileView>();
+
+    internal void WarmTilePool()
+    {
+        if (!useTilePool || tilePrefab == null || parent == null) return;
+        int reserve = Mathf.Clamp(tilePoolWarmCount, 0, width * height);
+        while (_tilePool.Count < reserve)
+        {
+            var go = Instantiate(tilePrefab, parent);
+            var view = go.GetComponent<TileView>();
+            if (view == null) { Destroy(go); break; }
+            view.PrepareForRelease();
+            go.SetActive(false);
+            _tilePool.Enqueue(view);
+        }
+    }
 
     // Level (yeniden) kurulurken havuzu sıfırla. Board teardown'ı root'ların çocuklarını Destroy
     // ettiği için havuzda "yok edilmiş" referanslar kalabilir; taze level taze havuzla başlasın.
@@ -2986,9 +3089,8 @@ public class BoardController : MonoBehaviour
 
         if (BoardFlowTraceEnabled)
         {
-            Debug.Log(
-                $"[PulseClearDebug] ClearAndDestroyTile ENTER tile=({x},{y}) " +
-                $"type={tileType} special={special} live={wasLiveInGrid}");
+            if (GameDiagnostics.BoardFlow)
+                Debug.Log($"[PulseClearDebug] ClearAndDestroyTile ENTER tile=({x},{y}) " + $"type={tileType} special={special} live={wasLiveInGrid}");
         }
 
         if (wasLiveInGrid)
@@ -3364,6 +3466,7 @@ public class BoardController : MonoBehaviour
             case 1: SetBoosterMode(BoosterMode.Row); break;
             case 2: SetBoosterMode(BoosterMode.Column); break;
             case 3: SetBoosterMode(BoosterMode.Shuffle); break;
+            case 4: SetBoosterMode(BoosterMode.PaintBucket); break;
             default: SetBoosterMode(BoosterMode.None); break;
         }
     }
@@ -3393,6 +3496,10 @@ public class BoardController : MonoBehaviour
         if (activeBooster == BoosterMode.None || activeBooster == BoosterMode.Shuffle) return false;
         if (x < 0 || x >= width || y < 0 || y >= height) return false;
 
+        // Boya Kovası yalnız taşa uygulanır; taşsız hücre (engel/boşluk) hakkı yakmaz.
+        if (activeBooster == BoosterMode.PaintBucket)
+            return tiles[x, y] != null && TryUseBoosterAtCell(x, y);
+
         bool any = false;
         if (activeBooster == BoosterMode.Row)
             for (int i = 0; i < width && !any; i++) any = boosterService.IsCellBoosterAffectable(i, y);
@@ -3406,11 +3513,27 @@ public class BoardController : MonoBehaviour
 
     public bool TryUseBoosterAtCell(int x, int y)
     {
-        Debug.Log($"[Booster] TryUseBoosterAtCell ({x},{y}) mode={activeBooster} busy={IsBusy} inputLocked={InputLocked}");
 
         if (activeBooster == BoosterMode.None) return false;
-        if (IsBusy || InputLocked) { Debug.LogWarning("[Booster] Skip: busy or input locked"); return true; }
+        if (IsBusy || InputLocked) { return true; }
         if (x < 0 || x >= width || y < 0 || y >= height) return true;
+
+        // Boya Kovası: önce hedef doğrulanır; uygun değilse joker seçili kalır, hak düşmez, sebep gösterilir.
+        if (activeBooster == BoosterMode.PaintBucket)
+        {
+            var paintTile = tiles[x, y];
+            string rejectKey = null;
+            if (paintBucket == null || !paintBucket.TryValidate(paintTile, out rejectKey))
+            {
+                OnBoosterTargetRejected?.Invoke(paintBucket == null ? PaintBucketJoker.RejectTile : rejectKey);
+                return true;
+            }
+            SetBoosterMode(BoosterMode.None); SetSelectedTile(null);
+            BoosterAccessService.OnBoosterUsed(BoosterMode.PaintBucket);
+            StartCoroutine(paintBucket.Apply(paintTile));
+            return true;
+        }
+
         var mode = activeBooster; SetBoosterMode(BoosterMode.None); SetSelectedTile(null);
         var targetCell = new Vector2Int(x, y); var targetTile = tiles[x, y];
 
@@ -3419,7 +3542,6 @@ public class BoardController : MonoBehaviour
 
         if (mode == BoosterMode.Shuffle)
         {
-            Debug.Log("[Booster] Shuffle mode → ShuffleBoardRoutine başlatılıyor.");
             StartCoroutine(boosterService.ShuffleBoardRoutine(actionSequencer));
         }
         else
@@ -3849,11 +3971,10 @@ public class BoardController : MonoBehaviour
             float now = Time.realtimeSinceStartup;
             float delta = now - _flowLast;
             float total = now - _flowStart;
-            Debug.Log($"[Flow] {step,-22} +{delta:0.000}s (total: {total:0.000}s)");
+            if (GameDiagnostics.BoardFlow)
+                Debug.Log($"[Flow] {step, -22} +{delta:0.000}s (total: {total:0.000}s)");
             _flowLast = now;
         }
-
-        Debug.Log("[Flow] ═══ SWAP START ═══");
         BeginBusy();
         lastSwapA = a; lastSwapB = b; lastSwapUserMove = true;
         // Bu hamlenin swap bağlamı YEREL: dynamic input'la başlayan ikinci hamle lastSwap* alanlarını
@@ -3902,7 +4023,8 @@ public class BoardController : MonoBehaviour
         TileSpecial originalSa = a.GetSpecial();
         TileSpecial originalSb = b.GetSpecial();
 
-        Debug.Log($"[ProcessSwap] SNAPSHOT a=({a.X},{a.Y}) specialA={originalSa} | b=({b.X},{b.Y}) specialB={originalSb} | origPos a=({ax},{ay}) b=({bx},{by})");
+        if (GameDiagnostics.BoardIntegrity)
+            Debug.Log($"[ProcessSwap] SNAPSHOT a=({a.X},{a.Y}) specialA={originalSa} | b=({b.X},{b.Y}) specialB={originalSb} | origPos a=({ax},{ay}) b=({bx},{by})");
 
         // Override+Normal: normal partner tile kendi match'ine girip temizlenirse,
         // frame sınırı sonrasında Unity fake-null devreye girer. Type'ı şimdi yakala.
@@ -4011,7 +4133,7 @@ public class BoardController : MonoBehaviour
                     }
 
                     normalMatches.RemoveWhere(t => t == null || t.GetSpecial() != TileSpecial.None);
-                    FlowLog($"special_creation({createdTiles.Count})");
+                    if (GameDiagnostics.BoardFlow) FlowLog($"special_creation({createdTiles.Count})");
 
                     if (normalMatches.Count > 0)
                     {
@@ -4056,7 +4178,6 @@ public class BoardController : MonoBehaviour
 
             yield return ResolveBoard(allowSpecialActivation: false, resolveEmptyCellsFirst: true, ignoreDynamicSwapGuard: dynamicInput);
             FlowLog("resolve_board");
-            Debug.Log($"[Flow] ═══ SWAP END (special) ═══ total: {Time.realtimeSinceStartup - _flowStart:0.000}s");
             EndBusy();
             yield break;
         }
@@ -4067,7 +4188,7 @@ public class BoardController : MonoBehaviour
         var matches = new HashSet<TileView>();
         foreach (var t in matchFinder.FindMatchesAt(a.X, a.Y)) matches.Add(t);
         foreach (var t in matchFinder.FindMatchesAt(b.X, b.Y)) matches.Add(t);
-        FlowLog($"match_find({matches.Count})");
+        if (GameDiagnostics.BoardFlow) FlowLog($"match_find({matches.Count})");
 
         // Only a match involving a swapped tile validates a normal move. A pending
         // match elsewhere (or a predicted gravity match) must not spend this move.
@@ -4099,8 +4220,6 @@ public class BoardController : MonoBehaviour
             yield return PlaySwapVisual(a, b, dynamicInput);
             FlowLog("swap_back");
             swapHold?.Dispose();
-
-            Debug.Log($"[Flow] ═══ SWAP END (no match: {rejectReason}, matches={matches.Count}) ═══ total: {Time.realtimeSinceStartup - _flowStart:0.000}s");
             EndBusy();
             yield break;
         }
@@ -4117,7 +4236,6 @@ public class BoardController : MonoBehaviour
         FlowLog("clear_pass");
         yield return ResolveBoard(resolveEmptyCellsFirst: true, ignoreDynamicSwapGuard: dynamicInput);
         FlowLog("resolve_board");
-        Debug.Log($"[Flow] ═══ SWAP END ═══ total: {Time.realtimeSinceStartup - _flowStart:0.000}s");
         EndBusy();
     }
 
@@ -4267,6 +4385,12 @@ public class BoardController : MonoBehaviour
         while (true)
         {
             lastResolveLoopFrame = Time.frameCount;
+            float watchdogDelta = ActiveWatchdogDeltaTime;
+            if (watchdogDelta <= 0f)
+            {
+                flowStallTime = backgroundJobWaitTime = 0f;
+                backgroundJobWarningLogged = false;
+            }
 
             if (!ignoreDynamicSwapGuard && dynamicSwapLogicDepth > 0)
             {
@@ -4279,8 +4403,8 @@ public class BoardController : MonoBehaviour
             previousIterationWasJobWait = false;
             if (safety > MaxResolveLoops)
             {
-                Debug.LogError($"[ResolveBoard] {MaxResolveLoops} pass limiti aşıldı — resolve durduruldu. " +
-                               $"resolvableEmpty={cascadeLogic?.HasAnyResolvableEmptyPlayableCell()} blockJobs={BlockingBackgroundJobs}");
+                if (GameDiagnostics.CriticalErrors)
+                    Debug.LogError($"[ResolveBoard] {MaxResolveLoops} pass limiti aşıldı — resolve durduruldu. " + $"resolvableEmpty={cascadeLogic?.HasAnyResolvableEmptyPlayableCell()} blockJobs={BlockingBackgroundJobs}");
                 yield break;
             }
 
@@ -4301,12 +4425,11 @@ public class BoardController : MonoBehaviour
                 {
                     // Akış ilerliyorsa bekleme meşrudur; yalnız ilerlemeden takılı kalırsa kurtar.
                     flowStallTime = lastFlowPumpWorkFrame >= Time.frameCount - 1
-                        ? 0f : flowStallTime + Time.unscaledDeltaTime;
+                        ? 0f : flowStallTime + watchdogDelta;
                     if (flowStallTime > 15f)
                     {
-                        Debug.LogError($"[ResolveBoard] Akış 15 sn ilerlemedi — işler ve tutulan hücreler boşaltılıyor. " +
-                                       $"flowJobs={FlowJobsInFlight} gravityBusy={cascadeLogic.IsGravityBusy} " +
-                                       $"seq={IsActionSequencePlaying} holds={cellHolds.Count}");
+                        if (GameDiagnostics.CriticalErrors)
+                            Debug.LogError($"[ResolveBoard] Akış 15 sn ilerlemedi — işler ve tutulan hücreler boşaltılıyor. " + $"flowJobs={FlowJobsInFlight} gravityBusy={cascadeLogic.IsGravityBusy} " + $"seq={IsActionSequencePlaying} holds={cellHolds.Count}");
                         ForceDrainAllJobs();
                         ClearAllPendingTriggeredSpecialCells();
                         fallMotion?.Reset();
@@ -4343,7 +4466,10 @@ public class BoardController : MonoBehaviour
                 {
                     DisableSettleIfMoreCascadesFollow(preMatchCascades);
                     if (BoardFlowTraceEnabled)
-                        Debug.Log($"[Resolve] pass={safety} pre_match_cascade actions={preMatchCascades.Count} +{(Time.realtimeSinceStartup - _rbStart):0.000}s");
+                        {
+                            if (GameDiagnostics.BoardFlow)
+                                Debug.Log($"[Resolve] pass={safety} pre_match_cascade actions={preMatchCascades.Count} +{(Time.realtimeSinceStartup - _rbStart):0.000}s");
+                        }
 
                     // ── Faz 1 overlap (Docs/DecoupledResolve_Plan.md §6) ──
                     // Bu cascade board'u mantıksal olarak OTURTTUYSA (artık boş hücre yok) ve
@@ -4382,14 +4508,10 @@ public class BoardController : MonoBehaviour
 
                     // DIAGNOSTIC (trace-only): overlap seri yola düştüyse HANGİ koşulun kapattığını yaz.
                     if (BoardFlowTraceEnabled && !(canOverlapCheap && overlapSimpleMatch && overlapMoving))
-                        Debug.Log(
-                            $"[Resolve] pass={safety} overlap_skip cheap={canOverlapCheap} " +
-                            $"(noSpecialVisual={!IsSpecialVisualInFlight} [phase={IsSpecialActivationPhase} " +
-                            $"fx={PresentationFxInFlight} dash={FlyingPatchBotDashes} spread={SpreadingObstacles} " +
-                            $"detached={(actionSequencer != null ? actionSequencer.DetachedActionsInFlight : 0)}] " +
-                            $"noActionSeq={!IsActionSequencePlaying} noBlockJobs={BlockingBackgroundJobs == 0} " +
-                            $"settled={!cascadeLogic.HasAnyEmptyPlayableCell()} stickyWas={hadSpecialActivityThisResolve}) " +
-                            $"simpleMatch={overlapSimpleMatch} moving={overlapMoving}");
+                        {
+                            if (GameDiagnostics.BoardFlow)
+                                Debug.Log($"[Resolve] pass={safety} overlap_skip cheap={canOverlapCheap} " + $"(noSpecialVisual={!IsSpecialVisualInFlight} [phase={IsSpecialActivationPhase} " + $"fx={PresentationFxInFlight} dash={FlyingPatchBotDashes} spread={SpreadingObstacles} " + $"detached={(actionSequencer != null ? actionSequencer.DetachedActionsInFlight : 0)}] " + $"noActionSeq={!IsActionSequencePlaying} noBlockJobs={BlockingBackgroundJobs == 0} " + $"settled={!cascadeLogic.HasAnyEmptyPlayableCell()} stickyWas={hadSpecialActivityThisResolve}) " + $"simpleMatch={overlapSimpleMatch} moving={overlapMoving}");
+                        }
 
                     if (canOverlapCheap && overlapSimpleMatch && overlapMoving)
                     {
@@ -4415,9 +4537,8 @@ public class BoardController : MonoBehaviour
                 }
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-                Debug.LogWarning(
-                    $"[Resolve] pass={safety} flow-fillable empty cells remain, but cascade produced no actions. " +
-                    "Continuing to MatchFinder to avoid a hard lock.");
+                if (GameDiagnostics.CriticalErrors)
+                    Debug.LogWarning($"[Resolve] pass={safety} flow-fillable empty cells remain, but cascade produced no actions. " + "Continuing to MatchFinder to avoid a hard lock.");
 #endif
                 // Güvenlik: board'u kilitleme. Normalde buraya düşmemeli;
                 // CascadeLogic.HasAnyEmptyPlayableCell artık sadece flow-reachable boşlukları sayar.
@@ -4451,7 +4572,10 @@ public class BoardController : MonoBehaviour
                 if (matchTiles.Count > 0)
                 {
                     if (BoardFlowTraceEnabled)
-                        Debug.Log($"[Resolve] pass={safety} cascade_match={matchTiles.Count} +{(Time.realtimeSinceStartup - _rbStart):0.000}s");
+                        {
+                            if (GameDiagnostics.BoardFlow)
+                                Debug.Log($"[Resolve] pass={safety} cascade_match={matchTiles.Count} +{(Time.realtimeSinceStartup - _rbStart):0.000}s");
+                        }
 
                     bool cleared = false;
                     yield return ExecuteClearPass(matchTiles, allowSpecialActivation, result => cleared = result);
@@ -4468,7 +4592,10 @@ public class BoardController : MonoBehaviour
             {
                 DisableSettleIfMoreCascadesFollow(cascades);
                 if (BoardFlowTraceEnabled)
-                    Debug.Log($"[Resolve] pass={safety} cascade_fall actions={cascades.Count} +{(Time.realtimeSinceStartup - _rbStart):0.000}s");
+                    {
+                        if (GameDiagnostics.BoardFlow)
+                            Debug.Log($"[Resolve] pass={safety} cascade_fall actions={cascades.Count} +{(Time.realtimeSinceStartup - _rbStart):0.000}s");
+                    }
                 actionSequencer.Enqueue(cascades);
 
                 while (actionSequencer.IsPlaying)
@@ -4483,7 +4610,7 @@ public class BoardController : MonoBehaviour
             // hariç tutulur ki hedefe uçarken cascade/düşüş/zincir akışı donmasın.
             if (BlockingBackgroundJobs > 0 || actionSequencer.IsPlaying)
             {
-                backgroundJobWaitTime += Time.unscaledDeltaTime;
+                backgroundJobWaitTime += watchdogDelta;
 
                 // Uzun mega-combo zincirleri meşru olarak 5 sn'yi geçebilir: orada drain etmek resolve'u
                 // hâlâ koşan zincirle yarıştırırdı. 5 sn'de yalnız uyar; drain yalnız gerçek sızıntı
@@ -4491,12 +4618,14 @@ public class BoardController : MonoBehaviour
                 if (backgroundJobWaitTime > 5f && !backgroundJobWarningLogged)
                 {
                     backgroundJobWarningLogged = true;
-                    Debug.LogWarning($"[ResolveBoard] Background jobs still running after 5s. ActiveBackgroundJobs={ActiveBackgroundJobs}, IsPlaying={actionSequencer.IsPlaying}");
+                    if (GameDiagnostics.CriticalErrors)
+                        Debug.LogWarning($"[ResolveBoard] Background jobs still running after 5s. ActiveBackgroundJobs={ActiveBackgroundJobs}, IsPlaying={actionSequencer.IsPlaying}");
                 }
 
                 if (backgroundJobWaitTime > 15f)
                 {
-                    Debug.LogError($"[ResolveBoard] Background job leak — forcing drain. ActiveBackgroundJobs={ActiveBackgroundJobs}, IsPlaying={actionSequencer.IsPlaying}");
+                    if (GameDiagnostics.CriticalErrors)
+                        Debug.LogError($"[ResolveBoard] Background job leak — forcing drain. ActiveBackgroundJobs={ActiveBackgroundJobs}, IsPlaying={actionSequencer.IsPlaying}");
                     ForceDrainAllJobs();
                     backgroundJobWaitTime = 0f;
                 }
@@ -4509,11 +4638,8 @@ public class BoardController : MonoBehaviour
             backgroundJobWaitTime = 0f;
             backgroundJobWarningLogged = false;
 
-            // Oil spread: board TAMAMEN oturduktan sonra (ekrandaki cascade + tüm background
-            // job'lar bitince) ve bu hamlede HİÇ oil kırılmamışsa (oilSuppressionCellsThisMove
-            // boşsa) yayılır. Önceden bu blok background-job idle kontrolünden ÖNCEydi; ekrandaki
-            // cascade hâlâ koşarken spread tetikleniyor, o esnada kırılma oluşuyordu. Artık
-            // yalnızca board tam idle iken çalışır.
+            // Oil chooses its target after matches/falls and blocking jobs settle. Commit the
+            // target now, then let its visual run independently: only that Oil cell is locked.
             // Level bittiyse (hedefler tamam / hamle kalmadı / popup kilidi) yayılma yok: kazanma anında
             // oil sıçramasın, fail popup'ı yayılma animasyonunu beklemesin.
             if (!oilSpreadResolvedThisMove && IsLevelEndPendingForSpread())
@@ -4528,14 +4654,11 @@ public class BoardController : MonoBehaviour
                 if (spreadTargets.Count > 0)
                 {
                     if (BoardFlowTraceEnabled)
-                        Debug.Log($"[Oil] Spreading to {spreadTargets.Count} cells after board fully settled.");
-                    actionSequencer.Enqueue(new OilSpreadAction(this, spreadTargets));
-
-                    while (actionSequencer.IsPlaying)
-                        yield return null;
-
-                    RefreshOilOverlays();
-                    continue;
+                        {
+                            if (GameDiagnostics.BoardFlow)
+                                Debug.Log($"[Oil] Spreading to {spreadTargets.Count} cells after board fully settled.");
+                        }
+                    StartCoroutine(new OilSpreadAction(this, spreadTargets).ExecuteVisuals(null));
                 }
             }
 
@@ -4552,7 +4675,10 @@ public class BoardController : MonoBehaviour
                 rocketLaunchesThisMove.Clear();
 
                 if (BoardFlowTraceEnabled)
-                    Debug.Log($"[RocketBasket] Launching {launches.Count} rocket(s) after board settled.");
+                    {
+                        if (GameDiagnostics.BoardFlow)
+                            Debug.Log($"[RocketBasket] Launching {launches.Count} rocket(s) after board settled.");
+                    }
                 // Bağımsız uçuş (flush yolu ile aynı): board'u bekletmeden fırlat.
                 StartCoroutine(new RocketBasketLaunchAction(this, launches).ExecuteVisuals(null));
                 continue;
@@ -4572,7 +4698,10 @@ public class BoardController : MonoBehaviour
             if (!matchFinder.HasAnyPlayableSwap())
             {
                 if (BoardFlowTraceEnabled)
-                    Debug.Log($"[Resolve] pass={safety} deadlock_detected -> safe_shuffle +{(Time.realtimeSinceStartup - _rbStart):0.000}s");
+                    {
+                        if (GameDiagnostics.BoardFlow)
+                            Debug.Log($"[Resolve] pass={safety} deadlock_detected -> safe_shuffle +{(Time.realtimeSinceStartup - _rbStart):0.000}s");
+                    }
 
                 // Uçuştaki (non-blocking) işler bitmeden karar verme: dash/spread hâlâ taş
                 // kırabilir, yani hem "hamle yok" teşhisi hem de shuffle'ın haritası bayat olur.
@@ -4606,7 +4735,10 @@ public class BoardController : MonoBehaviour
         EmitMoveClearPraiseIfNeeded();
 
         if (BoardFlowTraceEnabled)
-            Debug.Log($"[Resolve] ═══ DONE ═══ passes={safety} total: {(Time.realtimeSinceStartup - _rbStart):0.000}s");
+            {
+                if (GameDiagnostics.BoardFlow)
+                    Debug.Log($"[Resolve] ═══ DONE ═══ passes={safety} total: {(Time.realtimeSinceStartup - _rbStart):0.000}s");
+            }
     }
 
     // Public wrapper for services (BoosterService)
@@ -4636,7 +4768,10 @@ public class BoardController : MonoBehaviour
         releaseOnStart?.Dispose();
 
         if (BoardFlowTraceEnabled)
-            Debug.Log($"[ClearPass] clear+cascade_done matchCount={matchTiles.Count}");
+            {
+                if (GameDiagnostics.BoardFlow)
+                    Debug.Log($"[ClearPass] clear+cascade_done matchCount={matchTiles.Count}");
+            }
         onResult?.Invoke(true);
     }
 
@@ -4653,7 +4788,10 @@ public class BoardController : MonoBehaviour
         {
             float now = Time.realtimeSinceStartup;
             if (BoardFlowTraceEnabled)
-                Debug.Log($"[ClearPass] {step,-22} +{(now - _cpLast):0.000}s (total: {(now - _cpStart):0.000}s) matchCount={matchTiles.Count}");
+                {
+                    if (GameDiagnostics.BoardFlow)
+                        Debug.Log($"[ClearPass] {step, -22} +{(now - _cpLast):0.000}s (total: {(now - _cpStart):0.000}s) matchCount={matchTiles.Count}");
+                }
             _cpLast = now;
         }
 
@@ -5025,8 +5163,8 @@ public class BoardController : MonoBehaviour
     internal ObstacleStateService.ObstacleHitResult ApplyObstacleDamage(ObstacleDamageRequest request)
     {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-        // TEŞHİS: Mud çift-hit + Grass aşınma avı. Bu satır KAÇ kez basılıyor + remaining nasıl düşüyor?
-        var _traceId = obstacleStateService != null
+        // Optional obstacle hit trace; the expensive call stack is never captured while disabled.
+        var _traceId = GameDiagnostics.BoardFlow && obstacleStateService != null
             ? obstacleStateService.GetObstacleIdAt(request.cell.x, request.cell.y) : ObstacleId.None;
         bool traceOn = _traceId == ObstacleId.Mud || _traceId == ObstacleId.Grass;
         int _remBefore = traceOn ? obstacleStateService.GetRemainingHitsAt(request.cell.x, request.cell.y) : -1;
@@ -5043,8 +5181,8 @@ public class BoardController : MonoBehaviour
             string _callers = "";
             for (int _fi = 1; _fi <= 6 && _fi < _st.FrameCount; _fi++)
                 _callers += (_st.GetFrame(_fi)?.GetMethod()?.Name ?? "?") + "←";
-            Debug.Log($"[ObsHit] {_traceId} cell=({request.cell.x},{request.cell.y}) ctx={request.context} " +
-                      $"remaining {_remBefore}→{result.visualChange.remainingHits} cleared={result.visualChange.cleared} | via {_callers}");
+            if (GameDiagnostics.BoardFlow)
+                Debug.Log($"[ObsHit] {_traceId} cell=({request.cell.x},{request.cell.y}) ctx={request.context} " + $"remaining {_remBefore}→{result.visualChange.remainingHits} cleared={result.visualChange.cleared} | via {_callers}");
         }
 #endif
 
@@ -5180,7 +5318,10 @@ public class BoardController : MonoBehaviour
         rocketLaunchesThisMove.Clear();
 
         if (BoardFlowTraceEnabled)
-            Debug.Log($"[RocketBasket] Immediate launch: {launches.Count} rocket(s).");
+            {
+                if (GameDiagnostics.BoardFlow)
+                    Debug.Log($"[RocketBasket] Immediate launch: {launches.Count} rocket(s).");
+            }
         // PatchBot gibi bağımsız uçuş: sequencer'a girmez, board'u kilitlemez; uçuş
         // aksiyon içindeki FlyingPatchBotDashes sayacıyla izlenir, impact varışta
         // sequencer'a devredilir.
@@ -5213,6 +5354,7 @@ public class BoardController : MonoBehaviour
             return;
 
         holes[x, y] = IsMaskHole(x, y) || (obstacleStateService != null && obstacleStateService.IsCellBlocked(x, y));
+        matchFinder?.InvalidateRunCache();
     }
 
     private void BindObstacleEvents()
@@ -5297,7 +5439,10 @@ public class BoardController : MonoBehaviour
         }
 
         if (BoardFlowTraceEnabled)
-            Debug.Log($"[OBBTL] detonated origin={originIndex} t={Time.realtimeSinceStartup:0.000} footprint={(cells != null ? cells.Count : 0)}");
+            {
+                if (GameDiagnostics.BoardFlow)
+                    Debug.Log($"[OBBTL] detonated origin={originIndex} t={Time.realtimeSinceStartup:0.000} footprint={(cells != null ? cells.Count : 0)}");
+            }
 
         _obbDetonationQueue.Enqueue(originIndex);
         if (!_obbDetonationProcessing)
@@ -5751,10 +5896,6 @@ public class BoardController : MonoBehaviour
         int simulatedRows = Mathf.Max(1, height > 0 ? height : 9);
         int targetCount = Mathf.Min(9, simulatedRows);
 
-        Debug.Log(
-            $"[ReferenceFallTest] oneColumnTargets={targetCount} referenceFps={settings.referenceFps:0.##} " +
-            $"spawnIntervalFrames={settings.spawnIntervalFrames:0.##} anchorAboveTopCells=0.95");
-
         for (int order = 0; order < targetCount; order++)
         {
             int targetRow = simulatedRows - 1 - order;
@@ -5762,10 +5903,6 @@ public class BoardController : MonoBehaviour
             float distanceCells = targetRow + 0.95f;
             float moveFrames = EstimateReferenceFallFrames(settings, distanceCells);
             float landingFrame = spawnFrame + moveFrames;
-
-            Debug.Log(
-                $"[ReferenceFallTest] order={order} targetRow={targetRow} " +
-                $"spawnFrame={spawnFrame:0.0} landingFrame={landingFrame:0.0} travelledCells={distanceCells:0.00}");
         }
     }
 
@@ -5807,7 +5944,7 @@ public class BoardController : MonoBehaviour
     }
 
     // Board momentarily idle görünse de resolve loop'un HÂLÂ otomatik işleyeceği DETERMİNİSTİK iş.
-    // Async/uçuşta olan iş (oil spread=IsBusy resolve-loop içi, barrel splatter/keygen=BeginBackgroundJob,
+    // Async/uçuşta olan iş (oil spread=OilSpread job, barrel splatter/keygen=typed background jobs,
     // fırlatılmış rocket/orb/patchbot=flight sayaçları) artık ActiveBackgroundJobs üzerinden
     // IsBoardWorkingForLevelEnd tarafından beklenir — burada tekrar sayılmaz (eski "parça parça"
     // whitelist kaldırıldı). Yalnız kuyruğa alınmış ama HENÜZ fırlatılmamış rocket bir frame'lik
@@ -5923,10 +6060,12 @@ public class BoardController : MonoBehaviour
 
     // İşçi robot çıkışı: bir hücre aşağı düşer → diz büküp yere konar → TopHUD goal slotuna zıplar.
     // Uçuş async: board akmaya devam eder (goal-orb flight gibi), yalnız level-end bunu bekler.
-    // Tile verisi anında gridden çıkıyor (SetActive(false)+Destroy) → §3a karşılanıyor.
+    // Ghost captures the original sprite/position before the source returns to the tile pool.
     private IEnumerator CargoExitRoutine(TileView tile, RectTransform goalSlot)
     {
         BeginGoalOrbFlight();
+        int lifetime = tile != null ? tile.LifetimeVersion : -1;
+        bool released = false;
         try
         {
             var fly = GoalFlyFx;
@@ -5935,15 +6074,18 @@ public class BoardController : MonoBehaviour
                 // PlayCargoExit ilk yield'e kadar sprite + pozisyonu senkron yakalar;
                 // hemen sonrasında gerçek tile'ı gizleyip ghost'a devrediyoruz (çift robot olmasın).
                 var running = StartCoroutine(fly.PlayCargoExit(tile, goalSlot, 0.42f));
-                if (tile != null && tile)
-                    tile.gameObject.SetActive(false);
+                if (tile != null && tile && tile.LifetimeVersion == lifetime)
+                {
+                    ReleaseTile(tile);
+                    released = true;
+                }
                 yield return running;
             }
         }
         finally
         {
-            if (tile != null && tile)
-                Destroy(tile.gameObject);
+            if (!released && tile != null && tile && tile.LifetimeVersion == lifetime)
+                ReleaseTile(tile);
             EndGoalOrbFlight();
         }
     }
@@ -6271,7 +6413,8 @@ public class BoardController : MonoBehaviour
         }
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-        Debug.LogWarning("[Board] No playable move found even after safe shuffle retries.");
+        if (GameDiagnostics.CriticalErrors)
+            Debug.LogWarning("[Board] No playable move found even after safe shuffle retries.");
 #endif
     }
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
@@ -6279,7 +6422,7 @@ public class BoardController : MonoBehaviour
     [System.Diagnostics.Conditional("DEVELOPMENT_BUILD")]
     private void ValidateTileSync(string context, int onlyX = -1, int onlyY = -1, bool checkVisualPosition = true)
     {
-        if (!enableTileSyncValidation || tiles == null || gridData == null) return;
+        if (!GameDiagnostics.BoardIntegrity || tiles == null || gridData == null) return;
         int startX = (onlyX >= 0) ? onlyX : 0, endX = (onlyX >= 0) ? onlyX : width - 1;
         int startY = (onlyY >= 0) ? onlyY : 0, endY = (onlyY >= 0) ? onlyY : height - 1;
         bool mismatch = false; var sb = new System.Text.StringBuilder();
@@ -6297,7 +6440,8 @@ public class BoardController : MonoBehaviour
         if (!mismatch) return;
         string log = $"[TileSyncValidation] {context}\n{sb}";
         if (throwOnTileSyncMismatch) throw new InvalidOperationException(log);
-        Debug.LogError(log, this);
+        if (GameDiagnostics.CriticalErrors)
+            Debug.LogError(log, this);
     }
 #else
     [System.Diagnostics.Conditional("UNITY_EDITOR")]

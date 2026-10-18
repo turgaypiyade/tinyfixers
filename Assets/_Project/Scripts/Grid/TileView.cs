@@ -75,17 +75,36 @@ public class TileView : MonoBehaviour,
 
     private Coroutine specialCreationRevealRoutine;
     private GameObject specialCreationRevealRoot;
+    private Image cachedSpecialCreationHalo;
+    private Canvas cachedSpecialCreationHaloCanvas;
     private Canvas creationSortingCanvas;
     private Canvas creationPropellerCanvas;
+    private Canvas overrideActivationCanvas;
+    private System.Collections.Generic.List<MaskableGraphic> overrideSortingGraphics;
     private int creationSortingUsers;
+    private int overrideActivationSortingUsers;
     private bool revealUsesCreationSorting;
+
+    internal void BeginOverrideActivationSorting()
+    {
+        if (iconImage == null) return;
+        overrideActivationSortingUsers++;
+        BeginSpecialCreationSorting();
+    }
+
+    internal void EndOverrideActivationSorting()
+    {
+        if (overrideActivationSortingUsers <= 0) return;
+        overrideActivationSortingUsers--;
+        EndSpecialCreationSorting();
+    }
 
     internal void BeginSpecialCreationSorting()
     {
         if (iconImage == null) return;
         if (creationSortingUsers++ > 0)
         {
-            UpdateCreationPropellerSorting();
+            UpdateCreationSortingOrder();
             return;
         }
 
@@ -114,13 +133,54 @@ public class TileView : MonoBehaviour,
                 creationRaycaster.blockingMask = boardRaycaster.blockingMask;
             }
         }
+        UpdateCreationSortingOrder();
+    }
+
+    private void UpdateCreationSortingOrder()
+    {
+        if (creationSortingCanvas == null || iconImage == null) return;
+        var parentCanvas = iconImage.transform.parent.GetComponentInParent<Canvas>();
         creationSortingCanvas.enabled = true;
         creationSortingCanvas.overrideSorting = true;
         creationSortingCanvas.sortingLayerID = parentCanvas != null ? parentCanvas.sortingLayerID : 0;
-        creationSortingCanvas.sortingOrder = (parentCanvas != null ? parentCanvas.sortingOrder : 0) + 100;
+        // Source Override stays above target creation canvases (+100, propeller +101).
+        creationSortingCanvas.sortingOrder = (parentCanvas != null ? parentCanvas.sortingOrder : 0)
+            + (overrideActivationSortingUsers > 0 ? 200 : 100);
         iconImage.RecalculateMasking();
         iconImage.SetMaterialDirty();
         UpdateCreationPropellerSorting();
+        UpdateOverrideActivationSorting();
+    }
+
+    private void UpdateOverrideActivationSorting()
+    {
+        bool active = overrideActivationSortingUsers > 0 && creationSortingCanvas != null;
+        if (active && overrideSpecialView != null && overrideActivationCanvas == null)
+        {
+            overrideActivationCanvas = overrideSpecialView.GetComponent<Canvas>();
+            if (overrideActivationCanvas == null)
+                overrideActivationCanvas = overrideSpecialView.gameObject.AddComponent<Canvas>();
+        }
+        if (overrideActivationCanvas == null) return;
+        overrideActivationCanvas.enabled = true;
+        overrideActivationCanvas.overrideSorting = active;
+        if (active)
+        {
+            // Turn halves and pooled charge lightning are siblings of Icon, not its children.
+            overrideActivationCanvas.sortingLayerID = creationSortingCanvas.sortingLayerID;
+            overrideActivationCanvas.sortingOrder = creationSortingCanvas.sortingOrder + 1;
+        }
+        if (overrideSpecialView == null) return;
+        // Reuse the buffer; only refresh this small visual subtree at scope boundaries.
+        if (overrideSortingGraphics == null)
+            overrideSortingGraphics = new System.Collections.Generic.List<MaskableGraphic>(4);
+        overrideSpecialView.GetComponentsInChildren(true, overrideSortingGraphics);
+        for (int i = 0; i < overrideSortingGraphics.Count; i++)
+        {
+            overrideSortingGraphics[i].RecalculateMasking();
+            overrideSortingGraphics[i].SetMaterialDirty();
+        }
+        overrideSortingGraphics.Clear();
     }
 
     private void UpdateCreationPropellerSorting()
@@ -152,7 +212,12 @@ public class TileView : MonoBehaviour,
 
     internal void EndSpecialCreationSorting()
     {
-        if (creationSortingUsers <= 0 || --creationSortingUsers > 0) return;
+        if (creationSortingUsers <= 0) return;
+        if (--creationSortingUsers > 0)
+        {
+            UpdateCreationSortingOrder();
+            return;
+        }
         RestIconCanvas();
     }
 
@@ -162,6 +227,7 @@ public class TileView : MonoBehaviour,
     // taş veride dolu ama ekranda boş görünüyordu (CellDump: Icon canvas ovr=True order=0).
     private void RestIconCanvas()
     {
+        UpdateOverrideActivationSorting();
         if (creationPropellerCanvas != null)
         {
             // As with Icon, leave the Canvas enabled so its Image remains visible.
@@ -276,6 +342,34 @@ public class TileView : MonoBehaviour,
     // aynı kolonu yeniden düşürünce iki coroutine'in aynı rt'yi çekiştirip taşları üst
     // üste bindirmesi ("geriden gelen taş öndekinin üstüne çıkıyor") kökten biter.
     private int activeMoveToken;
+    private bool swapLiftApplied;
+    private Vector2 swapLiftOffset;
+
+    private void ClearSwapLift()
+    {
+        if (!swapLiftApplied) return;
+        if (rt != null)
+        {
+            rt.anchoredPosition -= swapLiftOffset;
+            rt.localScale = Vector3.one;
+        }
+        swapLiftOffset = Vector2.zero;
+        swapLiftApplied = false;
+    }
+
+    private void ApplySwapLift(float progress)
+    {
+        float rise = Mathf.Clamp01(progress / 0.18f);
+        float settle = Mathf.Clamp01((progress - 0.64f) / 0.36f);
+        float envelope = rise * rise * (3f - 2f * rise) * (1f - settle * settle * (3f - 2f * settle));
+        float scale = 1f + (board != null ? board.SwapLiftAmount : 0.20f) * envelope;
+        // Root pivot is top-left. Compensate so the entire icon/rotor/Override grows about its centre.
+        swapLiftOffset = new Vector2(rt.rect.width * (0.5f - rt.pivot.x),
+            rt.rect.height * (0.5f - rt.pivot.y)) * (1f - scale);
+        rt.localScale = new Vector3(scale, scale, 1f);
+        rt.anchoredPosition += swapLiftOffset;
+        swapLiftApplied = true;
+    }
 
     // Board-hosted coroutines survive StopAllCoroutines on this component. A pooled
     // view keeps its object identity, so deferred work must also check its lifetime.
@@ -370,6 +464,7 @@ public class TileView : MonoBehaviour,
 
     internal int ClaimMoveToken()
     {
+        ClearSwapLift();
         CancelActiveSettle();
         if (rt == null) rt = GetComponent<RectTransform>();
         if (rt != null)
@@ -526,12 +621,10 @@ public class TileView : MonoBehaviour,
     {
         LifetimeVersion++;
         activeMoveToken++;
+        overrideActivationSortingUsers = 0;
         StopSpecialCreationReveal();
-        if (creationSortingUsers > 0)
-        {
-            creationSortingUsers = 1;
-            EndSpecialCreationSorting();
-        }
+        creationSortingUsers = 0;
+        RestIconCanvas();
         StopLineIdleSpin();
         ResetVisualState();
     }
@@ -570,6 +663,7 @@ public class TileView : MonoBehaviour,
 
     private void ResetVisualState()
     {
+        ClearSwapLift();
         HiddenBy = null;
         KeepHiddenForCombo = false;
         CancelActiveSettle();   // pool'a dönen/yeniden kullanılan taşın eski detached settle'ı çalışmasın
@@ -675,10 +769,13 @@ public class TileView : MonoBehaviour,
         // reveal oynamadığı için burada başlatılır.
         if (model.special == TileSpecial.SystemOverride)
             overrideSpecialView?.EnsureIdle();
+        else if (overrideSpecialView != null && overrideSpecialView.IsPlaying)
+            overrideSpecialView.Stop();
     }
 
     public void SnapToGrid(int tileSize)
     {
+        ClearSwapLift();
         if (rt == null)
             rt = GetComponent<RectTransform>();
 
@@ -702,208 +799,224 @@ public class TileView : MonoBehaviour,
         float settleDuration = 0.06f,
         float settleStrength = 0.04f,
         float settleStretchX = 0f,
-        float settleOvershoot = 0f)
+        float settleOvershoot = 0f,
+        bool liftDuringSwap = false)
     {
         lastFallGeneration = (board != null) ? board.FallGeneration : 0;
+        ClearSwapLift();
         int myMoveToken = ++activeMoveToken;   // bu taşın tek-sahip hareket kilidi
+        int myLifetime = LifetimeVersion;
         CancelActiveSettle();   // önceki round'un detached settle'ı varsa iptal et (çakışma önle)
         ClearLandingPose();
 
-        if (rt == null || !rt)
-            yield break;
-
-        RectTransform visualRt = iconImage != null ? iconImage.rectTransform : null;
-        // Ev scale CANLI OKUNMAZ (shake-drift dersinin skala hali): önceki esneme/squash
-        // yarıda kesildiyse mevcut scale esnik kalmış olabilir — onu "ev" sanmak taşı
-        // kalıcı esnik bırakıyordu. İkonun dinlenme scale'i bu kod tabanında HER ZAMAN 1.
-        Vector3 visualBaseScale = Vector3.one;
-        if (visualRt != null) visualRt.localScale = Vector3.one;   // uçuşa temiz başla
-
-        Vector2 start = rt.anchoredPosition;
-        Vector2 end;
-
-        bool isSpecial = model != null && model.special != TileSpecial.None;
-        bool isMovable = isMovableObstacleTile;
-
-        if (isMovable)
+        try
         {
-            end = new Vector2(X * tileSize, -Y * tileSize);
-        }
-        else if (isSpecial)
-        {
-            float cellH;
 
-            if (useFullCellIcon)
+            if (rt == null || !rt)
+                yield break;
+
+            RectTransform visualRt = iconImage != null ? iconImage.rectTransform : null;
+            // Ev scale CANLI OKUNMAZ (shake-drift dersinin skala hali): önceki esneme/squash
+            // yarıda kesildiyse mevcut scale esnik kalmış olabilir — onu "ev" sanmak taşı
+            // kalıcı esnik bırakıyordu. İkonun dinlenme scale'i bu kod tabanında HER ZAMAN 1.
+            Vector3 visualBaseScale = Vector3.one;
+            if (visualRt != null) visualRt.localScale = Vector3.one;   // uçuşa temiz başla
+
+            Vector2 start = rt.anchoredPosition;
+            Vector2 end;
+
+            bool isSpecial = model != null && model.special != TileSpecial.None;
+            bool isMovable = isMovableObstacleTile;
+
+            if (isMovable)
             {
-                cellH = tileSize;
+                end = new Vector2(X * tileSize, -Y * tileSize);
+            }
+            else if (isSpecial)
+            {
+                float cellH;
+
+                if (useFullCellIcon)
+                {
+                    cellH = tileSize;
+                }
+                else
+                {
+                    float ratioY = iconSize.y / Mathf.Max(1f, IconReferenceSize.y);
+                    cellH = tileSize * Mathf.Max(0.1f, ratioY);
+                }
+
+                float elemH = cellH * (110f / 115f);
+                float yOffset = (cellH - elemH) * 0.5f;
+
+                end = new Vector2(X * tileSize, -Y * tileSize - yOffset);
             }
             else
             {
-                float ratioY = iconSize.y / Mathf.Max(1f, IconReferenceSize.y);
-                cellH = tileSize * Mathf.Max(0.1f, ratioY);
+                end = new Vector2(X * tileSize, -Y * tileSize);
             }
 
-            float elemH = cellH * (110f / 115f);
-            float yOffset = (cellH - elemH) * 0.5f;
+            float totalPixels = Vector2.Distance(start, end);
 
-            end = new Vector2(X * tileSize, -Y * tileSize - yOffset);
-        }
-        else
-        {
-            end = new Vector2(X * tileSize, -Y * tileSize);
-        }
-
-        float totalPixels = Mathf.Abs(end.y - start.y);
-
-        if (totalPixels < 0.5f)
-        {
-            if (rt != null && rt)
+            if (totalPixels < 0.5f)
             {
-                rt.anchoredPosition = end;
-                SnapToGrid(tileSize);
-                RaiseFallArrived();
+                if (rt != null && rt)
+                {
+                    rt.anchoredPosition = end;
+                    SnapToGrid(tileSize);
+                    RaiseFallArrived();
+                }
+
+                ResetVisualScale(visualRt, visualBaseScale);
+                yield break;
             }
 
-            ResetVisualScale(visualRt, visualBaseScale);
-            yield break;
-        }
+            float elapsed = 0f;
+            float safeDuration = Mathf.Max(0.0001f, duration);
 
-        float elapsed = 0f;
-        float safeDuration = Mathf.Max(0.0001f, duration);
+            while (elapsed < safeDuration)
+            {
+                if (activeMoveToken != myMoveToken || !IsCurrentLifetime(myLifetime)) yield break;
+                if (rt == null || !rt)
+                {
+                    ResetVisualScale(visualRt, visualBaseScale);
+                    yield break;
+                }
 
-        while (elapsed < safeDuration)
-        {
+                elapsed += Time.deltaTime;
+
+                float t = Mathf.Clamp01(elapsed / safeDuration);
+                if (easingCurve != null)
+                    t = easingCurve.Evaluate(t);
+
+                if (activeMoveToken != myMoveToken) yield break;   // daha yeni bir hareket bu taşı devraldı
+
+                ClearSwapLift();
+                rt.anchoredPosition = Vector2.LerpUnclamped(start, end, t);
+
+                // Event-driven erken varış: taş hedefe lead mesafesi KALA (hücreye tam oturmadan
+                // biraz üstünde) FallArrived'ı bir kez ateşle → clear 1-2 frame erken başlar (referans).
+                MaybeRaiseEarlyFallArrived(end, tileSize);
+                if (liftDuringSwap) ApplySwapLift(Mathf.Clamp01(elapsed / safeDuration));
+
+                yield return null;
+            }
+
+            if (activeMoveToken != myMoveToken || !IsCurrentLifetime(myLifetime)) yield break;
             if (rt == null || !rt)
             {
                 ResetVisualScale(visualRt, visualBaseScale);
                 yield break;
             }
 
-            elapsed += Time.deltaTime;
-
-            float t = Mathf.Clamp01(elapsed / safeDuration);
-            if (easingCurve != null)
-                t = easingCurve.Evaluate(t);
-
-            if (activeMoveToken != myMoveToken) yield break;   // daha yeni bir hareket bu taşı devraldı
-
-            rt.anchoredPosition = Vector2.LerpUnclamped(start, end, t);
-
-            // Event-driven erken varış: taş hedefe lead mesafesi KALA (hücreye tam oturmadan
-            // biraz üstünde) FallArrived'ı bir kez ateşle → clear 1-2 frame erken başlar (referans).
-            MaybeRaiseEarlyFallArrived(end, tileSize);
-
-            yield return null;
-        }
-
-        if (rt == null || !rt)
-        {
-            ResetVisualScale(visualRt, visualBaseScale);
-            yield break;
-        }
-
-        rt.anchoredPosition = end;
-        SnapToGrid(tileSize);
-        RaiseFallArrived();
-
-        if (!enableSettle || settleDuration <= 0f)
-        {
-            ResetVisualScale(visualRt, visualBaseScale);
-            yield break;
-        }
-
-        // Pozisyon dalışı settleOvershoot ile (KÜÇÜK, %2 gibi) — strength SKALA squash'ı sürer.
-        // Eskiden strength (%11+) pozisyonu sürüyordu: inen taş alttakinin içine gömülüp
-        // çıkıyordu (ağır çekimde "üst üste binip ayrılma").
-        Vector2 overshoot = end + new Vector2(0f, -settleOvershoot * tileSize);
-        Vector2 overUp = end + new Vector2(0f, settleOvershoot * tileSize * 0.3f);
-
-        float bounceDur = settleDuration;
-
-        float b1 = 0f;
-        while (b1 < bounceDur * 0.35f)
-        {
-            if (rt == null || !rt)
-            {
-                ResetVisualScale(visualRt, visualBaseScale);
-                yield break;
-            }
-
-            b1 += Time.deltaTime;
-
-            float k = Mathf.Clamp01(b1 / Mathf.Max(0.0001f, bounceDur * 0.35f));
-            float eased = 1f - (1f - k) * (1f - k);
-
-            rt.anchoredPosition = Vector2.LerpUnclamped(end, overshoot, eased);
-
-            if (visualRt != null && (settleStretchX > 0f || settleStrength > 0f))
-            {
-                float sx = 1f + settleStretchX * eased;
-                float sy = 1f - settleStrength * eased;   // impact ezilmesi skala ile (pozisyon değil)
-
-                visualRt.localScale = new Vector3(
-                    visualBaseScale.x * sx,
-                    visualBaseScale.y * sy,
-                    visualBaseScale.z);
-            }
-
-            yield return null;
-        }
-
-        float b2 = 0f;
-        while (b2 < bounceDur * 0.35f)
-        {
-            if (rt == null || !rt)
-            {
-                ResetVisualScale(visualRt, visualBaseScale);
-                yield break;
-            }
-
-            b2 += Time.deltaTime;
-
-            float k = Mathf.Clamp01(b2 / Mathf.Max(0.0001f, bounceDur * 0.35f));
-            float eased = 1f - (1f - k) * (1f - k);
-
-            rt.anchoredPosition = Vector2.LerpUnclamped(overshoot, overUp, eased);
-
-            if (visualRt != null && (settleStretchX > 0f || settleStrength > 0f))
-            {
-                float revK = 1f - k;
-                float sx = 1f + settleStretchX * revK;
-                float sy = 1f - settleStrength * revK;
-
-                visualRt.localScale = new Vector3(
-                    visualBaseScale.x * sx,
-                    visualBaseScale.y * sy,
-                    visualBaseScale.z);
-            }
-
-            yield return null;
-        }
-
-        float b3 = 0f;
-        while (b3 < bounceDur * 0.3f)
-        {
-            if (rt == null || !rt)
-            {
-                ResetVisualScale(visualRt, visualBaseScale);
-                yield break;
-            }
-
-            b3 += Time.deltaTime;
-
-            float k = Mathf.Clamp01(b3 / Mathf.Max(0.0001f, bounceDur * 0.3f));
-            float eased = k * k;
-
-            rt.anchoredPosition = Vector2.LerpUnclamped(overUp, end, eased);
-
-            yield return null;
-        }
-
-        ResetVisualScale(visualRt, visualBaseScale);
-
-        if (rt != null && rt)
+            rt.anchoredPosition = end;
             SnapToGrid(tileSize);
+            RaiseFallArrived();
+
+            if (!enableSettle || settleDuration <= 0f)
+            {
+                ResetVisualScale(visualRt, visualBaseScale);
+                yield break;
+            }
+
+            // Pozisyon dalışı settleOvershoot ile (KÜÇÜK, %2 gibi) — strength SKALA squash'ı sürer.
+            // Eskiden strength (%11+) pozisyonu sürüyordu: inen taş alttakinin içine gömülüp
+            // çıkıyordu (ağır çekimde "üst üste binip ayrılma").
+            Vector2 overshoot = end + new Vector2(0f, -settleOvershoot * tileSize);
+            Vector2 overUp = end + new Vector2(0f, settleOvershoot * tileSize * 0.3f);
+
+            float bounceDur = settleDuration;
+
+            float b1 = 0f;
+            while (b1 < bounceDur * 0.35f)
+            {
+                if (rt == null || !rt)
+                {
+                    ResetVisualScale(visualRt, visualBaseScale);
+                    yield break;
+                }
+
+                b1 += Time.deltaTime;
+
+                float k = Mathf.Clamp01(b1 / Mathf.Max(0.0001f, bounceDur * 0.35f));
+                float eased = 1f - (1f - k) * (1f - k);
+
+                rt.anchoredPosition = Vector2.LerpUnclamped(end, overshoot, eased);
+
+                if (visualRt != null && (settleStretchX > 0f || settleStrength > 0f))
+                {
+                    float sx = 1f + settleStretchX * eased;
+                    float sy = 1f - settleStrength * eased;   // impact ezilmesi skala ile (pozisyon değil)
+
+                    visualRt.localScale = new Vector3(
+                        visualBaseScale.x * sx,
+                        visualBaseScale.y * sy,
+                        visualBaseScale.z);
+                }
+
+                yield return null;
+            }
+
+            float b2 = 0f;
+            while (b2 < bounceDur * 0.35f)
+            {
+                if (rt == null || !rt)
+                {
+                    ResetVisualScale(visualRt, visualBaseScale);
+                    yield break;
+                }
+
+                b2 += Time.deltaTime;
+
+                float k = Mathf.Clamp01(b2 / Mathf.Max(0.0001f, bounceDur * 0.35f));
+                float eased = 1f - (1f - k) * (1f - k);
+
+                rt.anchoredPosition = Vector2.LerpUnclamped(overshoot, overUp, eased);
+
+                if (visualRt != null && (settleStretchX > 0f || settleStrength > 0f))
+                {
+                    float revK = 1f - k;
+                    float sx = 1f + settleStretchX * revK;
+                    float sy = 1f - settleStrength * revK;
+
+                    visualRt.localScale = new Vector3(
+                        visualBaseScale.x * sx,
+                        visualBaseScale.y * sy,
+                        visualBaseScale.z);
+                }
+
+                yield return null;
+            }
+
+            float b3 = 0f;
+            while (b3 < bounceDur * 0.3f)
+            {
+                if (rt == null || !rt)
+                {
+                    ResetVisualScale(visualRt, visualBaseScale);
+                    yield break;
+                }
+
+                b3 += Time.deltaTime;
+
+                float k = Mathf.Clamp01(b3 / Mathf.Max(0.0001f, bounceDur * 0.3f));
+                float eased = k * k;
+
+                rt.anchoredPosition = Vector2.LerpUnclamped(overUp, end, eased);
+
+                yield return null;
+            }
+
+            ResetVisualScale(visualRt, visualBaseScale);
+
+            if (rt != null && rt)
+                SnapToGrid(tileSize);
+        }
+        finally
+        {
+            if (liftDuringSwap && IsCurrentLifetime(myLifetime) && activeMoveToken == myMoveToken)
+                ClearSwapLift();
+        }
     }
 
     private Vector2 GetFallCellAnchoredPosition(int cellX, int cellY, int tileSize)
@@ -1180,6 +1293,7 @@ public class TileView : MonoBehaviour,
         float actionStartRealtime)
     {
         lastFallGeneration = (board != null) ? board.FallGeneration : 0;
+        ClearSwapLift();
         int myMoveToken = ++activeMoveToken;   // bu taşın tek-sahip hareket kilidi
         CancelActiveSettle();   // önceki round'un detached settle'ı varsa iptal et (çakışma önle)
         ClearLandingPose();
@@ -1253,9 +1367,8 @@ public class TileView : MonoBehaviour,
 
                 if (segmentElapsed > segmentTimeout)
                 {
-                    Debug.LogWarning(
-                        $"[ReferenceFall] movement timeout tileId={GetInstanceID()} column={column} " +
-                        $"sourceRow={sourceRow} targetRow={targetRow} segment={seg}. Snapping to target.");
+                    if (GameDiagnostics.CriticalErrors)
+                        Debug.LogWarning($"[ReferenceFall] movement timeout tileId={GetInstanceID()} column={column} " + $"sourceRow={sourceRow} targetRow={targetRow} segment={seg}. Snapping to target.");
                     rt.anchoredPosition = target;
                     break;
                 }
@@ -1314,11 +1427,6 @@ public class TileView : MonoBehaviour,
             float initialVelCellsPerSec = velocityCellsPerFrameInitial * referenceFps;
             float maxVelCellsPerSec = maxVelocityReached * referenceFps;
             float fallSeconds = (landingReferenceFrame - spawnReferenceFrame) / referenceFps;
-            Debug.Log(
-                $"[ReferenceFall] tileId={GetInstanceID()} column={column} startCell=({column},{sourceRow}) " +
-                $"targetCell=({column},{targetRow}) distCells={travelledCells:0.00} spawned={(sourceRow < 0)} " +
-                $"startDelayFrame={spawnReferenceFrame:0.0} v0={initialVelCellsPerSec:0.0}c/s vMax={maxVelCellsPerSec:0.0}c/s " +
-                $"fallDur={fallSeconds:0.000}s landingFrame={landingReferenceFrame:0.0}");
         }
 
         // Landing'e girmeden önce fall stretch'i temizle → impact scale her zaman base'den başlar.
@@ -1453,6 +1561,7 @@ public class TileView : MonoBehaviour,
         float settleOvershoot = 0f)
     {
         lastFallGeneration = (board != null) ? board.FallGeneration : 0;
+        ClearSwapLift();
         int myMoveToken = ++activeMoveToken;   // bu taşın tek-sahip hareket kilidi
         CancelActiveSettle();   // önceki round'un detached settle'ı varsa iptal et (çakışma önle)
         ClearLandingPose();
@@ -1573,6 +1682,7 @@ public class TileView : MonoBehaviour,
         float settleOvershoot = 0f)
     {
         lastFallGeneration = (board != null) ? board.FallGeneration : 0;
+        ClearSwapLift();
         int myMoveToken = ++activeMoveToken;   // bu taşın tek-sahip hareket kilidi
         CancelActiveSettle();   // önceki round'un detached settle'ı varsa iptal et (çakışma önle)
         ClearLandingPose();
@@ -1712,6 +1822,18 @@ public class TileView : MonoBehaviour,
             return;
 
         StopSpecialCreationReveal();
+
+        if (special == TileSpecial.SystemOverride && overrideSpecialView != null
+            && overrideSpecialView.UsesTurnFramesOnly)
+        {
+            // The generic reveal normally restores this after the merge. Frame-only mode
+            // bypasses it, so the resting icon must still come back fully visible.
+            var color = iconImage.color;
+            color.a = 1f;
+            iconImage.color = color;
+            overrideSpecialView.PlayCreation();
+            return;
+        }
 
         specialCreationRevealRoutine = StartCoroutine(CoSpecialCreationRevealSimple(special, tileSize));
 
@@ -2154,18 +2276,11 @@ public class TileView : MonoBehaviour,
 
         specialRevealVisualCaptured = false;
 
-        if (specialCreationRevealRoot != null)
-        {
-            Destroy(specialCreationRevealRoot);
-            specialCreationRevealRoot = null;
-        }
-
-        if (this != null)
-        {
-            Transform oldHalo = transform.Find("__SpecialCreationHalo");
-            if (oldHalo != null)
-                Destroy(oldHalo.gameObject);
-        }
+        // The tile itself is pooled. Retain one invisible child instead of allocating a
+        // GameObject/Image/Canvas on every reveal; no reparenting during owner OnDisable.
+        if (cachedSpecialCreationHalo != null) cachedSpecialCreationHalo.enabled = false;
+        if (cachedSpecialCreationHaloCanvas != null) cachedSpecialCreationHaloCanvas.enabled = false;
+        specialCreationRevealRoot = null;
 
         if (this != null && lastAppliedTileSize > 0)
             ApplyTileSize(lastAppliedTileSize);
@@ -2212,15 +2327,18 @@ public class TileView : MonoBehaviour,
 
         BeginSpecialCreationSorting();
         revealUsesCreationSorting = true;
-        specialCreationRevealRoot = new GameObject(
-            "__SpecialCreationHalo",
-            typeof(RectTransform),
-            typeof(Image));
-
-        specialCreationRevealRoot.transform.SetParent(transform, false);
+        if (cachedSpecialCreationHalo == null)
+        {
+            var halo = new GameObject("__SpecialCreationHalo", typeof(RectTransform), typeof(Image));
+            halo.transform.SetParent(transform, false);
+            cachedSpecialCreationHalo = halo.GetComponent<Image>();
+            cachedSpecialCreationHaloCanvas = halo.AddComponent<Canvas>();
+        }
+        specialCreationRevealRoot = cachedSpecialCreationHalo.gameObject;
         specialCreationRevealRoot.transform.SetAsLastSibling();
         specialCreationRevealRoot.layer = gameObject.layer;
-        var haloCanvas = specialCreationRevealRoot.AddComponent<Canvas>();
+        var haloCanvas = cachedSpecialCreationHaloCanvas;
+        haloCanvas.enabled = true;
         haloCanvas.overrideSorting = true;
         haloCanvas.sortingLayerID = creationSortingCanvas.sortingLayerID;
         haloCanvas.sortingOrder = creationSortingCanvas.sortingOrder - 1;
@@ -2234,7 +2352,8 @@ public class TileView : MonoBehaviour,
         haloRt.localScale = Vector3.zero;
         haloRt.localRotation = Quaternion.identity;
 
-        Image haloImage = specialCreationRevealRoot.GetComponent<Image>();
+        Image haloImage = cachedSpecialCreationHalo;
+        haloImage.enabled = true;
         haloImage.sprite = GetOrCreateSpecialRevealHaloSprite();
         haloImage.raycastTarget = false;
         haloImage.color = new Color(1f, 1f, 1f, 0f);
@@ -2581,7 +2700,8 @@ public class TileView : MonoBehaviour,
     {
         if (sprite == null)
         {
-            Debug.LogError("TileView: icon set to NULL");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogError("TileView: icon set to NULL");
             return;
         }
 
@@ -2801,7 +2921,7 @@ public class TileView : MonoBehaviour,
         // alındığında eski bir animasyon pozisyon/scale/alpha sürmeye devam ederse "hayalet" glitch olur.
         StopAllCoroutines();
         CancelActiveSettle();               // token/generation defterini de temizle
-        StopSpecialCreationReveal();         // reveal routine + halo root Destroy
+        StopSpecialCreationReveal();         // stop reveal and disable the reusable halo
         CleanupOverrideMarkHalo();
         ClearMovableObstaclePresentation();  // isMovableObstacleTile/sprite sıfırla
 
@@ -2813,6 +2933,7 @@ public class TileView : MonoBehaviour,
         IsPlannedToMoveThisFallPass = false;
         lastFallGeneration = -1;
         creationSortingUsers = 0;            // iç Canvas sayacı ömürler arası taşınmaz
+        overrideActivationSortingUsers = 0;
         revealUsesCreationSorting = false;
         RestIconCanvas();
         IsSpecialLocked = false;             // cage lock is per-tile; never leak across pool reuse

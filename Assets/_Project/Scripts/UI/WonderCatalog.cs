@@ -15,6 +15,8 @@ public class WonderCatalog : ScriptableObject
 
     public int Count => wonders != null ? wonders.Length : 0;
 
+    /// <summary>Oyuncu SIRASINDAKİ i. harika (WonderOrder: yeni oyuncuda ülkesinin harikası ilk). İlerleme, ana menü,
+    /// görevler ve Journey bu sırayı kullanır.</summary>
     public WonderDefinition Get(int i)
-        => (wonders != null && i >= 0 && i < wonders.Length) ? wonders[i] : null;
+        => (wonders != null && i >= 0 && i < wonders.Length) ? wonders[WonderOrder.RawIndex(this, i)] : null;
 }

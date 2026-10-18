@@ -40,6 +40,7 @@ MonoBehaviour:
   - {fileID: 21300000, guid: c5de51f39b234e05bc66b701f227c3ba, type: 3}
   headingFont: {fileID: 11400000, guid: 5e6309197a20b48f38af13be4a943e86, type: 2}
   bodyFont: {fileID: 11400000, guid: af5dedf535e914a95b9338f201a87125, type: 2}
+  listPanel: {fileID: 21300000, guid: 459746b08d3c48d688e7220cabf505dc, type: 3}
   rabbitFrames:
   - {fileID: 21300000, guid: dd306bb67edd149969af9c70f2e737b1, type: 3}
   - {fileID: 21300000, guid: 8c5a6ca15ce6b4ad3a757a17d28c847d, type: 3}
@@ -68,6 +69,7 @@ MonoBehaviour:
   - 1486
   - 1494
   eventEnabled: 1
+  autoShowJoinPopup: 1
   minLevelGate: 51
   seasonHours: 72
   settlementMinutes: 10

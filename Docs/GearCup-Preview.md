@@ -22,7 +22,7 @@ Onaylanan mavi arena, platform, halka, bağımsız dişli ve modern kıyafetli t
 
 Ekranın altındaki devam yazısı mevcut `common_tap_continue` lokalizasyonunu kullanır (TR: “Devam etmek için dokun”, EN: “Tap to continue”) ve yumuşakça yanıp söner. Dokununca Gear Cup kapanır; Bridge/Tırmanış ile aynı `MainMenuLevelButtonController.StartLevel()` akışı PreLevelPopup ve can kontrolünü açar. Giriş baskılanırsa etkinlik ekranı tekrar açılır. Süresi biten etkinlikte sonraki sezona katılım bilgi düğmesinden erişilir. Yazının animasyonu mevcut Update döngüsünde CanvasRenderer opaklığıyla çalışır; ek nesne veya coroutine oluşturmaz ve ekran kapanınca opaklık sıfırlanır.
 
-Katılım penceresi etkinliğin aynı mavi arena arka planını ve mevcut popup renk dönüşüm materyalini kullanır. Katılım başlığı `TextArcEffect` ile −10° kavislidir. Katıl butonundan `EventScreenIris` dairesel geçişi başlar. İptal katılım kaydı oluşturmaz. Katılım kabul edilince kalıcı kaydedilir; sonraki girişte doğrudan etkinlik açılır.
+Katılım penceresi etkinliğin aynı mavi arena arka planını ve mevcut popup renk dönüşüm materyalini kullanır. Katılım başlığı `TextArcEffect` ile +15° yukarı doğru kavislidir. Katıl butonundan `EventScreenIris` dairesel geçişi başlar. İptal katılım kaydı oluşturmaz. Katılım kabul edilince kalıcı kaydedilir; sonraki girişte doğrudan etkinlik açılır.
 
 Ana menü badge’i `Gear Trophy Stadium Badge.png` görselidir; süre boş mavi şeritte TMP ile yazılır. Kaynak PNG değiştirilmeden projeye kopyalanmıştır; import sınırı 512, mipmap ve Read/Write kapalıdır. Bridge ve Harvest ile aynı `EventIconAnimator`, üç saniyelik beklemenin ardından 0,55 saniye büyüme/sallanma oynatır. İkon seviye kapısı nedeniyle gizliyken animatör devre dışıdır; nesne kapanınca mevcut ortak bileşen coroutine’i durdurur ve transformu sıfırlar. Sahne ve yeniden kurulum aracı aynı görsel/animasyon bağlantısını kullanır.
 
@@ -63,3 +63,12 @@ Dişli etiketleri mevcut `UiVfxPool` ile önceden hazırlanan üç nesneyi tekra
 Unity build’i, Play Mode veya cihaz testi çalıştırılmadı. Önceki kaynak kontrolünde Unity/Firebase/TMP API çözümlemesi geçti; son senkronizasyon değişiklikleri kaynak üzerinden gözden geçirildi. Firestore kurallarının emülatör testi tamamlanmadı. Gereksiz indirilen test araçları/emülatör ve bunların npm önbelleği temizlendi. Gerçek cihaz performansı ve sunucu davranışı kullanıcı tarafından uygulamada doğrulanacak; ölçülmüş performans kazanımı iddia edilmez.
 
 Görsel dökümü: [GearCup-Assets.md](GearCup-Assets.md).
+# Menü ömrü ve katılım hatırlatması — 2026-10-17
+
+GearCup menü rozeti artık yalnız canlı katılım veya katılınabilir yeni pencere için görünür; süresi bitmiş ve sonucu bekleyen eski sezonun logosu ve sıfır sayacı gizlenir. Skor outbox’ı ve hak edilen ödüller korunur. Sonuç/ödül hazır olduğunda rozet gizli olsa bile menüde sonuç gösterimi açılabilir. Eski sezonun outbox/ödül/gösterimi tamamlanmadan yeni katılım önerilmez. Tamamlandıysa yeni pencerenin gerçek sayacı kullanılır; eski 00:00 sayacı gösterilmez.
+
+`autoShowJoinPopup` açık: takım sahibi, seviye kapısını geçmiş ve katılmamış oyuncuya ana menü dönüşünde sezon başına bir kez mevcut GearCupJoinPopup gösterilir. Loading/restore sonrası üç saniye beklenir; Safari/Bridge’in mevcut giriş akışından sonra tutorial, market, ödül ve görünür popup kalmadığında açılır. Sonuç ve katılım kontrolleri mevcut bir saniyelik badge tick’inde çalışır; tekrar sorulmayan pencere için modal taraması yapılmaz. Manuel gösterim de aynı sezonun hatırlatma kaydını yazar. Local `gearcup_join_asked_v1` kaydı kullanılır, level içinde popup açılmaz.
+
+Safari/Tırmanış görünürlüğü de menü açıkken saniyede bir takvime göre güncellenir. Hasat’ın önceki “ara günlerde de logo göster” kuralı kaldırıldı; yalnız canlı sezonda görünür. Hasat bitişindeki kürek→altın dönüşümü rozet gizlenirken yine çalışır. Bridge ve ProgressEvent’in mevcut süre görünürlüğü korunur.
+
+`check_gearcup_menu.csx`: 18 üretim metodu kontrolü (canlı/biten sezon, bekleyen ödül, outbox koruma, yeni sayaç, modal/tutorial/level/team koşulları, sezon başına tek davet). Kaynak/API kontrolü 618 dosyada sıfır hata. Unity/cihaz/build çalıştırılmadı.
