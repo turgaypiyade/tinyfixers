@@ -17,6 +17,18 @@
           "value": "TEKRAR HOŞ GELDİN!"
         },
         {
+          "key": "comeback_boost_title",
+          "value": "SENİ ÖZLEDİK!"
+        },
+        {
+          "key": "comeback_boost_message",
+          "value": "Hoş geldin! {0} dakika boyunca tüm jokerler ve oyun başı güçlendiriciler SINIRSIZ. Süre \"Başla\"ya bastığında başlar."
+        },
+        {
+          "key": "comeback_boost_start",
+          "value": "BAŞLA"
+        },
+        {
           "key": "gearcup_unlock",
           "value": "{0}. seviyede açılır."
         },
@@ -2849,6 +2861,14 @@
           "value": "Seni özledik! 🥺"
         },
         {
+          "key": "notif_comeback_boost_title",
+          "value": "Ödüller seni bekliyor! 🎁"
+        },
+        {
+          "key": "notif_comeback_boost_body",
+          "value": "Geri dön: 30 dakika boyunca tüm jokerler SINIRSIZ!"
+        },
+        {
           "key": "notif_comeback_body",
           "value": "Tamir bekleyen yerler var, tamirciler seni bekliyor 🐷🔧"
         },
@@ -3076,6 +3096,18 @@
         {
           "key": "welcome_back_reward_title",
           "value": "WELCOME BACK!"
+        },
+        {
+          "key": "comeback_boost_title",
+          "value": "WE MISSED YOU!"
+        },
+        {
+          "key": "comeback_boost_message",
+          "value": "Welcome back! For {0} minutes all jokers and pre-level boosters are UNLIMITED. The timer starts when you tap Start."
+        },
+        {
+          "key": "comeback_boost_start",
+          "value": "START"
         },
         {
           "key": "gearcup_unlock",
@@ -5908,6 +5940,14 @@
         {
           "key": "notif_comeback_title",
           "value": "We miss you! 🥺"
+        },
+        {
+          "key": "notif_comeback_boost_title",
+          "value": "Your rewards are waiting! 🎁"
+        },
+        {
+          "key": "notif_comeback_boost_body",
+          "value": "Come back: all jokers are UNLIMITED for 30 minutes!"
         },
         {
           "key": "notif_comeback_body",

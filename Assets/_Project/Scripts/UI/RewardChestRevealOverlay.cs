@@ -316,9 +316,9 @@ public sealed class RewardChestRevealOverlay : MonoBehaviour
         labelRt.anchoredPosition = Vector2.zero;
         labelRt.sizeDelta = new Vector2(RewardItemWidth + 60f, RewardLabelSize * 1.3f);
         var label = labelRt.gameObject.AddComponent<TextMeshProUGUI>();
-        int amount = reward != null ? Mathf.Max(1, reward.amount) : 1;
+        string amountLabel = reward != null ? reward.AmountLabel : "x1";
         string name = reward != null ? reward.DisplayName : "";
-        label.text = resolvedIcon != null ? $"x{amount}" : $"{name} x{amount}";
+        label.text = resolvedIcon != null ? amountLabel : $"{name} {amountLabel}";
         if (_font != null) label.font = _font;
         label.fontSize = 34;
         label.fontStyle = FontStyles.Bold;

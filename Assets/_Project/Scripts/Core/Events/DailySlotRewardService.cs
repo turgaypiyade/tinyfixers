@@ -9,6 +9,13 @@ public static class DailySlotRewardService
     public static void Grant(DailySlotReward reward)
     {
         if (reward == null) return;
+        if (reward.IsTimed)
+        {
+            TimedRewardService.Grant(reward.type, reward.durationMinutes);
+            if (reward.type >= DailySlotRewardType.Booster_Hammer && reward.type <= DailySlotRewardType.Booster_PaintBucket)
+                BoosterInventory.NotifyCountChanged(ToBoosterMode(reward.type));
+            return;
+        }
         int amt = Mathf.Max(1, reward.amount);
 
         switch (reward.type)
@@ -58,4 +65,14 @@ public static class DailySlotRewardService
                 break;
         }
     }
+
+    private static BoardController.BoosterMode ToBoosterMode(DailySlotRewardType type) => type switch
+    {
+        DailySlotRewardType.Booster_Hammer      => BoardController.BoosterMode.Single,
+        DailySlotRewardType.Booster_Row         => BoardController.BoosterMode.Row,
+        DailySlotRewardType.Booster_Column      => BoardController.BoosterMode.Column,
+        DailySlotRewardType.Booster_Shuffle     => BoardController.BoosterMode.Shuffle,
+        DailySlotRewardType.Booster_PaintBucket => BoardController.BoosterMode.PaintBucket,
+        _                                       => BoardController.BoosterMode.None
+    };
 }

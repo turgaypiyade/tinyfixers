@@ -16,3 +16,5 @@ MonoBehaviour:
   levelOverrides:
   - fromLevel: 1
     config: {fileID: 11400000, guid: dc288bb48e66c47e68ddf35ae8abd448, type: 2}
+  - fromLevel: 30
+    config: {fileID: 11400000, guid: 6b5009c817564db98ff3a5d76a181cf2, type: 2}

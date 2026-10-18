@@ -48,7 +48,7 @@ public static class TestLevelProgressionBootstrap
         bool hasAdContinueUsed = PlayerPrefs.HasKey(LevelAdRight.UsedLevelKey);
         int savedAdContinueUsed = PlayerPrefs.GetInt(LevelAdRight.UsedLevelKey, 0);
 
-        var timedRewardTypes = new[] { 1, 10, 11, 12, 13 }; // Lives, Joker_LineH, PulseCore, Override, Joker_Line
+        var timedRewardTypes = new[] { 1, 10, 11, 12, 13, 20, 21, 22, 23, 24 }; // Lives, Joker_LineH, PulseCore, Override, Joker_Line, boosters
         var savedTimedRewards = new string[timedRewardTypes.Length];
         for (int t = 0; t < timedRewardTypes.Length; t++)
             savedTimedRewards[t] = PlayerPrefs.GetString($"timed_reward_{timedRewardTypes[t]}", "");

@@ -10269,7 +10269,6 @@ MonoBehaviour:
   obstacleBreakFxPrefab: {fileID: 1851070113503770558, guid: 84c2cc22fd6664f148afccf4fe0599c3, type: 3}
   obstacleBreakFxLifetime: 0.08
   hammerBoosterFxPrefab: {fileID: 3587498911280161232, guid: 9397f041fbc3947d4a7218642a06ed42, type: 3}
-  cannonBoosterFxPrefab: {fileID: 7678512554813887660, guid: 96f15dca5f77149318355bae7ee48545, type: 3}
   verticalBoosterFxPrefab: {fileID: 7678512554813887660, guid: fa55f156c7113402e8e9465d0f144110, type: 3}
   rowBoosterWithDrillSprite: {fileID: 21300000, guid: 6383ea1b8ef964caa93201ecd940dce2, type: 3}
   rowBoosterWithoutDrillSprite: {fileID: 21300000, guid: 34a21e80fd8d04f8e992b75b9fb13971, type: 3}

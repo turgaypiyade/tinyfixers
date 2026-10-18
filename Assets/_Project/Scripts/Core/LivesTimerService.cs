@@ -69,7 +69,7 @@ public class LivesTimerService : MonoBehaviour
         LivesManager.TickRegen();
         BackendServices.TickTeamLives();
         LevelAssist.TickActivity(System.DateTime.UtcNow);
-        if (!paused && hasFocus) WelcomeBackRewardPresenter.Tick();
+        if (!paused && hasFocus) { WelcomeBackRewardPresenter.Tick(); ComebackBoost.TickPresenter(); }
     }
 
     private void OnApplicationPause(bool value) { paused = value; SyncActivity(); }

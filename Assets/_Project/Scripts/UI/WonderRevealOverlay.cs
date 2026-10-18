@@ -82,7 +82,7 @@ public class WonderRevealOverlay : MonoBehaviour
             if (!view.isActiveAndEnabled) yield break;
             if (WonderProgress.IsEventComplete(cat, wonderIndex))
             {
-                yield return PlayChest(w);
+                yield return PlayChest(cat.ChestRewardsFor(wonderIndex), w);
                 WonderProgress.MarkEventCompleted(cat, wonderIndex);
             }
 
@@ -133,11 +133,11 @@ public class WonderRevealOverlay : MonoBehaviour
         _scene.includeCharacters = false;   // overlay'de robot/dron YOK (onlar ana menüde)
     }
 
-    IEnumerator PlayChest(WonderDefinition w)
+    IEnumerator PlayChest(DailySlotReward[] chestRewards, WonderDefinition w)
     {
         var rewards = new List<DailySlotReward>();
-        if (w.chestRewards != null)
-            foreach (var rw in w.chestRewards)
+        if (chestRewards != null)
+            foreach (var rw in chestRewards)
                 if (rw != null) rewards.Add(rw);
         if (rewards.Count == 0) yield break;
 

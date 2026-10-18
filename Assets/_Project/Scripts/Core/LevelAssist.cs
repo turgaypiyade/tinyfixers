@@ -104,10 +104,14 @@ public static class LevelAssist
         if (RuntimeSimulationSession.IsActive || foreground) return;
         long now = utcNow.Ticks;
         if (long.TryParse(PlayerPrefs.GetString(LastActiveKey, ""), out long previous)
-            && previous > 0 && previous <= now && now - previous >= TimeSpan.TicksPerDay * 3)
+            && previous > 0 && previous <= now)
         {
-            PlayerPrefs.SetInt(ReturnPendingKey, 1);
-            WelcomeBackReward.Queue(now);
+            if (now - previous >= TimeSpan.TicksPerDay * 3)
+            {
+                PlayerPrefs.SetInt(ReturnPendingKey, 1);
+                WelcomeBackReward.Queue(now);
+            }
+            ComebackBoost.Queue(new TimeSpan(now - previous), now);
         }
         foreground = true;
         CheckpointActivity(now);

@@ -102,35 +102,11 @@ public class BoosterService
                 if (reached.Add(y)) onCellReached(new Vector2Int(cell.x, y));
             }
 
-            // Retain the cannon presentation for a column containing a line special.
-            // Detection selects visuals only; activation still happens on arrival.
-            bool useCannon = false;
-            for (int y = 0; y < board.Height; y++)
-            {
-                var tile = board.Tiles[cell.x, y];
-                if (tile != null && (tile.GetSpecial() == TileSpecial.LineH
-                    || tile.GetSpecial() == TileSpecial.LineV))
-                {
-                    useCannon = true;
-                    break;
-                }
-            }
-
-            if (useCannon)
-            {
-                yield return PlayCannonBoosterEnterAndFireFx(cell.x, r => exit = r);
-                Coroutine exitHandle = exit != null ? board.StartCoroutine(exit) : null;
-                yield return PlayBoosterLineSweep(
-                    new Vector2Int(cell.x, board.Height - 1), false,
-                    lineSweepService, lightningSpawner, lineTravelPlayer,
-                    hitCell => ReachRow(hitCell.y));
-                if (exitHandle != null) yield return exitHandle;
-            }
-            else
-            {
-                yield return PlayElevatorBoosterEnterFx(cell.x, r => exit = r, ReachRow);
-                if (exit != null) yield return exit;
-            }
+            // Every column uses the elevator. The old cannon branch (columns with a line special) pointed
+            // at robot-era art deleted in the animal pivot → its Image rendered as a white square.
+            // Specials still activate on arrival via ReachRow, exactly as before.
+            yield return PlayElevatorBoosterEnterFx(cell.x, r => exit = r, ReachRow);
+            if (exit != null) yield return exit;
 
             // Missing/interrupted visual: still finish the authorized sweep.
             for (int y = board.Height - 1; y >= 0; y--) ReachRow(y);
@@ -194,189 +170,10 @@ public class BoosterService
     }
 
     // ============================================================
-    // CANNON BOOSTER FX
-    //
-    // Column booster icin gorsel top/cannon animasyonu.
-    // Firing is followed by a bottom-to-top sweep; its arrival callback owns impacts.
-    // ============================================================
-
-    private IEnumerator PlayCannonBoosterEnterAndFireFx(int columnX, Action<IEnumerator> exitRoutine)
-    {
-        RectTransform cannon = CreateCannonFxInstance();
-
-        if (cannon == null)
-            yield break;
-
-        RectTransform parent = GetBoosterFxParent();
-        if (parent == null)
-        {
-            UnityEngine.Object.Destroy(cannon.gameObject);
-            yield break;
-        }
-
-        cannon.SetParent(parent, false);
-        cannon.SetAsLastSibling();
-
-        cannon.anchorMin = new Vector2(0.5f, 0.5f);
-        cannon.anchorMax = new Vector2(0.5f, 0.5f);
-        cannon.pivot = new Vector2(0.5f, 0.5f);
-
-        CanvasGroup canvasGroup = cannon.GetComponent<CanvasGroup>();
-        if (canvasGroup == null)
-            canvasGroup = cannon.gameObject.AddComponent<CanvasGroup>();
-
-        canvasGroup.alpha = 1f;
-
-        Canvas.ForceUpdateCanvases();
-
-        Vector2 targetPos = GetColumnBottomAnchoredCenter(columnX, parent);
-
-        // BottomArea'nın altından geliyormuş gibi board'un altından başlatıyoruz.
-        // Daha aşağıdan gelsin istersen 2.4f değerini büyüt.
-        Vector2 startPos = targetPos + new Vector2(0f, -board.TileSize * 2.4f);
-
-        cannon.anchoredPosition = startPos;
-        cannon.localScale = Vector3.one;
-        cannon.localRotation = Quaternion.identity;
-
-        const float enterDuration = 0.32f;
-
-        float t = 0f;
-
-        while (t < enterDuration)
-        {
-            if (cannon == null || !cannon)
-                yield break;
-
-            t += Time.deltaTime;
-
-            float k = Mathf.Clamp01(t / enterDuration);
-            float eased = EaseOutBackLight(k);
-
-            cannon.anchoredPosition = Vector2.LerpUnclamped(startPos, targetPos, eased);
-
-            yield return null;
-        }
-
-        if (cannon == null || !cannon)
-            yield break;
-
-        cannon.anchoredPosition = targetPos;
-
-        // Fire/recoil: cannon tetikleniyor hissi.
-        yield return PlayCannonFirePulse(cannon, targetPos);
-
-        // Impact/fire anından sonra mevcut Column clear başlasın.
-        exitRoutine?.Invoke(PlayCannonBoosterExitFx(cannon, canvasGroup, targetPos));
-    }
-
-    private IEnumerator PlayCannonFirePulse(RectTransform cannon, Vector2 basePos)
-    {
-        if (cannon == null || !cannon)
-            yield break;
-
-        const float recoilDuration = 0.075f;
-        const float recoverDuration = 0.10f;
-
-        Vector2 recoilPos = basePos + new Vector2(0f, -board.TileSize * 0.16f);
-
-        Vector3 baseScale = cannon.localScale;
-        Vector3 fireScale = new Vector3(
-            baseScale.x * 1.08f,
-            baseScale.y * 0.92f,
-            baseScale.z);
-
-        float t = 0f;
-
-        while (t < recoilDuration)
-        {
-            if (cannon == null || !cannon)
-                yield break;
-
-            t += Time.deltaTime;
-
-            float k = Mathf.Clamp01(t / recoilDuration);
-            float eased = k * k;
-
-            cannon.anchoredPosition = Vector2.LerpUnclamped(basePos, recoilPos, eased);
-            cannon.localScale = Vector3.LerpUnclamped(baseScale, fireScale, eased);
-
-            yield return null;
-        }
-
-        t = 0f;
-
-        while (t < recoverDuration)
-        {
-            if (cannon == null || !cannon)
-                yield break;
-
-            t += Time.deltaTime;
-
-            float k = Mathf.Clamp01(t / recoverDuration);
-            float eased = EaseOut(k);
-
-            cannon.anchoredPosition = Vector2.LerpUnclamped(recoilPos, basePos, eased);
-            cannon.localScale = Vector3.LerpUnclamped(fireScale, baseScale, eased);
-
-            yield return null;
-        }
-
-        if (cannon != null && cannon)
-        {
-            cannon.anchoredPosition = basePos;
-            cannon.localScale = baseScale;
-        }
-    }
-
-    private IEnumerator PlayCannonBoosterExitFx(RectTransform cannon, CanvasGroup canvasGroup, Vector2 targetPos)
-    {
-        if (cannon == null || !cannon)
-            yield break;
-
-        const float holdDuration = 0.05f;
-        const float exitDuration = 0.18f;
-
-        yield return new WaitForSeconds(holdDuration);
-
-        Vector2 startPos = cannon.anchoredPosition;
-        Vector2 exitPos = targetPos + new Vector2(0f, -board.TileSize * 1.7f);
-
-        Vector3 startScale = cannon.localScale;
-        Vector3 endScale = startScale * 0.92f;
-
-        float t = 0f;
-
-        while (t < exitDuration)
-        {
-            if (cannon == null || !cannon)
-                yield break;
-
-            t += Time.deltaTime;
-
-            float k = Mathf.Clamp01(t / exitDuration);
-            float eased = k * k;
-
-            cannon.anchoredPosition = Vector2.LerpUnclamped(startPos, exitPos, eased);
-            cannon.localScale = Vector3.LerpUnclamped(startScale, endScale, eased);
-
-            if (canvasGroup != null)
-                canvasGroup.alpha = 1f - k;
-
-            yield return null;
-        }
-
-        if (cannon != null && cannon)
-            UnityEngine.Object.Destroy(cannon.gameObject);
-    }
-
-    // ============================================================
     // MINI ELEVATOR / SERVİS ASANSÖRÜ BOOSTER FX
     //
     // Column booster: the platform reports each row as its top reaches the cell.
     // Gameplay impacts are handled by the shared special chain at that instant.
-    // Görsel şimdilik cannon prefabını (placeholder) kullanır; asıl asansör sprite'ı
-    // board.CannonBoosterFxPrefab değiştirilerek takılır.
     // ============================================================
 
     private const float ElevatorStepDelay = 0.05f;
@@ -547,50 +344,6 @@ public class BoosterService
 
         if (go != null)
             UnityEngine.Object.Destroy(go);
-    }
-
-    private RectTransform CreateCannonFxInstance()
-    {
-        RectTransform prefab = board.CannonBoosterFxPrefab;
-
-        if (prefab != null)
-            return UnityEngine.Object.Instantiate(prefab);
-
-        return CreateFallbackCannonFx();
-    }
-
-    private RectTransform CreateFallbackCannonFx()
-    {
-        GameObject root = new GameObject(
-            "__CannonBoosterFx",
-            typeof(RectTransform),
-            typeof(CanvasGroup));
-
-        RectTransform rootRt = root.GetComponent<RectTransform>();
-        rootRt.anchorMin = new Vector2(0f, 1f);
-        rootRt.anchorMax = new Vector2(0f, 1f);
-        rootRt.pivot = new Vector2(0.5f, 0.5f);
-        rootRt.sizeDelta = new Vector2(board.TileSize * 1.15f, board.TileSize * 1.15f);
-
-        GameObject body = new GameObject(
-            "Body",
-            typeof(RectTransform),
-            typeof(Image));
-
-        body.transform.SetParent(rootRt, false);
-
-        RectTransform bodyRt = body.GetComponent<RectTransform>();
-        bodyRt.anchorMin = new Vector2(0.5f, 0.5f);
-        bodyRt.anchorMax = new Vector2(0.5f, 0.5f);
-        bodyRt.pivot = new Vector2(0.5f, 0.5f);
-        bodyRt.anchoredPosition = Vector2.zero;
-        bodyRt.sizeDelta = new Vector2(board.TileSize * 0.85f, board.TileSize * 0.85f);
-
-        Image img = body.GetComponent<Image>();
-        img.raycastTarget = false;
-        img.color = new Color(0.18f, 0.22f, 0.28f, 1f);
-
-        return rootRt;
     }
 
     private Vector2 GetColumnBottomAnchoredCenter(int columnX, RectTransform parent)

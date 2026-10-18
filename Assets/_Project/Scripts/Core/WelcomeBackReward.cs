@@ -24,24 +24,15 @@ public static class WelcomeBackReward
         // Complete initialization before staging the bundle: EnsureInit may save preferences.
         CurrencyLedger.EnsureInit();
         string receipt = PlayerPrefs.GetString(PendingKey, "");
-        BoosterInventory.StageAddition(BoardController.BoosterMode.Single, 1);
-        BoosterInventory.StageAddition(BoardController.BoosterMode.Shuffle, 1);
-        PreLevelSpecialInventory.Add(TileSpecial.LineH, 1);
-        PreLevelSpecialInventory.Add(TileSpecial.PulseCore, 1);
-        // Inventory, coins, offline delta and receipt are committed by the same Save.
+        // Coins only: joker use for returning players comes as time from ComebackBoost, never as counts.
+        // Coins, offline delta and receipt are committed by the same Save.
         PlayerWallet.AddCoinsWithCheckpoint(Coins, ClaimedKey, receipt);
-        BoosterInventory.NotifyCountChanged(BoardController.BoosterMode.Single);
-        BoosterInventory.NotifyCountChanged(BoardController.BoosterMode.Shuffle);
         return true;
     }
 
     public static DailySlotReward[] CreatePresentation() => new[]
     {
-        new DailySlotReward { type = DailySlotRewardType.Coins, amount = Coins },
-        new DailySlotReward { type = DailySlotRewardType.Booster_Hammer, amount = 1 },
-        new DailySlotReward { type = DailySlotRewardType.Booster_Shuffle, amount = 1 },
-        new DailySlotReward { type = DailySlotRewardType.Joker_LineH, amount = 1 },
-        new DailySlotReward { type = DailySlotRewardType.Joker_PulseCore, amount = 1 }
+        new DailySlotReward { type = DailySlotRewardType.Coins, amount = Coins }
     };
 
     private static long ReadTicks(string key)

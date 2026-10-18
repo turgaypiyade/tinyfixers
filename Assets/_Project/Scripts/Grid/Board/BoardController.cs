@@ -271,12 +271,11 @@ public class BoardController : MonoBehaviour
     [SerializeField] private float obstacleBreakFxLifetime = 0.40f;
     [Header("Booster FX")]
     [SerializeField] private RectTransform hammerBoosterFxPrefab;
-    [SerializeField] private RectTransform cannonBoosterFxPrefab;
     [SerializeField] private RectTransform verticalBoosterFxPrefab;
     [SerializeField] private Sprite rowBoosterWithDrillSprite;
     [SerializeField] private Sprite rowBoosterWithoutDrillSprite;
     [Tooltip("Makaslı asansör (joker3 / cannonball) board'un alt çizgisinden kaç TILE daha aşağıdan " +
-             "başlasın. Tepe noktası değişmez (offset yükseklik bütçesine geri eklenir). Cannon FX'i etkilemez.")]
+             "başlasın. Tepe noktası değişmez (offset yükseklik bütçesine geri eklenir).")]
     [SerializeField, Range(0f, 3f)] private float scissorLiftExtraDropTiles = 0.5f;
     [Tooltip("Hammer geri çekerken fazla çekip telefon camını çatlatma şansı (maymun gelip tamir eder). " +
              "Test için 1 yap.")]
@@ -293,7 +292,6 @@ public class BoardController : MonoBehaviour
     [SerializeField, Min(1f)] private float patchBotPropellerFrameFps = 18f;
 
     internal RectTransform HammerBoosterFxPrefab => hammerBoosterFxPrefab;
-    internal RectTransform CannonBoosterFxPrefab => cannonBoosterFxPrefab;
     internal RectTransform VerticalBoosterFxPrefab => verticalBoosterFxPrefab;
     internal Sprite RowBoosterWithDrillSprite => rowBoosterWithDrillSprite;
     internal Sprite RowBoosterWithoutDrillSprite => rowBoosterWithoutDrillSprite;

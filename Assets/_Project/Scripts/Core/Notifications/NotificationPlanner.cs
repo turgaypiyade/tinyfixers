@@ -30,7 +30,7 @@ public readonly struct PlannedNotification
 ///  - Sessiz saat (yerel 22:00–09:00): ileri kayan bildirim sabah 10:00'a, "bitiyor" hatırlatması
 ///    akşam 21:30'a (geriye) alınır — bitişten sonraya kaymasın.
 ///  - Yerel gün başına en fazla <see cref="MaxPerLocalDay"/>, iki bildirim arası en az <see cref="MinGapMinutes"/> dk.
-///    Çakışmada öncelik: event başladı > can doldu > event bitiyor > çark > geri dönüş.
+///    Çakışmada öncelik: event başladı > can doldu > event bitiyor > geri dönüş bonusu > çark > geri dönüş.
 /// </summary>
 public static class NotificationPlanner
 {
@@ -48,6 +48,7 @@ public static class NotificationPlanner
     private const int PriorityLivesFull = 40;
     private const int PriorityEventEnding = 30;
     private const int PriorityWheel = 20;
+    private const int PriorityComebackBoost = 25;
     private const int PriorityComeback = 10;
 
     public static List<PlannedNotification> Build(DateTime utcNow)
@@ -57,7 +58,9 @@ public static class NotificationPlanner
         AddRising(candidates, utcNow);
         AddBridgeRepair(candidates, utcNow);
         AddWheel(candidates, utcNow);
-        AddComeback(candidates, utcNow, 2, "notif_comeback_title", "notif_comeback_body");
+        // Bonus hazır olacaksa 36. saatte "ödüller seni bekliyor"; o zaman 2. gün genel hatırlatması gereksiz.
+        if (!AddComebackBoost(candidates, utcNow))
+            AddComeback(candidates, utcNow, 2, "notif_comeback_title", "notif_comeback_body");
         AddComeback(candidates, utcNow, 5, "notif_comeback2_title", "notif_comeback2_body");
         return ApplyLimits(candidates, utcNow);
     }
@@ -133,6 +136,16 @@ public static class NotificationPlanner
         if (wait <= TimeSpan.Zero) return;   // hak zaten hazır; geri dönüş hatırlatması kapsar
         AddForward(list, "wheel_ready", PriorityWheel, utcNow + wait, utcNow,
             "notif_wheel_title", "notif_wheel_body");
+    }
+
+    private static bool AddComebackBoost(List<PlannedNotification> list, DateTime utcNow)
+    {
+        DateTime fire = utcNow.AddHours(ComebackBoost.MinAbsenceHours);
+        if (!ComebackBoost.WouldQualifyAt(fire)) return false;
+        int before = list.Count;
+        AddForward(list, "comeback_boost", PriorityComebackBoost, fire, utcNow,
+            "notif_comeback_boost_title", "notif_comeback_boost_body");
+        return list.Count > before;
     }
 
     private static void AddComeback(List<PlannedNotification> list, DateTime utcNow, int days, string titleKey, string bodyKey)

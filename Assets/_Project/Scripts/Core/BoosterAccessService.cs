@@ -92,8 +92,13 @@ public static class BoosterAccessService
     {
         EnsureGameSession();
         if (!IsUnlocked(boosterIndex)) return false;
-        return sessionFree[boosterIndex] || BoosterInventory.GetCount(ToMode(boosterIndex)) > 0;
+        return sessionFree[boosterIndex] || IsTimedFree(boosterIndex)
+            || BoosterInventory.GetCount(ToMode(boosterIndex)) > 0;
     }
+
+    /// <summary>Süreli sınırsız kullanım (ör. geri dönüş bonusu) aktif mi? Hak düşmez, free-oyun da harcanmaz.</summary>
+    public static bool IsTimedFree(int boosterIndex)
+        => IsUnlocked(boosterIndex) && TimedRewardService.IsBoosterFree(ToMode(boosterIndex));
 
     /// <summary>Free kullanım tüketildiğinde (booster index'i ile) yayınlanır — UI rozeti kapatıp sayacı açar.</summary>
     public static event System.Action<int> OnFreeConsumed;
@@ -107,6 +112,7 @@ public static class BoosterAccessService
         EnsureGameSession();
         int index = ToIndex(mode);
         if (index < 0) return;
+        if (TimedRewardService.IsBoosterFree(mode)) return;
 
         if (sessionFree[index])
         {

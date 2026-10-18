@@ -29,6 +29,17 @@ public class DailySlotReward
     [Tooltip("Miktar — coin için altın sayısı, joker/booster için adet, life için kalp sayısı.")]
     [Min(1)] public int amount = 1;
 
+    [Tooltip("0 = normal ödül (adet). >0 = SÜRELİ: bu kadar dakika sınırsız kullanım (can, oyun başı special, joker); " +
+             "adet yok sayılır. Süreli desteklemeyen tipte (altın, yıldız) etkisizdir.")]
+    [Min(0)] public int durationMinutes;
+
+    public bool IsTimed => durationMinutes > 0 && TimedRewardService.SupportsTimed(type);
+
+    /// <summary>Ödül ekranlarındaki miktar yazısı: "x2" ya da süreli için "30 dk".</summary>
+    public string AmountLabel => IsTimed
+        ? GameLocalization.GetFormat("progress_reward_minutes", durationMinutes)
+        : "x" + Mathf.Max(1, amount);
+
     [Tooltip("Slot reel'de ve kazanma popup'ında gösterilecek ikon. Boş bırakılırsa " +
              "joker/booster ikonu TileIconLibrary'den (Shared) otomatik çözülür.")]
     public Sprite icon;
@@ -78,6 +89,7 @@ public class DailySlotReward
         DailySlotRewardType.Booster_Row          => "shop_reward_row",
         DailySlotRewardType.Booster_Column       => "shop_reward_column",
         DailySlotRewardType.Booster_Shuffle      => "shop_reward_shuffle",
+        DailySlotRewardType.Booster_PaintBucket  => "shop_reward_paint",
         _                                        => null,
     };
 
