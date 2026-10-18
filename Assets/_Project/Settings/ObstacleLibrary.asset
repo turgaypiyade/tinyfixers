@@ -3757,7 +3757,11 @@ MonoBehaviour:
       holdsTile: 0
       suppressHitParticles: 0
       hitParticleSprites:
-      - {fileID: 21300000, guid: c4ad1211e5adf4d0fb4cd3d32d67a81d, type: 3}
+      - {fileID: 21300000, guid: e6e2640e8c404005987158b49eeb07c0, type: 3}
+      - {fileID: 21300000, guid: cca9190e846c428a82cee2b467d7de8c, type: 3}
+      - {fileID: 21300000, guid: 21ac026d255d4619959378c4b1368bbb, type: 3}
+      - {fileID: 21300000, guid: 0de1906b5e424b748b91225be26bddfb, type: 3}
+      - {fileID: 21300000, guid: 703fd6dff87a4d1ba5125a5c88968838, type: 3}
       hitSound: {fileID: 0}
       hitSoundVolume: 1
     - sprite: {fileID: 21300000, guid: 25087cdc313d4f2d82e6be29be2114c2, type: 3}
@@ -3769,7 +3773,11 @@ MonoBehaviour:
       holdsTile: 0
       suppressHitParticles: 0
       hitParticleSprites:
-      - {fileID: 21300000, guid: c4ad1211e5adf4d0fb4cd3d32d67a81d, type: 3}
+      - {fileID: 21300000, guid: e6e2640e8c404005987158b49eeb07c0, type: 3}
+      - {fileID: 21300000, guid: cca9190e846c428a82cee2b467d7de8c, type: 3}
+      - {fileID: 21300000, guid: 21ac026d255d4619959378c4b1368bbb, type: 3}
+      - {fileID: 21300000, guid: 0de1906b5e424b748b91225be26bddfb, type: 3}
+      - {fileID: 21300000, guid: 703fd6dff87a4d1ba5125a5c88968838, type: 3}
       hitSound: {fileID: 0}
       hitSoundVolume: 1
     - sprite: {fileID: 21300000, guid: 883896fbd1854b989ccc02f5e19b6cc7, type: 3}
@@ -3781,7 +3789,11 @@ MonoBehaviour:
       holdsTile: 1
       suppressHitParticles: 0
       hitParticleSprites:
-      - {fileID: -9004337153635042660, guid: 8c185012295424a2187904d2bc9f87a9, type: 3}
+      - {fileID: 21300000, guid: e6e2640e8c404005987158b49eeb07c0, type: 3}
+      - {fileID: 21300000, guid: cca9190e846c428a82cee2b467d7de8c, type: 3}
+      - {fileID: 21300000, guid: 21ac026d255d4619959378c4b1368bbb, type: 3}
+      - {fileID: 21300000, guid: 0de1906b5e424b748b91225be26bddfb, type: 3}
+      - {fileID: 21300000, guid: 703fd6dff87a4d1ba5125a5c88968838, type: 3}
       hitSound: {fileID: 0}
       hitSoundVolume: 1
     auxiliarySprites: []
@@ -3796,8 +3808,19 @@ MonoBehaviour:
     goalIconSprite: {fileID: 21300000, guid: cb4dfdec96f04b2eb5cd09f9b669bf8d, type: 3}
     coversCellFully: 0
     suppressHitParticles: 0
-    hitParticleSprites: []
-    breakParticleSprites: []
+    hitParticleSprites:
+    - {fileID: 21300000, guid: e6e2640e8c404005987158b49eeb07c0, type: 3}
+    - {fileID: 21300000, guid: cca9190e846c428a82cee2b467d7de8c, type: 3}
+    - {fileID: 21300000, guid: 21ac026d255d4619959378c4b1368bbb, type: 3}
+    - {fileID: 21300000, guid: 0de1906b5e424b748b91225be26bddfb, type: 3}
+    - {fileID: 21300000, guid: 703fd6dff87a4d1ba5125a5c88968838, type: 3}
+    breakParticleSprites:
+    - {fileID: 21300000, guid: e6e2640e8c404005987158b49eeb07c0, type: 3}
+    - {fileID: 21300000, guid: cca9190e846c428a82cee2b467d7de8c, type: 3}
+    - {fileID: 21300000, guid: 21ac026d255d4619959378c4b1368bbb, type: 3}
+    - {fileID: 21300000, guid: 0de1906b5e424b748b91225be26bddfb, type: 3}
+    - {fileID: 21300000, guid: 703fd6dff87a4d1ba5125a5c88968838, type: 3}
+    particleScale: 1.6
     wardrobeItemSprites: []
     hamsterSatiety: 7
     hitSound: {fileID: 8300000, guid: 0f1bde174f79747b18d415aac08278f5, type: 3}
@@ -3829,7 +3852,11 @@ MonoBehaviour:
       holdsTile: 0
       suppressHitParticles: 0
       hitParticleSprites:
-      - {fileID: 21300000, guid: c4ad1211e5adf4d0fb4cd3d32d67a81d, type: 3}
+      - {fileID: 21300000, guid: d727f2b4216c4898915ae132ddab7cae, type: 3}
+      - {fileID: 21300000, guid: d1c6c69cdd0449979cc550c1669e75b3, type: 3}
+      - {fileID: 21300000, guid: 09d8543c02134af3923d718f4dd19bf5, type: 3}
+      - {fileID: 21300000, guid: 21bc27f297754d65970be744b64a2704, type: 3}
+      - {fileID: 21300000, guid: 2953d6a2879e4b51ba312ab8cf4302d3, type: 3}
       hitSound: {fileID: 0}
       hitSoundVolume: 1
     - sprite: {fileID: 21300000, guid: 85b16a6a8fce4d68be11c6d509b940ba, type: 3}
@@ -3841,7 +3868,11 @@ MonoBehaviour:
       holdsTile: 0
       suppressHitParticles: 0
       hitParticleSprites:
-      - {fileID: 21300000, guid: c4ad1211e5adf4d0fb4cd3d32d67a81d, type: 3}
+      - {fileID: 21300000, guid: d727f2b4216c4898915ae132ddab7cae, type: 3}
+      - {fileID: 21300000, guid: d1c6c69cdd0449979cc550c1669e75b3, type: 3}
+      - {fileID: 21300000, guid: 09d8543c02134af3923d718f4dd19bf5, type: 3}
+      - {fileID: 21300000, guid: 21bc27f297754d65970be744b64a2704, type: 3}
+      - {fileID: 21300000, guid: 2953d6a2879e4b51ba312ab8cf4302d3, type: 3}
       hitSound: {fileID: 0}
       hitSoundVolume: 1
     - sprite: {fileID: 21300000, guid: 5bcaec9ef7af4e5d9019a22b599ad66f, type: 3}
@@ -3853,7 +3884,11 @@ MonoBehaviour:
       holdsTile: 1
       suppressHitParticles: 0
       hitParticleSprites:
-      - {fileID: -9004337153635042660, guid: 8c185012295424a2187904d2bc9f87a9, type: 3}
+      - {fileID: 21300000, guid: d727f2b4216c4898915ae132ddab7cae, type: 3}
+      - {fileID: 21300000, guid: d1c6c69cdd0449979cc550c1669e75b3, type: 3}
+      - {fileID: 21300000, guid: 09d8543c02134af3923d718f4dd19bf5, type: 3}
+      - {fileID: 21300000, guid: 21bc27f297754d65970be744b64a2704, type: 3}
+      - {fileID: 21300000, guid: 2953d6a2879e4b51ba312ab8cf4302d3, type: 3}
       hitSound: {fileID: 0}
       hitSoundVolume: 1
     auxiliarySprites: []
@@ -3868,8 +3903,19 @@ MonoBehaviour:
     goalIconSprite: {fileID: 21300000, guid: 89b7a55a752a4aaaa13c336720236019, type: 3}
     coversCellFully: 0
     suppressHitParticles: 0
-    hitParticleSprites: []
-    breakParticleSprites: []
+    hitParticleSprites:
+    - {fileID: 21300000, guid: d727f2b4216c4898915ae132ddab7cae, type: 3}
+    - {fileID: 21300000, guid: d1c6c69cdd0449979cc550c1669e75b3, type: 3}
+    - {fileID: 21300000, guid: 09d8543c02134af3923d718f4dd19bf5, type: 3}
+    - {fileID: 21300000, guid: 21bc27f297754d65970be744b64a2704, type: 3}
+    - {fileID: 21300000, guid: 2953d6a2879e4b51ba312ab8cf4302d3, type: 3}
+    breakParticleSprites:
+    - {fileID: 21300000, guid: d727f2b4216c4898915ae132ddab7cae, type: 3}
+    - {fileID: 21300000, guid: d1c6c69cdd0449979cc550c1669e75b3, type: 3}
+    - {fileID: 21300000, guid: 09d8543c02134af3923d718f4dd19bf5, type: 3}
+    - {fileID: 21300000, guid: 21bc27f297754d65970be744b64a2704, type: 3}
+    - {fileID: 21300000, guid: 2953d6a2879e4b51ba312ab8cf4302d3, type: 3}
+    particleScale: 1.6
     wardrobeItemSprites: []
     hamsterSatiety: 7
     hitSound: {fileID: 8300000, guid: 0f1bde174f79747b18d415aac08278f5, type: 3}
@@ -3901,7 +3947,11 @@ MonoBehaviour:
       holdsTile: 0
       suppressHitParticles: 0
       hitParticleSprites:
-      - {fileID: 21300000, guid: c4ad1211e5adf4d0fb4cd3d32d67a81d, type: 3}
+      - {fileID: 21300000, guid: 12cb90b761a5430d92ea065decea11a3, type: 3}
+      - {fileID: 21300000, guid: 225aeacd6fe048dcb183aa9ed5fdd8b4, type: 3}
+      - {fileID: 21300000, guid: 30d8d5b28fa3454485600cf0c5caa168, type: 3}
+      - {fileID: 21300000, guid: 13aed3b173844cf7a6eb997088013589, type: 3}
+      - {fileID: 21300000, guid: 507e9db317f84d4c9e3679767c00c448, type: 3}
       hitSound: {fileID: 0}
       hitSoundVolume: 1
     - sprite: {fileID: 21300000, guid: 9aa1fbdaf8c54e17b8ba9846ac1f2b69, type: 3}
@@ -3913,7 +3963,11 @@ MonoBehaviour:
       holdsTile: 0
       suppressHitParticles: 0
       hitParticleSprites:
-      - {fileID: 21300000, guid: c4ad1211e5adf4d0fb4cd3d32d67a81d, type: 3}
+      - {fileID: 21300000, guid: 12cb90b761a5430d92ea065decea11a3, type: 3}
+      - {fileID: 21300000, guid: 225aeacd6fe048dcb183aa9ed5fdd8b4, type: 3}
+      - {fileID: 21300000, guid: 30d8d5b28fa3454485600cf0c5caa168, type: 3}
+      - {fileID: 21300000, guid: 13aed3b173844cf7a6eb997088013589, type: 3}
+      - {fileID: 21300000, guid: 507e9db317f84d4c9e3679767c00c448, type: 3}
       hitSound: {fileID: 0}
       hitSoundVolume: 1
     - sprite: {fileID: 21300000, guid: 0468fe57d6f141d2996fd1562b9a67d2, type: 3}
@@ -3925,7 +3979,11 @@ MonoBehaviour:
       holdsTile: 1
       suppressHitParticles: 0
       hitParticleSprites:
-      - {fileID: -9004337153635042660, guid: 8c185012295424a2187904d2bc9f87a9, type: 3}
+      - {fileID: 21300000, guid: 12cb90b761a5430d92ea065decea11a3, type: 3}
+      - {fileID: 21300000, guid: 225aeacd6fe048dcb183aa9ed5fdd8b4, type: 3}
+      - {fileID: 21300000, guid: 30d8d5b28fa3454485600cf0c5caa168, type: 3}
+      - {fileID: 21300000, guid: 13aed3b173844cf7a6eb997088013589, type: 3}
+      - {fileID: 21300000, guid: 507e9db317f84d4c9e3679767c00c448, type: 3}
       hitSound: {fileID: 0}
       hitSoundVolume: 1
     auxiliarySprites: []
@@ -3940,8 +3998,19 @@ MonoBehaviour:
     goalIconSprite: {fileID: 21300000, guid: 0aff55f298a04b50a690ce90519e4049, type: 3}
     coversCellFully: 0
     suppressHitParticles: 0
-    hitParticleSprites: []
-    breakParticleSprites: []
+    hitParticleSprites:
+    - {fileID: 21300000, guid: 12cb90b761a5430d92ea065decea11a3, type: 3}
+    - {fileID: 21300000, guid: 225aeacd6fe048dcb183aa9ed5fdd8b4, type: 3}
+    - {fileID: 21300000, guid: 30d8d5b28fa3454485600cf0c5caa168, type: 3}
+    - {fileID: 21300000, guid: 13aed3b173844cf7a6eb997088013589, type: 3}
+    - {fileID: 21300000, guid: 507e9db317f84d4c9e3679767c00c448, type: 3}
+    breakParticleSprites:
+    - {fileID: 21300000, guid: 12cb90b761a5430d92ea065decea11a3, type: 3}
+    - {fileID: 21300000, guid: 225aeacd6fe048dcb183aa9ed5fdd8b4, type: 3}
+    - {fileID: 21300000, guid: 30d8d5b28fa3454485600cf0c5caa168, type: 3}
+    - {fileID: 21300000, guid: 13aed3b173844cf7a6eb997088013589, type: 3}
+    - {fileID: 21300000, guid: 507e9db317f84d4c9e3679767c00c448, type: 3}
+    particleScale: 1.6
     wardrobeItemSprites: []
     hamsterSatiety: 7
     hitSound: {fileID: 8300000, guid: 0f1bde174f79747b18d415aac08278f5, type: 3}
@@ -3973,7 +4042,11 @@ MonoBehaviour:
       holdsTile: 0
       suppressHitParticles: 0
       hitParticleSprites:
-      - {fileID: 21300000, guid: c4ad1211e5adf4d0fb4cd3d32d67a81d, type: 3}
+      - {fileID: 21300000, guid: 17c110229106402b8bbd7263f6030147, type: 3}
+      - {fileID: 21300000, guid: fc1caa769a0a43608ca8681558e775f4, type: 3}
+      - {fileID: 21300000, guid: ef9c529b4c6e4979861a0e245be74709, type: 3}
+      - {fileID: 21300000, guid: 15de396729ec473389d93219f909e9ca, type: 3}
+      - {fileID: 21300000, guid: 49c00dbf8b8146e5ab890bfa7e3f32b5, type: 3}
       hitSound: {fileID: 0}
       hitSoundVolume: 1
     - sprite: {fileID: 21300000, guid: c2ffab6d0b824be99aa707c0b14e323a, type: 3}
@@ -3985,7 +4058,11 @@ MonoBehaviour:
       holdsTile: 0
       suppressHitParticles: 0
       hitParticleSprites:
-      - {fileID: 21300000, guid: c4ad1211e5adf4d0fb4cd3d32d67a81d, type: 3}
+      - {fileID: 21300000, guid: 17c110229106402b8bbd7263f6030147, type: 3}
+      - {fileID: 21300000, guid: fc1caa769a0a43608ca8681558e775f4, type: 3}
+      - {fileID: 21300000, guid: ef9c529b4c6e4979861a0e245be74709, type: 3}
+      - {fileID: 21300000, guid: 15de396729ec473389d93219f909e9ca, type: 3}
+      - {fileID: 21300000, guid: 49c00dbf8b8146e5ab890bfa7e3f32b5, type: 3}
       hitSound: {fileID: 0}
       hitSoundVolume: 1
     - sprite: {fileID: 21300000, guid: e3ffe65addaf454f81d19d0fb34891b2, type: 3}
@@ -3997,7 +4074,11 @@ MonoBehaviour:
       holdsTile: 1
       suppressHitParticles: 0
       hitParticleSprites:
-      - {fileID: -9004337153635042660, guid: 8c185012295424a2187904d2bc9f87a9, type: 3}
+      - {fileID: 21300000, guid: 17c110229106402b8bbd7263f6030147, type: 3}
+      - {fileID: 21300000, guid: fc1caa769a0a43608ca8681558e775f4, type: 3}
+      - {fileID: 21300000, guid: ef9c529b4c6e4979861a0e245be74709, type: 3}
+      - {fileID: 21300000, guid: 15de396729ec473389d93219f909e9ca, type: 3}
+      - {fileID: 21300000, guid: 49c00dbf8b8146e5ab890bfa7e3f32b5, type: 3}
       hitSound: {fileID: 0}
       hitSoundVolume: 1
     auxiliarySprites: []
@@ -4012,8 +4093,19 @@ MonoBehaviour:
     goalIconSprite: {fileID: 21300000, guid: 0356079cd8834981ab0966054819ff9f, type: 3}
     coversCellFully: 0
     suppressHitParticles: 0
-    hitParticleSprites: []
-    breakParticleSprites: []
+    hitParticleSprites:
+    - {fileID: 21300000, guid: 17c110229106402b8bbd7263f6030147, type: 3}
+    - {fileID: 21300000, guid: fc1caa769a0a43608ca8681558e775f4, type: 3}
+    - {fileID: 21300000, guid: ef9c529b4c6e4979861a0e245be74709, type: 3}
+    - {fileID: 21300000, guid: 15de396729ec473389d93219f909e9ca, type: 3}
+    - {fileID: 21300000, guid: 49c00dbf8b8146e5ab890bfa7e3f32b5, type: 3}
+    breakParticleSprites:
+    - {fileID: 21300000, guid: 17c110229106402b8bbd7263f6030147, type: 3}
+    - {fileID: 21300000, guid: fc1caa769a0a43608ca8681558e775f4, type: 3}
+    - {fileID: 21300000, guid: ef9c529b4c6e4979861a0e245be74709, type: 3}
+    - {fileID: 21300000, guid: 15de396729ec473389d93219f909e9ca, type: 3}
+    - {fileID: 21300000, guid: 49c00dbf8b8146e5ab890bfa7e3f32b5, type: 3}
+    particleScale: 1.6
     wardrobeItemSprites: []
     hamsterSatiety: 7
     hitSound: {fileID: 8300000, guid: 0f1bde174f79747b18d415aac08278f5, type: 3}
