@@ -42,6 +42,12 @@ public sealed class RuntimeSimulationSession : MonoBehaviour
         public float timeScale = 1f;
         public float stepTimeoutSeconds = 120f;
         public string outputPath;
+        // Social-clip recording (editor only). recordDir empty = normal simulation.
+        public string recordDir;
+        public string ffmpegPath = "/opt/homebrew/bin/ffmpeg";
+        public int recordFps = 30;
+        public float thinkSeconds = 0.75f;     // human-like pause before each move (game time)
+        public float tailSeconds = 2.5f;       // keep filming after the last move
     }
 
     [Serializable]
@@ -83,6 +89,8 @@ public sealed class RuntimeSimulationSession : MonoBehaviour
     private float _gameStarted;
     private bool _finished;
     private bool _sceneLoadFailed;
+    private RuntimeGameplayRecorder _recorder;
+    private bool Recording => _recorder != null;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     private static void Bootstrap()
@@ -105,6 +113,8 @@ public sealed class RuntimeSimulationSession : MonoBehaviour
         CurrentLevel = UnityEditor.AssetDatabase.LoadAssetAtPath<LevelData>(config.levelPaths[0]);
         UnityEngine.Random.InitState(config.seed);
         Application.logMessageReceived += session.OnLog;
+        if (!string.IsNullOrEmpty(config.recordDir))
+            session._recorder = RuntimeGameplayRecorder.Create(config.ffmpegPath, config.recordFps);
     }
 
     private IEnumerator Start()
@@ -139,8 +149,15 @@ public sealed class RuntimeSimulationSession : MonoBehaviour
                         UnityEngine.Random.InitState(seed);
                         yield return LoadGameScene(result);
                     }
+                    if (Recording)
+                        _recorder.BeginClip(Path.Combine(_config.recordDir, $"{result.level}_s{sample:00}.mp4"));
                     if (string.IsNullOrEmpty(result.outcome))
                         yield return GuardGame(PlayGame(result), result);
+                    if (Recording)
+                    {
+                        yield return new WaitForSeconds(_config.tailSeconds);
+                        _recorder.EndClip();
+                    }
                 }
                 first = false;
                 CaptureResult(result);
@@ -283,6 +300,7 @@ public sealed class RuntimeSimulationSession : MonoBehaviour
                     break;
                 }
 
+                if (Recording) yield return new WaitForSeconds(_config.thinkSeconds);
                 int before = board.RemainingMoves;
                 result.trace.Add($"moves={before}; board={bot.BoardFingerprint()}; emptySlots={DescribeEmptyCells(board)}; {move.Value}");
                 bot.Submit(move.Value); // Exactly the same input entry points as clicking/dragging.
@@ -448,6 +466,7 @@ public sealed class RuntimeSimulationSession : MonoBehaviour
     {
         if (_config == null) return;
         Application.logMessageReceived -= OnLog;
+        if (_recorder != null) Destroy(_recorder.gameObject);
         try
         {
             if (!_finished)

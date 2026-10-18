@@ -90,6 +90,9 @@ public class ObstacleDef
     [Tooltip("Obstacle tamamen kırıldığında kullanılacak particle sprite sheet parçaları.")]
     public List<Sprite> breakParticleSprites = new();
 
+    [Tooltip("Vuruş/kırılma parçacıklarının ölçeği (1 = varsayılan). Büyük parça istenen engelde (renkli sandık) artır.")]
+    [Min(0.1f)] public float particleScale = 1f;
+
     [Header("Wardrobe")]
     [Tooltip("Wardrobe obstacle'ının içindeki item sprite'ları. Sıra: soldan sağa fiziksel pozisyon. " +
              "hits = 1 (kapı açma) + bu liste uzunluğu olarak ayarlanmalı.")]

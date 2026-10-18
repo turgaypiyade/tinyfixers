@@ -167,12 +167,14 @@ public class BoardBreakFxService
         if (UsesDropletBreakFx(change.obstacleId) && TryPlayOilDropletUiBurst(worldPos, particleSprites))
             return;
 
+        var particleDef = board.LevelData?.obstacleLibrary?.Get(change.obstacleId);
         SpawnAtWorld(
             prefab,
             lifetime,
             worldPos,
             fxColor,
             particleSprites,
+            scale: particleDef != null ? particleDef.particleScale : 1f,
             useOilDropletMotion: UsesDropletBreakFx(change.obstacleId));
     }
 
