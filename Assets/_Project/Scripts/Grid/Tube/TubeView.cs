@@ -117,20 +117,24 @@ public class TubeView : MonoBehaviour
         StartCoroutine(EmitChips());
     }
 
-    public void DestroyView()
+    /// Son hücre vuruldu: tüp o an parçalanır (kendi taban görselinden iri parçalar saçılır) ve kaybolur.
+    /// host: parça coroutine'lerini sürdürecek yaşayan bileşen (tüp hemen yok edilir).
+    public void DestroyView(MonoBehaviour host)
     {
         if (destroying) return;
-        AnimateShrink(0);
         destroying = true;
-        StartCoroutine(FinishDestruction());
-    }
+        StopAllCoroutines();
 
-    private IEnumerator FinishDestruction()
-    {
-        yield return new WaitForSeconds(Mathf.Max(shrinkDuration, sawSpinDuration));
-        baseImage.enabled = false;
-        if (sawRt != null) sawRt.gameObject.SetActive(false);
-        yield return new WaitForSeconds(0.65f);
+        var root = transform.parent as RectTransform;
+        if (host != null && root != null && baseImage != null && baseImage.sprite != null)
+        {
+            var corners = new Vector3[4];
+            baseImage.rectTransform.GetWorldCorners(corners);
+            Vector2 a = WaterTankFx.WorldToLocal(corners[0], root);
+            Vector2 b = WaterTankFx.WorldToLocal(corners[2], root);
+            float size = Mathf.Max(Mathf.Abs(b.x - a.x), Mathf.Abs(b.y - a.y));   // yatay tüp döndürülmüş
+            WaterTankFx.SpawnShards(host, root, (a + b) * 0.5f, size, baseImage.sprite, 8, 1.8f);
+        }
         Destroy(gameObject);
     }
 

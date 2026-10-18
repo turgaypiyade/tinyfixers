@@ -29,7 +29,8 @@ public static class SimMatchFinderValidation
         RunCase("DecideSpecial: PulseCore",      TestDecideSpecialPulseCore, ref pass, ref fail);
         RunCase("DecideSpecial: PatchBot",       TestDecideSpecialPatchBot, ref pass, ref fail);
 
-        Debug.Log($"[SimMatchFinder] Validation complete: {pass} PASS, {fail} FAIL");
+        if (GameDiagnostics.EditorTools)
+            Debug.Log($"[SimMatchFinder] Validation complete: {pass} PASS, {fail} FAIL");
     }
 
     // ── Test cases ───────────────────────────────────────────────────────────
@@ -320,18 +321,21 @@ public static class SimMatchFinderValidation
             string error = test();
             if (error == null)
             {
-                Debug.Log($"[SimMatchFinder] PASS  {name}");
+                if (GameDiagnostics.EditorTools)
+                    Debug.Log($"[SimMatchFinder] PASS  {name}");
                 pass++;
             }
             else
             {
-                Debug.LogError($"[SimMatchFinder] FAIL  {name}\n{error}");
+                if (GameDiagnostics.EditorTools)
+                    Debug.LogError($"[SimMatchFinder] FAIL  {name}\n{error}");
                 fail++;
             }
         }
         catch (Exception ex)
         {
-            Debug.LogError($"[SimMatchFinder] FAIL  {name} (EXCEPTION)\n{ex}");
+            if (GameDiagnostics.EditorTools)
+                Debug.LogError($"[SimMatchFinder] FAIL  {name} (EXCEPTION)\n{ex}");
             fail++;
         }
     }

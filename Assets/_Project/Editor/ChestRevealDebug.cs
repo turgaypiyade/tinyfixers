@@ -27,6 +27,9 @@ public static class ChestRevealDebug
             new DailySlotReward { type = DailySlotRewardType.Stars, amount = 3,   icon = star, fallbackName = "Yıldız" },
         };
 
-        RewardChestRevealOverlay.Show(rewards, () => Debug.Log("[ChestRevealDebug] Tören bitti."));
+        RewardChestRevealOverlay.Show(rewards, () => {
+    if (GameDiagnostics.EditorTools)
+        Debug.Log("[ChestRevealDebug] Tören bitti.");
+});
     }
 }

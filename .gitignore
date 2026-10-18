@@ -85,3 +85,8 @@ TFIOSBuild/
 # Firebase SDK unitypackage yeniden import edilerek geri gelir; build'e girmez.
 Assets/Firebase/Plugins/x86_64/FirebaseCppApp-*.bundle
 Assets/Firebase/Plugins/x86_64/FirebaseCppApp-*.bundle.meta
+
+# Web sitesi için ham oyun kareleri (işlenmiş hâlleri Website/img/ altına girer)
+/Website/raw/
+/Website/IMGStore/
+/Website/.wrangler/

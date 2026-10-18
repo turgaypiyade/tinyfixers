@@ -39,8 +39,6 @@ public class LightningSpawner : MonoBehaviour
         if (targetWorldPositions == null || targetWorldPositions.Count == 0)
             return;
 
-        Debug.Log($"[LightningSpawn.PlayEmitterLightning] emitter={V3(emitterWorldPos)} targets={targetWorldPositions.Count} root={(vfxRoot ? vfxRoot.name : "NULL")}");
-
         var targetsCopy = new List<Vector3>(targetWorldPositions.Count);
         for (int i = 0; i < targetWorldPositions.Count; i++)
             targetsCopy.Add(targetWorldPositions[i]);
@@ -65,8 +63,6 @@ public class LightningSpawner : MonoBehaviour
             onCompleted?.Invoke();
             return;
         }
-
-        Debug.Log($"[LightningSpawn.PlayLineSweepSteps] steps={stepWorldPositions.Count} root={(vfxRoot ? vfxRoot.name : "NULL")}");
         StartCoroutine(CoPlayLineSweepSteps(stepWorldPositions, onStepReached, onCompleted));
     }
 
@@ -100,7 +96,6 @@ public class LightningSpawner : MonoBehaviour
 
     public void PlayLineSweep(Vector3 lineStartWorldPos, Vector3 lineEndWorldPos)
     {
-        Debug.Log($"[LightningSpawn.PlayLineSweep] start={V3(lineStartWorldPos)} end={V3(lineEndWorldPos)} root={(vfxRoot ? vfxRoot.name : "NULL")}");
         StartCoroutine(CoPlayLineSweep(lineStartWorldPos, lineEndWorldPos));
     }
 
@@ -119,8 +114,6 @@ public class LightningSpawner : MonoBehaviour
         {
             var start = emitterWorldPos;
             var end = targets[i];
-
-            Debug.Log($"[LightningSpawn.CoPlay] index={i} start={V3(start)} end={V3(end)}");
 
             var beam = CreateBeamInstance();
             if (beam == null)

@@ -41,6 +41,8 @@ public class RepairProgressBar : MonoBehaviour
              "oturur; bu kadar yukarı alınır ki çubuğun ortasına hizalı dursun. Sahneden bağımsız (kodla uygulanır).")]
     [SerializeField] private float chestRaise = 26f;
     private bool chestRaised;
+    private bool chestAnimating;
+    private RewardChestMotion.Home chestHome;
 
     private void Awake()
     {
@@ -137,6 +139,9 @@ public class RepairProgressBar : MonoBehaviour
 
     private void OnDisable()
     {
+        StopAllCoroutines();
+        if (chestAnimating) chestHome.Restore();
+        chestAnimating = false;
         if (workshop != null)
         {
             workshop.OnStageCompleted   -= HandleStageCompleted;
@@ -189,7 +194,7 @@ public class RepairProgressBar : MonoBehaviour
 
     private void HandleFinalReward(WorkshopRewardBundle bundle)
     {
-        if (!gameObject.activeInHierarchy) return;
+        if (!gameObject.activeInHierarchy || chestAnimating) return;
         StartCoroutine(PlayChestOpenAnimation());
     }
 
@@ -215,7 +220,11 @@ public class RepairProgressBar : MonoBehaviour
         if (chestImage == null) yield break;
 
         var rt = chestImage.rectTransform;
+        chestAnimating = true;
+        chestHome = new RewardChestMotion.Home(rt);
         Vector3 startScale = rt.localScale;
+        yield return RewardChestMotion.Anticipate(rt);
+        UpdateChestSprite();
         Vector3 peakScale  = startScale * chestPopScale;
 
         float t = 0f;
@@ -241,6 +250,7 @@ public class RepairProgressBar : MonoBehaviour
         }
 
         rt.localScale = startScale;
-        UpdateChestSprite();
+        chestHome.Restore();
+        chestAnimating = false;
     }
 }

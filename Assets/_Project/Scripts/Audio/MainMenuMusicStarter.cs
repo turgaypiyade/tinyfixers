@@ -30,7 +30,8 @@ public class MainMenuMusicStarter : MonoBehaviour
         EnsureMusicManager();
         if (MusicManager.Instance == null)
         {
-            Debug.LogWarning("[MainMenuMusicStarter] MusicManager bulunamadı.");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogWarning("[MainMenuMusicStarter] MusicManager bulunamadı.");
             return;
         }
         PlaySelected();

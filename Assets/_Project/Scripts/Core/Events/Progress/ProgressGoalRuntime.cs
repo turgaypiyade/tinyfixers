@@ -15,9 +15,7 @@ public class ProgressGoalRuntime
             ? Mathf.Clamp01((float)CurrentCount / Definition.targetCount)
             : 0f;
 
-    // goalIcon null ise reward.icon'a düşer — UI bunu kullanır.
-    public Sprite DisplayIcon =>
-        Definition.goalIcon != null ? Definition.goalIcon : Definition.reward?.icon;
+    public Sprite DisplayIcon => Definition.ResolveGoalIcon();
 
     public ProgressGoalRuntime(ProgressGoalDefinition definition)
     {

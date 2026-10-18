@@ -110,8 +110,6 @@ public sealed class PatchBotSpecial
         var coordinator = new PatchBotTargetCoordinator(board, patchbotService);
         var special = new PatchBotSpecial();
 
-        Debug.Log($"[PatchBotSpecial] Group solo launch count={cells.Count}");
-
         for (int i = 0; i < cells.Count; i++)
         {
             var cell = cells[i];
@@ -241,6 +239,7 @@ public sealed class PatchBotSpecial
                 {
                     // Headless/no-VFX playback may invoke arrival without onStart.
                     dashStart?.Invoke();
+                    if (!IsInside(rt.Board, hitX, hitY)) return;
                     var arrivalCtx = new ResolutionContext();
                     var arrivalRt = new PatchBotExecutionRuntime
                     {
@@ -310,7 +309,7 @@ public sealed class PatchBotSpecial
                 finally
                 {
                     originHold?.Dispose();
-                    coordinator.ReleaseIntent(liveIntent ?? picked.intent);
+                    coordinator.ReleaseIntent(liveIntent);
                 }
             });
 
@@ -356,8 +355,8 @@ public sealed class PatchBotSpecial
             // Yoğun special zincirinde hücre bu patchbot'tan BAŞKA bir taşa reassign olmuş
             // (cascade doldurmuş) → yukarıdaki disposal atlanır, view sahnede orphan kalırdı.
             // Hücre DATA'sına dokunmadan orphan view'ı yok et (görsel hayalet fix).
-            Debug.LogWarning($"[PatchBot] ORPHAN yakalandı & yok edildi: origin=({cell.x},{cell.y}) " +
-                             $"hücre şu an başka taşa reassign olmuş (yoğun-zincir yarışı). Fix çalıştı.");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogWarning($"[PatchBot] ORPHAN yakalandı & yok edildi: origin=({cell.x},{cell.y}) " + $"hücre şu an başka taşa reassign olmuş (yoğun-zincir yarışı). Fix çalıştı.");
             board.DestroyOrphanedTileView(tile);
         }
     }
@@ -564,8 +563,6 @@ public sealed class PatchBotSpecial
     {
         const float staggerInterval = 0.04f;
 
-        Debug.Log($"[PatchBotSpecial] Override auto PatchBot sequence count={autoPatchBots.Count}");
-
         for (int i = 0; i < autoPatchBots.Count; i++)
         {
             var (autoPatchBot, sourceCell, sourceType) = autoPatchBots[i];
@@ -573,8 +570,6 @@ public sealed class PatchBotSpecial
 
             if (autoPatchBot.GetSpecial() != TileSpecial.PatchBot)
                 continue;
-
-            Debug.Log($"[PatchBotSpecial] Override auto PatchBot step={i + 1}/{autoPatchBots.Count} cell={sourceCell}");
 
             var nestedCtx = new ResolutionContext();
             var nestedRt = new PatchBotExecutionRuntime

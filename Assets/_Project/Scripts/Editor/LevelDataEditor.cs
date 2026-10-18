@@ -4,15 +4,22 @@ using UnityEngine;
 [CustomEditor(typeof(LevelData))]
 public class LevelDataEditor : Editor
 {
-    private enum PaintMode { Mask, Obstacle, Tube, Magnet, Tiles, Safe, Overlay, Erase }
+    private enum PaintMode { Mask, Obstacle, Tube, Magnet, Tiles, Safe, Overlay, Erase, AncientSeal }
 
     private PaintMode mode = PaintMode.Obstacle;
     private ObstacleId selectedObstacle = ObstacleId.Stone;
+    private int selectedHamsterSatiety = 7;   // yerleştirilecek hamsterin lokma sayısı
+    private TarpStatueColor selectedTarpColor = TarpStatueColor.Red;          // yerleştirilecek heykelin etiket rengi
+    private int selectedTarpCount = LevelData.TarpStatueDefaultCount;         // brandanın kalkması için toplanacak taş
+    private int selectedTarpSize = TarpStatueEntry.TarpStatueMinSize;         // kare boyut (2/3/4)
     // Duvar (Wall) numaralı fırça: aynı numaralı BİTİŞİK duvar hücreleri tek parça (tek origin).
     private int selectedWallPiece = 1;
     private bool showBossOilSettings;
 
     // Safe (kasa) settings — tıklanan hücre sol-üst origin; WxH bölgeyi kaplar.
+    private AncientSealStartColor selectedSealStartColor = AncientSealStartColor.Auto;
+    private int selectedSealW = 3, selectedSealH = 3;
+    private int selectedSealRed = 4, selectedSealYellow = 4, selectedSealGreen = 4;
     private int selectedSafeW = 2;
     private int selectedSafeH = 2;
     private int selectedSafeRed = 3;
@@ -84,7 +91,7 @@ public class LevelDataEditor : Editor
 
         EditorGUILayout.Space(6);
 
-        mode = (PaintMode)GUILayout.Toolbar((int)mode, new[] { "Mask", "Obstacle", "Tube", "Magnet", "Tiles", "Safe", "Overlay", "Erase" });
+        mode = (PaintMode)GUILayout.Toolbar((int)mode, new[] { "Mask", "Obstacle", "Tube", "Magnet", "Tiles", "Safe", "Overlay", "Erase", "Ancient Seal" });
 
         if (mode == PaintMode.Obstacle)
             DrawPalette(level);
@@ -96,6 +103,8 @@ public class LevelDataEditor : Editor
             DrawTilePinPalette(level);
         else if (mode == PaintMode.Safe)
             DrawSafePalette(level);
+        else if (mode == PaintMode.AncientSeal)
+            DrawAncientSealPalette(level);
         else if (mode == PaintMode.Overlay)
             DrawOverlayPalette(level);
         else
@@ -163,8 +172,27 @@ public class LevelDataEditor : Editor
         // Aç Hamster: level'da hamster varsa doyma eşiği (0 = ObstacleLibrary varsayılanı).
         if (level.obstacles != null && System.Array.IndexOf(level.obstacles, (int)ObstacleId.Hamster) >= 0)
             level.hamsterSatietyOverride = Mathf.Max(0, EditorGUILayout.IntField(
-                new GUIContent("Hamster Doyma (lokma)", "0 = ObstacleLibrary'deki varsayılan (hamsterSatiety)."),
+                new GUIContent("Hamster Varsayılan Lokma", "Hücresinde kendi sayısı olmayan hamsterler için. 0 = ObstacleLibrary'deki varsayılan (hamsterSatiety)."),
                 level.hamsterSatietyOverride));
+
+        // Boya kutusu kasaları: her kasanın kutu rengi (Auto = satır bandına göre).
+        if (level.obstacles != null && level.obstacleOrigins != null && level.width > 0)
+        {
+            for (int i = 0; i < level.obstacles.Length && i < level.obstacleOrigins.Length; i++)
+            {
+                if (level.obstacles[i] != (int)ObstacleId.PaintCanBox || level.obstacleOrigins[i] != i) continue;
+                var current = level.GetPaintCanBoxColor(i);
+                var next = (PaintCanColor)EditorGUILayout.EnumPopup(
+                    new GUIContent($"Boya Kasası ({i % level.width},{i / level.width})",
+                        "Kutu rengi. Auto = kasanın satırına göre otomatik."), current);
+                if (next != current)
+                {
+                    Undo.RecordObject(level, "Boya Kasası Rengi");
+                    level.SetPaintCanBoxColor(i, next);
+                    EditorUtility.SetDirty(level);
+                }
+            }
+        }
 
         // Boss düellosu kendi hayvan intro'sunu (BossDuelIntroArtwork) oynatır; sol/sağ sprite'lı
         // özel intro orada hiç okunmaz. Yalnız giriş süreleri kullanılır.
@@ -422,6 +450,8 @@ public class LevelDataEditor : Editor
                 removeIndex = i;
             EditorGUILayout.EndHorizontal();
 
+            var prevTargetType = goal.targetType;
+            var prevObstacleId = goal.obstacleId;
             goal.targetType = (LevelGoalTargetType)EditorGUILayout.EnumPopup("Target Type", goal.targetType);
             switch (goal.targetType)
             {
@@ -436,8 +466,39 @@ public class LevelDataEditor : Editor
                     break;
             }
 
+            // Obstacle seçilince Amount'a tahtadaki sayı önerilir (sonra elle değiştirilebilir).
+            int boardCount = goal.targetType == LevelGoalTargetType.Obstacle
+                ? CountGoalObstacles(level, goal.obstacleId)
+                : -1;
+            bool obstaclePicked = goal.targetType == LevelGoalTargetType.Obstacle
+                                  && (prevTargetType != goal.targetType || prevObstacleId != goal.obstacleId);
+            if (obstaclePicked && boardCount > 0)
+                goal.amount = boardCount;
+
             goal.iconOverride = (Sprite)EditorGUILayout.ObjectField("Icon Override", goal.iconOverride, typeof(Sprite), false);
             goal.amount = Mathf.Max(1, EditorGUILayout.IntField("Amount", goal.amount));
+
+            if (boardCount >= 0)
+            {
+                EditorGUILayout.BeginHorizontal();
+                string hint = goal.obstacleId == ObstacleId.SpreadingGel
+                    ? $"Oynanır hücre: {boardCount}"
+                    : $"Tahtada: {boardCount}";
+                var style = boardCount != goal.amount ? EditorStyles.boldLabel : EditorStyles.miniLabel;
+                var prevColor = GUI.color;
+                if (boardCount != goal.amount && goal.obstacleId != ObstacleId.SpreadingGel)
+                    GUI.color = new Color(1f, 0.55f, 0.45f);
+                EditorGUILayout.LabelField(" ", hint, style);
+                GUI.color = prevColor;
+                using (new EditorGUI.DisabledScope(boardCount <= 0 || boardCount == goal.amount))
+                {
+                    if (GUILayout.Button("Eşitle", GUILayout.Width(60)))
+                        goal.amount = boardCount;
+                }
+                EditorGUILayout.EndHorizontal();
+            }
+            if (goal.targetType == LevelGoalTargetType.Obstacle && goal.obstacleId == ObstacleId.BilliardBall)
+                DrawBilliardReachWarning(level, goal.amount);
             EditorGUILayout.EndVertical();
         }
 
@@ -453,6 +514,195 @@ public class LevelDataEditor : Editor
             var list = new System.Collections.Generic.List<LevelGoalDefinition>(level.goals) { new LevelGoalDefinition() };
             level.goals = list.ToArray();
         }
+    }
+
+    private static readonly string[] TarpSizeLabels = { "2x2", "3x3", "4x4" };
+
+    // Yeni heykel ayarları + tahtadaki her heykelin rengi/sayısı/boyutu (sonradan da değişir; aynı engel, boyut ayarlı).
+    private void DrawTarpStatuePalette(LevelData level)
+    {
+        EditorGUILayout.LabelField("Yeni heykel", EditorStyles.boldLabel);
+        selectedTarpSize = TarpStatueEntry.TarpStatueMinSize + GUILayout.Toolbar(
+            Mathf.Clamp(selectedTarpSize - TarpStatueEntry.TarpStatueMinSize, 0, 2), TarpSizeLabels);
+        selectedTarpColor = (TarpStatueColor)EditorGUILayout.EnumPopup(
+            new GUIContent("Etiket rengi", "Brandanın kalkması için tahtanın herhangi bir yerinde toplanacak taş rengi."),
+            selectedTarpColor);
+        selectedTarpCount = Mathf.Max(1, EditorGUILayout.IntField(
+            new GUIContent("Toplanacak taş", "Etikette geri sayan sayı."), selectedTarpCount));
+        EditorGUILayout.HelpBox("Brandalı heykel: önce renk toplanır → branda kalkar; sonra 3 taş vuruşu (yalnız " +
+                                "special) → heykel hedefe uçar. Hedef = heykel sayısı (boyuttan bağımsız).", MessageType.None);
+
+        // Tahtadaki heykeller (taban katman + yığın) — düzenlenebilir.
+        var origins = new System.Collections.Generic.List<int>();
+        if (level.obstacles != null && level.obstacleOrigins != null)
+            for (int i = 0; i < level.obstacles.Length; i++)
+                if (level.obstacles[i] == (int)ObstacleId.TarpStatue && level.obstacleOrigins[i] == i) origins.Add(i);
+        if (level.stackedObstacles != null)
+            foreach (var e in level.stackedObstacles)
+                if (e.obstacleId == ObstacleId.TarpStatue && !origins.Contains(e.originCellIndex)) origins.Add(e.originCellIndex);
+        if (origins.Count == 0) return;
+
+        EditorGUILayout.Space(2);
+        EditorGUILayout.LabelField("Tahtadaki heykeller", EditorStyles.boldLabel);
+        foreach (int o in origins)
+        {
+            var t = level.GetTarpStatue(o);
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField($"({o % level.width},{o / level.width})", GUILayout.Width(52));
+            int size = TarpStatueEntry.TarpStatueMinSize + EditorGUILayout.Popup(t.Size - TarpStatueEntry.TarpStatueMinSize,
+                TarpSizeLabels, GUILayout.Width(52));
+            var color = (TarpStatueColor)EditorGUILayout.EnumPopup(t.color, GUILayout.Width(70));
+            int count = Mathf.Max(1, EditorGUILayout.IntField(t.count, GUILayout.Width(44)));
+            EditorGUILayout.EndHorizontal();
+            if (color == t.color && count == t.count && size == t.Size) continue;
+
+            Undo.RecordObject(level, "Brandalı heykel düzenle");
+            if (size != t.Size && !TryResizeTarpStatue(level, o, t.Size, size))
+                size = t.Size;
+            level.SetTarpStatue(o, color, count, size);
+            EditorUtility.SetDirty(level);
+        }
+    }
+
+    // Taban katmandaki heykeli yeni kare boyuta basar. Yeni alan tahta dışına taşar ya da başka engel/hole'a değerse vazgeçer.
+    private static bool TryResizeTarpStatue(LevelData level, int origin, int oldSize, int newSize)
+    {
+        int ox = origin % level.width, oy = origin / level.width;
+        if (level.obstacles[origin] != (int)ObstacleId.TarpStatue)
+            return true;   // yığındaki heykel: hücre basılmaz, boyut yalnız girişte
+        if (!level.InBounds(ox + newSize - 1, oy + newSize - 1))
+        {
+            if (GameDiagnostics.EditorTools)
+                Debug.LogWarning($"[LevelEditor] Heykel {newSize}x{newSize} tahtaya sığmıyor.");
+            return false;
+        }
+        for (int y = oy; y < oy + newSize; y++)
+            for (int x = ox; x < ox + newSize; x++)
+            {
+                int i = level.Index(x, y);
+                bool ownCell = level.obstacles[i] == (int)ObstacleId.TarpStatue && level.obstacleOrigins[i] == origin;
+                if (level.cells[i] != (int)CellType.Normal || (!ownCell && level.obstacles[i] != (int)ObstacleId.None))
+                {
+                    if (GameDiagnostics.EditorTools)
+                        Debug.LogWarning($"[LevelEditor] Heykel {newSize}x{newSize}: ({x},{y}) dolu ya da hole.");
+                    return false;
+                }
+            }
+        for (int y = oy; y < oy + oldSize; y++)
+            for (int x = ox; x < ox + oldSize; x++)
+            {
+                int i = level.Index(x, y);
+                if (level.obstacles[i] != (int)ObstacleId.TarpStatue || level.obstacleOrigins[i] != origin) continue;
+                level.obstacles[i] = (int)ObstacleId.None;
+                level.obstacleOrigins[i] = -1;
+            }
+        for (int y = oy; y < oy + newSize; y++)
+            for (int x = ox; x < ox + newSize; x++)
+            {
+                int i = level.Index(x, y);
+                level.obstacles[i] = (int)ObstacleId.TarpStatue;
+                level.obstacleOrigins[i] = origin;
+            }
+        return true;
+    }
+
+    // Yerleştirilecek engelin ayak izi: brandalı heykelde seçili kare boyut, diğerlerinde def.size.
+    private Vector2Int PlacementFootprint(ObstacleId id, ObstacleDef def)
+    {
+        if (id == ObstacleId.TarpStatue) return new Vector2Int(selectedTarpSize, selectedTarpSize);
+        return def != null ? new Vector2Int(Mathf.Max(1, def.size.x), Mathf.Max(1, def.size.y)) : Vector2Int.one;
+    }
+
+    private static Color TarpEditorColor(TarpStatueColor c) => c switch
+    {
+        TarpStatueColor.Yellow => new Color(0.85f, 0.65f, 0.05f, 0.9f),
+        TarpStatueColor.Blue => new Color(0.15f, 0.35f, 0.9f, 0.9f),
+        TarpStatueColor.Green => new Color(0.1f, 0.6f, 0.2f, 0.9f),
+        _ => new Color(0.8f, 0.1f, 0.12f, 0.9f),
+    };
+
+    // Bilardo: tasarım anında, cebe hiçbir zaman ulaşamayacak topları uyar (runtime takılma kuralıyla aynı hesap).
+    private static void DrawBilliardReachWarning(LevelData level, int goalAmount)
+    {
+        if (level.obstacles == null || level.cells == null || level.width <= 0 || level.height <= 0) return;
+        int w = level.width, h = level.height;
+        bool IsHole(int x, int y) => level.cells[y * w + x] == (int)CellType.Empty;
+        bool IsPocket(int x, int y) => level.obstacles[y * w + x] == (int)ObstacleId.BilliardPocket;
+
+        var dist = new int[w, h];
+        BilliardReach.ComputePocketDistances(w, h, IsHole, IsPocket, dist, new System.Collections.Generic.Queue<(int x, int y)>());
+
+        int balls = 0, reachable = 0, pockets = 0;
+        for (int y = 0; y < h; y++)
+            for (int x = 0; x < w; x++)
+            {
+                if (IsPocket(x, y)) pockets++;
+                if (level.obstacles[y * w + x] != (int)ObstacleId.BilliardBall) continue;
+                balls++;
+                if (dist[x, y] != BilliardReach.Unreachable) reachable++;
+            }
+
+        if (pockets == 0)
+            EditorGUILayout.HelpBox("Tahtada bilardo cebi yok — top hedefi tamamlanamaz.", MessageType.Error);
+        else if (reachable < goalAmount)
+            EditorGUILayout.HelpBox($"{balls - reachable} top hiçbir cebe ulaşamıyor (yalnız aşağı/çapraz/yana yuvarlanır). " +
+                                    $"Ulaşabilen {reachable} top < hedef {goalAmount}: level başta takılı sayılır.", MessageType.Error);
+        else if (reachable < balls)
+            EditorGUILayout.HelpBox($"{balls - reachable} top hiçbir cebe ulaşamıyor (süs olarak kalır).", MessageType.Warning);
+    }
+
+    /// <summary>
+    /// Bir obstacle hedefinin tahtadaki karşılığı — TopHUD sayımıyla aynı kural: her ORIGIN bir kez
+    /// (duvar parçası, 2x2 kasa = 1), yığılmış (stackedObstacles) ve kasa (safes) girişleri dahil.
+    /// Çiçekli çim aynı zamanda çimdir. BatteryBox pil vuruşu başına sayılır. Jel için oynanır hücre
+    /// sayısı döner (kaplama hedefi). Hamster = tahtadaki hamster sayısı. -1 = öneri yok: KeyGenerator (anahtar) ve
+    /// movable engeller (hedef sayısına göre üretilir).
+    /// </summary>
+    private static int CountGoalObstacles(LevelData level, ObstacleId id)
+    {
+        if (level == null || level.obstacles == null || level.obstacleOrigins == null) return -1;
+        if (id == ObstacleId.KeyGenerator) return -1;
+        // Hamster hedefi = tahtadaki hamster sayısı (her biri doyup ayrılınca 1 sayılır). Bilardo topu da yalnız
+        // level'da konur (üstten gelmez) → hedef = tahtadaki top sayısı.
+        if (id == ObstacleId.Hamster || id == ObstacleId.BilliardBall)
+        {
+            int placed = 0;
+            for (int i = 0; i < level.obstacles.Length && i < level.obstacleOrigins.Length; i++)
+                if (level.obstacles[i] == (int)id && level.obstacleOrigins[i] == i) placed++;
+            return placed;
+        }
+        // Movable engeller (kargo, kask, plastik...) hedef sayısına göre üretilir: Amount tasarımcınındır.
+        var lib = level.obstacleLibrary;
+        var goalDef = lib != null ? lib.Get(id) : null;
+        if (goalDef != null && goalDef.IsMovableObstacle) return -1;
+
+        if (id == ObstacleId.SpreadingGel)
+        {
+            int playable = 0;
+            if (level.cells != null)
+                foreach (var c in level.cells) if (c != 0) playable++;
+            return playable;
+        }
+
+        bool Matches(int raw) => raw == (int)id || (id == ObstacleId.Grass &&
+            (raw == (int)ObstacleId.GrassFlower || raw == (int)ObstacleId.GrassWaterLily));
+
+        int count = 0;
+        for (int i = 0; i < level.obstacles.Length && i < level.obstacleOrigins.Length; i++)
+            if (Matches(level.obstacles[i]) && level.obstacleOrigins[i] == i) count++;
+
+        if (level.stackedObstacles != null)
+            foreach (var e in level.stackedObstacles)
+                if (Matches((int)e.obstacleId)) count++;
+
+        if (id == ObstacleId.Safe && level.safes != null)
+            count += level.safes.Length;
+        if (id == ObstacleId.AncientSeal && level.ancientSeals != null)
+            count += level.ancientSeals.Length;
+
+        if (id == ObstacleId.BatteryBox)
+            count *= Mathf.Max(1, goalDef != null ? goalDef.hits : 1) * 4;
+        return count;
     }
 
     private void EnsureArrays(LevelData level)
@@ -487,6 +737,8 @@ public class LevelDataEditor : Editor
 
         if (level.safes == null)
             level.safes = System.Array.Empty<SafeEntry>();
+        if (level.ancientSeals == null)
+            level.ancientSeals = System.Array.Empty<AncientSealEntry>();
 
         if (level.stackedObstacles == null)
             level.stackedObstacles = System.Array.Empty<StackedObstacleEntry>();
@@ -516,7 +768,10 @@ public class LevelDataEditor : Editor
             var id = (ObstacleId)level.obstacles[i];
             if (id == ObstacleId.None) continue;
             if (library.Get(id) == null)
-                Debug.LogWarning($"{level.name}: Unknown obstacle id {id} ({(int)id}) at index {i}. It will not render in editor and may not block cascade correctly.", level);
+                {
+                    if (GameDiagnostics.EditorTools)
+                        Debug.LogWarning($"{level.name}: Unknown obstacle id {id} ({(int)id}) at index {i}. It will not render in editor and may not block cascade correctly.", level);
+                }
         }
     }
 
@@ -556,7 +811,7 @@ public class LevelDataEditor : Editor
                 GUI.backgroundColor = isSel ? new Color(0.2f, 0.9f, 1f, 1f) : Color.white;
                 if (GUI.Button(r, GUIContent.none)) selectedObstacle = def.id;
                 GUI.backgroundColor = Color.white;
-                DrawSpriteInRect(def.GetPreviewSprite(), r, 4);
+                DrawObstaclePreview(library, def, r, 4);
                 var mini = new GUIStyle(EditorStyles.miniLabel) { alignment = TextAnchor.LowerRight };
                 GUI.Label(r, $"{def.size.x}x{def.size.y}", mini);
             }
@@ -564,6 +819,20 @@ public class LevelDataEditor : Editor
         }
 
         EditorGUILayout.Space(4);
+        if (selectedObstacle == ObstacleId.GrassWaterLily)
+            EditorGUILayout.HelpBox("GrassWaterLily tek parça yerleştirilir: çim + nilüfer birlikte gelir. Ayrı Grass ekleme.", MessageType.Info);
+        if (selectedObstacle == ObstacleId.RhodesStatue)
+            EditorGUILayout.HelpBox("RhodesStatue: tek seçimle 2×2 yerleşir. Yalnız special hasarı alır; dört vuruşta tamamen kalkar.", MessageType.Info);
+        if (selectedObstacle == ObstacleId.TarpStatue)
+            DrawTarpStatuePalette(level);
+        if (selectedObstacle == ObstacleId.Hamster)
+        {
+            selectedHamsterSatiety = Mathf.Max(1, EditorGUILayout.IntField(
+                new GUIContent("Lokma (bu hamster)", "Yerleştirilen hamsterin doyması için gereken lokma. Hücrede sayı olarak görünür. " +
+                    "Var olan hamsterin sayısını değiştirmek için aynı hücreye yeniden yerleştir."),
+                selectedHamsterSatiety));
+            EditorGUILayout.HelpBox("Hamster hedefi = tahtadaki hamster sayısı. Her hamster kendi lokmasıyla doyar, bir kez zıplar (3x3) ve ayrılır.", MessageType.None);
+        }
         var selDef = library.Get(selectedObstacle);
         if (selDef != null)
         {
@@ -695,10 +964,28 @@ public class LevelDataEditor : Editor
             if (IsWallId(obs)) continue;   // DrawWallPieces hücre hücre çizer
             var def = library != null ? library.Get(obs) : null;
             if (def == null || def.GetPreviewSprite() == null) continue;
-            int w = Mathf.Max(1, def.size.x);
-            int h = Mathf.Max(1, def.size.y);
+            var foot = level.GetObstacleFootprint(obs, idx, def);
+            int w = foot.x, h = foot.y;
             Rect big = new Rect(ox + x * cellPx, oy + y * cellPx, w * cellPx - 1, h * cellPx - 1);
-            DrawSpriteInRect(def.GetPreviewSprite(), big, 2);
+            DrawObstaclePreview(library, def, big, 2);
+            if (obs == ObstacleId.TarpStatue)
+            {
+                var tarp = level.GetTarpStatue(idx);
+                var badge = new Rect(big.center.x - cellPx * 0.4f, big.center.y - cellPx * 0.25f, cellPx * 0.8f, cellPx * 0.5f);
+                EditorGUI.DrawRect(badge, TarpEditorColor(tarp.color));
+                GUI.Label(badge, tarp.count.ToString(), new GUIStyle(EditorStyles.boldLabel)
+                    { alignment = TextAnchor.MiddleCenter, fontSize = 12, normal = { textColor = Color.white } });
+            }
+            if (obs == ObstacleId.Hamster)
+            {
+                int bites = level.hamsterSatietyByCell != null && idx < level.hamsterSatietyByCell.Length
+                    ? level.hamsterSatietyByCell[idx] : 0;
+                string label = bites > 0 ? bites.ToString() : "~";   // ~ = level/kütüphane varsayılanı
+                var badge = new Rect(big.xMax - cellPx * 0.42f, big.yMax - cellPx * 0.36f, cellPx * 0.42f, cellPx * 0.36f);
+                EditorGUI.DrawRect(badge, new Color(0.15f, 0.1f, 0.05f, 0.85f));
+                GUI.Label(badge, label, new GUIStyle(EditorStyles.boldLabel)
+                    { alignment = TextAnchor.MiddleCenter, fontSize = 10, normal = { textColor = Color.white } });
+            }
         }
 
         // Draw pinned tile overlays
@@ -712,6 +999,14 @@ public class LevelDataEditor : Editor
 
                 bool hasPin     = level.pinnedTileTypes   != null && idx < level.pinnedTileTypes.Length   && level.pinnedTileTypes[idx]   > 0;
                 bool hasSpecial = level.pinnedSpecialTypes != null && idx < level.pinnedSpecialTypes.Length && level.pinnedSpecialTypes[idx] > 0;
+
+                // Hücrede taban engel (çim, yağ…) varsa sabitleme hücreyi kaplamasın: sol-alt köşede
+                // küçük rozet olur, engel görünür kalır (126'da çimler pinli taşların altında kayboluyordu).
+                if ((hasPin || hasSpecial) && idx < level.obstacles.Length && level.obstacles[idx] != (int)ObstacleId.None)
+                {
+                    float badge = r.width * 0.45f;
+                    r = new Rect(r.x, r.yMax - badge, badge, badge);
+                }
 
                 if (hasSpecial)
                     EditorGUI.DrawRect(r, pinnedSpecialColor);
@@ -847,8 +1142,59 @@ public class LevelDataEditor : Editor
                     EditorGUI.DrawRect(sr, (c == 0 && r == 0) ? safeOriginColor : safeFillColor);
                 }
 
+                // Engel ikonu bölgenin üstüne; altındaki içerik seçilebilsin diye hafif saydam.
+                var safeDef = level.obstacleLibrary != null ? level.obstacleLibrary.Get(ObstacleId.Safe) : null;
+                if (safeDef != null && safeDef.GetPreviewSprite() != null)
+                {
+                    var prevColor = GUI.color;
+                    GUI.color = new Color(1f, 1f, 1f, 0.85f);
+                    DrawSpriteInRect(safeDef.GetPreviewSprite(),
+                        new Rect(ox + sox * cellPx, oy + soy * cellPx, sw * cellPx - 1, sh * cellPx - 1), 2);
+                    GUI.color = prevColor;
+                }
+
                 Rect lr = new Rect(ox + sox * cellPx, oy + soy * cellPx, cellPx - 1, cellPx - 1);
                 GUI.Label(lr, $"🔒{e.redHits}/{e.yellowHits}/{e.greenHits}", new GUIStyle(EditorStyles.boldLabel)
+                {
+                    alignment = TextAnchor.UpperLeft,
+                    fontSize  = 8,
+                    normal    = { textColor = Color.white }
+                });
+            }
+        }
+
+        // Ancient Seal collection counts and its own icon.
+        if (level.ancientSeals != null)
+        {
+            for (int s = 0; s < level.ancientSeals.Length; s++)
+            {
+                var e = level.ancientSeals[s];
+                int sox = e.originCellIndex % level.width;
+                int soy = e.originCellIndex / level.width;
+                int sw = Mathf.Max(1, e.width), sh = Mathf.Max(1, e.height);
+
+                for (int r = 0; r < sh; r++)
+                for (int c = 0; c < sw; c++)
+                {
+                    int cx = sox + c, cy = soy + r;
+                    if (cx >= level.width || cy >= level.height) continue;
+                    Rect sr = new Rect(ox + cx * cellPx, oy + cy * cellPx, cellPx - 1, cellPx - 1);
+                    EditorGUI.DrawRect(sr, (c == 0 && r == 0) ? safeOriginColor : safeFillColor);
+                }
+
+                // Engel ikonu bölgenin üstüne; altındaki içerik seçilebilsin diye hafif saydam.
+                var safeDef = level.obstacleLibrary != null ? level.obstacleLibrary.Get(ObstacleId.AncientSeal) : null;
+                if (safeDef != null && safeDef.GetPreviewSprite() != null)
+                {
+                    var prevColor = GUI.color;
+                    GUI.color = new Color(1f, 1f, 1f, 0.85f);
+                    DrawSpriteInRect(safeDef.GetPreviewSprite(),
+                        new Rect(ox + sox * cellPx, oy + soy * cellPx, sw * cellPx - 1, sh * cellPx - 1), 2);
+                    GUI.color = prevColor;
+                }
+
+                Rect lr = new Rect(ox + sox * cellPx, oy + soy * cellPx, cellPx - 1, cellPx - 1);
+                GUI.Label(lr, $"🔒{e.redCount}/{e.yellowCount}/{e.greenCount}", new GUIStyle(EditorStyles.boldLabel)
                 {
                     alignment = TextAnchor.UpperLeft,
                     fontSize  = 8,
@@ -870,8 +1216,8 @@ public class LevelDataEditor : Editor
                 var def = lib != null ? lib.Get(e.obstacleId) : null;
                 int sox = e.originCellIndex % level.width;
                 int soy = e.originCellIndex / level.width;
-                int sw = def != null ? Mathf.Max(1, def.size.x) : 1;
-                int sh = def != null ? Mathf.Max(1, def.size.y) : 1;
+                var sfoot = level.GetObstacleFootprint(e.obstacleId, e.originCellIndex, def);
+                int sw = sfoot.x, sh = sfoot.y;
 
                 float band = cellPx * 0.40f;
                 for (int r = 0; r < sh; r++)
@@ -887,7 +1233,7 @@ public class LevelDataEditor : Editor
 
                 // Origin'in üst-sol köşesine üstteki obstacle'ın mini ikonu.
                 Rect lr = new Rect(ox + sox * cellPx, oy + soy * cellPx, cellPx * 0.55f, cellPx * 0.55f);
-                if (def != null) DrawSpriteInRect(def.GetPreviewSprite(), lr, 1);
+                if (def != null) DrawObstaclePreview(lib, def, lr, 1);
             }
         }
 
@@ -1016,6 +1362,7 @@ public class LevelDataEditor : Editor
                 RemoveTubeAtCell(level, idx);
                 RemoveMagnetAtCell(level, idx);
                 RemoveSafeAtCell(level, idx);
+                RemoveAncientSealAtCell(level, idx);
                 RemoveStackedAtCell(level, idx);
                 magnetPathBuilding.Clear();
                 ClearPinnedTile(level, idx);
@@ -1036,10 +1383,14 @@ public class LevelDataEditor : Editor
             case PaintMode.Safe:
                 PlaceSafe(level, x, y);
                 break;
+            case PaintMode.AncientSeal:
+                PlaceAncientSeal(level, x, y);
+                break;
             case PaintMode.Overlay:
                 PlaceStackedObstacle(level, x, y);
                 break;
         }
+        level.PruneTarpStatues();
     }
 
     // Model (a): içerik AYRI yerleştirilir (Obstacle/Tiles/Mask modu); Safe sadece bir overlay
@@ -1054,7 +1405,8 @@ public class LevelDataEditor : Editor
         int h = Mathf.Max(1, selectedSafeH);
         if (bx + w > level.width || by + h > level.height)
         {
-            Debug.LogWarning($"[SafeEditor] Safe at ({bx},{by}) {w}x{h} grid dışına taşıyor.");
+            if (GameDiagnostics.EditorTools)
+                Debug.LogWarning($"[SafeEditor] Safe at ({bx},{by}) {w}x{h} grid dışına taşıyor.");
             return;
         }
 
@@ -1091,6 +1443,49 @@ public class LevelDataEditor : Editor
         level.safes = list.ToArray();
     }
 
+    private void PlaceAncientSeal(LevelData level, int bx, int by)
+    {
+        if (!level.InBounds(bx, by)) return;
+        int originIdx = level.Index(bx, by);
+
+        int w = Mathf.Max(2, selectedSealW);
+        int h = Mathf.Max(2, selectedSealH);
+        if (bx + w > level.width || by + h > level.height)
+        {
+            if (GameDiagnostics.EditorTools)
+                Debug.LogWarning($"[SealEditor] Ancient Seal at ({bx},{by}) {w}x{h} grid dışına taşıyor.");
+            return;
+        }
+
+        // Aynı köşedeki mührü güncelle; Safe ve diğer katmanları koru.
+        int existing = System.Array.FindIndex(level.ancientSeals ?? System.Array.Empty<AncientSealEntry>(),
+            e => e.originCellIndex == originIdx);
+        if (!ValidateFullCover(level, RectCells(level, originIdx, w, h), ObstacleId.AncientSeal, -1, existing))
+            return;
+        int stackOrder = existing >= 0 ? level.ancientSeals[existing].stackOrder : NextStackOrder(level);
+        if (existing >= 0)
+        {
+            var kept = new System.Collections.Generic.List<AncientSealEntry>(level.ancientSeals);
+            kept.RemoveAt(existing);
+            level.ancientSeals = kept.ToArray();
+        }
+
+        var entry = new AncientSealEntry
+        {
+            originCellIndex = originIdx,
+            width           = w,
+            height          = h,
+            startColor      = selectedSealStartColor,
+            redCount        = Mathf.Max(1, selectedSealRed),
+            yellowCount     = Mathf.Max(1, selectedSealYellow),
+            greenCount      = Mathf.Max(1, selectedSealGreen),
+            stackOrder      = stackOrder
+        };
+
+        var list = new System.Collections.Generic.List<AncientSealEntry>(level.ancientSeals ?? System.Array.Empty<AncientSealEntry>()) { entry };
+        level.ancientSeals = list.ToArray();
+    }
+
     // ── Yığın kuralı: üstteki katman alttaki engeli TAMAMEN örtmeli (aynı ya da daha çok hücre) ──
     // Yarım örtme (ör. 1x1 sandık 2x2 kasanın tek köşesinde) kurulmaz: görsel sıra ve açılma bozulur.
     // Muaf: mıknatıs/tüp (yol engeli) ve saydam örtüler (Grass/Oil — kısmi örtebilir, altı görünür).
@@ -1108,7 +1503,7 @@ public class LevelDataEditor : Editor
     // Runtime kurulumuyla (GridSpawner.StampLayeredEntriesIntoLevel) aynı sırayla her hücrenin EN ÜST
     // katmanını ve o katmanın kapladığı hücreleri simüle eder. isPath = mıknatıs/tüp (kural dışı).
     private static System.Collections.Generic.Dictionary<int, (ObstacleId id, System.Collections.Generic.HashSet<int> cells, bool isPath)>
-        SimulateTopLayers(LevelData level, int excludeSafeIndex)
+        SimulateTopLayers(LevelData level, int excludeSafeIndex, int excludeSealIndex)
     {
         var top = new System.Collections.Generic.Dictionary<int, (ObstacleId, System.Collections.Generic.HashSet<int>, bool)>();
         int n = level.width * level.height;
@@ -1146,6 +1541,9 @@ public class LevelDataEditor : Editor
         if (level.safes != null)
             for (int i = 0; i < level.safes.Length; i++)
                 if (i != excludeSafeIndex) order.Add((level.safes[i].stackOrder, 1, i));
+        if (level.ancientSeals != null)
+            for (int i = 0; i < level.ancientSeals.Length; i++)
+                if (i != excludeSealIndex) order.Add((level.ancientSeals[i].stackOrder, 2, i));
         order.Sort((a, b) => a.stackOrder != b.stackOrder ? a.stackOrder.CompareTo(b.stackOrder)
                            : a.kind != b.kind ? a.kind.CompareTo(b.kind) : a.index.CompareTo(b.index));
 
@@ -1157,8 +1555,14 @@ public class LevelDataEditor : Editor
                 var e = level.stackedObstacles[o.index];
                 var def = level.obstacleLibrary != null ? level.obstacleLibrary.Get(e.obstacleId) : null;
                 id = e.obstacleId;
-                cells = RectCells(level, e.originCellIndex,
-                    def != null ? Mathf.Max(1, def.size.x) : 1, def != null ? Mathf.Max(1, def.size.y) : 1);
+                var efoot = level.GetObstacleFootprint(e.obstacleId, e.originCellIndex, def);
+                cells = RectCells(level, e.originCellIndex, efoot.x, efoot.y);
+            }
+            else if (o.kind == 2)
+            {
+                var e = level.ancientSeals[o.index];
+                id = ObstacleId.AncientSeal;
+                cells = RectCells(level, e.originCellIndex, Mathf.Max(1, e.width), Mathf.Max(1, e.height));
             }
             else
             {
@@ -1172,20 +1576,19 @@ public class LevelDataEditor : Editor
     }
 
     private static bool ValidateFullCover(LevelData level, System.Collections.Generic.HashSet<int> newCells,
-        ObstacleId newId, int excludeSafeIndex)
+        ObstacleId newId, int excludeSafeIndex, int excludeSealIndex = -1)
     {
         // Saydam örtüler (Grass/Oil) kısmen örtebilir: altı görünür kalır; çok-hücreli engel, üstündeki
         // tüm örtüler gidene dek vuruş almaz (ObstacleStateService.IsBuriedAnywhere). Örn. 4x4 kasa + 4 grass.
         if (ObstacleStateService.IsSeeThroughLayer(newId)) return true;
 
-        var top = SimulateTopLayers(level, excludeSafeIndex);
+        var top = SimulateTopLayers(level, excludeSafeIndex, excludeSealIndex);
         foreach (var c in newCells)
         {
             if (!top.TryGetValue(c, out var under) || under.isPath || under.id == ObstacleId.None) continue;
             if (under.cells.IsSubsetOf(newCells)) continue;
-            Debug.LogWarning($"[OverlayEditor] {newId} konamaz: ({c % level.width},{c / level.width}) hücresindeki " +
-                             $"{under.id} ({under.cells.Count} hücre) tamamen örtülmüyor. Üstteki katman alttaki engeli " +
-                             "aynı ya da daha çok hücreyle TAMAMEN kaplamalı.");
+            if (GameDiagnostics.EditorTools)
+                Debug.LogWarning($"[OverlayEditor] {newId} konamaz: ({c % level.width},{c / level.width}) hücresindeki " + $"{under.id} ({under.cells.Count} hücre) tamamen örtülmüyor. Üstteki katman alttaki engeli " + "aynı ya da daha çok hücreyle TAMAMEN kaplamalı.");
             return false;
         }
         return true;
@@ -1195,6 +1598,8 @@ public class LevelDataEditor : Editor
     private static int NextStackOrder(LevelData level)
     {
         int max = 0;
+        if (level.ancientSeals != null)
+            foreach (var e in level.ancientSeals) max = Mathf.Max(max, e.stackOrder);
         if (level.safes != null)
             foreach (var e in level.safes) max = Mathf.Max(max, e.stackOrder);
         if (level.stackedObstacles != null)
@@ -1220,6 +1625,24 @@ public class LevelDataEditor : Editor
         level.safes = list.ToArray();
     }
 
+    private void RemoveAncientSealAtCell(LevelData level, int cellIndex)
+    {
+        if (level.ancientSeals == null || level.ancientSeals.Length == 0) return;
+
+        int W = level.width;
+        var list = new System.Collections.Generic.List<AncientSealEntry>(level.ancientSeals);
+        for (int s = list.Count - 1; s >= 0; s--)
+        {
+            var e = list[s];
+            int ox = e.originCellIndex % W, oy = e.originCellIndex / W;
+            int cx = cellIndex % W, cy = cellIndex / W;
+            if (cx >= ox && cx < ox + Mathf.Max(1, e.width) &&
+                cy >= oy && cy < oy + Mathf.Max(1, e.height))
+                list.RemoveAt(s);
+        }
+        level.ancientSeals = list.ToArray();
+    }
+
     private void DrawOverlayPalette(LevelData level)
     {
         EditorGUILayout.HelpBox(
@@ -1239,23 +1662,39 @@ public class LevelDataEditor : Editor
     {
         if (!level.InBounds(bx, by)) return;
         if (selectedObstacle == ObstacleId.None) return;
-
-        // Zemin altı engeller (Mud, Jel, Su birikintisi) yığının daima EN ALTINDA — başka bir şeyin üstüne konamaz.
-        if (selectedObstacle == ObstacleId.Mud || selectedObstacle == ObstacleId.SpreadingGel
-            || selectedObstacle == ObstacleId.WaterPuddle)
+        if (selectedObstacle == ObstacleId.AncientSeal)
         {
-            Debug.LogWarning($"[OverlayEditor] {selectedObstacle} üst katman olamaz (daima en altta). " +
-                             "Obstacle modunda taban katmana boya.");
+            if (GameDiagnostics.EditorTools)
+                Debug.LogWarning("Ancient Seal için kendi sekmesini kullan; toplama sayıları orada ayarlanır.");
+            return;
+        }
+
+        // Zemin altı engeller daima en altta. Lazer ise örn. 167'de tek jel hücresini
+        // örtebilir; generic beneath yolu lazer kırılınca bu hücreyi açar.
+        if (selectedObstacle == ObstacleId.Mud || selectedObstacle == ObstacleId.SpreadingGel
+            || selectedObstacle == ObstacleId.WaterPuddle
+            || selectedObstacle == ObstacleId.BilliardPocket)
+        {
+            if (GameDiagnostics.EditorTools)
+                Debug.LogWarning($"[OverlayEditor] {selectedObstacle} üst katman olamaz (daima en altta). " + "Obstacle modunda taban katmana boya.");
             return;
         }
 
         int originIdx = level.Index(bx, by);
+        // Bilardo cebi yığına girmez: üstüne de bir şey konmaz (top cebe düşebilmeli).
+        if (level.obstacles != null && level.obstacles[originIdx] == (int)ObstacleId.BilliardPocket)
+        {
+            if (GameDiagnostics.EditorTools)
+                Debug.LogWarning("[OverlayEditor] Bilardo cebinin üstüne katman konamaz.");
+            return;
+        }
         var def = level.obstacleLibrary != null ? level.obstacleLibrary.Get(selectedObstacle) : null;
-        int w = def != null ? Mathf.Max(1, def.size.x) : 1;
-        int h = def != null ? Mathf.Max(1, def.size.y) : 1;
+        var pfoot = PlacementFootprint(selectedObstacle, def);
+        int w = pfoot.x, h = pfoot.y;
         if (bx + w > level.width || by + h > level.height)
         {
-            Debug.LogWarning($"[OverlayEditor] Stacked {selectedObstacle} at ({bx},{by}) {w}x{h} grid dışına taşıyor.");
+            if (GameDiagnostics.EditorTools)
+                Debug.LogWarning($"[OverlayEditor] Stacked {selectedObstacle} at ({bx},{by}) {w}x{h} grid dışına taşıyor.");
             return;
         }
 
@@ -1277,6 +1716,8 @@ public class LevelDataEditor : Editor
         var list = new System.Collections.Generic.List<StackedObstacleEntry>(
             level.stackedObstacles ?? System.Array.Empty<StackedObstacleEntry>()) { entry };
         level.stackedObstacles = list.ToArray();
+        if (selectedObstacle == ObstacleId.TarpStatue)
+            level.SetTarpStatue(originIdx, selectedTarpColor, selectedTarpCount, selectedTarpSize);
     }
 
     private void RemoveStackedAtCell(LevelData level, int cellIndex)
@@ -1291,8 +1732,8 @@ public class LevelDataEditor : Editor
             var e = list[s];
             var def = lib != null ? lib.Get(e.obstacleId) : null;
             int ox = e.originCellIndex % W, oy = e.originCellIndex / W;
-            int w = def != null ? Mathf.Max(1, def.size.x) : 1;
-            int h = def != null ? Mathf.Max(1, def.size.y) : 1;
+            var rfoot = level.GetObstacleFootprint(e.obstacleId, e.originCellIndex, def);
+            int w = rfoot.x, h = rfoot.y;
             int cx = cellIndex % W, cy = cellIndex / W;
             if (cx >= ox && cx < ox + w && cy >= oy && cy < oy + h)
                 list.RemoveAt(s);
@@ -1329,7 +1770,8 @@ public class LevelDataEditor : Editor
         {
             tubeStatus = $"({bx},{by}) → {selectedTubeDir} yönünde {entry.length} hücre board dışına taşıyor. " +
                          "Yönü veya uzunluğu değiştir (Up = tıklanan hücreden YUKARI uzanır).";
-            Debug.LogWarning($"[TubeEditor] {tubeStatus}");
+            if (GameDiagnostics.EditorTools)
+                Debug.LogWarning($"[TubeEditor] {tubeStatus}");
             return;
         }
         foreach (int ci in cells)
@@ -1338,20 +1780,23 @@ public class LevelDataEditor : Editor
             if (level.cells[ci] != (int)CellType.Normal)
             {
                 tubeStatus = $"Tüp ({cx},{cy}) hücresinden geçiyor ama orası boş (mask) hücre.";
-                Debug.LogWarning($"[TubeEditor] {tubeStatus}");
+                if (GameDiagnostics.EditorTools)
+                    Debug.LogWarning($"[TubeEditor] {tubeStatus}");
                 return;
             }
             var existingObs = (ObstacleId)level.obstacles[ci];
             if (existingObs != ObstacleId.None && existingObs != ObstacleId.Tube)
             {
                 tubeStatus = $"Tüp ({cx},{cy}) hücresinden geçiyor ama orada {existingObs} var. Önce Erase ile temizle.";
-                Debug.LogWarning($"[TubeEditor] {tubeStatus}");
+                if (GameDiagnostics.EditorTools)
+                    Debug.LogWarning($"[TubeEditor] {tubeStatus}");
                 return;
             }
             if (TubeIndexAtCell(level, ci) >= 0)
             {
                 tubeStatus = $"Tüp ({cx},{cy}) hücresinde başka bir tüple çakışıyor.";
-                Debug.LogWarning($"[TubeEditor] {tubeStatus}");
+                if (GameDiagnostics.EditorTools)
+                    Debug.LogWarning($"[TubeEditor] {tubeStatus}");
                 return;
             }
         }
@@ -1393,8 +1838,21 @@ public class LevelDataEditor : Editor
         return false;
     }
 
+    private static void EnsureHamsterSatietyArray(LevelData level)
+    {
+        int size = level.width * level.height;
+        if (level.hamsterSatietyByCell == null || level.hamsterSatietyByCell.Length != size)
+        {
+            var old = level.hamsterSatietyByCell;
+            level.hamsterSatietyByCell = new int[size];
+            if (old != null) System.Array.Copy(old, level.hamsterSatietyByCell, Mathf.Min(size, old.Length));
+        }
+    }
+
     private void ClearCell(LevelData level, int idx)
     {
+        if (level.hamsterSatietyByCell != null && idx < level.hamsterSatietyByCell.Length)
+            level.hamsterSatietyByCell[idx] = 0;
         bool wasWall = IsWallId((ObstacleId)level.obstacles[idx]);
         level.obstacles[idx] = (int)ObstacleId.None;
         level.obstacleOrigins[idx] = -1;
@@ -1405,9 +1863,10 @@ public class LevelDataEditor : Editor
     {
         // Tube/Magnet/Safe ham obstacle olarak basılamaz: runtime yalnız LevelData.tubes/magnets/safes
         // girişlerinden kurar (GridSpawner generic görsel de çizmez) → görünmez, bozuk hücre olur.
-        if (id == ObstacleId.Tube || id == ObstacleId.Magnet || id == ObstacleId.Safe)
+        if (id == ObstacleId.Tube || id == ObstacleId.Magnet || id == ObstacleId.Safe || id == ObstacleId.AncientSeal)
         {
-            Debug.LogWarning($"[LevelEditor] {id} Obstacle modunda yerleştirilemez — kendi sekmesini ({id}) kullan.");
+            if (GameDiagnostics.EditorTools)
+                Debug.LogWarning($"[LevelEditor] {id} Obstacle modunda yerleştirilemez — kendi sekmesini ({id}) kullan.");
             return;
         }
 
@@ -1426,7 +1885,7 @@ public class LevelDataEditor : Editor
 
         var library = level.obstacleLibrary;
         var def = library != null ? library.Get(id) : null;
-        Vector2Int size = def != null ? def.size : Vector2Int.one;
+        Vector2Int size = PlacementFootprint(id, def);
         int w = Mathf.Max(1, size.x);
         int h = Mathf.Max(1, size.y);
         if (!level.InBounds(ax, ay) || !level.InBounds(ax + w - 1, ay + h - 1)) return;
@@ -1445,6 +1904,14 @@ public class LevelDataEditor : Editor
             level.obstacleOrigins[idx] = originIdx;
         }
         level.obstacleOrigins[originIdx] = originIdx;
+        EnsureHamsterSatietyArray(level);
+        for (int y = ay; y < ay + h; y++)
+        for (int x = ax; x < ax + w; x++)
+            level.hamsterSatietyByCell[level.Index(x, y)] = 0;
+        if (id == ObstacleId.Hamster)
+            level.hamsterSatietyByCell[originIdx] = Mathf.Max(1, selectedHamsterSatiety);
+        if (id == ObstacleId.TarpStatue)
+            level.SetTarpStatue(originIdx, selectedTarpColor, selectedTarpCount, selectedTarpSize);
         // Başka engel duvar hücrelerinin üstüne basıldıysa kalan duvar parçalarını yeniden kur.
         if (level.wallPieceIds != null && System.Array.Exists(level.wallPieceIds, p => p > 0))
             RecomputeWallOrigins(level);
@@ -1686,6 +2153,59 @@ public class LevelDataEditor : Editor
         }
     }
 
+    private void DrawAncientSealPalette(LevelData level)
+    {
+        EditorGUILayout.LabelField("Ancient Seal (Antik Mühür)", EditorStyles.boldLabel);
+        EditorGUILayout.HelpBox(
+            "Grid'e tıkla: sol üst hücreden başlayan mühür eklenir. Altındaki içerik korunur. " +
+            "Tahtanın herhangi bir yerinde, sayaçtaki renkten belirtilen sayıda taş topla. " +
+            "Auto başlangıçları kırmızı, yeşil, sarı olarak dağıtır; sonra renk döngüsü sürer. " +
+            "Her taş yalnız bir mühre gider; aynı rengi isteyenler taşları sırayla paylaşır. " +
+            "Kenardan veya special ile doğrudan vurmak sayılmaz; " +
+            "special'ın topladığı uygun renk taşlar sayılır. Erase mührü kaldırır.", MessageType.Info);
+        selectedSealStartColor = (AncientSealStartColor)EditorGUILayout.EnumPopup("Yeni mühür başlangıcı", selectedSealStartColor);
+        selectedSealW = EditorGUILayout.IntSlider("Genişlik (hücre)", selectedSealW, 2, 9);
+        selectedSealH = EditorGUILayout.IntSlider("Yükseklik (hücre)", selectedSealH, 2, 11);
+        selectedSealRed = EditorGUILayout.IntSlider("Kırmızı taş sayısı", selectedSealRed, 1, 100);
+        selectedSealYellow = EditorGUILayout.IntSlider("Sarı taş sayısı", selectedSealYellow, 1, 100);
+        selectedSealGreen = EditorGUILayout.IntSlider("Yeşil taş sayısı", selectedSealGreen, 1, 100);
+        EditorGUILayout.LabelField($"Mevcut mühürler: {level.ancientSeals?.Length ?? 0}");
+        if (level.ancientSeals == null || level.ancientSeals.Length == 0) return;
+        for (int i = 0; i < level.ancientSeals.Length; i++)
+        {
+            var entry = level.ancientSeals[i];
+            EditorGUI.BeginChangeCheck();
+            var startColor = (AncientSealStartColor)EditorGUILayout.EnumPopup(
+                $"Mühür ({entry.originCellIndex % level.width}, {entry.originCellIndex / level.width}) başlangıcı", entry.startColor);
+            if (EditorGUI.EndChangeCheck())
+            {
+                Undo.RecordObject(level, "Change Ancient Seal Start Color");
+                entry.startColor = startColor;
+                level.ancientSeals[i] = entry;
+                EditorUtility.SetDirty(level);
+            }
+        }
+        if (GUILayout.Button("Seçili taş sayılarını mevcut mühürlere uygula"))
+        {
+            Undo.RecordObject(level, "Update Ancient Seal Counts");
+            for (int i = 0; i < level.ancientSeals.Length; i++)
+            {
+                var entry = level.ancientSeals[i];
+                entry.redCount = selectedSealRed;
+                entry.yellowCount = selectedSealYellow;
+                entry.greenCount = selectedSealGreen;
+                level.ancientSeals[i] = entry;
+            }
+            EditorUtility.SetDirty(level);
+        }
+        if (GUILayout.Button("Tüm mühürleri temizle"))
+        {
+            Undo.RecordObject(level, "Clear Ancient Seals");
+            level.ancientSeals = System.Array.Empty<AncientSealEntry>();
+            EditorUtility.SetDirty(level);
+        }
+    }
+
     private void DrawSafePalette(LevelData level)
     {
         EditorGUILayout.LabelField("Safe (Kasa) Obstacle", EditorStyles.boldLabel);
@@ -1783,6 +2303,18 @@ public class LevelDataEditor : Editor
         }
 
         return SafeLockColor.Red;
+    }
+
+    private void DrawObstaclePreview(ObstacleLibrary library, ObstacleDef def, Rect rect, float padding)
+    {
+        if (def == null) return;
+        if (def.id == ObstacleId.GrassWaterLily)
+        {
+            DrawSpriteInRect(library != null ? library.Get(ObstacleId.Grass)?.GetPreviewSprite() : null, rect, padding);
+            float grow = (GrassWaterLilyService.FlowerSizeRatio - 1) * (rect.width - padding * 2) * 0.5f;
+            rect = new Rect(rect.x - grow, rect.y - grow, rect.width + grow * 2, rect.height + grow * 2);
+        }
+        DrawSpriteInRect(def.GetPreviewSprite(), rect, padding);
     }
 
     private void DrawSpriteInRect(Sprite sprite, Rect r, float padding)

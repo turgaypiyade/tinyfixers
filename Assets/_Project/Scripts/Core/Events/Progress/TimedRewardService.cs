@@ -9,15 +9,19 @@ public static class TimedRewardService
 
     // ── Grant ────────────────────────────────────────────────────────────────
 
+    public static bool SupportsTimed(DailySlotRewardType type) => type == DailySlotRewardType.Lives
+        || type == DailySlotRewardType.Joker_LineH || type == DailySlotRewardType.Joker_Line
+        || type == DailySlotRewardType.Joker_PulseCore || type == DailySlotRewardType.Joker_SystemOverride
+        || BoosterRewardType(BoardController.BoosterMode.Single) <= type && type <= BoosterRewardType(BoardController.BoosterMode.PaintBucket);
+
     public static void Grant(DailySlotRewardType type, int minutes)
     {
-        if (minutes <= 0) return;
+        if (minutes <= 0 || !SupportsTimed(type)) return;
         // Aktif süre varsa ÜSTÜNE eklenir (ikinci paket/ödül süreyi ezmesin, uzatsın).
         DateTime start = DateTime.UtcNow + GetRemaining(type);
         long expiry = start.AddMinutes(minutes).Ticks;
         PlayerPrefs.SetString(Key(type), expiry.ToString());
         PlayerPrefs.Save();
-        Debug.Log($"[TimedReward] {type} → {minutes} dk ücretsiz.");
     }
 
     // ── Sorgulama ─────────────────────────────────────────────────────────────
@@ -49,6 +53,29 @@ public static class TimedRewardService
     };
 
     public static bool IsLivesFree() => IsActive(DailySlotRewardType.Lives);
+
+    /// In-level booster (joker) usable without spending while its timed reward runs.
+    public static bool IsBoosterFree(BoardController.BoosterMode mode)
+    {
+        var type = BoosterRewardType(mode);
+        return type != DailySlotRewardType.Empty && IsActive(type);
+    }
+
+    public static TimeSpan GetBoosterRemaining(BoardController.BoosterMode mode)
+    {
+        var type = BoosterRewardType(mode);
+        return type != DailySlotRewardType.Empty ? GetRemaining(type) : TimeSpan.Zero;
+    }
+
+    public static DailySlotRewardType BoosterRewardType(BoardController.BoosterMode mode) => mode switch
+    {
+        BoardController.BoosterMode.Single      => DailySlotRewardType.Booster_Hammer,
+        BoardController.BoosterMode.Row         => DailySlotRewardType.Booster_Row,
+        BoardController.BoosterMode.Column      => DailySlotRewardType.Booster_Column,
+        BoardController.BoosterMode.Shuffle     => DailySlotRewardType.Booster_Shuffle,
+        BoardController.BoosterMode.PaintBucket => DailySlotRewardType.Booster_PaintBucket,
+        _                                       => DailySlotRewardType.Empty
+    };
 
     // ── Helper ───────────────────────────────────────────────────────────────
 

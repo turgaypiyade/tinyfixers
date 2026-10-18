@@ -22,7 +22,8 @@ public sealed class BossDuelIntroArtwork : MonoBehaviour
         var badger = Resources.Load<Sprite>(path + "PB1");
         if (!blue || !red || !bear || !ram || !hyena || !badger)
         {
-            Debug.LogWarning("[BossDuelIntro] Missing artwork in Resources/BossDuelIntro.");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogWarning("[BossDuelIntro] Missing artwork in Resources/BossDuelIntro.");
             return null;
         }
 

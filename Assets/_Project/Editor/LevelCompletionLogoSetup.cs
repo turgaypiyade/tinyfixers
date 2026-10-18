@@ -46,14 +46,16 @@ public static class LevelCompletionLogoSetup
         var scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
         if (!scene.IsValid())
         {
-            Debug.LogError("[LogoSetup] Sahne açılamadı: " + ScenePath);
+            if (GameDiagnostics.EditorTools)
+                Debug.LogError("[LogoSetup] Sahne açılamadı: " + ScenePath);
             EditorApplication.Exit(1);
             return;
         }
 
         if (!Run(out string message))
         {
-            Debug.LogError("[LogoSetup] " + message);
+            if (GameDiagnostics.EditorTools)
+                Debug.LogError("[LogoSetup] " + message);
             EditorApplication.Exit(1);
             return;
         }
@@ -61,13 +63,15 @@ public static class LevelCompletionLogoSetup
         EditorSceneManager.MarkSceneDirty(scene);
         if (!EditorSceneManager.SaveScene(scene))
         {
-            Debug.LogError("[LogoSetup] Sahne kaydedilemedi: " + ScenePath);
+            if (GameDiagnostics.EditorTools)
+                Debug.LogError("[LogoSetup] Sahne kaydedilemedi: " + ScenePath);
             EditorApplication.Exit(1);
             return;
         }
 
         AssetDatabase.SaveAssets();
-        Debug.Log("[LogoSetup] BASARILI\n" + message);
+        if (GameDiagnostics.EditorTools)
+            Debug.Log("[LogoSetup] BASARILI\n" + message);
         EditorApplication.Exit(0);
     }
 

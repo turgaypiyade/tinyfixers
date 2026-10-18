@@ -20,7 +20,6 @@ public static class TestLevelProgressionBootstrap
             UnityEditor.EditorPrefs.DeleteKey(FreshUserNextLaunchKey);
             PlayerPrefs.DeleteAll();
             PlayerPrefs.Save();
-            Debug.Log("[TestLevelProgressionBootstrap] YENİ KULLANICI: test değerleri basılmadı, ilk açılış gibi başlanıyor.");
             return;
         }
 
@@ -38,16 +37,18 @@ public static class TestLevelProgressionBootstrap
         // Progress event ve timed reward verilerini koru, geri kalanı sıfırla.
         string savedStartTime = PlayerPrefs.GetString("progress_event_v1_start_time", "");
         string savedGoals     = PlayerPrefs.GetString("progress_event_v1_goals", "");
+        // Bölge testi (WonderOrder / DeviceCountry): editörde seçilen ülke Play'ler arasında korunur.
+        string savedDebugCountry = PlayerPrefs.GetString("debug_country", "");
 
-        // Yıldız + wonder ilerlemesini KORU (yazdığın değerle başla; yoksa 100 başlangıç).
-        int savedStars      = PlayerPrefs.HasKey("player_total_stars") ? PlayerPrefs.GetInt("player_total_stars") : 100;
+        // Yıldız + wonder ilerlemesini KORU (yazdığın değerle başla; yoksa 10 başlangıç, InitialStarsBootstrap ile aynı).
+        int savedStars      = PlayerPrefs.HasKey("player_total_stars") ? PlayerPrefs.GetInt("player_total_stars") : 10;
         int savedWonderDone = PlayerPrefs.GetInt("wonder_completed_count", 0);
         int savedWonderStg  = PlayerPrefs.GetInt("wonder_current_stage", 0);
         // Level reklam hakkı kalıcı: Play'i durdurup açınca da aynı level'da tekrar açılmasın.
         bool hasAdContinueUsed = PlayerPrefs.HasKey(LevelAdRight.UsedLevelKey);
         int savedAdContinueUsed = PlayerPrefs.GetInt(LevelAdRight.UsedLevelKey, 0);
 
-        var timedRewardTypes = new[] { 1, 10, 11, 12, 13 }; // Lives, Joker_LineH, PulseCore, Override, Joker_Line
+        var timedRewardTypes = new[] { 1, 10, 11, 12, 13, 20, 21, 22, 23, 24 }; // Lives, Joker_LineH, PulseCore, Override, Joker_Line, boosters
         var savedTimedRewards = new string[timedRewardTypes.Length];
         for (int t = 0; t < timedRewardTypes.Length; t++)
             savedTimedRewards[t] = PlayerPrefs.GetString($"timed_reward_{timedRewardTypes[t]}", "");
@@ -56,6 +57,7 @@ public static class TestLevelProgressionBootstrap
 
         if (!string.IsNullOrEmpty(savedStartTime)) PlayerPrefs.SetString("progress_event_v1_start_time", savedStartTime);
         if (!string.IsNullOrEmpty(savedGoals))     PlayerPrefs.SetString("progress_event_v1_goals", savedGoals);
+        if (!string.IsNullOrEmpty(savedDebugCountry)) PlayerPrefs.SetString("debug_country", savedDebugCountry);
         for (int t = 0; t < timedRewardTypes.Length; t++)
             if (!string.IsNullOrEmpty(savedTimedRewards[t]))
                 PlayerPrefs.SetString($"timed_reward_{timedRewardTypes[t]}", savedTimedRewards[t]);
@@ -71,8 +73,6 @@ public static class TestLevelProgressionBootstrap
         PlayerPrefs.SetInt("initial_stars_granted", 1);
         PlayerPrefs.SetInt("first_launch_done", 1);
         PlayerPrefs.Save();
-
-        Debug.Log($"[TestLevelProgressionBootstrap] Starting at level {level} with {coins} coins, {savedStars} stars, wonder {savedWonderDone}/{savedWonderStg}.");
 #endif
     }
 }

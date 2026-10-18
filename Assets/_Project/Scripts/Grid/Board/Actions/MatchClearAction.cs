@@ -203,13 +203,8 @@ public class MatchClearAction : BoardAction
 
         if (trace)
         {
-            Debug.Log(
-                $"[PulseClearDebug][MCA] ENTER " +
-                $"isSpecialPhase={isSpecialActivationPhase} " +
-                $"matches={(matches != null ? matches.Count : -1)} " +
-                $"stagger={(staggerDelays != null ? staggerDelays.Count : 0)} " +
-                $"perTile={(perTileClearDelays != null ? perTileClearDelays.Count : 0)} " +
-                $"plan={(PresentationPlan != null)}");
+            if (GameDiagnostics.BoardFlow)
+                Debug.Log($"[PulseClearDebug][MCA] ENTER " + $"isSpecialPhase={isSpecialActivationPhase} " + $"matches={(matches != null ? matches.Count : -1)} " + $"stagger={(staggerDelays != null ? staggerDelays.Count : 0)} " + $"perTile={(perTileClearDelays != null ? perTileClearDelays.Count : 0)} " + $"plan={(PresentationPlan != null)}");
         }
 
         if (!isSpecialActivationPhase)
@@ -227,13 +222,19 @@ public class MatchClearAction : BoardAction
 
         bool hasPlan = PresentationPlan != null;
         if (trace)
-            UnityEngine.Debug.Log($"[MatchClear] START matches={matches.Count} plan={hasPlan} blocking={isBlocking} shake={doShake}");
+            {
+                if (GameDiagnostics.BoardFlow)
+                    UnityEngine.Debug.Log($"[MatchClear] START matches={matches.Count} plan={hasPlan} blocking={isBlocking} shake={doShake}");
+            }
 
         if (PresentationPlan != null)
         {
             yield return sequencer.Animator.PlayClearPresentation(PresentationPlan);
             if (trace)
-                UnityEngine.Debug.Log($"[MatchClear] presentation_done +{(UnityEngine.Time.realtimeSinceStartup - _mcStart):0.000}s");
+                {
+                    if (GameDiagnostics.BoardFlow)
+                        UnityEngine.Debug.Log($"[MatchClear] presentation_done +{(UnityEngine.Time.realtimeSinceStartup - _mcStart):0.000}s");
+                }
 
             EnqueueCascadeIfNeeded(sequencer);
             yield break;
@@ -249,12 +250,18 @@ public class MatchClearAction : BoardAction
             consumePatchbotDashRequests: !IsFlowPumpClear);
 
         if (trace)
-            UnityEngine.Debug.Log($"[MatchClear] clear_anim_done +{(UnityEngine.Time.realtimeSinceStartup - _mcStart):0.000}s");
+            {
+                if (GameDiagnostics.BoardFlow)
+                    UnityEngine.Debug.Log($"[MatchClear] clear_anim_done +{(UnityEngine.Time.realtimeSinceStartup - _mcStart):0.000}s");
+            }
 
         float _cascStart = UnityEngine.Time.realtimeSinceStartup;
         EnqueueCascadeIfNeeded(sequencer);
         if (trace)
-            UnityEngine.Debug.Log($"[MatchClear] cascade_enqueue +{(UnityEngine.Time.realtimeSinceStartup - _cascStart):0.000}s total={UnityEngine.Time.realtimeSinceStartup - _mcStart:0.000}s");
+            {
+                if (GameDiagnostics.BoardFlow)
+                    UnityEngine.Debug.Log($"[MatchClear] cascade_enqueue +{(UnityEngine.Time.realtimeSinceStartup - _cascStart):0.000}s total={UnityEngine.Time.realtimeSinceStartup - _mcStart:0.000}s");
+            }
     }
 
     public void RemoveFromMatches(TileView tile)

@@ -48,13 +48,13 @@ public class WonderScene : MonoBehaviour
         var bgImg = bg.GetComponent<Image>();
         bgImg.sprite = def.backgroundSprite;
         bgImg.preserveAspect = false;
-        if (shader != null) bgImg.material = new Material(shader) { name = $"WonderReveal_{def.wonderId}" };
         var fitter = bg.GetComponent<AspectRatioFitter>();
         fitter.aspectMode = AspectRatioFitter.AspectMode.EnvelopeParent;
         if (def.backgroundSprite != null)
             fitter.aspectRatio = (float)def.backgroundSprite.texture.width / def.backgroundSprite.texture.height;
 
         var view = bg.GetComponent<WonderRevealView>();
+        view.ConfigureShader(shader);
         view.wonderId = def.wonderId;
         view.totalStages = def.TaskCount;
         view.welderFrames = def.welderFrames;
@@ -69,7 +69,8 @@ public class WonderScene : MonoBehaviour
         var agents = new List<WonderAmbientAgent>();
         if (includeCharacters && def.characters != null)
             foreach (var c in def.characters)
-                agents.Add(BuildCharacter(bgRt, c));
+                if (c != null && c.active)
+                    agents.Add(BuildCharacter(bgRt, c));
         view.ambientAgents = agents.ToArray();
 
         View = view;

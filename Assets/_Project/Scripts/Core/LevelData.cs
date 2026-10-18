@@ -244,9 +244,76 @@ public enum ObstacleId : int
     // GrassFlower +1; hücre bundan sonra tamamen normal çimdir. Görsel: GrassFlowerOverlayService.
     // Grass gibi başka engellerin üstüne yığılabilir (saydam örtü).
     GrassFlower = 58,
+
+    // Jel fırlatıcı (kartuş): sabit, hücre kapatan, YALNIZ special hasarı alan 2 aşamalı engel. Ağzın baktığı
+    // yöne göre 4 ayrı id: Up/Down = 1x2 (dik), Left/Right = 2x1 (yatay). 2. vuruşta kırılınca kapak ağızdan
+    // tahta kenarına kadar uçar; yolundaki her hücrede engel kalmayana kadar vurur, taşı kırar/special'ı
+    // tetikler; jel 2 hücre geriden gelip yolu (ve kartuşun kendi hücrelerini) boyar.
+    // Görsel/mantık: BoardController.HandleObstacleDestroyed → GelLauncherFireAction.
+    GelLauncherUp = 59,
+    GelLauncherDown = 60,
+    GelLauncherLeft = 61,
+    GelLauncherRight = 62,
+
+    // Boya kutusu piramidi (2x2, sabit, hücre kapatan). Kasada 4-3-2 dizili 9 boya kutusu; bitişik her
+    // eşleşme bir, her special vuruşu iki kutu düşürür (ObstacleStateService). Son kutu düşünce kasa kalkar.
+    // Görsel: Grid/PaintCanBoxView — vuruşta tüm kutular sallanır, düşenler takla atarak uçar.
+    PaintCanBox = 63,
+
+    // Collect the displayed color anywhere on the board; direct hits do not advance it.
+    AncientSeal = 64,
+
+    // Lazer topu (2x2, sabit, hücre kapatan; yalnız special ile vurulur). Kule serbestçe döner; hamle sonunda
+    // bir special'a kilitlenip lazerle işaretler, oyuncu bir hamle daha kullanmazsa kafese alır. Kafesli special
+    // başka bir special'ın etki alanına girerse serbest kalır (patlamaz). 4 vuruşta (4 cıvata) parçalanır.
+    // Mantık + görsel: Grid/LaserCannon/LaserCannonService + LaserCannonView.
+    LaserCannon = 65,
+
+    // Bilardo topu (tek hücre, hareketli, KIRILMAZ, swap'lanamaz). Kargo gibi düşer; ayrıca boşalan komşu hücreye
+    // yuvarlanır (aşağı → çapraz aşağı → yana, yukarı asla) ve boşluğu taşlardan önce alır. Cebe girince hedef +1.
+    // Yalnız level'da konur (üstten yeni top gelmez). Kurallar: Docs/BilliardBall_Plan.md.
+    // Mantık: Grid/Board/CascadeLogic.Billiard.cs + BilliardBallService; görsel: BilliardBallRoll.
+    BilliardBall = 66,
+
+    // Bilardo cebi (tek hücre, sabit, kırılmaz). Taşa kapalı engel: taşlar yanından çapraz akar; yalnız top girer.
+    // Sınırsız top alır.
+    BilliardPocket = 67,
+
+    // Brandalı heykel (2x2, sabit, hücre kapatan). Önce branda: etiketteki renkten N taş tahtanın HERHANGİ bir
+    // yerinde temizlenince branda soyulur (o sırada vuruş almaz). Sonra 3 taş aşaması (YALNIZ special — normal
+    // eşleşme vurmaz, SculptingSpecial kuralı), her vuruşta parça düşer; son vuruşta bitmiş heykel hedefe uçar, çerçeve parçalanır.
+    // Renk/sayı engel başına: LevelData.tarpStatues. Mantık + görsel: Grid/TarpStatue/. Docs/TarpStatue_Plan.md.
+    TarpStatue = 68,
+
+    // Grass-backed water lily. Eats adjacent specials; special hits return the stored special,
+    // then remove four petals permanently. Empty flowers accept normal/special hits; a stored
+    // special can only be released by another special. The goal completes after grass clears.
+    GrassWaterLily = 69,
+
+    // Fixed 2x2 colossus: four damage stages, special activation only. Shared origin/goal.
+    RhodesStatue = 70,
+
+    // Renkli sandık: sabit 1x1, 3 aşama (sağlam → çatlak → ahşabı görünen). YALNIZ kendi rengindeki komşu
+    // eşleşme + special kırar (ObstacleDef.restrictNormalMatchTileType). Renk sırası ToolThreat ile aynı:
+    // Sarı=Gear, Kırmızı=Core, Mavi=Bolt, Yeşil=Plate.
+    ColorCrateYellow = 71,
+    ColorCrateRed = 72,
+    ColorCrateBlue = 73,
+    ColorCrateGreen = 74,
 }
 
 public enum TubeDirection { Up, Down, Left, Right }
+
+[System.Serializable]
+public struct TutorialStep
+{
+    [Tooltip("Gösterilecek metin (öğretici türü).")]
+    public TutorialId id;
+    [Tooltip("Değiştirilecek ilk hücre (y*width+x). -1 = tahtadaki special'ı kendisi bulur (oluşan roketi patlatma adımı).")]
+    public int fromCell;
+    [Tooltip("Değiştirilecek ikinci hücre (y*width+x). fromCell -1 ise yok sayılır (komşu kendisi seçilir).")]
+    public int toCell;
+}
 
 [System.Serializable]
 public struct TubeEntry
@@ -302,6 +369,70 @@ public struct SafeEntry
     [Tooltip("Yığın sırası (Docs/ObstacleStack_Plan.md): üst üste konan engeller (stackedObstacles + safes) " +
              "bu sayıya göre alttan üste kurulur. Eşitse eski davranış: önce stackedObstacles, sonra kasalar.")]
     public int stackOrder;
+}
+
+public enum AncientSealStartColor
+{
+    Auto = 0,
+    Red = 1,
+    Yellow = 2,
+    Green = 3
+}
+
+[System.Serializable]
+public struct AncientSealEntry
+{
+    public int originCellIndex;
+    [Min(2)] public int width;
+    [Min(2)] public int height;
+    [Tooltip("Başlangıç rengi; Auto mühürleri kırmızı, yeşil, sarı başlangıçlara dengeli dağıtır.")]
+    public AncientSealStartColor startColor;
+    [Tooltip("Her rengin toplama adedi. Başlangıçtan itibaren kırmızı → sarı → yeşil döngüsü izlenir.")]
+    [Min(1)] public int redCount;
+    [Min(1)] public int yellowCount;
+    [Min(1)] public int greenCount;
+    public int stackOrder;
+}
+
+public enum PaintCanColor
+{
+    Auto = 0,
+    Red = 1,
+    Yellow = 2,
+    Green = 3,
+    Blue = 4,
+}
+
+public enum TarpStatueColor
+{
+    Red = 0,      // TileType.Core
+    Yellow = 1,   // TileType.Gear
+    Blue = 2,     // TileType.Bolt
+    Green = 3,    // TileType.Plate
+}
+
+[System.Serializable]
+public struct TarpStatueEntry
+{
+    [Tooltip("Heykelin SOL-ÜST (origin) hücresinin flat index'i (y*width+x).")]
+    public int originCellIndex;
+    [Tooltip("Etiket rengi: brandanın kalkması için toplanacak taş rengi.")]
+    public TarpStatueColor color;
+    [Tooltip("Toplanacak taş sayısı (etikette geri sayar).")]
+    [Min(1)] public int count;
+    [Tooltip("Kare boyut: 2 = 2x2, 3 = 3x3, 4 = 4x4 (0 = 2x2).")]
+    public int size;
+
+    public int Size => size >= TarpStatueMinSize ? Mathf.Min(size, TarpStatueMaxSize) : TarpStatueMinSize;
+    public const int TarpStatueMinSize = 2, TarpStatueMaxSize = 4;
+}
+
+[System.Serializable]
+public struct PaintCanBoxColorEntry
+{
+    [Tooltip("Kasanın SOL-ÜST (origin) hücresinin flat index'i (y*width+x).")]
+    public int originCellIndex;
+    public PaintCanColor color;
 }
 
 [System.Serializable]
@@ -425,6 +556,11 @@ public class LevelData : ScriptableObject
              "BossDifficulty.AutoWaveCount ile belirler (erken bosslar 1, sonra 2, sonra 3).")]
     [Min(0)] public int bossWaveCount = 0;
 
+    [Header("Oil")]
+    [Tooltip("Oil yayılmasının tavanı: board'daki toplam oil bu sayıya ulaşınca yayılma durur (boss'un attığı oil de sayılır). " +
+             "0 = otomatik: oynanabilir hücrelerin dörtte biri, ama level'ın başlangıç oil sayısından az değil.")]
+    [Min(0)] public int oilSpreadMaxCells = 0;
+
     [Header("Random Pool")]
     [Tooltip("Bu levelda random üretilecek taş tipleri. DOLUYSA GridSpawner'daki varsayılan " +
              "havuz hiç kullanılmaz, yalnızca buradakiler üretilir. Boşsa GridSpawner'daki geçerlidir.")]
@@ -443,6 +579,10 @@ public class LevelData : ScriptableObject
     [Header("Tutorial")]
     [Tooltip("Bu level açılınca board'a inject edilecek combo tutorial. None = normal level.")]
     public ComboTutorialId comboTutorial = ComboTutorialId.None;
+
+    [Tooltip("Önceden tanımlı öğretici adımları (sırayla). Tahta pinli taşlarla bu hamlelere göre hazırlanır; " +
+             "oyuncu yalnız gösterilen değişimi yapabilir. Şansa bağlı değildir (ScriptedTutorial).")]
+    public TutorialStep[] tutorialSteps;
 
     [Header("Audio")]
     public AudioClip musicClip;
@@ -471,6 +611,9 @@ public class LevelData : ScriptableObject
              "kasa kırılınca açılır. Cells runtime'da SafeObstacleService ile işlenir.")]
     public SafeEntry[] safes;
 
+    [Tooltip("Ancient Mühür: sıradaki renkten belirtilen sayıda taş toplanınca açılır. Kenar/special vuruşu sayılmaz.")]
+    public AncientSealEntry[] ancientSeals;
+
     [Tooltip("Üst üste bindirilmiş obstacle'lar (generic stacking). Her entry, kapladığı hücrelerdeki " +
              "AUTHORED içeriği (Mud, Stone vb.) 'beneath' olarak saklayıp üstüne obstacleId'yi stamp eder; " +
              "üstteki obstacle kırılınca alttaki geri açılır. Safe ile aynı beneath mekanizmasının her " +
@@ -481,8 +624,98 @@ public class LevelData : ScriptableObject
              "obstacleOrigins'ten tanır: aynı numaralı bitişik duvar hücreleri tek origin paylaşır. 0 = duvar yok.")]
     public int[] wallPieceIds;
 
-    [Tooltip("Aç Hamster doyma eşiği (lokma). 0 = ObstacleLibrary'deki hamsterSatiety varsayılanı.")]
+    [Tooltip("Aç Hamster doyma eşiği (lokma), level varsayılanı. 0 = ObstacleLibrary'deki hamsterSatiety. " +
+             "Hamster başına değer (hamsterSatietyByCell) varsa o geçerlidir.")]
     [Min(0)] public int hamsterSatietyOverride = 0;
+    [Tooltip("Hamster başına lokma (doyma) sayısı — hamsterin KONDUĞU hücrenin index'inde. 0 = level/kütüphane varsayılanı. " +
+             "Editörde hamster yerleştirirken yazılır.")]
+    public int[] hamsterSatietyByCell;
+
+    [Tooltip("Boya kutusu kasalarının (PaintCanBox) kutu rengi, kasa origin'ine göre. Listede olmayan kasa " +
+             "Auto'dur: rengi satır bandından gelir (PaintCanBoxView.AutoColorForRow).")]
+    public PaintCanBoxColorEntry[] paintCanBoxColors;
+
+    [Tooltip("Brandalı heykellerin etiket rengi + toplama sayısı, heykel origin'ine göre. Listede olmayan heykel " +
+             "varsayılanı kullanır (kırmızı, TarpStatueDefaultCount).")]
+    public TarpStatueEntry[] tarpStatues;
+
+    public const int TarpStatueDefaultCount = 30;
+
+    public TarpStatueEntry GetTarpStatue(int originCellIndex)
+    {
+        if (tarpStatues != null)
+            foreach (var e in tarpStatues)
+                if (e.originCellIndex == originCellIndex) return e;
+        return new TarpStatueEntry { originCellIndex = originCellIndex, color = TarpStatueColor.Red, count = TarpStatueDefaultCount };
+    }
+
+    public void SetTarpStatue(int originCellIndex, TarpStatueColor color, int count, int size)
+    {
+        var list = new System.Collections.Generic.List<TarpStatueEntry>(
+            tarpStatues ?? System.Array.Empty<TarpStatueEntry>());
+        list.RemoveAll(e => e.originCellIndex == originCellIndex);
+        list.Add(new TarpStatueEntry { originCellIndex = originCellIndex, color = color, count = Mathf.Max(1, count), size = size });
+        tarpStatues = list.ToArray();
+    }
+
+    /// Engelin kapladığı alan. Brandalı heykel tek engel, boyutu heykel başına (2x2/3x3/4x4); diğerleri def.size.
+    /// Çok-hücreli engelin ayak izini okuyan her yer bunu kullanmalı (doğrudan def.size değil).
+    public Vector2Int GetObstacleFootprint(ObstacleId id, int originCellIndex, ObstacleDef def)
+    {
+        if (id == ObstacleId.TarpStatue)
+        {
+            int n = GetTarpStatue(originCellIndex).Size;
+            return new Vector2Int(n, n);
+        }
+        return def != null ? new Vector2Int(Mathf.Max(1, def.size.x), Mathf.Max(1, def.size.y)) : Vector2Int.one;
+    }
+
+    public void RemoveTarpStatue(int originCellIndex)
+    {
+        if (tarpStatues == null) return;
+        var list = new System.Collections.Generic.List<TarpStatueEntry>(tarpStatues);
+        if (list.RemoveAll(e => e.originCellIndex == originCellIndex) > 0) tarpStatues = list.ToArray();
+    }
+
+    /// Tahtada (taban ya da yığın katmanı olarak) heykeli kalmayan girdileri siler — silgi, üstüne boyama, maske
+    /// hangisi heykeli kaldırırsa kaldırsın ayar listesi tahtayla aynı kalır.
+    public void PruneTarpStatues()
+    {
+        if (tarpStatues == null || tarpStatues.Length == 0) return;
+        var list = new System.Collections.Generic.List<TarpStatueEntry>(tarpStatues);
+        int removed = list.RemoveAll(e => !HasTarpStatueAt(e.originCellIndex));
+        if (removed > 0) tarpStatues = list.ToArray();
+    }
+
+    private bool HasTarpStatueAt(int origin)
+    {
+        if (obstacles != null && origin >= 0 && origin < obstacles.Length &&
+            obstacles[origin] == (int)ObstacleId.TarpStatue &&
+            (obstacleOrigins == null || origin >= obstacleOrigins.Length || obstacleOrigins[origin] == origin))
+            return true;
+        if (stackedObstacles != null)
+            foreach (var s in stackedObstacles)
+                if (s.obstacleId == ObstacleId.TarpStatue && s.originCellIndex == origin) return true;
+        return false;
+    }
+
+    public PaintCanColor GetPaintCanBoxColor(int originCellIndex)
+    {
+        if (paintCanBoxColors != null)
+            foreach (var e in paintCanBoxColors)
+                if (e.originCellIndex == originCellIndex) return e.color;
+        return PaintCanColor.Auto;
+    }
+
+    public void SetPaintCanBoxColor(int originCellIndex, PaintCanColor color)
+    {
+        var list = new System.Collections.Generic.List<PaintCanBoxColorEntry>(
+            paintCanBoxColors ?? System.Array.Empty<PaintCanBoxColorEntry>());
+        list.RemoveAll(e => e.originCellIndex == originCellIndex);
+        if (color != PaintCanColor.Auto)
+            list.Add(new PaintCanBoxColorEntry { originCellIndex = originCellIndex, color = color });
+        paintCanBoxColors = list.ToArray();
+    }
 
     [Tooltip("Sabitlenmiş taş tipleri. 0 = rastgele (None), diğerleri TileType+1 değeri.\n" +
              "size = width*height. GridSpawner spawn sırasında simulation yerine bu değeri kullanır.")]
@@ -537,12 +770,17 @@ public class LevelData : ScriptableObject
 
         if (safes == null)
             safes = System.Array.Empty<SafeEntry>();
+        if (ancientSeals == null)
+            ancientSeals = System.Array.Empty<AncientSealEntry>();
 
         if (stackedObstacles == null)
             stackedObstacles = System.Array.Empty<StackedObstacleEntry>();
 
         if (pinnedTileTypes == null || pinnedTileTypes.Length != size)
             pinnedTileTypes = new int[size];
+
+        if (hamsterSatietyByCell == null || hamsterSatietyByCell.Length != size)
+            hamsterSatietyByCell = new int[size];
 
         if (pinnedSpecialTypes == null || pinnedSpecialTypes.Length != size)
             pinnedSpecialTypes = new int[size];

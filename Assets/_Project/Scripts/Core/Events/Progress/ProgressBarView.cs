@@ -41,6 +41,7 @@ public class ProgressBarView : MonoBehaviour
 
     private IProgressEventService service;
     private Coroutine             activeRoutine;
+    private bool                  infoBuilt;
 
     // ── Panel tarafından çağrılır ─────────────────────────────────
 
@@ -69,15 +70,64 @@ public class ProgressBarView : MonoBehaviour
         }
         if (rewardAmountText != null && def.reward != null)
         {
-            rewardAmountText.text = def.rewardDurationMinutes > 0
-                ? GameLocalization.GetFormat("progress_reward_minutes", def.rewardDurationMinutes)
+            rewardAmountText.text = def.EffectiveRewardDurationMinutes > 0
+                ? GameLocalization.GetFormat("progress_reward_minutes", def.EffectiveRewardDurationMinutes)
                 : $"+{def.reward.amount}";
         }
-        if (descriptionText != null) descriptionText.text   = def.fallbackDescription;
+        if (descriptionText != null) descriptionText.text   = def.GetDescription();
+        EnsureInfoBadge();
         if (claimedOverlay  != null) claimedOverlay.SetActive(goal.IsRewardClaimed);
 
         if (applyFill)
             StartCoroutine(CoApplyFillNextFrame(goal.NormalizedProgress, goal.CurrentCount, def.targetCount));
+    }
+
+    // ── Bilgi (i) ────────────────────────────────────────────────
+    // Hedef açıklaması barın altında yazmaz: hedef ikonunun sağ alt köşesine (kenardan taşan) küçük (i) konur;
+    // ikona ya da (i)'ye dokununca açıklama ortak mesaj penceresinde (RuntimeChoicePopup) açılır.
+
+    private void EnsureInfoBadge()
+    {
+        if (infoBuilt || goalIconImage == null) return;
+        infoBuilt = true;
+        if (descriptionText != null) descriptionText.gameObject.SetActive(false);
+
+        var iconGo = goalIconImage.gameObject;
+        goalIconImage.raycastTarget = true;
+        if (!iconGo.TryGetComponent<Button>(out var iconButton))
+        {
+            iconButton = iconGo.AddComponent<Button>();
+            iconButton.targetGraphic = goalIconImage;
+        }
+        iconButton.onClick.AddListener(ShowGoalInfo);
+
+        var badge = new GameObject("GoalInfoBadge", typeof(RectTransform), typeof(Image), typeof(Button));
+        badge.layer = iconGo.layer;
+        var rt = (RectTransform)badge.transform;
+        rt.SetParent(iconGo.transform, false);
+        rt.SetAsLastSibling();
+        // Merkez ikonun sağ alt köşesine yakın: rozet ikon kenarından dışarı taşar.
+        rt.anchorMin = new Vector2(0.68f, -0.12f);
+        rt.anchorMax = new Vector2(1.12f, 0.32f);
+        rt.offsetMin = rt.offsetMax = Vector2.zero;
+        var img = badge.GetComponent<Image>();
+        img.sprite = UiIcons.Info;
+        img.preserveAspect = true;
+        img.raycastTarget = true;
+        var badgeButton = badge.GetComponent<Button>();
+        badgeButton.targetGraphic = img;
+        badgeButton.onClick.AddListener(ShowGoalInfo);
+    }
+
+    private void ShowGoalInfo()
+    {
+        var svc = ProgressEventService.Instance;
+        if (svc == null || goalIndex >= svc.Goals.Count) return;
+        var goal = svc.Goals[goalIndex];
+        if (goal == null || goal.Definition == null) return;
+        string body = goal.Definition.GetDescription() + "\n\n"
+            + GameLocalization.GetFormat("progress_info_progress", goal.CurrentCount, goal.Definition.targetCount);
+        RuntimeChoicePopup.Show(GameLocalization.Get("progress_info_title"), body);
     }
 
     private IEnumerator CoApplyFillNextFrame(float normalized, int current, int target)

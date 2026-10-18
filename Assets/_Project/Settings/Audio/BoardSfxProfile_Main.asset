@@ -29,32 +29,34 @@ MonoBehaviour:
     minInterval: 0.05
   createLine:
     clips:
-    - {fileID: 8300000, guid: 1323266ee11014c418025a85f3dd3b3b, type: 3}
+    - {fileID: 8300000, guid: 5365e990ddf848a1a127fb551233bea0, type: 3}
     volume: 1
     minInterval: 0.05
   createPatchBot:
     clips:
-    - {fileID: 8300000, guid: 1323266ee11014c418025a85f3dd3b3b, type: 3}
+    - {fileID: 8300000, guid: ca61cc653b8a405bab624830b39c669e, type: 3}
     volume: 1
     minInterval: 0.05
   createPulseCore:
     clips:
-    - {fileID: 8300000, guid: 1323266ee11014c418025a85f3dd3b3b, type: 3}
+    - {fileID: 8300000, guid: fb29da788c644d1ea39e0530cc22f007, type: 3}
     volume: 1
     minInterval: 0.05
   createSystemOverride:
     clips:
-    - {fileID: 8300000, guid: 1323266ee11014c418025a85f3dd3b3b, type: 3}
+    - {fileID: 8300000, guid: 0438140636d74bf4b016ddc1aae4ac75, type: 3}
     volume: 1
     minInterval: 0.05
   activateLine:
     clips:
-    - {fileID: 8300000, guid: 60fd4c828f6fca145a07b8744d59929a, type: 3}
+    - {fileID: 8300000, guid: 85992a49098148ada86d4dba76a8066a, type: 3}
+    - {fileID: 8300000, guid: 172227c9ce1e418c94d67057497297d2, type: 3}
     volume: 1
     minInterval: 0.05
   activatePatchBot:
     clips:
-    - {fileID: 8300000, guid: 516d7e3d256ecf14d8e5336cad8c777f, type: 3}
+    - {fileID: 8300000, guid: fbc21993a19b410b92b25151bf6c0b8b, type: 3}
+    - {fileID: 8300000, guid: e9615d5f5e524a41af8cfef4aed794e3, type: 3}
     volume: 1
     minInterval: 0.05
   activatePulseCore:
@@ -77,12 +79,12 @@ MonoBehaviour:
     minInterval: 0.05
   overrideNormalStart:
     clips:
-    - {fileID: 8300000, guid: 56be64fdcf2344825bf271fb492eaa9e, type: 3}
+    - {fileID: 8300000, guid: a37a95438eb548cdb86d41eaae285bec, type: 3}
     volume: 1
     minInterval: 0.05
   overrideSpecialStart:
     clips:
-    - {fileID: 8300000, guid: 56be64fdcf2344825bf271fb492eaa9e, type: 3}
+    - {fileID: 8300000, guid: a37a95438eb548cdb86d41eaae285bec, type: 3}
     volume: 1
     minInterval: 0.05
   pulsePulseCharge:

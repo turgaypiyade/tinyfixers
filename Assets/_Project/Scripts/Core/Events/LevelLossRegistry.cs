@@ -9,7 +9,7 @@ using UnityEngine;
 public readonly struct LevelLossItem
 {
     public readonly Sprite Icon;     // opsiyonel (null → ikon gizlenir)
-    public readonly string Label;    // localized isim ("Safari ilerlemesi")
+    public readonly string Label;    // localized isim ("TIRMANIŞ ilerlemesi")
     public readonly int Amount;
     public readonly bool Achieved;   // true → checkmark, false → cancel rozeti
 
@@ -28,6 +28,10 @@ public readonly struct LevelLossItem
 /// Amaç: loss paneli (UI) hiçbir event'i tek tek tanımasın. Her event/sistem kendi riskini
 /// bir provider ile buraya kaydeder; UI yalnızca <see cref="Collect"/> ile toplayıp çizer.
 /// Yeni event = yeni provider + Register → UI'a HİÇ dokunulmaz (open/closed).
+///
+/// KURAL (kullanıcı, 2026-10-10): oyuncunun bu level'da FİİLEN kazandığı ve vazgeçince silinecek her şey
+/// (yarım event ilerlemesi dahil) burada görünmeli — oyuncuyu tutmanın aracı budur. Level içinde kazanım
+/// biriktiren yeni bir sistem yazılırsa provider'ı da yazılır. Kaybı olmayan event (ör. Bridge) kaydedilmez.
 ///
 /// Pull-based: provider O ANKİ canlı durumu okur (staging/commit/discard senkronu YOK).
 /// Keyed: aynı anahtar tekrar Register edilince ÜzerINE yazılır → sahne yeniden yüklense de
@@ -83,7 +87,8 @@ public static class LevelLossRegistry
         foreach (var pending in resultScreens.Values)
         {
             try { if (pending()) return true; }
-            catch (Exception e) { Debug.LogWarning($"[LevelLossRegistry] result screen hata: {e.Message}"); }
+            catch (Exception e) { if (GameDiagnostics.CriticalErrors)
+                Debug.LogWarning($"[LevelLossRegistry] result screen hata: {e.Message}"); }
         }
         return false;
     }
@@ -95,7 +100,8 @@ public static class LevelLossRegistry
         {
             IEnumerable<LevelLossItem> items = null;
             try { items = provider?.Invoke(); }
-            catch (Exception e) { Debug.LogWarning($"[LevelLossRegistry] provider hata: {e.Message}"); }
+            catch (Exception e) { if (GameDiagnostics.CriticalErrors)
+                Debug.LogWarning($"[LevelLossRegistry] provider hata: {e.Message}"); }
 
             if (items == null)
                 continue;

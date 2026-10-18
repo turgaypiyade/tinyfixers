@@ -54,11 +54,6 @@ public sealed class UfoImplantController : MonoBehaviour
         int stage = StreakBoosterEvent.CurrentStage;
         var earned = StreakBoosterEvent.GetEarnedSpecials(globalLevel);
 
-        // Karar noktası logu: ödül BOŞ olsa bile hangi koşulun patladığını gör (level<eşik mi, streak 0 mı).
-        Debug.Log($"[UfoImplant] karar → level={globalLevel} threshold={StreakBoosterEvent.ThresholdLevel} " +
-                  $"active={StreakBoosterEvent.IsActiveForLevel(globalLevel)} streak={streak} stage={stage} " +
-                  $"earned={(earned != null ? earned.Count : 0)}");
-
         if (earned == null || earned.Count == 0)
             yield break;
 
@@ -73,7 +68,8 @@ public sealed class UfoImplantController : MonoBehaviour
         }
         if (board == null)
         {
-            Debug.LogWarning("[UfoImplant] Board hazır olmadı (timeout) — teslimat atlandı.");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogWarning("[UfoImplant] Board hazır olmadı (timeout) — teslimat atlandı.");
             yield break;
         }
 
@@ -137,6 +133,7 @@ public sealed class UfoImplantController : MonoBehaviour
         const float maxWait = 30f;  // güvenlik tavanı — asla sonsuza takılma
         float waited = 0f;
         float clearFor = 0f;
+        bool reasonLogged = false;
 
         while (waited < maxWait)
         {
@@ -153,6 +150,13 @@ public sealed class UfoImplantController : MonoBehaviour
             else
             {
                 clearFor = 0f;
+                // Teşhis (tek sefer): UFO 2 sn'den uzun bekliyorsa nedenini yaz.
+                if (!reasonLogged && waited > 2f)
+                {
+                    reasonLogged = true;
+                    if (GameDiagnostics.CriticalErrors)
+                        Debug.LogWarning($"[UfoImplant] UFO bekliyor ({waited:0.0}s): tutorialOverlay={overlayActive} " + $"boardBusy={(board != null && board.IsBusy)} boardLocked={(board != null && board.IsExplicitlyLocked)}");
+                }
             }
 
             waited += Time.deltaTime;

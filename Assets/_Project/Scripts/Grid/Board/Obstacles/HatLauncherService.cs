@@ -40,7 +40,10 @@ public sealed class HatLauncherService : MonoBehaviour
     private void OnDisable()
     {
         if (board?.ObstacleStateService != null)
+        {
             board.ObstacleStateService.HatLauncherHitInterceptor = null;
+            board.ObstacleStateService.HatLauncherCanProduceQuery = null;
+        }
     }
 
     private void ResolveReferences()
@@ -69,8 +72,15 @@ public sealed class HatLauncherService : MonoBehaviour
 
         totalGroupReleased = 0;
         board.ObstacleStateService.HatLauncherHitInterceptor = HandleHit;
+        board.ObstacleStateService.HatLauncherCanProduceQuery = CanProduce;
+    }
 
-        Debug.Log($"[HatLauncher] Bound. totalCapacity={TotalCapacity}");
+    private bool CanProduce()
+    {
+        if (totalGroupReleased >= TotalCapacity) return false;
+        var collectible = ResolveCollectibleId();
+        return collectible == CollectibleId.None || topHud == null
+               || topHud.HasGoalForCollectible(collectible);
     }
 
     private void HandleHit(int originIndex)
@@ -80,7 +90,7 @@ public sealed class HatLauncherService : MonoBehaviour
 
         int capacity = TotalCapacity;
 
-        if (totalGroupReleased >= capacity)
+        if (!CanProduce())
         {
             fx?.SetExhausted(originIndex, null);
             return;
@@ -111,8 +121,6 @@ public sealed class HatLauncherService : MonoBehaviour
 
         if (logHits)
         {
-            Debug.Log($"[HatLauncher] HIT origin={originIndex} released={totalGroupReleased}/{capacity} " +
-                      $"collectible={collectible} goalExists={goalExists} fx={(fx != null ? fx.name : "NULL")} topHud={(topHud != null ? "ok" : "NULL")}");
         }
 
         if (fx != null)
@@ -121,7 +129,21 @@ public sealed class HatLauncherService : MonoBehaviour
             onArrived?.Invoke();
 
         if (exhausted)
+        {
             ExhaustAll();
+            // Kapasite doldu: kutular kapanır → bitiş sesi (ObstacleDef.breakSound). Son fırlatma sesiyle
+            // üst üste binmesin diye kısa gecikme.
+            if (isActiveAndEnabled) StartCoroutine(CoPlayFinishSound(0.35f));
+        }
+    }
+
+    private IEnumerator CoPlayFinishSound(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        if (!GameSettings.SoundEnabled || board == null) yield break;
+        var def = ResolveActiveLevelData()?.obstacleLibrary?.Get(ObstacleId.HatLauncher);
+        if (def != null && def.breakSound != null)
+            board.SfxSource?.PlayOneShot(def.breakSound, def.breakSoundVolume);
     }
 
     private void ExhaustAll()

@@ -64,9 +64,9 @@ public class PreLevelSpecialPopupController : MonoBehaviour
     [SerializeField, Min(1)] private int fallbackChapter = 1;
     [SerializeField] private Transform goalsPreviewRoot;
     [SerializeField] private TopHudGoalSlot goalSlotPrefab;
-    [SerializeField, Min(1)] private int maxPreviewGoals = 4;
-    [Tooltip("Hedef ikonlarının en büyük ölçeği (1–2 hedef). 3 hedefte %80'i, 4 hedefte %65'i kullanılır " +
-             "(kutuya sığsın).")]
+    [SerializeField, Min(1)] private int maxPreviewGoals = 5;
+    [Tooltip("Hedef ikonlarının en büyük ölçeği (1–2 hedef). 3 hedefte %80'i, 4 hedefte %65'i " +
+             "kullanılır. 5 hedefte tüm satır kutuya sığacak şekilde orantılı küçülür.")]
     [SerializeField, Min(0.1f)] private float goalPreviewScale = 2.6f;
     private int previewGoalCount = 1;
     [SerializeField] private Sprite fallbackGoalIcon;
@@ -332,8 +332,8 @@ public class PreLevelSpecialPopupController : MonoBehaviour
             // Böylece ikon görünmeyip sadece sayı görünmesi engellenir.
             if (goalIcon == null)
             {
-                Debug.LogWarning(
-                    $"[PreLevelSpecialPopup] Goal preview skipped because icon is missing. index={i}, targetType={goal.targetType}");
+                if (GameDiagnostics.CriticalErrors)
+                    Debug.LogWarning($"[PreLevelSpecialPopup] Goal preview skipped because icon is missing. index={i}, targetType={goal.targetType}");
                 continue;
             }
 
@@ -354,6 +354,8 @@ public class PreLevelSpecialPopupController : MonoBehaviour
 
         // Az hedefte büyük ikon (kutu boş kalmasın), çok hedefte kutuya sığacak kadar.
         float countFactor = previewGoalCount <= 2 ? 1f : previewGoalCount == 3 ? 0.8f : 0.65f;
+        if (previewGoalCount > 4)
+            countFactor *= 4f / previewGoalCount;
         float scale = Mathf.Max(0.1f, goalPreviewScale * countFactor);
 
         if (slot.transform is RectTransform rt)
@@ -361,6 +363,21 @@ public class PreLevelSpecialPopupController : MonoBehaviour
             LayoutElement slotLayoutElement = slot.GetComponent<LayoutElement>();
             float baseWidth = ResolveLayoutSize(slotLayoutElement != null ? slotLayoutElement.preferredWidth : -1f, rt.rect.width, rt.sizeDelta.x);
             float baseHeight = ResolveLayoutSize(slotLayoutElement != null ? slotLayoutElement.preferredHeight : -1f, rt.rect.height, rt.sizeDelta.y);
+            if (previewGoalCount > 4 && goalsPreviewRoot is RectTransform rootRt)
+            {
+                var layout = rootRt.GetComponent<HorizontalLayoutGroup>();
+                float availableWidth = rootRt.rect.width;
+                float availableHeight = rootRt.rect.height;
+                if (layout != null)
+                {
+                    availableWidth -= layout.padding.horizontal + layout.spacing * (previewGoalCount - 1);
+                    availableHeight -= layout.padding.vertical;
+                }
+                if (baseWidth > 0f && availableWidth > 0f)
+                    scale = Mathf.Min(scale, availableWidth / (previewGoalCount * baseWidth));
+                if (baseHeight > 0f && availableHeight > 0f)
+                    scale = Mathf.Min(scale, availableHeight / baseHeight);
+            }
             WrapGoalPreviewSlotForLayout(slot, rt, baseWidth, baseHeight, scale);
             rt.localScale = Vector3.one * scale;
         }
@@ -506,7 +523,7 @@ public class PreLevelSpecialPopupController : MonoBehaviour
                 ? levelData.obstacleLibrary.Get(goal.obstacleId)
                 : null;
 
-            Sprite preview = obstacleDef != null ? obstacleDef.GetPreviewSprite() : null;
+            Sprite preview = obstacleDef != null ? obstacleDef.GetGoalIconSprite() : null;
             return preview != null ? preview : fallbackGoalIcon;
         }
 
@@ -588,8 +605,6 @@ public class PreLevelSpecialPopupController : MonoBehaviour
         var timedSpecials = PreLevelAutoSpecials.Collect();
         var combined = new List<TileSpecial>(timedSpecials);
         combined.AddRange(userSelected);
-
-        Debug.Log($"[PreLevelSpecialPopup] Continue userSelected={userSelected.Count} timedAuto={timedSpecials.Count}");
         PreLevelSpecialSelectionState.SetSelection(userSelected);
         PreLevelSpecialRuntimeInjector.EnsureForSelection(combined);
         RefreshCounts();

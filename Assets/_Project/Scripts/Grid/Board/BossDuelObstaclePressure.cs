@@ -58,11 +58,8 @@ public static class BossDuelObstaclePressure
                 if (board.Holes[x, y]) continue;
                 usable++;
                 if (pool.Contains(service.GetObstacleIdAt(x, y))) alive++;
-                var tile = board.Tiles[x, y];
                 if (service.HasObstacleAt(x, y) || service.IsInteractionLockedAt(x, y)
-                    || tile == null || !tile.IsRuntimeIdle || tile.WasDragging || board.GridData[x, y] == null
-                    || tile.GetSpecial() != TileSpecial.None || tile.GetTileType() == TileType.Key
-                    || board.IsPendingTriggeredSpecialCell(x, y) || board.IsReservedTileTargetCell(x, y)) continue;
+                    || !board.IsTileFreeForDynamicObstacle(x, y)) continue;
                 candidates.Add(new Vector2Int(x, y));
             }
         // Pressure cannot occupy more than a quarter of the board, even with an oversized editor value.

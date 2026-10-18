@@ -43,17 +43,20 @@ public class BoardBorderDrawer : MonoBehaviour
     {
         if (level == null)
         {
-            Debug.LogError("BoardBorderDrawer: LevelData NULL");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogError("BoardBorderDrawer: LevelData NULL");
             return;
         }
         if (borderRoot == null)
         {
-            Debug.LogError("BoardBorderDrawer: borderRoot NULL (Mask dışına bir RectTransform ver)");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogError("BoardBorderDrawer: borderRoot NULL (Mask dışına bir RectTransform ver)");
             return;
         }
         if (borderSegmentPrefab == null)
         {
-            Debug.LogError("BoardBorderDrawer: borderSegmentPrefab NULL");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogError("BoardBorderDrawer: borderSegmentPrefab NULL");
             return;
         }
 

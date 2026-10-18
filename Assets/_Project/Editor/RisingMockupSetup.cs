@@ -5,7 +5,7 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// Yükseliş (Rising) eventini tek tıkla kurar — Menü: TinyFixers > Mockup > Rising Event.
+/// TIRMANIŞ eventini tek tıkla kurar — Menü: TinyFixers > Mockup > TIRMANIŞ Event.
 /// Safari backend'ini (SafariConfig/State/Schedule/Controller) yeniden kullanır; sunum olarak
 /// dikey asansör harita ekranını (RisingMapScreen) + üst HUD'u (RisingTopHud) kurar:
 ///   - Kule fonu (RisingBG) + 7 kat anchor'ı (alttan üste).
@@ -51,7 +51,7 @@ public static class RisingMockupSetup
 
     private static readonly Color Yellow = new Color(1f, 0.82f, 0.2f, 1f);
 
-    [MenuItem("TinyFixers/Mockup/Rising Event")]
+    [MenuItem("TinyFixers/Mockup/TIRMANIŞ Event")]
     public static void Setup()
     {
         MockupUI.EnsureFolder(ResDir);
@@ -71,7 +71,7 @@ public static class RisingMockupSetup
         var canvas = Object.FindFirstObjectByType<Canvas>();
         if (canvas == null)
         {
-            EditorUtility.DisplayDialog("Rising Setup", "MainMenu sahnesini aç ve tekrar dene.", "Tamam");
+            EditorUtility.DisplayDialog("TIRMANIŞ Kurulumu", "MainMenu sahnesini aç ve tekrar dene.", "Tamam");
             return;
         }
         var root = canvas.rootCanvas.transform;
@@ -112,8 +112,8 @@ public static class RisingMockupSetup
 
         EditorSceneManager.MarkSceneDirty(canvas.gameObject.scene);
         AssetDatabase.SaveAssets();
-        EditorUtility.DisplayDialog("Rising Setup",
-            "Yükseliş kuruldu (ikon + popup + asansör harita + TopHUD).\n" +
+        EditorUtility.DisplayDialog("TIRMANIŞ Kurulumu",
+            "TIRMANIŞ kuruldu (ikon + popup + asansör harita + TopHUD).\n" +
             "Kalıcı sprite'ları Inspector'dan tak: mor bant, bej panel, mavi kutu, Seviye/Oyuncu ikonları.\n" +
             "Sahneyi kaydet (Cmd+S).", "Tamam");
     }
@@ -336,7 +336,7 @@ public static class RisingMockupSetup
         flagLabel.raycastTarget = false;
         flagLabel.gameObject.SetActive(flagSprite == null);
 
-        var title = MockupUI.NewText("Title", rootRt, "Yükseliş", 82f,
+        var title = MockupUI.NewText("Title", rootRt, "TIRMANIŞ", 82f,
             new Color(1f, 0.93f, 0.62f, 1f), TextAlignmentOptions.Center, theme.headingFont);
         title.rectTransform.anchorMin = title.rectTransform.anchorMax = new Vector2(0.5f, 1f);
         title.rectTransform.pivot = new Vector2(0.5f, 1f);
@@ -434,7 +434,7 @@ public static class RisingMockupSetup
 
         // Mor bant başlık
         var titleText = MakeHudText("Title", fr, theme.headingFont, Yellow, 40,
-            new Vector2(0.5f, 0.82f), new Vector2(360f, 60f), "Yükseliş");
+            new Vector2(0.5f, 0.82f), new Vector2(360f, 60f), "TIRMANIŞ");
 
         // Sol kutu — Seviye (posX/posY: kullanıcı Unity tuning'i, mevcut frac anchor'a göre; font 40).
         var levelTitle = MakeHudText("LevelTitle", fr, theme.headingFont, Yellow, 40,
@@ -716,8 +716,10 @@ public static class RisingMockupSetup
         list.Sort((a, b) => a.rect.x.CompareTo(b.rect.x));
 
         if (list.Count == 0)
-            Debug.LogError($"[{LogTag}] Helmet sheet dilimlenmemiş: {HelmetSheetPath} " +
-                           "(Inspector > Sprite Mode: Multiple + Sprite Editor > Slice).");
+            {
+                if (GameDiagnostics.EditorTools)
+                    Debug.LogError($"[{LogTag}] Helmet sheet dilimlenmemiş: {HelmetSheetPath} " + "(Inspector > Sprite Mode: Multiple + Sprite Editor > Slice).");
+            }
         return list.ToArray();
     }
 
@@ -733,7 +735,8 @@ public static class RisingMockupSetup
     {
         var so = new SerializedObject(target);
         var p = so.FindProperty(field);
-        if (p == null) { Debug.LogError($"[RisingMockupSetup] '{field}' alanı {target} üzerinde yok."); return; }
+        if (p == null) { if (GameDiagnostics.EditorTools)
+            Debug.LogError($"[RisingMockupSetup] '{field}' alanı {target} üzerinde yok."); return; }
         p.boolValue = value;
         so.ApplyModifiedPropertiesWithoutUndo();
     }
@@ -742,7 +745,8 @@ public static class RisingMockupSetup
     {
         var so = new SerializedObject(target);
         var p = so.FindProperty(field);
-        if (p == null) { Debug.LogError($"[RisingMockupSetup] '{field}' alanı {target} üzerinde yok."); return; }
+        if (p == null) { if (GameDiagnostics.EditorTools)
+            Debug.LogError($"[RisingMockupSetup] '{field}' alanı {target} üzerinde yok."); return; }
         p.intValue = value;
         so.ApplyModifiedPropertiesWithoutUndo();
     }
@@ -751,7 +755,8 @@ public static class RisingMockupSetup
     {
         var so = new SerializedObject(target);
         var p = so.FindProperty(field);
-        if (p == null) { Debug.LogError($"[RisingMockupSetup] '{field}' alanı {target} üzerinde yok."); return; }
+        if (p == null) { if (GameDiagnostics.EditorTools)
+            Debug.LogError($"[RisingMockupSetup] '{field}' alanı {target} üzerinde yok."); return; }
         p.floatValue = value;
         so.ApplyModifiedPropertiesWithoutUndo();
     }

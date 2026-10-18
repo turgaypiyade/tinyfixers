@@ -78,8 +78,27 @@ public sealed class InGameShopOverlay : MonoBehaviour
         CommonPopupView.Region((RectTransform)close.transform, new Rect(0.30f, 0.03f, 0.40f, 0.075f));
     }
 
-    private void OnEnable() => PlayerWallet.OnCoinsChanged += RefreshBalance;
-    private void OnDisable() => PlayerWallet.OnCoinsChanged -= RefreshBalance;
+    private void OnEnable()
+    {
+        PlayerWallet.OnCoinsChanged += RefreshBalance;
+        ShopPurchaseService.OnPurchased += HandleAsyncPurchased;
+    }
+
+    private void OnDisable()
+    {
+        PlayerWallet.OnCoinsChanged -= RefreshBalance;
+        ShopPurchaseService.OnPurchased -= HandleAsyncPurchased;
+    }
+
+    private bool inSyncPurchase;
+
+    // Mağaza (gerçek para) onayı sonradan gelir → kartları o an tazele; senkron alımlar HandlePurchase'ta işlenir.
+    private void HandleAsyncPurchased(ShopOffer offer)
+    {
+        if (inSyncPurchase || offer == null) return;
+        ShowToast(GameLocalization.GetFormat("shop_purchased_toast", offer.LocalizedName));
+        Populate();
+    }
 
     private void Build()
     {
@@ -147,7 +166,11 @@ public sealed class InGameShopOverlay : MonoBehaviour
 
     private void HandlePurchase(ShopOffer offer)
     {
-        if (!ShopPurchaseService.TryPurchase(offer)) return;
+        inSyncPurchase = true;
+        bool bought;
+        try { bought = ShopPurchaseService.TryPurchase(offer); }
+        finally { inSyncPurchase = false; }
+        if (!bought) return;
 
         ShowToast(GameLocalization.GetFormat("shop_purchased_toast", offer.LocalizedName));
         Populate();   // bakiye + tek seferlik teklif durumu değişti

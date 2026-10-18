@@ -36,7 +36,15 @@ public class SlideToggleAnimator : MonoBehaviour
         if (toggle != null) toggle.onValueChanged.RemoveListener(OnToggleChanged);
     }
 
-    private void OnToggleChanged(bool isOn) => StartAnim(isOn);
+    // A settings listener can restore the actual value while a native request is pending.
+    private void OnToggleChanged(bool isOn) => StartAnim(toggle != null ? toggle.isOn : isOn);
+
+    // Silent Toggle updates do not invoke onValueChanged. Also cancels an in-flight slide.
+    public void SyncWithoutAnimation()
+    {
+        if (toggle == null) toggle = GetComponent<Toggle>();
+        ApplyInstant(toggle != null && toggle.isOn);
+    }
 
     private void ApplyInstant(bool isOn)
     {

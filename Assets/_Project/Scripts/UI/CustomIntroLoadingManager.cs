@@ -87,7 +87,8 @@ public sealed class CustomIntroLoadingManager : MonoBehaviour
     {
         if (left == null || right == null || string.IsNullOrEmpty(sceneName))
         {
-            Debug.LogWarning("[CustomIntroLoading] Eksik sprite/scene — default akışa düşülmeli.");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogWarning("[CustomIntroLoading] Eksik sprite/scene — default akışa düşülmeli.");
             return;
         }
 

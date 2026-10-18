@@ -1,0 +1,111 @@
+<size=150%><b>Privacy Policy</b></size>
+
+<i>Last updated: 17 October 2026</i>
+
+This policy explains what information <b>Wonder Fixers</b> (the "Game") collects, why, and what choices you have. The Game is developed by <b>Wondi Games</b>, the game studio of <b>Julvera Teknoloji A.Ş.</b> ("we", "us"). Julvera Teknoloji A.Ş. is the data controller for the personal data described here.
+
+<b>Contact</b>
+Julvera Teknoloji A.Ş. (Wondi Games)
+Ünalan Mah. Ünalan Cad. No:1 İç Kapı No:10, Üsküdar, İstanbul, Türkiye
+MERSİS No: 0484229996100001 · Istanbul Trade Registry No: 1061860
+Email: hello@wondigames.com
+
+<size=120%><b>1. Information we collect</b></size>
+
+<b>Account information</b>
+
+• When you first open the Game, we create an anonymous account with a random user ID (Google Firebase Authentication). We do not ask for your name or email to play.
+
+• If you choose <b>Sign in with Apple</b> to save your progress, we receive an Apple user identifier and, only if you choose to share it, your email address (which Apple may hide behind a private relay address).
+
+<b>Profile and social features</b>
+
+• The player name and avatar you choose, your friend code, your level progress and your country or region (read from your device's language and region settings, not from GPS).
+
+• If you join a team: your team membership, the messages you write in team chat, and the lives you request or send.
+
+• Your friends list and your position on leaderboards.
+
+• If you report a chat message: your user ID, the reported player and message. The list of players you block is stored with your saved progress.
+
+<b>Game progress and purchases</b>
+
+• Your saved progress (levels, stars, coins, boosters, event progress, settings) so it can be restored on another device.
+
+• Records of in-game purchases (product and transaction ID) so items are delivered once. Payments are processed by Apple App Store or Google Play; <b>we never receive your card or payment details</b>.
+
+<b>Gameplay statistics and analytics</b>
+
+• How you play levels: attempts, wins and losses, moves and time spent, used boosters. We use this to balance difficulty.
+
+• App usage and device information collected by Google Firebase Analytics: app version, device model, operating system, language, approximate location derived from your IP address, and app interactions, linked to your Game user ID.
+
+<b>Advertising</b>
+
+The Game may offer optional rewarded video ads (for example, to get extra moves). Ads are served by Google AdMob, which may collect your device's advertising identifier and usage data. In the EEA, the UK and Switzerland we ask for your consent before personalised ads, through Google's consent tool. On iOS, tracking only happens if you allow it in Apple's App Tracking Transparency prompt.
+
+<b>Support</b>
+
+If you contact us by email or through the chat on our website (provided by tawk.to), we receive the information you send us, such as your email address and the content of your message.
+
+<b>Notifications</b>
+
+Reminders (for example, "your lives are full") are local notifications scheduled on your device. You can turn them off in the Game's settings or your device settings.
+
+<size=120%><b>2. How we use information</b></size>
+
+• To run the Game and provide its features: saving and restoring progress, teams, chat, friends, leaderboards and events (performance of our agreement with you).
+
+• To deliver purchases and prevent fraud and cheating (legitimate interest and legal obligations).
+
+• To understand how the Game is played and improve it, including level balance (legitimate interest).
+
+• To show ads, and personalised ads where you have consented (consent).
+
+• To answer your support requests.
+
+We do not sell your personal data.
+
+<size=120%><b>3. Who we share it with</b></size>
+
+• <b>Google Firebase (Authentication, Cloud Firestore, Analytics)</b>: Accounts, cloud save, social features, analytics
+
+• <b>Apple App Store / Google Play</b>: Downloads and payments, Sign in with Apple
+
+• <b>Google AdMob</b>: Rewarded ads, where shown
+
+• <b>tawk.to</b>: Website support chat
+
+Other players can see your player name, avatar, level, team, leaderboard position and the messages you post in team chat. We may also disclose information if required by law.
+
+<size=120%><b>4. International transfers</b></size>
+
+Our service providers may store and process data on servers outside Türkiye and outside your country, including in the European Union and the United States. Where required, transfers are made with appropriate safeguards (such as standard contractual clauses) and, for users in Türkiye, in line with the Personal Data Protection Law No. 6698 (KVKK).
+
+<size=120%><b>5. How long we keep it</b></size>
+
+• Account, profile and progress data: while your account is active. If you ask us to delete your account, we delete it within 30 days, except records we must keep by law (for example, purchase records).
+
+• Team chat messages: until the team or your account is deleted.
+
+• Analytics data: up to 14 months.
+
+<size=120%><b>6. Your rights and choices</b></size>
+
+Depending on where you live (for example under KVKK, the GDPR or US state laws), you have the right to access, correct or delete your personal data, to object to or restrict certain processing, to data portability, and to withdraw consent at any time. To make a request, email hello@wondigames.com and include your <b>friend code</b> (shown on your profile in the Game) so we can find your account. You can also complain to your data protection authority; in Türkiye this is the Personal Data Protection Authority (KVKK).
+
+<b>Delete your account in the Game:</b> Settings → Terms & Privacy → Delete My Account. This permanently deletes your account, progress, team membership and chat messages.
+
+You can reset your advertising identifier or limit ad tracking in your device settings at any time.
+
+<size=120%><b>7. Children</b></size>
+
+The Game is intended for a general audience and is not directed at children under 13. We do not knowingly collect personal data from children under 13 (or the higher age required in your country). If you believe a child has given us personal data, contact us and we will delete it.
+
+<size=120%><b>8. Security</b></size>
+
+We use access-controlled cloud services and encrypted connections to protect your data. No system is completely secure, but we work to protect your information and limit who can access it.
+
+<size=120%><b>9. Changes</b></size>
+
+We may update this policy. When we do, we change the date at the top, and for important changes we tell you in the Game.

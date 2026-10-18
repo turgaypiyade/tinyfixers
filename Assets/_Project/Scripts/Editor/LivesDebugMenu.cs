@@ -15,8 +15,12 @@ public static class LivesDebugMenu
         }
 
         if (TimedRewardService.IsLivesFree())
-            Debug.LogWarning("[LivesDebug] Sonsuz can (timed reward) aktif — teklif popup'ı bu sürede açılmaz.");
-        Debug.Log($"[LivesDebug] Can = {LivesManager.Current}");
+            {
+                if (GameDiagnostics.EditorTools)
+                    Debug.LogWarning("[LivesDebug] Sonsuz can (timed reward) aktif — teklif popup'ı bu sürede açılmaz.");
+            }
+        if (GameDiagnostics.EditorTools)
+            Debug.Log($"[LivesDebug] Can = {LivesManager.Current}");
     }
 
     [MenuItem("TinyFixers/Debug/Canları Sıfırla (Play)", true)]

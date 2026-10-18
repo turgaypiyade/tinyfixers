@@ -53,6 +53,18 @@ public static class PlayerWallet
 
     public static bool HasEnoughCoins(int amount) => Coins >= amount;
 
+    /// <summary>Durable event delivery: balance, ledger and delivery checkpoint persist together.</summary>
+    public static void AddCoinsWithCheckpoint(int amount, string checkpointKey, string checkpoint)
+    {
+        if (RuntimeSimulationSession.IsActive || amount <= 0 || string.IsNullOrEmpty(checkpointKey)) return;
+        int value = Coins + amount;
+        CurrencyLedger.RecordCoins(amount);
+        PlayerPrefs.SetInt(KeyCoins, value);
+        PlayerPrefs.SetString(checkpointKey, checkpoint);
+        PlayerPrefs.Save();
+        OnCoinsChanged?.Invoke(value);
+    }
+
     // -----------------------------------------------------------------------
     // Stars
 

@@ -44,7 +44,12 @@ public sealed class BridgeRepairJoinPopup : MonoBehaviour
     {
         if (wired) return;
         wired = true;
-        if (continueButton != null) continueButton.onClick.AddListener(() => { EventSfx.Play(x => x.uiTap); Close(onContinue); });
+        if (continueButton != null) continueButton.onClick.AddListener(() =>
+        {
+            EventSfx.Play(x => x.uiTap);
+            EventScreenIris.MarkLaunchPoint(continueButton);   // yarış ekranı bu butondan açılsın
+            Close(onContinue);
+        });
         if (cancelButton != null)   cancelButton.onClick.AddListener(() => Close(onLater));
     }
 

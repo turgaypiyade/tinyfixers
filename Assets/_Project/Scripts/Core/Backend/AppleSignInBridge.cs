@@ -38,7 +38,6 @@ public sealed class AppleSignInBridge : MonoBehaviour
 
         manager = new AppleAuthManager(new PayloadDeserializer());
         AuthLinkService.AppleTokenProvider = Fetch;
-        Debug.Log("[AppleSignIn] köprü hazır — Apple butonu aktif.");
 #endif
     }
 

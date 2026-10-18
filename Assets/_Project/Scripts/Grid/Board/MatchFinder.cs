@@ -19,6 +19,7 @@ public class MatchFinder
     private int[,] _vRunCache;   // vertical   run length passing through (x,y)
     private int _cacheW, _cacheH;
     private bool _cacheValid;    // false → cache must be rebuilt before reading
+    internal int ChangeVersion { get; private set; }
 
     public MatchFinder(BoardController board)
     {
@@ -41,6 +42,7 @@ public class MatchFinder
     public void InvalidateRunCache()
     {
         _cacheValid = false;
+        unchecked { ChangeVersion++; }
     }
 
     /// <summary>
@@ -139,7 +141,7 @@ public class MatchFinder
                     if (IsNormalMatchable(data))
                     {
                         var t = data.Type;
-                        if (runLen > 0 && t.Equals(runType))
+                        if (runLen > 0 && (t == runType))
                         {
                             runLen++;
                             extend = true;
@@ -180,7 +182,7 @@ public class MatchFinder
                     if (IsNormalMatchable(data))
                     {
                         var t = data.Type;
-                        if (runLen > 0 && t.Equals(runType))
+                        if (runLen > 0 && (t == runType))
                         {
                             runLen++;
                             extend = true;
@@ -307,7 +309,7 @@ public class MatchFinder
                     runType = t;
                     _runTilesBuffer.Add(data);
                 }
-                else if (t.Equals(runType))
+                else if ((t == runType))
                 {
                     run++;
                     _runTilesBuffer.Add(data);
@@ -352,7 +354,7 @@ public class MatchFinder
                     runType = t;
                     _runTilesBuffer.Add(data);
                 }
-                else if (t.Equals(runType))
+                else if ((t == runType))
                 {
                     run++;
                     _runTilesBuffer.Add(data);
@@ -406,9 +408,9 @@ public class MatchFinder
 
                 var t = a.Type;
 
-                if (!b.Type.Equals(t)) continue;
-                if (!c.Type.Equals(t)) continue;
-                if (!d.Type.Equals(t)) continue;
+                if (!(b.Type == t)) continue;
+                if (!(c.Type == t)) continue;
+                if (!(d.Type == t)) continue;
 
                 result.Add(a);
                 result.Add(b);
@@ -524,10 +526,10 @@ public class MatchFinder
                 if (!IsNormalMatchable(a) || !IsNormalMatchable(b) || !IsNormalMatchable(c) || !IsNormalMatchable(d))
                     continue;
 
-                if (!a.Type.Equals(t)) continue;
-                if (!b.Type.Equals(t)) continue;
-                if (!c.Type.Equals(t)) continue;
-                if (!d.Type.Equals(t)) continue;
+                if (!(a.Type == t)) continue;
+                if (!(b.Type == t)) continue;
+                if (!(c.Type == t)) continue;
+                if (!(d.Type == t)) continue;
 
                 return true;
             }
@@ -566,7 +568,7 @@ public class MatchFinder
                     run = 1;
                     runType = t;
                 }
-                else if (t.Equals(runType))
+                else if ((t == runType))
                 {
                     run++;
                 }
@@ -605,7 +607,7 @@ public class MatchFinder
                     run = 1;
                     runType = t;
                 }
-                else if (t.Equals(runType))
+                else if ((t == runType))
                 {
                     run++;
                 }
@@ -716,10 +718,10 @@ public class MatchFinder
                 if (!IsNormalMatchable(a) || !IsNormalMatchable(b) || !IsNormalMatchable(c) || !IsNormalMatchable(d))
                     continue;
 
-                if (!a.GetTileType().Equals(type)) continue;
-                if (!b.GetTileType().Equals(type)) continue;
-                if (!c.GetTileType().Equals(type)) continue;
-                if (!d.GetTileType().Equals(type)) continue;
+                if (!(a.GetTileType() == type)) continue;
+                if (!(b.GetTileType() == type)) continue;
+                if (!(c.GetTileType() == type)) continue;
+                if (!(d.GetTileType() == type)) continue;
 
                 candidates.Add(a);
                 candidates.Add(b);
@@ -742,21 +744,21 @@ public class MatchFinder
             return;
 
         var center = board.Tiles[x, y];
-        if (!IsNormalMatchable(center) || !center.GetTileType().Equals(type))
+        if (!IsNormalMatchable(center) || !(center.GetTileType() == type))
             return;
 
         _runViewBuffer.Clear();
         _runViewBuffer.Add(center);
 
         int lx = x - 1;
-        while (lx >= 0 && !board.Holes[lx, y] && IsNormalMatchable(board.Tiles[lx, y]) && board.Tiles[lx, y].GetTileType().Equals(type))
+        while (lx >= 0 && !board.Holes[lx, y] && IsNormalMatchable(board.Tiles[lx, y]) && (board.Tiles[lx, y].GetTileType() == type))
         {
             _runViewBuffer.Add(board.Tiles[lx, y]);
             lx--;
         }
 
         int rx = x + 1;
-        while (rx < board.Width && !board.Holes[rx, y] && IsNormalMatchable(board.Tiles[rx, y]) && board.Tiles[rx, y].GetTileType().Equals(type))
+        while (rx < board.Width && !board.Holes[rx, y] && IsNormalMatchable(board.Tiles[rx, y]) && (board.Tiles[rx, y].GetTileType() == type))
         {
             _runViewBuffer.Add(board.Tiles[rx, y]);
             rx++;
@@ -778,21 +780,21 @@ public class MatchFinder
             return;
 
         var center = board.Tiles[x, y];
-        if (!IsNormalMatchable(center) || !center.GetTileType().Equals(type))
+        if (!IsNormalMatchable(center) || !(center.GetTileType() == type))
             return;
 
         _runViewBuffer.Clear();
         _runViewBuffer.Add(center);
 
         int uy = y - 1;
-        while (uy >= 0 && !board.Holes[x, uy] && IsNormalMatchable(board.Tiles[x, uy]) && board.Tiles[x, uy].GetTileType().Equals(type))
+        while (uy >= 0 && !board.Holes[x, uy] && IsNormalMatchable(board.Tiles[x, uy]) && (board.Tiles[x, uy].GetTileType() == type))
         {
             _runViewBuffer.Add(board.Tiles[x, uy]);
             uy--;
         }
 
         int dy = y + 1;
-        while (dy < board.Height && !board.Holes[x, dy] && IsNormalMatchable(board.Tiles[x, dy]) && board.Tiles[x, dy].GetTileType().Equals(type))
+        while (dy < board.Height && !board.Holes[x, dy] && IsNormalMatchable(board.Tiles[x, dy]) && (board.Tiles[x, dy].GetTileType() == type))
         {
             _runViewBuffer.Add(board.Tiles[x, dy]);
             dy++;
@@ -1037,6 +1039,7 @@ public class MatchFinder
     [System.Diagnostics.Conditional("DEVELOPMENT_BUILD")]
     private void LogFindAllMatchesDebug(HashSet<TileData> result)
     {
+        if (!GameDiagnostics.BoardIntegrity) return;
         static string TileViewDebugString(TileView tv)
         {
             if (tv == null) return "·";
@@ -1108,7 +1111,7 @@ public class MatchFinder
                 }
                 else
                 {
-                    if (!gd.Type.Equals(tv.GetTileType())) mismatch = true;
+                    if (!(gd.Type == tv.GetTileType())) mismatch = true;
                     if (gd.Special != tv.GetSpecial()) mismatch = true;
                 }
 
@@ -1133,12 +1136,14 @@ public class MatchFinder
         if (mismatchCount > 0)
         {
             string log = sb.ToString();
-            Debug.LogError(log);
+            if (GameDiagnostics.BoardIntegrity)
+                Debug.LogError(log);
             Debug.Break();
             throw new System.InvalidOperationException("[MatchFinder] GridData/TileView mismatch detected. Board state is invalid.");
         }
 
-        Debug.Log(sb.ToString());
+        if (GameDiagnostics.BoardIntegrity)
+            Debug.Log(sb.ToString());
     }
 #endif
 }

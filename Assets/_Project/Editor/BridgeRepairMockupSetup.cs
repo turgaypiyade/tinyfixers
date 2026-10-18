@@ -238,7 +238,8 @@ public static class BridgeRepairMockupSetup
         var safari = FindChildByName(canvasRoot, "SafariJoinPopup");
         if (safari == null)
         {
-            Debug.LogError("[BridgeRepairSetup] Sahnede SafariJoinPopup yok — Bridge popup'ı kopyalanamadı.");
+            if (GameDiagnostics.EditorTools)
+                Debug.LogError("[BridgeRepairSetup] Sahnede SafariJoinPopup yok — Bridge popup'ı kopyalanamadı.");
             return null;
         }
 
@@ -433,7 +434,10 @@ public static class BridgeRepairMockupSetup
         {
             var s = MockupUI.LoadSprite($"{CharDir}{id}_{kind}_{i}.png");
             if (s != null) frames.Add(s);
-            else Debug.LogWarning($"[BridgeRepairSetup] Kare yok: {CharDir}{id}_{kind}_{i}.png");
+            else {
+                if (GameDiagnostics.EditorTools)
+                    Debug.LogWarning($"[BridgeRepairSetup] Kare yok: {CharDir}{id}_{kind}_{i}.png");
+            }
         }
         return frames.ToArray();
     }

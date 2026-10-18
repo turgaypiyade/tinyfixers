@@ -18,6 +18,12 @@ public static class PlayerAvatarProvider
         get { var l = Lib; return l != null ? l.Get(PlayerProfile.AvatarId) : null; }
     }
 
+    /// <summary>Seçili avatarın hayvan kimliği; kostümden ve event karakter sırasından bağımsız.</summary>
+    public static string CurrentCharacterId
+    {
+        get { var l = Lib; return l != null ? l.GetCharacterId(PlayerProfile.AvatarId) : string.Empty; }
+    }
+
     public static Sprite PickForSeed(string seed)
     {
         var l = Lib;

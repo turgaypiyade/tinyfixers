@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -106,6 +107,20 @@ public class OverrideComboController : MonoBehaviour
     //  PRIVATE
     // ─────────────────────────────────────────
     private Coroutine _routine;
+    private bool stopRequested;
+    private OverrideSpecialView turnSourceA, turnSourceB;
+    private OverrideSpecialView turnViewA, turnViewB;
+    private OverrideComboLinkGraphic comboLink;
+    private float comboTurnElapsed;
+    private const string TurnPoolKey = "Override.ComboTurn";
+    private const string LinkPoolKey = "Override.ComboLink";
+    private readonly List<Image> imageResetBuffer = new List<Image>(16);
+
+    public void SetTurnSources(OverrideSpecialView a, OverrideSpecialView b)
+    {
+        turnSourceA = a;
+        turnSourceB = b;
+    }
 
     // Dalga cephesinin varacağı yarıçap (px). BoardVfxService her oynatmada origin'den en uzak
     // board köşesine göre set eder; set edilmezse blastHaloMaxRadius kullanılır.
@@ -237,7 +252,7 @@ public class OverrideComboController : MonoBehaviour
             go.transform.SetSiblingIndex(0);
         }
 
-        if (blastHaloImage == null)
+        if (blastHaloImage == null && blastHaloSegmentCount > 0)
             blastHaloImage = CreateBlastImage("BlastHalo_Auto", GetSoftRingSprite());
 
         // Alev sprite'ları: sunburst glow (en arkada, yumuşatıcı) + ışınlar + shockwave halkası (önde).
@@ -571,9 +586,12 @@ public class OverrideComboController : MonoBehaviour
     {
         if (!IsWired())
         {
-            Debug.LogError("[OverrideComboController] Missing core refs (pivot/flash/canvasGroup/stormParticles)!");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogError("[OverrideComboController] Missing core refs (pivot/flash/canvasGroup/stormParticles)!");
             return;
         }
+        if (_routine != null) Stop();
+        gameObject.SetActive(true);
         // KRİTİK ÖNEMLİ: gameObject SetActive(true) BoardVfxService'de çağrılıyor → bu noktada child'lar
         // önceki combo'dan kalma state'le bir frame görünebilir. canvasGroup.alpha=0 hepsini gizler,
         // ek olarak tüm görsel state'leri elle sıfırlıyoruz ki Co_Play öncesi flash olmasın.
@@ -589,13 +607,14 @@ public class OverrideComboController : MonoBehaviour
         _hasPreparedStartOffsets = false;
 
         // Hierarchy'deki TÜM Image component'lerini bul ve alpha 0'a indir (custom/unutulmuş sprite'lar dahil).
-        var allImages = GetComponentsInChildren<Image>(includeInactive: true);
-        for (int i = 0; i < allImages.Length; i++)
+        imageResetBuffer.Clear();
+        GetComponentsInChildren(true, imageResetBuffer);
+        for (int i = 0; i < imageResetBuffer.Count; i++)
         {
-            if (allImages[i] == null) continue;
-            var c = allImages[i].color;
+            if (imageResetBuffer[i] == null) continue;
+            var c = imageResetBuffer[i].color;
             c.a = 0f;
-            allImages[i].color = c;
+            imageResetBuffer[i].color = c;
         }
 
         if (mergedIconImage != null)
@@ -623,19 +642,33 @@ public class OverrideComboController : MonoBehaviour
         if (glowImageA != null) { glowImageA.sprite = sprA; glowImageA.enabled = sprA != null; }
         if (glowImageB != null) { glowImageB.sprite = sprB; glowImageB.enabled = sprB != null; }
 
-        // Halka sprite'ını TAZE üret ve yeniden ata → blastHaloThickness değişiklikleri her oynatmada
-        // uygulansın (static cache + domain-reload-off durumunda eski ince sprite'a takılıp kalmasın).
-        softRingSprite = null;
+        // The legacy halo is disabled. If enabled elsewhere, reuse its cached sprite;
+        // never allocate an unused 256x256 texture on every combo.
         if (blastHaloImage != null) blastHaloImage.sprite = GetSoftRingSprite();
 
-        if (_routine != null) StopCoroutine(_routine);
         _routine = StartCoroutine(Co_Play());
     }
 
     public void Stop()
     {
-        if (_routine != null) { StopCoroutine(_routine); _routine = null; }
+        stopRequested = true;
+        var running = _routine;
+        _routine = null;
+        if (running != null) StopCoroutine(running);
         Cleanup();
+    }
+
+    private void OnDisable()
+    {
+        var running = _routine;
+        _routine = null;
+        if (running != null)
+        {
+            stopRequested = true;
+            StopCoroutine(running);
+            Cleanup();
+        }
+        else ReleaseComboTurns();
     }
 
     // ─────────────────────────────────────────
@@ -649,6 +682,7 @@ public class OverrideComboController : MonoBehaviour
     // ─────────────────────────────────────────
     private void Cleanup()
     {
+        ReleaseComboTurns();
         RestoreStormDefaults();
         StormStop(true);
         if (canvasGroup != null) canvasGroup.alpha = 0f;
@@ -661,6 +695,7 @@ public class OverrideComboController : MonoBehaviour
     // ─────────────────────────────────────────
     private IEnumerator Co_Play()
     {
+        stopRequested = false;
         bool finished = false;
         try
         {
@@ -708,6 +743,7 @@ public class OverrideComboController : MonoBehaviour
             SetGlowPos(glowImageB, _startOffsetB, Quaternion.identity, Vector3.one);
 
             SetFlashAlpha(0f);
+            AcquireComboTurns();
             SaveStormDefaults();
             StormStop(true);
 
@@ -724,8 +760,8 @@ public class OverrideComboController : MonoBehaviour
             float orbitTime = 0f;
             float selfRotA   = 0f;
             float selfRotB   = 0f;
-            Vector2 awayA = ResolveAwayDirection(_startOffsetA, Vector2.left);
-            Vector2 awayB = ResolveAwayDirection(_startOffsetB, Vector2.right);
+            Vector2 awayA = ResolveAwayDirection(_startOffsetA - _startOffsetB, Vector2.left);
+            Vector2 awayB = -awayA;
             Vector2 aLiftEnd = _startOffsetA + Vector2.up * liftDistance + awayA * separationDistance;
             Vector2 bLiftEnd = _startOffsetB + Vector2.up * liftDistance + awayB * separationDistance;
 
@@ -749,8 +785,8 @@ public class OverrideComboController : MonoBehaviour
                 float spinT = EaseOutQuad(t);
                 selfRotA = spinT * liftSpinTurns * 360f;
                 selfRotB = -spinT * liftSpinTurns * 360f;
-                IconRectA.localRotation = Quaternion.Euler(0f, 0f, selfRotA);
-                IconRectB.localRotation = Quaternion.Euler(0f, 0f, selfRotB);
+                IconRectA.localRotation = turnViewA != null ? Quaternion.identity : Quaternion.Euler(0f, 0f, selfRotA);
+                IconRectB.localRotation = turnViewB != null ? Quaternion.identity : Quaternion.Euler(0f, 0f, selfRotB);
 
                 // Glow: fade in, pulse
                 float glowAlpha = Mathf.Lerp(0f, 0.65f, t) + 0.2f * Mathf.Sin(orbitTime * 6f);
@@ -775,6 +811,7 @@ public class OverrideComboController : MonoBehaviour
                 if (t > 0.85f)
                     SetFlashAlpha(((t - 0.85f) / 0.15f) * 0.18f);
 
+                TickComboTurns(Time.deltaTime, alphaPulse, true);
                 yield return null;
             }
 
@@ -797,8 +834,8 @@ public class OverrideComboController : MonoBehaviour
                 IconRectB.anchoredPosition = Vector2.Lerp(bSmashStart, Vector2.zero, rushT);
 
                 float smashSpinT = EaseOutQuad(t);
-                IconRectA.localRotation = Quaternion.Euler(0f, 0f, selfRotA + smashSpinT * smashSpinTurns * 360f);
-                IconRectB.localRotation = Quaternion.Euler(0f, 0f, selfRotB - smashSpinT * smashSpinTurns * 360f);
+                IconRectA.localRotation = turnViewA != null ? Quaternion.identity : Quaternion.Euler(0f, 0f, selfRotA + smashSpinT * smashSpinTurns * 360f);
+                IconRectB.localRotation = turnViewB != null ? Quaternion.identity : Quaternion.Euler(0f, 0f, selfRotB - smashSpinT * smashSpinTurns * 360f);
 
                 // Scale stays at 1.25x throughout the rush.
                 IconRectA.localScale = Vector3.one * orbitScaleTarget;
@@ -815,6 +852,7 @@ public class OverrideComboController : MonoBehaviour
                 SetAlpha(iconImageB, 1f);
                 SetFlashAlpha(Mathf.Lerp(0.18f, flashMaxAlpha * 0.75f, Mathf.InverseLerp(smashImpactFraction, 1f, t)));
 
+                TickComboTurns(Time.deltaTime, 1f, true);
                 yield return null;
             }
 
@@ -826,6 +864,7 @@ public class OverrideComboController : MonoBehaviour
             SetGlowPos(glowImageB, Vector2.zero, IconRectB.localRotation, Vector3.one * impactPulseScale * glowSizeMultiplier);
             SetAlpha(glowImageA, 0.85f);
             SetAlpha(glowImageB, 0.85f);
+            ReleaseComboLink();
             OnImpact?.Invoke();
             SetFlashAlpha(flashMaxAlpha);
 
@@ -877,8 +916,8 @@ public class OverrideComboController : MonoBehaviour
                 float spinDecay = Mathf.Lerp(620f, 45f, t);
                 selfRotA += spinDecay * Time.deltaTime;
                 selfRotB -= spinDecay * Time.deltaTime;
-                IconRectA.localRotation = Quaternion.Euler(0f, 0f, selfRotA);
-                IconRectB.localRotation = Quaternion.Euler(0f, 0f, selfRotB);
+                IconRectA.localRotation = turnViewA != null ? Quaternion.identity : Quaternion.Euler(0f, 0f, selfRotA);
+                IconRectB.localRotation = turnViewB != null ? Quaternion.identity : Quaternion.Euler(0f, 0f, selfRotB);
                 float postScale = Mathf.Lerp(impactPulseScale, orbitScaleTarget, EaseOutQuad(t));
                 IconRectA.localScale = Vector3.one * postScale;
                 IconRectB.localScale = Vector3.one * postScale;
@@ -927,6 +966,7 @@ public class OverrideComboController : MonoBehaviour
                     OnRadialClearProgress?.Invoke(expandT);
                 }
 
+                TickComboTurns(Time.deltaTime, iconAlpha, false);
                 yield return null;
             }
 
@@ -965,14 +1005,96 @@ public class OverrideComboController : MonoBehaviour
             Cleanup();
             if (finished)
                 OnComboFinished?.Invoke();
-            else
-                Debug.LogError("[OverrideComboController] Coroutine died unexpectedly — cleaned up.");
+            else if (!stopRequested)
+                {
+                    if (GameDiagnostics.CriticalErrors)
+                        Debug.LogError("[OverrideComboController] Coroutine died unexpectedly — cleaned up.");
+                }
         }
     }
 
     // ─────────────────────────────────────────
     //  HELPERS
     // ─────────────────────────────────────────
+    private static bool IsFirstTurnRole(Vector2 a, Vector2 b)
+        => Mathf.Abs(a.x - b.x) > 0.01f ? a.x < b.x : a.y >= b.y;
+
+    private void AcquireComboTurns()
+    {
+        ReleaseComboTurns();
+        comboTurnElapsed = 0f;
+        bool aFirst = IsFirstTurnRole(_startOffsetA, _startOffsetB);
+        var sourceA = turnSourceA != null ? turnSourceA : turnSourceB;
+        var sourceB = turnSourceB != null ? turnSourceB : turnSourceA;
+        turnViewA = RentComboTurn(sourceA, iconImageA, !aFirst);
+        turnViewB = RentComboTurn(sourceB, iconImageB, aFirst);
+
+        var go = UiVfxPool.RentRect(LinkPoolKey, pivot, "OverrideComboLink");
+        if (go == null) return;
+        go.layer = gameObject.layer;
+        comboLink = go.GetComponent<OverrideComboLinkGraphic>();
+        if (comboLink == null) comboLink = go.AddComponent<OverrideComboLinkGraphic>();
+        comboLink.raycastTarget = false;
+        comboLink.ResetLink();
+        go.transform.SetAsFirstSibling();
+    }
+
+    private static OverrideSpecialView RentComboTurn(OverrideSpecialView source, Image icon, bool opposite)
+    {
+        if (source == null || icon == null) return null;
+        var go = UiVfxPool.RentRect(TurnPoolKey, icon.transform, "OverrideComboTurn");
+        if (go == null) return null;
+        go.layer = icon.gameObject.layer;
+        ((RectTransform)go.transform).sizeDelta = icon.rectTransform.rect.size;
+        var view = go.GetComponent<OverrideSpecialView>();
+        if (view == null) view = go.AddComponent<OverrideSpecialView>();
+        if (view.BeginComboTurn(source, icon, opposite)) return view;
+        UiVfxPool.Return(TurnPoolKey, go, 4);
+        return null;
+    }
+
+    private void TickComboTurns(float deltaTime, float alpha, bool linked)
+    {
+        comboTurnElapsed += deltaTime;
+        turnViewA?.TickComboTurn(comboTurnElapsed, deltaTime, alpha);
+        turnViewB?.TickComboTurn(comboTurnElapsed, deltaTime, alpha);
+        if (comboLink != null && linked)
+        {
+            float sizeA = IconRectA.rect.width * IconRectA.localScale.x;
+            float sizeB = IconRectB.rect.width * IconRectB.localScale.x;
+            comboLink.SetConnection(IconRectA.anchoredPosition, IconRectB.anchoredPosition,
+                sizeA * 0.42f, sizeB * 0.42f, Mathf.Min(sizeA, sizeB), comboTurnElapsed);
+        }
+        if (alpha <= 0f) ReleaseComboTurns();
+    }
+
+    private void ReleaseComboTurns()
+    {
+        ReleaseComboTurn(ref turnViewA, iconImageA);
+        ReleaseComboTurn(ref turnViewB, iconImageB);
+        ReleaseComboLink();
+    }
+
+    private static void ReleaseComboTurn(ref OverrideSpecialView view, Image icon)
+    {
+        if (view == null) return;
+        var current = view;
+        view = null;
+        current.EndComboTurn();
+        UiVfxPool.Return(TurnPoolKey, current.gameObject, 4);
+        // Stop restores the original icon opacity; the combo has finished displaying this sphere.
+        SetAlpha(icon, 0f);
+    }
+
+    private void ReleaseComboLink()
+    {
+        if (comboLink == null) return;
+        var current = comboLink;
+        comboLink = null;
+        current.ResetLink();
+        UiVfxPool.Return(LinkPoolKey, current.gameObject, 4);
+    }
+
     private void SetGlowPos(Image glow, Vector2 pos, Quaternion rot, Vector3 scale)
     {
         if (glow == null) return;

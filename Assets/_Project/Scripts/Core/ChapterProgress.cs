@@ -47,9 +47,8 @@ public static class ChapterProgress
             if (lib == null && !_missingWarned)
             {
                 _missingWarned = true;
-                Debug.LogWarning(
-                    $"[ChapterProgress] ChapterThemeLibrary bulunamadı (Resources/{ResourcesPath}). " +
-                    "Bölüm bilgisi gerektiren kapılar AÇIK kabul edilecek.");
+                if (GameDiagnostics.CriticalErrors)
+                    Debug.LogWarning($"[ChapterProgress] ChapterThemeLibrary bulunamadı (Resources/{ResourcesPath}). " + "Bölüm bilgisi gerektiren kapılar AÇIK kabul edilecek.");
             }
             return lib != null;
         }

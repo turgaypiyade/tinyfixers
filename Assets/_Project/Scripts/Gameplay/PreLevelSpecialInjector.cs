@@ -32,7 +32,6 @@ public class PreLevelSpecialInjector : MonoBehaviour
         var runtimeInjector = FindAnyObjectByType<PreLevelSpecialRuntimeInjector>(FindObjectsInactive.Include);
         if (runtimeInjector != null)
         {
-            Debug.Log("[PreLevelSpecialInjector] RuntimeInjector found; skipping scene-based injection.");
             yield break;
         }
 

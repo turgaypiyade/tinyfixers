@@ -38,17 +38,21 @@ public sealed class RuntimeChoicePopup : MonoBehaviour
         public readonly string Subtitle;
         public readonly Action OnClick;
         public readonly bool Interactable;
+        /// true: karta basınca pencere KAPANMAZ (belge açılıp geri dönülen kartlar: Şartlar/Gizlilik).
+        public readonly bool KeepOpen;
 
-        public OfferButton(string label, string subtitle, Action onClick, bool interactable = true)
+        public OfferButton(string label, string subtitle, Action onClick, bool interactable = true, bool keepOpen = false)
         {
             Label = label;
             Subtitle = subtitle;
             OnClick = onClick;
             Interactable = interactable;
+            KeepOpen = keepOpen;
         }
     }
 
     private static RuntimeChoicePopup _instance;
+    public static bool IsShowing => _instance != null;
 
     public readonly struct RewardItem
     {
@@ -203,28 +207,60 @@ public sealed class RuntimeChoicePopup : MonoBehaviour
             ? CommonPopupView.Create(parent, title, Close)
             : CommonPopupView.Create(parent, title, Close, CommonPopupSkin.Shared.saveProgressBackgroundMaterial);
 
-        var statusText = CommonPopupView.Text(view.Body, "Status", status, 34, CommonPopupSkin.Shared.bodyTextColor);
-        CommonPopupView.Region(statusText.rectTransform, new Rect(0, 0.80f, 1, 0.20f));
-
-        int count = options != null ? options.Count : 0;
-        var list = CommonPopupView.NewRect(view.Body, "Options", Vector2.zero);
-        CommonPopupView.Region(list, new Rect(0, 0, 1, 0.76f));
-        for (int i = 0; i < count; i++)
+        BuildOfferBody(view, status, options, option => () =>
         {
-            // Buton yüksekliği %30 (SaveProgressPopup ölçüsü); alan içinde EŞİT aralıkla dikey ortalanır.
-            const float height = 0.30f;
-            float gap = Mathf.Max(0f, (1f - count * height) / (count + 1));
-            float y = 1f - (i + 1) * (gap + height);
-            MakeOfferButton(list, options[i], y);
-        }
-
-        var action = CommonPopupView.Button(view.Actions, "BtnContinue", actionLabel, () =>
+            if (closing || !gameObject.activeSelf) return;
+            if (!option.KeepOpen) Close();
+            option.OnClick?.Invoke();
+        });
+        BuildOfferAction(view, actionLabel, () =>
         {
             if (closing || !gameObject.activeSelf) return;
             Close();
             onAction?.Invoke();
-        }, CommonPopupSkin.Shared.saveProgressContinueButton);
+        });
+    }
+
+    /// Kart düzeni (can teklifi, Şartlar ve Gizlilik, ilk kabul ekranı ortak): üstte durum yazısı, gövdede eşit aralıklı
+    /// büyük kartlar (başlık + alt yazı). Tıklama davranışını çağıran verir (handler). Kartları sırayla döndürür.
+    public static Button[] BuildOfferBody(CommonPopupView view, string status, IReadOnlyList<OfferButton> options,
+        Func<OfferButton, Action> handler)
+    {
+        var statusText = CommonPopupView.Text(view.Body, "Status", status, 34, CommonPopupSkin.Shared.bodyTextColor);
+        CommonPopupView.Region(statusText.rectTransform, new Rect(0, 0.80f, 1, 0.20f));
+
+        int count = options != null ? options.Count : 0;
+        var buttons = new Button[count];
+        var list = CommonPopupView.NewRect(view.Body, "Options", Vector2.zero);
+        CommonPopupView.Region(list, new Rect(0, 0, 1, 0.76f));
+        // Buton yüksekliği %30 (SaveProgressPopup ölçüsü); 3'ten fazla kartta sığacak kadar küçülür.
+        float height = Mathf.Min(0.30f, 0.92f / Mathf.Max(1, count));
+        for (int i = 0; i < count; i++)
+        {
+            // Alan içinde EŞİT aralıkla dikey ortalanır.
+            float gap = Mathf.Max(0f, (1f - count * height) / (count + 1));
+            float y = 1f - (i + 1) * (gap + height);
+            buttons[i] = MakeOfferButton(list, options[i], y, height, handler(options[i]));
+        }
+        return buttons;
+    }
+
+    /// Kart düzeninin alttaki tek ana düğmesi (yeşil "devam" görseli).
+    public static Button BuildOfferAction(CommonPopupView view, string label, Action onClick)
+    {
+        var action = CommonPopupView.Button(view.Actions, "BtnContinue", label, onClick,
+            CommonPopupSkin.Shared.saveProgressContinueButton);
         CommonPopupView.Region((RectTransform)action.transform, CommonPopupView.ActionRegion(0, 1));
+        return action;
+    }
+
+    /// Kartın alt yazısını değiştirir (ör. belge açıldıktan sonra "Göz attın").
+    public static void SetOfferSubtitle(Button card, string text, Color color)
+    {
+        if (card == null) return;
+        var sub = card.GetComponentsInChildren<TMPro.TMP_Text>(true);
+        foreach (var s in sub)
+            if (s.name == "OfferSubtitle") { s.text = text; s.color = color; }
     }
 
     private void BuildRewards(IReadOnlyList<RewardItem> rewards)
@@ -289,15 +325,11 @@ public sealed class RuntimeChoicePopup : MonoBehaviour
         }
     }
 
-    private void MakeOfferButton(Transform parent, OfferButton option, float y)
+    private static Button MakeOfferButton(Transform parent, OfferButton option, float y, float height, Action onClick)
     {
-        var button = CommonPopupView.Button(parent, "Btn_" + option.Label, option.Label, () =>
-        {
-            if (closing || !gameObject.activeSelf) return;
-            Close();
-            option.OnClick?.Invoke();
-        }, CommonPopupSkin.Shared.accountButton);
-        CommonPopupView.Region((RectTransform)button.transform, new Rect(0, y, 1, 0.30f));
+        var button = CommonPopupView.Button(parent, "Btn_" + option.Label, option.Label, onClick,
+            CommonPopupSkin.Shared.accountButton);
+        CommonPopupView.Region((RectTransform)button.transform, new Rect(0, y, 1, height));
 
         var label = button.GetComponentInChildren<TMPro.TMP_Text>();
         CommonPopupView.StyleText(label, 48, Color.white);
@@ -314,6 +346,7 @@ public sealed class RuntimeChoicePopup : MonoBehaviour
         colors.disabledColor = new Color(0.70f, 0.74f, 0.80f, 0.85f);
         button.colors = colors;
         button.interactable = option.Interactable;
+        return button;
     }
 
     private static RectTransform BuildStretch(Transform parent, string name)

@@ -1,4 +1,6 @@
 using System;
+using System.Security.Cryptography;
+using System.Text;
 using UnityEngine;
 
 /// <summary>
@@ -31,6 +33,9 @@ public static class LivesManager
     public static int RegenIntervalMinutes { get; set; } = 30;
 
     // ── PlayerPrefs anahtarları ───────────────────────────────────────────────
+
+    private const string KeyPurchaseThanks = "purchase_thanks_receipts_v1";
+    private const string KeyPendingThanks = "purchase_thanks_pending_lives";
 
     private const string KeyLives     = "lives_current";
     private const string KeyNextTicks = "lives_next_ticks";
@@ -79,9 +84,20 @@ public static class LivesManager
             _nextLifeTime = DateTime.UtcNow.AddMinutes(RegenIntervalMinutes);
 
         _lives--;
+        LevelAttemptStats.RecordLifeSpent(CurrentLevel.Global);
         Save();
         OnLivesChanged?.Invoke();
         return true;
+    }
+
+    /// A continue refunds the failed attempt's debit; it is not a life spent toward mercy.
+    public static void RefundFailureLife()
+    {
+        EnsureInit();
+        LevelAttemptStats.RefundLifeSpent(CurrentLevel.Global);
+        _lives = Mathf.Min(MaxLives, _lives + 1);
+        Save();
+        OnLivesChanged?.Invoke();
     }
 
     /// <summary>Her kaynaktan gelen canı ortak 10 can sınırına uygular.</summary>
@@ -93,6 +109,47 @@ public static class LivesManager
         _lives += amount;
         Save();
         OnLivesChanged?.Invoke();
+    }
+
+    public static int PendingPurchaseThanks => Mathf.Max(0, PlayerPrefs.GetInt(KeyPendingThanks, 0));
+
+    // Called after verified fulfilment (or explicitly labelled development simulation).
+    // The receipt and gift balance share the same Save; duplicate callbacks cannot add another gift.
+    internal static bool GrantPurchaseThanks(string transactionId)
+    {
+        if (RuntimeSimulationSession.IsActive || string.IsNullOrWhiteSpace(transactionId)) return false;
+        EnsureInit();
+        string receipt;
+        using (var sha = SHA256.Create())
+            receipt = Convert.ToBase64String(sha.ComputeHash(Encoding.UTF8.GetBytes(transactionId)));
+        string receipts = PlayerPrefs.GetString(KeyPurchaseThanks, "");
+        if (("\n" + receipts).Contains("\n" + receipt + "\n")) return false;
+
+        PlayerPrefs.SetString(KeyPurchaseThanks, receipts + receipt + "\n");
+        PlayerPrefs.SetInt(KeyPendingThanks, PendingPurchaseThanks + 1);
+        ApplyPendingPurchaseThanks();
+        Save();
+        OnLivesChanged?.Invoke();
+        return true;
+    }
+
+    /// Claim overflow gifts at a new attempt, not during fail/continue life refunds.
+    public static void ClaimPendingPurchaseThanks()
+    {
+        if (RuntimeSimulationSession.IsActive) return;
+        EnsureInit();
+        if (!ApplyPendingPurchaseThanks()) return;
+        Save();
+        OnLivesChanged?.Invoke();
+    }
+
+    private static bool ApplyPendingPurchaseThanks()
+    {
+        int gain = Mathf.Min(PendingPurchaseThanks, MaxLives - _lives);
+        if (gain <= 0) return false;
+        PlayerPrefs.SetInt(KeyPendingThanks, PendingPurchaseThanks - gain);
+        _lives += gain;
+        return true;
     }
 
     /// <summary>Timer servisi tarafından saniyede bir çağrılır.</summary>
@@ -126,7 +183,8 @@ public static class LivesManager
             : DateTime.UtcNow.AddMinutes(RegenIntervalMinutes);
 
         ProcessOfflineRegen();
-        if (_lives != savedLives) Save();
+        bool claimedThanks = ApplyPendingPurchaseThanks();
+        if (claimedThanks || _lives != savedLives) Save();
     }
 
     // ── Dahili ───────────────────────────────────────────────────────────────
@@ -155,5 +213,6 @@ public static class LivesManager
         PlayerPrefs.SetInt(KeyLives, _lives);
         PlayerPrefs.SetString(KeyNextTicks, _nextLifeTime.Ticks.ToString());
         PlayerPrefs.Save();
+        FirebaseCloudSaveService.MarkDirty();
     }
 }

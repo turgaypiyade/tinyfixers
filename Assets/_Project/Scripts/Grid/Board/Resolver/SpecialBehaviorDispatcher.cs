@@ -86,7 +86,6 @@ public class SpecialBehaviorDispatcher
                 Partner = b,
                 FinalizeAtEnd = false,
                 ExecuteSpecialActions = ExecuteSpecialActions,
-                DebugLog = msg => Debug.Log(msg),
                 EmitComboTriggered = (comboSa, comboSb, cell) => effectOrchestrator.EmitComboTriggered(comboSa, comboSb, cell),
                 EmitPulseEmitterComboTriggered = cell => effectOrchestrator.EmitPulseEmitterComboTriggered(cell)
             });
@@ -304,14 +303,8 @@ public class SpecialBehaviorDispatcher
                 {
                     var cell = new Vector2Int(specialTile.X, specialTile.Y);
 
-                    Debug.Log(
-                        $"[OverrideActivation] cell={cell} " +
-                        $"hasLine={ctx.HasLineActivation} " +
-                        $"strikes={(ctx.LightningLineStrikes != null ? ctx.LightningLineStrikes.Count : -1)} " +
-                        $"isPulsePulse={ctx.IsPulsePulseComboActive} " +
-                        $"isPulseCore={ctx.IsPulseCoreActive} " +
-                        $"processed={ctx.Processed.Contains(cell)} " +
-                        $"queued={ctx.Queued.Contains(cell)}");
+                    if (GameDiagnostics.SpecialChains)
+                        Debug.Log($"[OverrideActivation] cell={cell} " + $"hasLine={ctx.HasLineActivation} " + $"strikes={(ctx.LightningLineStrikes != null ? ctx.LightningLineStrikes.Count : -1)} " + $"isPulsePulse={ctx.IsPulsePulseComboActive} " + $"isPulseCore={ctx.IsPulseCoreActive} " + $"processed={ctx.Processed.Contains(cell)} " + $"queued={ctx.Queued.Contains(cell)}");
 
                     if (ctx.HasLineActivation)
                     {
@@ -322,31 +315,32 @@ public class SpecialBehaviorDispatcher
 
                     if (ctx.IsPulsePulseComboActive)
                     {
-                        Debug.Log($"[OverrideDefer] reason=PulsePulse cell={cell} " +
-                                  $"deferredBefore={ctx.DeferredPulseComboOverrideCells.Count}");
+                        if (GameDiagnostics.SpecialChains)
+                            Debug.Log($"[OverrideDefer] reason=PulsePulse cell={cell} " + $"deferredBefore={ctx.DeferredPulseComboOverrideCells.Count}");
 
                         if (!ctx.DeferredPulseComboOverrideCells.Contains(cell))
                             ctx.DeferredPulseComboOverrideCells.Add(cell);
 
-                        Debug.Log($"[OverrideDefer] reason=PulsePulse cell={cell} " +
-                                  $"deferredAfter={ctx.DeferredPulseComboOverrideCells.Count}");
+                        if (GameDiagnostics.SpecialChains)
+                            Debug.Log($"[OverrideDefer] reason=PulsePulse cell={cell} " + $"deferredAfter={ctx.DeferredPulseComboOverrideCells.Count}");
                         break;
                     }
 
                     if (ctx.IsPulseCoreActive)
                     {
-                        Debug.Log($"[OverrideDefer] reason=PulseCore cell={cell} " +
-                                  $"deferredBefore={ctx.DeferredPulseComboOverrideCells.Count}");
+                        if (GameDiagnostics.SpecialChains)
+                            Debug.Log($"[OverrideDefer] reason=PulseCore cell={cell} " + $"deferredBefore={ctx.DeferredPulseComboOverrideCells.Count}");
 
                         if (!ctx.DeferredPulseComboOverrideCells.Contains(cell))
                             ctx.DeferredPulseComboOverrideCells.Add(cell);
 
-                        Debug.Log($"[OverrideDefer] reason=PulseCore cell={cell} " +
-                                  $"deferredAfter={ctx.DeferredPulseComboOverrideCells.Count}");
+                        if (GameDiagnostics.SpecialChains)
+                            Debug.Log($"[OverrideDefer] reason=PulseCore cell={cell} " + $"deferredAfter={ctx.DeferredPulseComboOverrideCells.Count}");
                         break;
                     }
 
-                    Debug.Log($"[OverrideExecuteNow] cell={cell}");
+                    if (GameDiagnostics.SpecialChains)
+                        Debug.Log($"[OverrideExecuteNow] cell={cell}");
 
                     overrideSpecial.Execute(new OverrideExecutionRuntime
                     {

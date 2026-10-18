@@ -24,7 +24,8 @@ public class ProgressEventService : MonoBehaviour, IProgressEventService
             s_pendingConfig = Resources.Load<ProgressEventConfig>("Events/ProgressEventConfig");
             if (s_pendingConfig == null)
             {
-                Debug.LogWarning("[ProgressEvent] Resources/Events/ altında ne ProgressEventScheduler ne de ProgressEventConfig bulunamadı.");
+                if (GameDiagnostics.CriticalErrors)
+                    Debug.LogWarning("[ProgressEvent] Resources/Events/ altında ne ProgressEventScheduler ne de ProgressEventConfig bulunamadı.");
                 return;
             }
         }
@@ -44,31 +45,40 @@ public class ProgressEventService : MonoBehaviour, IProgressEventService
             if (inst == null)
                 return null;
 
-            // Yalnızca bu level'da FİİLEN TAMAMLANAN hedefler kayıp sayılır (yarım ilerleme değil —
-            // "henüz kazanmadığın şeyi gösterme"). Her tamamlanan hedefin İKONU tek başına gösterilir.
+            // Bu level'da hedefe yazılan HER ilerleme kayıptır (kullanıcı kararı, 2026-10-10): oyuncu
+            // ör. 12 LineH/V topladıysa hedef dolmasa da vazgeçince o 12 silinir. Hedef başına ikon + sayı.
             List<LevelLossItem> result = null;
-            foreach (var goal in inst.GetStagedNewlyCompletedGoals())
-            {
-                if (goal == null) continue;
+            foreach (var (goal, gained) in inst.GetStagedGoalGains())
                 (result ??= new List<LevelLossItem>())
-                    .Add(new LevelLossItem(goal.DisplayIcon, null, 0, achieved: true));
-            }
+                    .Add(new LevelLossItem(goal.DisplayIcon, inst.EventName, gained, achieved: true));
             return result;
         });
     }
 
     // ── Persistence keys ────────────────────────────────────────
 
-    private const string KeyStartTime = "progress_event_v1_start_time";
     private const string KeyGoals     = "progress_event_v1_goals";
     private const string KeyCycleKey  = "progress_event_v1_cycle_key";
+    private const string KeyRound     = "progress_event_v1_round";   // basamak turu (sunucu sezonu)
+
+    // Asset'teki "Always" event'i sabit bir başlangıçtan durationHours'luk dilimlerle döner → bitip
+    // kaybolmaz (eski davranış: 48 saat sonra "always" anahtarı değişmediği için sonsuza dek Ended kalıyordu).
+    private static readonly DateTime LocalAlwaysEpochUtc = new DateTime(2026, 1, 5, 0, 0, 0, DateTimeKind.Utc);
 
     // ── Runtime state ────────────────────────────────────────────
 
     private ProgressEventScheduler    scheduler;
     private ScheduledProgressEvent    activeEvent;
     private ISaveStore                saveStore;
-    private long                      startTimeTicks;
+
+    // Kaynak önceliği: sunucu sezonu (RemoteProgressEvent) → asset scheduler → asset config.
+    private ProgressEventConfig                localDirectConfig;   // scheduler yoksa doğrudan asset config
+    private RemoteProgressEvent.ActiveSeason   remoteSeason;        // null = asset kaynağı
+    private int                                ladderRound;         // sunucu sezonunda basamak turu (0 = taban)
+    private bool                               pendingReload;       // level sürerken gelen değişiklik → level sonunda
+    private float                              nextGateCheckTime;
+    private float                              nextEndedReloadTime;
+    private bool                               levelGateOpen = true;
 
     private readonly List<ProgressGoalRuntime> goals        = new();
     private readonly List<SessionGainRecord>   sessionGains = new();
@@ -82,7 +92,10 @@ public class ProgressEventService : MonoBehaviour, IProgressEventService
     public ProgressEventState                  State         { get; private set; }
     public TimeSpan                            TimeRemaining => ComputeTimeRemaining();
     public IReadOnlyList<ProgressGoalRuntime>  Goals         => goals;
-    public string                              EventName     => config != null ? config.eventName : "";
+    // Sunucu sezonu oyuncunun dilinde ad verdiyse o; yoksa çeviri (asset'teki eventName Türkçe sabit, yalnız son çare).
+    public string                              EventName     => config == null ? ""
+        : remoteSeason != null && !string.IsNullOrEmpty(config.eventName) ? config.eventName
+        : GameLocalization.GetOr("progress_event_name", config.eventName);
     public Sprite EventIcon
     {
         get
@@ -90,7 +103,7 @@ public class ProgressEventService : MonoBehaviour, IProgressEventService
             if (config == null || config.goals == null || config.goals.Count == 0) return null;
             var g = config.goals[0];
             if (g == null) return null;
-            return g.goalIcon != null ? g.goalIcon : (g.reward != null ? g.reward.ResolveIcon() : null);
+            return g.ResolveGoalIcon();
         }
     }
 
@@ -105,13 +118,7 @@ public class ProgressEventService : MonoBehaviour, IProgressEventService
 
         if (config == null && s_pendingConfig != null) config = s_pendingConfig;
         s_pendingConfig = null;
-
-        // Scheduler varsa aktif event'ten config'i çöz.
-        if (scheduler != null)
-        {
-            activeEvent = scheduler.GetActiveEvent();
-            config      = activeEvent?.config;
-        }
+        localDirectConfig = config;
 
         if (Instance != null) { Destroy(gameObject); return; }
         Instance = this;
@@ -119,20 +126,113 @@ public class ProgressEventService : MonoBehaviour, IProgressEventService
         DontDestroyOnLoad(gameObject);
 
         saveStore = new PlayerPrefsSaveStore();
-        BuildGoals();
-        LoadState();
-        RefreshState();
+        RebuildFromSource();
 
-        GameEventBus.OnTileCleared += HandleTileCleared;
+        GameEventBus.OnTileCleared     += HandleTileCleared;
+        GameEventBus.OnObstacleCleared += HandleObstacleCleared;
+        GameEventBus.OnSpecialCreated  += HandleSpecialCreated;
+        RemoteProgressEvent.OnChanged  += RequestReload;
     }
 
     private void OnDestroy()
     {
-        GameEventBus.OnTileCleared -= HandleTileCleared;
+        GameEventBus.OnTileCleared     -= HandleTileCleared;
+        GameEventBus.OnObstacleCleared -= HandleObstacleCleared;
+        GameEventBus.OnSpecialCreated  -= HandleSpecialCreated;
+        RemoteProgressEvent.OnChanged  -= RequestReload;
         if (Instance == this) Instance = null;
     }
 
     private void Update() => RefreshState();
+
+    /// The service survives menu scene reloads; discard cached goals/rewards after a save reset/restore.
+    public void ReloadFromPrefs()
+    {
+        DiscardStagedGains();
+        stagedSpacePerGoal = null;
+        sessionGains.Clear();
+        pendingRewardReveals.Clear();
+        pendingMenuRewardFx.Clear();
+        RebuildFromSource();
+    }
+
+    // Sunucu dokümanı değişti / sezon bitti: level sürerken staging'i bozmamak için level sonuna ertelenir.
+    // Kayıt geri yüklemesinden (ReloadFromPrefs) farkı: bekleyen ödül töreni / menü uçuşu korunur.
+    private void RequestReload()
+    {
+        if (stagingActive) { pendingReload = true; return; }
+        RebuildFromSource();
+    }
+
+    // Kaynağı çöz → döngü/tur → hedefler → kayıtlı sayımlar. Hedef listesi değiştiyse menü bar şovunun
+    // indeksleri geçersizdir (sessionGains silinir); ilerleme kayıtta olduğu için kaybolmaz.
+    private void RebuildFromSource()
+    {
+        pendingReload = false;
+        string previousKey = config != null ? CurrentCycleKey() : null;
+        int previousCount = goals.Count;
+
+        ResolveSource();
+        if (config == null)
+        {
+            goals.Clear();
+            sessionGains.Clear();
+            RefreshState();
+            return;
+        }
+
+        LoadState();
+        BuildGoals();
+        LoadGoalCounts();
+        TryAdvanceLadder();
+        if (previousKey != CurrentCycleKey() || previousCount != goals.Count) sessionGains.Clear();
+        RefreshState();
+    }
+
+    // Kaynak: sunucu sezonu (varsa) → yoksa oyundaki asset. Sunucu "kapalı" diyorsa event yok.
+    private void ResolveSource()
+    {
+        remoteSeason = null;
+        activeEvent = null;
+
+        var status = RemoteProgressEvent.TryResolve(DateTime.UtcNow, LocalIconSource(), out var season);
+        if (status == RemoteProgressEvent.Status.Active)
+        {
+            remoteSeason = season;
+            config = season.Config;
+        }
+        else if (status == RemoteProgressEvent.Status.Inactive)
+        {
+            config = null;
+        }
+        else if (scheduler != null)
+        {
+            activeEvent = scheduler.GetActiveEvent();
+            config = activeEvent?.config;
+        }
+        else
+        {
+            config = localDirectConfig;
+        }
+
+        UpdateLevelGate();
+    }
+
+    // Sunucu sezonunun ikon/dalga görselleri oyundaki asset'ten eşlenir.
+    private ProgressEventConfig LocalIconSource()
+    {
+        if (localDirectConfig != null) return localDirectConfig;
+        if (scheduler?.events == null) return null;
+        foreach (var e in scheduler.events)
+            if (e?.config != null) return e.config;
+        return null;
+    }
+
+    private void UpdateLevelGate()
+    {
+        int minLevel = remoteSeason != null ? remoteSeason.MinLevel : 1;
+        levelGateOpen = PlayerPrefs.GetInt("current_level", 1) >= minLevel;
+    }
 
     // ── IProgressEventService ────────────────────────────────────
 
@@ -151,35 +251,36 @@ public class ProgressEventService : MonoBehaviour, IProgressEventService
     // Oyun içi "+N" feedback'i staging sırasında da canlı akar (sanal kapasite
     // simülasyonu commit'le birebir aynı dağıtımı kullanır; commit sessiz uygular).
 
-    private struct StagedTileEvent { public TileType type; public int count; }
+    // Sayılan olay: taş (tip taşır), engel, special, level kazanma. Hedef türüyle Matches eşler.
+    private enum SignalKind : byte { Tile, Obstacle, Special, LevelWon, FirstTryWin }
+    private struct Signal { public SignalKind kind; public TileType tile; public int count; }
 
     private bool stagingActive;
-    private readonly List<StagedTileEvent> stagedEvents = new();
+    private readonly List<Signal> stagedEvents = new();
     private int[] stagedSpacePerGoal;
+    private int[] stagedStartSpacePerGoal;   // level başındaki boşluk → (başlangıç − şimdiki) = bu level'ın kazancı
     private int stagedGainTotal;
 
     /// Fail popup'ının "X event puanı kaybolacak" uyarısı için.
     public int StagedGainTotal => stagingActive ? stagedGainTotal : 0;
 
     /// <summary>
-    /// Bu level'da (staged) YENİ tamamlanan hedefler. Vazgeçilirse bu tamamlamalar kaybolur.
-    /// Önceki level'larda zaten tamamlanmış (committed → <see cref="ProgressGoalRuntime.IsCompleted"/>)
-    /// veya yalnızca kısmen ilerlenen hedefler HARİÇ. Staging'de bir hedefin başlangıç boşluğu
-    /// (stagedSpacePerGoal) 0'a indiyse ama commit'li state hâlâ tamamlanmamışsa → bu level tamamladı.
+    /// Bu level'da (staged) ilerleme yazılan hedefler ve kazanılan miktar. Vazgeçilirse hepsi silinir.
+    /// Tamamlanan ve yarım kalan hedefler birlikte döner; ödülü alınmış / önceden dolmuş hedefler hariç.
     /// </summary>
-    public IEnumerable<ProgressGoalRuntime> GetStagedNewlyCompletedGoals()
+    public IEnumerable<(ProgressGoalRuntime goal, int gained)> GetStagedGoalGains()
     {
-        if (!stagingActive || stagedSpacePerGoal == null)
+        if (!stagingActive || stagedSpacePerGoal == null || stagedStartSpacePerGoal == null)
             yield break;
 
-        int n = Mathf.Min(goals.Count, stagedSpacePerGoal.Length);
+        int n = Mathf.Min(goals.Count, Mathf.Min(stagedSpacePerGoal.Length, stagedStartSpacePerGoal.Length));
         for (int i = 0; i < n; i++)
         {
             var g = goals[i];
-            if (g == null || g.IsRewardClaimed) continue;
-            if (g.IsCompleted) continue;            // committed olarak zaten tamam → kayıp değil
-            if (stagedSpacePerGoal[i] == 0)         // bu level'da staged olarak dolduruldu → risk
-                yield return g;
+            if (g == null || g.IsRewardClaimed || g.IsCompleted) continue;
+            int gained = stagedStartSpacePerGoal[i] - stagedSpacePerGoal[i];
+            if (gained > 0)
+                yield return (g, gained);
         }
     }
 
@@ -222,6 +323,9 @@ public class ProgressEventService : MonoBehaviour, IProgressEventService
     /// Level başında çağrılır (GridSpawner). Önceki kalıntıyı atar.
     public void BeginLevelStaging()
     {
+        if (pendingReload) RebuildFromSource();
+        UpdateLevelGate();
+        TryAdvanceLadder();
         stagingActive = true;
         stagedEvents.Clear();
         stagedGainTotal = 0;
@@ -233,6 +337,7 @@ public class ProgressEventService : MonoBehaviour, IProgressEventService
                 ? 0
                 : Mathf.Max(0, goals[i].Definition.targetCount - goals[i].CurrentCount);
         }
+        stagedStartSpacePerGoal = (int[])stagedSpacePerGoal.Clone();
     }
 
     /// Level kazanılınca çağrılır: bekleyen kazanımları kalıcılaştırır (ödüller dahil).
@@ -243,24 +348,35 @@ public class ProgressEventService : MonoBehaviour, IProgressEventService
         stagingActive = false;
 
         for (int i = 0; i < stagedEvents.Count; i++)
-            ApplyTileCleared(stagedEvents[i].type, stagedEvents[i].count, fireGainEvent: false);
+            ApplySignal(stagedEvents[i], fireGainEvent: false);
 
         if (stagedGainTotal > 0)
-            Debug.Log($"[ProgressEvent] Staged commit: {stagedGainTotal} event puanı kalıcılaştı.");
+            {}
 
         stagedEvents.Clear();
         stagedGainTotal = 0;
+
+        // Commit = level kazanıldı. Kazanma hedefleri burada (staging'siz) sayılır.
+        if (State == ProgressEventState.Active)
+        {
+            ApplySignal(new Signal { kind = SignalKind.LevelWon, count = 1 }, fireGainEvent: true);
+            if (LevelAttemptStats.AttemptsOn(CurrentLevel.Global) <= 1)
+                ApplySignal(new Signal { kind = SignalKind.FirstTryWin, count = 1 }, fireGainEvent: true);
+        }
+
+        if (pendingReload) RebuildFromSource();
     }
 
     /// Oyuncu kaybetmeyi kabul edince çağrılır: bekleyen kazanımlar atılır.
     public void DiscardStagedGains()
     {
         if (stagedGainTotal > 0)
-            Debug.Log($"[ProgressEvent] Staged discard: {stagedGainTotal} event puanı kaybedildi (level fail).");
+            {}
 
         stagingActive = false;
         stagedEvents.Clear();
         stagedGainTotal = 0;
+        if (pendingReload) RebuildFromSource();
     }
 
     // Staging sırasında "+N" feedback'i için: commit'in yapacağı dağıtımın birebir
@@ -268,11 +384,11 @@ public class ProgressEventService : MonoBehaviour, IProgressEventService
     // KADEMELİ sayım: yalnızca AKTİF hedef (ilk dolmamış) sayar; o dolmadan
     // sonraki hedefe hiçbir taş yazılmaz. Aktif hedef bu level'da (sanal) dolarsa
     // sıradaki hedef O ANDAN itibaren saymaya başlar.
-    private int SimulateStagedGain(TileType type, int count)
+    private int SimulateStagedGain(in Signal signal)
     {
         if (stagedSpacePerGoal == null) return 0;
 
-        int remaining = count;
+        int remaining = signal.count;
         int gained = 0;
 
         for (int i = 0; i < goals.Count && remaining > 0; i++)
@@ -280,7 +396,7 @@ public class ProgressEventService : MonoBehaviour, IProgressEventService
             if (stagedSpacePerGoal[i] <= 0) continue;   // bitmiş (ya da bu level'da sanal bitti) → sıradaki
 
             // İlk dolmamış hedef = aktif hedef. Tip uymuyorsa sayım yok — sonrakiler de bloklu.
-            if (!Matches(goals[i].Definition.goalType, type)) break;
+            if (!Matches(goals[i].Definition.goalType, signal)) break;
 
             int take = Mathf.Min(stagedSpacePerGoal[i], remaining);
             stagedSpacePerGoal[i] -= take;
@@ -297,31 +413,41 @@ public class ProgressEventService : MonoBehaviour, IProgressEventService
     // ── Tile counting ────────────────────────────────────────────
 
     private void HandleTileCleared(TileType type, int count)
+        => HandleSignal(new Signal { kind = SignalKind.Tile, tile = type, count = count });
+
+    private void HandleObstacleCleared(ObstacleId id)
+        => HandleSignal(new Signal { kind = SignalKind.Obstacle, count = 1 });
+
+    private void HandleSpecialCreated(TileSpecial special)
+        => HandleSignal(new Signal { kind = SignalKind.Special, count = 1 });
+
+    private void HandleSignal(in Signal signal)
     {
-        if (State != ProgressEventState.Active) return;
+        if (State != ProgressEventState.Active || signal.count <= 0) return;
 
         if (stagingActive)
         {
-            stagedEvents.Add(new StagedTileEvent { type = type, count = count });
+            stagedEvents.Add(signal);
 
-            int gained = SimulateStagedGain(type, count);
+            int gained = SimulateStagedGain(signal);
             if (gained > 0)
             {
                 stagedGainTotal += gained;
                 OnProgressGained?.Invoke(gained);
-                OnProgressGainedTyped?.Invoke(type, gained);
+                if (signal.kind == SignalKind.Tile)
+                    OnProgressGainedTyped?.Invoke(signal.tile, gained);
             }
             return;
         }
 
-        ApplyTileCleared(type, count, fireGainEvent: true);
+        ApplySignal(signal, fireGainEvent: true);
     }
 
-    private void ApplyTileCleared(TileType type, int count, bool fireGainEvent)
+    private void ApplySignal(in Signal signal, bool fireGainEvent)
     {
         EnsureSessionGainSlots();
 
-        int remaining   = count;
+        int remaining   = signal.count;
         int totalGained = 0;
         bool dirty      = false;
 
@@ -335,7 +461,7 @@ public class ProgressEventService : MonoBehaviour, IProgressEventService
 
             // İlk claim edilmemiş hedef = aktif hedef. Tip uymuyorsa bu batch'ten
             // hiçbir hedef sayamaz (sonrakiler bloklu) — döngüyü kes.
-            if (!Matches(goal.Definition.goalType, type)) break;
+            if (!Matches(goal.Definition.goalType, signal)) break;
 
             int before   = goal.CurrentCount;
             int overflow = goal.AddWithOverflow(remaining);
@@ -378,7 +504,8 @@ public class ProgressEventService : MonoBehaviour, IProgressEventService
         if (totalGained > 0 && fireGainEvent)
         {
             OnProgressGained?.Invoke(totalGained);
-            OnProgressGainedTyped?.Invoke(type, totalGained);
+            if (signal.kind == SignalKind.Tile)
+                OnProgressGainedTyped?.Invoke(signal.tile, totalGained);
         }
     }
 
@@ -392,49 +519,83 @@ public class ProgressEventService : MonoBehaviour, IProgressEventService
 
     private void RefreshState()
     {
-        if (config == null) { State = ProgressEventState.Scheduled; return; }
-
-        // Scheduler varsa schedule'a göre kontrol et.
-        if (scheduler != null && activeEvent != null)
+        if (config == null)
         {
-            if (!activeEvent.schedule.IsActiveNow())
-            {
-                // Pencere kapandı; bir sonraki Awake'de yeni aktif event seçilecek.
-                State = ProgressEventState.Ended;
-                return;
-            }
-
-            // Always dışındaki tiplerde pencere bitişini kontrol et.
-            if (activeEvent.schedule.scheduleType != ProgressEventScheduleType.Always)
-            {
-                State = ProgressEventState.Active;
-                return;
-            }
+            State = ProgressEventState.Scheduled;
+            // Sunucu kapalıyken / hafta içi boş günlerde ara ara yeniden bak (sezon başlamış olabilir).
+            ReloadWhenEnded();
+            return;
         }
 
-        // Always tipi veya scheduler yok → durationHours kullan.
-        double elapsed = TimeSpan.FromTicks(DateTime.UtcNow.Ticks - startTimeTicks).TotalHours;
-        State = elapsed >= config.durationHours ? ProgressEventState.Ended : ProgressEventState.Active;
+        if (Time.unscaledTime >= nextGateCheckTime)
+        {
+            nextGateCheckTime = Time.unscaledTime + 1f;
+            UpdateLevelGate();
+        }
+
+        if (DateTime.UtcNow >= CurrentWindowEndUtc())
+        {
+            // Pencere kapandı → sıradaki sezon/döngü (level sürüyorsa level sonunda).
+            State = ProgressEventState.Ended;
+            ReloadWhenEnded();
+            return;
+        }
+
+        State = levelGateOpen ? ProgressEventState.Active : ProgressEventState.Scheduled;
+    }
+
+    private void ReloadWhenEnded()
+    {
+        if (Time.unscaledTime < nextEndedReloadTime) return;
+        nextEndedReloadTime = Time.unscaledTime + 30f;
+        RequestReload();
     }
 
     private TimeSpan ComputeTimeRemaining()
     {
         if (State != ProgressEventState.Active || config == null) return TimeSpan.Zero;
-
-        DateTime end;
-
-        if (scheduler != null && activeEvent != null &&
-            activeEvent.schedule.scheduleType != ProgressEventScheduleType.Always)
-        {
-            end = scheduler.GetWindowEnd(activeEvent);
-        }
-        else
-        {
-            end = new DateTime(startTimeTicks, DateTimeKind.Utc).AddHours(config.durationHours);
-        }
-
-        var remaining = end - DateTime.UtcNow;
+        var remaining = CurrentWindowEndUtc() - DateTime.UtcNow;
         return remaining < TimeSpan.Zero ? TimeSpan.Zero : remaining;
+    }
+
+    // Aktif pencerenin bitişi: sunucu sezonu → sezon dilimi; scheduler Weekly/FixedDate → kendi penceresi;
+    // Always → sabit başlangıçtan durationHours'luk dilim (sürekli döner).
+    private DateTime CurrentWindowEndUtc()
+    {
+        if (remoteSeason != null) return remoteSeason.WindowEndUtc;
+        if (activeEvent != null && activeEvent.schedule.scheduleType != ProgressEventScheduleType.Always)
+            return activeEvent.schedule.IsActiveNow() ? scheduler.GetWindowEnd(activeEvent) : DateTime.MinValue;
+        long period = LocalAlwaysPeriod();
+        return LocalAlwaysEpochUtc.AddHours(LocalAlwaysHours() * (period + 1));
+    }
+
+    private double LocalAlwaysHours() => Math.Max(1.0, config != null ? config.durationHours : 48f);
+
+    private long LocalAlwaysPeriod()
+        => (long)Math.Floor((DateTime.UtcNow - LocalAlwaysEpochUtc).TotalHours / LocalAlwaysHours());
+
+    private string CurrentCycleKey()
+    {
+        if (remoteSeason != null) return remoteSeason.CycleKey;
+        if (activeEvent != null && activeEvent.schedule.scheduleType != ProgressEventScheduleType.Always)
+            return scheduler.GetCycleKey(activeEvent);
+        return $"always_{LocalAlwaysPeriod()}";
+    }
+
+    // ── Basamak (ladder) ─────────────────────────────────────────
+    // Sunucu sezonunda tüm hedefler alınınca aynı hedefler growthPercent büyüyerek yeniden açılır.
+    // Tur ilerletme level BAŞINDA / yüklemede yapılır: menüdeki bar şovu (sessionGains, hedef indeksleri)
+    // bitmiş turu oynatırken liste değişmesin.
+    private void TryAdvanceLadder()
+    {
+        if (remoteSeason == null || !remoteSeason.LadderEnabled || stagingActive) return;
+        if (!AllGoalsClaimed() || ladderRound + 1 >= remoteSeason.MaxRounds) return;
+
+        ladderRound++;
+        saveStore.Save(KeyRound, ladderRound.ToString());
+        saveStore.Save(KeyGoals, "");
+        sessionGains.Clear();
+        BuildGoals();
     }
 
     // ── Helpers ──────────────────────────────────────────────────
@@ -442,14 +603,24 @@ public class ProgressEventService : MonoBehaviour, IProgressEventService
     private static void GrantProgressReward(ProgressGoalDefinition def)
     {
         if (def.reward == null) return;
-        if (def.rewardDurationMinutes > 0)
-            TimedRewardService.Grant(def.reward.type, def.rewardDurationMinutes);
+        if (def.EffectiveRewardDurationMinutes > 0)
+            TimedRewardService.Grant(def.reward.type, def.EffectiveRewardDurationMinutes);
         else
             DailySlotRewardService.Grant(def.reward);
     }
 
-    private static bool Matches(ProgressGoalType goalType, TileType tile) =>
-        goalType switch
+    private static bool Matches(ProgressGoalType goalType, in Signal s)
+    {
+        switch (s.kind)
+        {
+            case SignalKind.Obstacle:    return goalType == ProgressGoalType.ObstacleCleared;
+            case SignalKind.Special:     return goalType == ProgressGoalType.SpecialCreated;
+            case SignalKind.LevelWon:    return goalType == ProgressGoalType.LevelWon;
+            case SignalKind.FirstTryWin: return goalType == ProgressGoalType.FirstTryWin;
+        }
+
+        var tile = s.tile;
+        return goalType switch
         {
             ProgressGoalType.LineH             => tile == TileType.LineEmitter_H,
             ProgressGoalType.LineV             => tile == TileType.LineEmitter_V,
@@ -462,6 +633,7 @@ public class ProgressEventService : MonoBehaviour, IProgressEventService
                                                    tile == TileType.Bolt  || tile == TileType.Plate,
             _ => false
         };
+    }
 
     // ── Init & Persistence ───────────────────────────────────────
 
@@ -469,48 +641,59 @@ public class ProgressEventService : MonoBehaviour, IProgressEventService
     {
         goals.Clear();
         if (config?.goals == null) return;
+
+        // Basamak turunda aynı hedefler büyütülmüş hedefle (ödül aynı) yeniden kurulur.
+        float scale = remoteSeason != null && ladderRound > 0
+            ? Mathf.Pow(1f + remoteSeason.GrowthPercent / 100f, ladderRound)
+            : 1f;
+
         foreach (var def in config.goals)
-            goals.Add(new ProgressGoalRuntime(def));
+        {
+            if (def == null) continue;
+            goals.Add(new ProgressGoalRuntime(Mathf.Approximately(scale, 1f) ? def : Scaled(def, scale)));
+        }
     }
 
+    private static ProgressGoalDefinition Scaled(ProgressGoalDefinition def, float scale) => new()
+    {
+        goalType = def.goalType,
+        targetCount = Mathf.Max(def.targetCount, Mathf.CeilToInt(def.targetCount * scale)),
+        reward = def.reward,
+        rewardDurationMinutes = def.rewardDurationMinutes,
+        rewardWaveSprite = def.rewardWaveSprite,
+        fallbackDescription = def.fallbackDescription,
+        goalIcon = def.goalIcon,
+    };
+
+    // Döngü anahtarı + basamak turu. Döngü değiştiyse eski hedef kaydı SİLİNİR (önceden yalnız anahtar
+    // yazılıyordu → ilk kazanım yazılmadan uygulama kapanırsa eski döngünün ilerlemesi geri yükleniyordu).
     private void LoadState()
     {
-        // Cycle key kontrolü: değiştiyse goal'leri sıfırla.
-        string currentCycleKey = scheduler != null && activeEvent != null
-            ? scheduler.GetCycleKey(activeEvent)
-            : "always";
-
+        string currentCycleKey = CurrentCycleKey();
         string savedCycleKey = saveStore.Load(KeyCycleKey, "");
         if (savedCycleKey != currentCycleKey)
         {
-            Debug.Log($"[ProgressEvent] Yeni döngü: '{savedCycleKey}' → '{currentCycleKey}'. Goal'ler sıfırlanıyor.");
             saveStore.Save(KeyCycleKey, currentCycleKey);
-            // Goal verisini temizle (start time'ı yenile).
-            startTimeTicks = DateTime.UtcNow.Ticks;
-            saveStore.Save(KeyStartTime, startTimeTicks.ToString());
-            return; // goals sıfır kalır
+            saveStore.Save(KeyGoals, "");
+            saveStore.Save(KeyRound, "0");
+            ladderRound = 0;
+            return;
         }
 
-        // Start time yükle (Always tipi için).
-        string startStr = saveStore.Load(KeyStartTime, "");
-        if (!long.TryParse(startStr, out startTimeTicks))
-        {
-            startTimeTicks = DateTime.UtcNow.Ticks;
-            saveStore.Save(KeyStartTime, startTimeTicks.ToString());
-        }
+        ladderRound = int.TryParse(saveStore.Load(KeyRound, "0"), out int r) ? Mathf.Max(0, r) : 0;
+        if (remoteSeason == null || !remoteSeason.LadderEnabled) ladderRound = 0;
+        else ladderRound = Mathf.Min(ladderRound, remoteSeason.MaxRounds - 1);
+    }
 
-        // Goal durumlarını yükle.
+    private void LoadGoalCounts()
+    {
         string json = saveStore.Load(KeyGoals, "");
-        if (!string.IsNullOrEmpty(json))
-        {
-            var wrapper = JsonUtility.FromJson<GoalSaveWrapper>(json);
-            if (wrapper?.items != null)
-            {
-                int count = Mathf.Min(goals.Count, wrapper.items.Count);
-                for (int i = 0; i < count; i++)
-                    goals[i].SetFromSave(wrapper.items[i].count, wrapper.items[i].claimed);
-            }
-        }
+        if (string.IsNullOrEmpty(json)) return;
+        var wrapper = JsonUtility.FromJson<GoalSaveWrapper>(json);
+        if (wrapper?.items == null) return;
+        int count = Mathf.Min(goals.Count, wrapper.items.Count);
+        for (int i = 0; i < count; i++)
+            goals[i].SetFromSave(wrapper.items[i].count, wrapper.items[i].claimed);
     }
 
     private void SaveGoals()

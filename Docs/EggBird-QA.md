@@ -30,3 +30,9 @@
 ## Verification performed
 
 The user confirmed the initial EggBird implementation works in-game. This refinement was checked statically for stage/sprite references, shared flame settings, the dedicated nonblocking flight registration and removal of flight animation from the main queue. No build was run; the refined animation still needs Play Mode visual verification.
+
+## Special impact fix
+
+`CellsImpactAction` now routes live special targets through `TriggerSpecialTileFromBoardEffect` and the existing special chain engine, rather than adding them to the normal `MatchClearAction` set. This applies to PulseCore, LineH, LineV, PatchBot and SystemOverride. Duplicate bird destinations still produce one impact. Pending specials remain owned by their existing chain; caged or covered specials survive while the covering obstacle takes its normal hit. A special revealed by that hit is not also activated immediately.
+
+The shared action is also used by Hamster landings and GelLauncher impacts, so those callers receive the same special handling. Target selection, bird flight VFX, pools and nonblocking flight jobs are unchanged. No additional board scans or VFX objects were added; performance was not profiled. Isolated production-action regression checks run with `csi Tools/check_cells_impact.csx`; visual playback and full chain effects still require Play Mode verification.

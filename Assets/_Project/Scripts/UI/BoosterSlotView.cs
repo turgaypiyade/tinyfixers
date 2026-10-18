@@ -11,7 +11,7 @@ using UnityEngine.UI;
 public class BoosterSlotView : MonoBehaviour
 {
     [Tooltip("-1 = aynı objedeki JokerBoosterSlotMapping.BoosterIndex kullanılır. " +
-             "(0=Hammer, 1=Row, 2=Column, 3=Shuffle)")]
+             "(0=Hammer, 1=Row, 2=Column, 3=Shuffle, 4=PaintBucket)")]
     [SerializeField] private int boosterIndex = -1;
 
     [Header("UI")]
@@ -48,6 +48,7 @@ public class BoosterSlotView : MonoBehaviour
 
     private Image frameImage;   // butonun yeşil gövdesi (Button.targetGraphic)
 
+    private bool timedTicking;
     private TMP_Text freeBadgeLabel;   // freeBadge altındaki text — lazily bulunur
     private int resolvedIndex = -1;
 
@@ -61,8 +62,10 @@ public class BoosterSlotView : MonoBehaviour
     {
         resolvedIndex = ResolveIndex();
         if (resolvedIndex < 0)
-            Debug.LogError($"[BoosterSlotView] '{name}': booster index çözülemedi! Inspector'dan " +
-                           "boosterIndex (0-3) ya da JokerBoosterSlotMapping.BoosterIndex ayarla.", this);
+            {
+                if (GameDiagnostics.CriticalErrors)
+                    Debug.LogError($"[BoosterSlotView] '{name}': booster index çözülemedi! Inspector'dan " + "boosterIndex (0-3) ya da JokerBoosterSlotMapping.BoosterIndex ayarla.", this);
+            }
 
         AutoFindMissingRefs();
         ApplyBoosterIcon();
@@ -126,6 +129,15 @@ public class BoosterSlotView : MonoBehaviour
             iconImage.sprite = sprite;
     }
 
+    /// Çalışma anında kopyalanan slotu (5. joker) yeni index'e bağlar: ikon + rozetler yeniden çizilir.
+    public void Rebind(int index)
+    {
+        boosterIndex = index;
+        resolvedIndex = index;
+        ApplyBoosterIcon();
+        RefreshVisuals();
+    }
+
     // Index çözüm sırası: serialized alan → mapping (self/parent) → obje adındaki sayı (Slot1→0).
     private int ResolveIndex()
     {
@@ -147,7 +159,7 @@ public class BoosterSlotView : MonoBehaviour
         {
             int start = end;
             while (start > 0 && char.IsDigit(n[start - 1])) start--;
-            if (int.TryParse(n.Substring(start, end - start + 1), out int num) && num >= 1 && num <= 4)
+            if (int.TryParse(n.Substring(start, end - start + 1), out int num) && num >= 1 && num <= 5)
                 return num - 1;
         }
 
@@ -224,6 +236,8 @@ public class BoosterSlotView : MonoBehaviour
 
     private void OnDisable()
     {
+        CancelInvoke(nameof(TickTimed));
+        timedTicking = false;
         BoosterInventory.OnCountChanged -= HandleCountChanged;
         BoosterAccessService.OnFreeConsumed -= HandleFreeConsumed;
         GameLocalization.OnLanguageChanged -= RefreshVisuals;
@@ -257,8 +271,16 @@ public class BoosterSlotView : MonoBehaviour
         ApplyBoosterIcon();
 
         bool unlocked = BoosterAccessService.IsUnlocked(resolvedIndex);
-        bool free = unlocked && BoosterAccessService.IsFreeThisGame(resolvedIndex);
+        bool timed = unlocked && BoosterAccessService.IsTimedFree(resolvedIndex);
+        bool free = unlocked && (timed || BoosterAccessService.IsFreeThisGame(resolvedIndex));
         bool showCount = unlocked && !free;
+        // Kalan süreyi saniyede bir yaz; yalnız süre aktifken (sıcak yol değil, Update yok).
+        if (timed != timedTicking)
+        {
+            timedTicking = timed;
+            if (timed) InvokeRepeating(nameof(TickTimed), 1f, 1f);
+            else CancelInvoke(nameof(TickTimed));
+        }
 
         if (lockOverlay != null)
             lockOverlay.SetActive(!unlocked);
@@ -274,7 +296,7 @@ public class BoosterSlotView : MonoBehaviour
             freeBadge.SetActive(free);
 
         if (free)
-            RefreshFreeBadgeLabel();
+            RefreshFreeBadgeLabel(timed);
 
         if (numberBG != null)
             numberBG.gameObject.SetActive(showCount);
@@ -287,7 +309,7 @@ public class BoosterSlotView : MonoBehaviour
         }
     }
 
-    private void RefreshFreeBadgeLabel()
+    private void RefreshFreeBadgeLabel(bool timed)
     {
         if (freeBadge == null)
             return;
@@ -296,6 +318,15 @@ public class BoosterSlotView : MonoBehaviour
             freeBadgeLabel = freeBadge.GetComponentInChildren<TMP_Text>(true);
 
         if (freeBadgeLabel != null)
-            freeBadgeLabel.text = GameLocalization.Get("prelevel_special_free");
+            freeBadgeLabel.text = timed
+                ? TimeFormat.Countdown(TimedRewardService.GetBoosterRemaining(BoosterAccessService.ToMode(resolvedIndex)))
+                : GameLocalization.Get("prelevel_special_free");
+    }
+
+    private void TickTimed()
+    {
+        // Süre bitince RefreshVisuals sayaca döner ve tick'i durdurur.
+        if (BoosterAccessService.IsTimedFree(resolvedIndex)) RefreshFreeBadgeLabel(true);
+        else RefreshVisuals();
     }
 }

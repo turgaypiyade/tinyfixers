@@ -50,7 +50,8 @@ public static class LevelCatalogCsvTool
         }
 
         File.WriteAllText(path, sb.ToString(), new UTF8Encoding(true));
-        Debug.Log($"[LevelCatalogCsv] Export: {rows} giriş → {path}");
+        if (GameDiagnostics.EditorTools)
+            Debug.Log($"[LevelCatalogCsv] Export: {rows} giriş → {path}");
         EditorUtility.RevealInFinder(path);
     }
 
@@ -82,7 +83,7 @@ public static class LevelCatalogCsvTool
 
     /// Araya level sokma / sıra değiştirme için: chapter-level-levelKey kolonları
     /// YOK SAYILIR, girişler satır sırasına göre baştan numaralanır
-    /// (chapter=1, level=1..N, levelKey=LevelCL_001..). Excel'de sadece satır ekle/taşı yeter.
+    /// (level=1..N, chapter=levelsPerChapter'a göre, levelKey=LevelCL_001..). Excel'de sadece satır ekle/taşı yeter.
     [MenuItem("TinyFixers/Levels/Import Catalog CSV (Yeniden Numaralandır)")]
     public static void ImportRenumbered() => Import(autoRenumber: true);
 
@@ -155,9 +156,10 @@ public static class LevelCatalogCsvTool
 
             if (autoRenumber)
             {
-                // Satır sırası = yeni sıra: numaralar ve key'ler baştan üretilir.
-                chapter = 1;
+                // Satır sırası = yeni sıra: numaralar ve key'ler baştan üretilir. Chapter, oyunun
+                // kullandığı TEK kaynaktan (ChapterThemeLibrary.levelsPerChapter) türetilir.
                 level = newEntries.Count + 1;
+                chapter = ChapterProgress.ChapterOfLevel(level);
                 levelKey = $"LevelCL_{level:000}";
             }
             else
@@ -186,7 +188,10 @@ public static class LevelCatalogCsvTool
 
         if (errors.Count > 0)
         {
-            foreach (var err in errors) Debug.LogError("[LevelCatalogCsv] " + err);
+            foreach (var err in errors) {
+                if (GameDiagnostics.EditorTools)
+                    Debug.LogError("[LevelCatalogCsv] " + err);
+            }
             Fail($"Import İPTAL — {errors.Count} hata var (Console'a bak). Katalog değiştirilmedi.");
             return;
         }
@@ -199,7 +204,8 @@ public static class LevelCatalogCsvTool
 
         EditorUtility.DisplayDialog("Katalog Import",
             $"{catalog.name}: {newEntries.Count} giriş CSV'deki sırayla yazıldı.", "Tamam");
-        Debug.Log($"[LevelCatalogCsv] Import: {newEntries.Count} giriş → {catalog.name}");
+        if (GameDiagnostics.EditorTools)
+            Debug.Log($"[LevelCatalogCsv] Import: {newEntries.Count} giriş → {catalog.name}");
     }
 
     // ── Yardımcılar ──────────────────────────────────────────────────────────

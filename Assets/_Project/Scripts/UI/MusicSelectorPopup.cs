@@ -27,7 +27,8 @@ public sealed class MusicSelectorPopup : MonoBehaviour
     {
         if (library == null || library.Count == 0)
         {
-            Debug.LogWarning("[MusicSelector] MusicLibrary atanmamış/boş.");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogWarning("[MusicSelector] MusicLibrary atanmamış/boş.");
             return;
         }
 

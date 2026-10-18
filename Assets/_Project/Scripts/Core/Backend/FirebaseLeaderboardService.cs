@@ -124,7 +124,8 @@ public sealed class FirebaseLeaderboardService : ILeaderboardService
             {
                 if (task.IsFaulted || task.IsCanceled)
                 {
-                    Debug.LogError($"[Leaderboard] okuma hatası ({tab}): {task.Exception}");
+                    if (GameDiagnostics.Backend)
+                        Debug.LogError($"[Leaderboard] okuma hatası ({tab}): {task.Exception}");
                     return;
                 }
                 cache[(tab, 0)] = Rank(Merge(ParseOthers(task.Result), region: 0));
@@ -295,6 +296,8 @@ public sealed class FirebaseLeaderboardService : ILeaderboardService
         };
         return col.Document(FirebaseAuthService.UserId).SetAsync(data, SetOptions.MergeAll);
     }
+
+    internal static string CurrentWeekId => WeekId();
 
     private static string WeekId()
     {

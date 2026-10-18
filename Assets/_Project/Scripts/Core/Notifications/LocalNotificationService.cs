@@ -25,7 +25,9 @@ public static class LocalNotificationService
     private const string KeyConsent = "notif_consent";
     private const string AndroidChannelId = "game";
 
+#if !UNITY_EDITOR && (UNITY_ANDROID || UNITY_IOS)
     private static bool s_initialized;
+#endif
     private static bool s_permissionRequestedThisSession;
 
     public static ConsentState Consent
@@ -96,7 +98,7 @@ public static class LocalNotificationService
         foreach (var n in plan)
             PlatformSchedule(n);
 #if !UNITY_EDITOR
-        Debug.Log($"[Notifications] {plan.Count} bildirim bırakıldı.");
+        ;
 #endif
     }
 
@@ -167,9 +169,8 @@ public static class LocalNotificationService
         NotificationCenter.CancelAllDeliveredNotifications();
     }
 #else
-    private static void PlatformInitialize() => s_initialized = true;
-    private static void PlatformRequestPermission() => Debug.Log("[Notifications] (editör) OS izni istendi.");
-    private static void PlatformSchedule(PlannedNotification n) { }
+    private static void PlatformInitialize() { }
+    private static void PlatformRequestPermission() {}    private static void PlatformSchedule(PlannedNotification n) { }
     private static void PlatformCancelAll() { }
 #endif
 }

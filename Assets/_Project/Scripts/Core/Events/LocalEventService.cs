@@ -61,7 +61,6 @@ public class LocalEventService : IEventService
         SaveParticipants();
         PlayerPrefs.Save();
         PopulateWithBots();
-        Debug.Log($"[LocalEventService] Yeni event başladı. Bitiş: {GetEventEndTime():g}");
     }
 
     private void PopulateWithBots()
@@ -131,7 +130,6 @@ public class LocalEventService : IEventService
         }
 
         SaveParticipants();
-        Debug.Log($"[LocalEventService] {playerId} event'e katıldı.");
     }
 
     // -----------------------------------------------------------------------
@@ -143,12 +141,10 @@ public class LocalEventService : IEventService
         if (p == null || p.status != EventParticipantStatus.Active) return;
 
         p.streak++;
-        Debug.Log($"[LocalEventService] {playerId} kazandı. Streak: {p.streak}/{config.consecutiveWinsRequired}");
 
         if (p.streak >= config.consecutiveWinsRequired)
         {
             p.status = EventParticipantStatus.Winner;
-            Debug.Log($"[LocalEventService] {playerId} EVENT KAZANDI!");
         }
 
         SaveParticipants();
@@ -162,7 +158,6 @@ public class LocalEventService : IEventService
         p.streak            = 0;
         p.status            = EventParticipantStatus.Cooldown;
         p.lastFailTimestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-        Debug.Log($"[LocalEventService] {playerId} kaybetti. Cooldown: {config.failCooldownMinutes} dk.");
 
         SaveParticipants();
     }
@@ -223,8 +218,6 @@ public class LocalEventService : IEventService
 
         p.status = EventParticipantStatus.Claimed;
         SaveParticipants();
-
-        Debug.Log($"[LocalEventService] {playerId} {share} coin ödül aldı.");
     }
 
     public int CalculateRewardShare()

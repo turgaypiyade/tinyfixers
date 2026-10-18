@@ -32,7 +32,8 @@ public static class NamePool
         var asset = Resources.Load<TextAsset>(resourcePath);
         if (asset == null)
         {
-            Debug.LogWarning($"[NamePool] Bulunamadı: Resources/{resourcePath}");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogWarning($"[NamePool] Bulunamadı: Resources/{resourcePath}");
             return list;
         }
         foreach (var line in asset.text.Split('\n'))

@@ -1,0 +1,981 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!--SEO-META: build.py /tr/ sayfası için bu bloktaki EN metinleri TR'ye çevirir.-->
+<meta name="description" content="Wonder Fixers is a match-3 puzzle game by Wondi Games. Match tiles, earn stars and help an animal repair crew fix the world's wonders, from the Leaning Paw Tower to the Purramid.">
+<link rel="canonical" href="https://wondigames.com/">
+<link rel="alternate" hreflang="en" href="https://wondigames.com/">
+<link rel="alternate" hreflang="tr" href="https://wondigames.com/tr/">
+<link rel="alternate" hreflang="x-default" href="https://wondigames.com/">
+<meta name="theme-color" content="#1f5bff">
+<meta property="og:site_name" content="Wondi Games">
+<meta property="og:title" content="Wonder Fixers — Match-3 puzzle by Wondi Games">
+<meta property="og:description" content="Match tiles, earn stars and help the animal crew repair the world's wonders.">
+<meta property="og:image" content="https://wondigames.com/img/og-team5.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:url" content="https://wondigames.com/">
+<meta property="og:locale" content="en_US">
+<meta property="og:locale:alternate" content="tr_TR">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" type="image/png" href="/img/favicon.png">
+<link rel="apple-touch-icon" href="/img/apple-touch-icon.png">
+<script type="application/ld+json">{"@context": "https://schema.org", "@graph": [{"@type": "Organization", "@id": "https://wondigames.com/#org", "name": "Wondi Games", "url": "https://wondigames.com/", "logo": "https://wondigames.com/img/org-logo.png", "email": "hello@wondigames.com", "sameAs": ["https://www.instagram.com/wondigames/"]}, {"@type": "WebSite", "@id": "https://wondigames.com/#site", "url": "https://wondigames.com/", "name": "Wondi Games", "publisher": {"@id": "https://wondigames.com/#org"}, "inLanguage": ["en", "tr"]}, {"@type": "VideoGame", "@id": "https://wondigames.com/#game", "name": "Wonder Fixers", "url": "https://wondigames.com/", "description": "A match-3 puzzle game where an animal repair crew fixes the world's wonders. Match tiles, earn stars and restore famous landmarks.", "genre": ["Puzzle", "Match-3"], "gamePlatform": ["iOS", "Android"], "applicationCategory": "Game", "inLanguage": ["en", "tr"], "image": "https://wondigames.com/img/og-team5.jpg", "publisher": {"@id": "https://wondigames.com/#org"}, "author": {"@id": "https://wondigames.com/#org"}}]}</script>
+<!--SEO-META-END-->
+<!--PAGE-->
+<title>Wonder Fixers — Match-3 Puzzle Game | Wondi Games</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@500;700;800&display=swap">
+<style>
+  :root {
+    color-scheme: light;
+    --sky: #1f5bff;        /* marka mavisi (logo zemini) */
+    --deep: #0b2569;       /* gece mavisi: hero altı, rakip bandı */
+    --sun: #ffc53d;        /* yıldız / altın */
+    --tool: #e8412f;       /* logodaki kırmızı nokta, ekip bandanası */
+    --cream: #fff7ea;      /* sayfa kağıdı */
+    --paper: #ffffff;
+    --ink: #1d1a3d;        /* mavimsi mürekkep */
+    --muted: #5d5a85;
+    --line: #eadfca;
+    --display: "Baloo 2", "Nunito", ui-rounded, "Arial Rounded MT Bold", system-ui, sans-serif;
+    --body: "Nunito", ui-rounded, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --wrap: 1160px;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--cream);
+    color: var(--ink);
+    font: 500 17px/1.6 var(--body);
+    -webkit-font-smoothing: antialiased;
+    font-synthesis: none;   /* Safari: eksik ağırlığı yapay kalınlaştırma — ğ/ç/ş ince görünüyordu */
+  }
+  /* width/height öznitelikleri yer tutar; CSS genişliği küçültünce oran korunsun (yoksa dikey esner). */
+  img { max-width: 100%; height: auto; display: block; }
+  a { color: inherit; }
+  h1, h2, h3 { font-family: var(--display); line-height: 1.08; text-wrap: balance; margin: 0; }
+  p { margin: 0; }
+  .wrap { max-width: var(--wrap); margin-inline: auto; padding-inline: 20px; }
+  .eyebrow {
+    font: 800 13px/1 var(--body); letter-spacing: .14em; text-transform: uppercase; color: var(--tool);
+  }
+  :focus-visible { outline: 3px solid var(--sun); outline-offset: 3px; border-radius: 8px; }
+
+  /* ── Wordmark: "Wondi." + Games, logodaki gibi yuvarlak + kırmızı nokta ── */
+  .mark { display: inline-flex; flex-direction: column; text-decoration: none; color: #fff; line-height: .9; }
+  .mark b { font: 700 30px/0.9 var(--display); letter-spacing: -.01em; display: inline-flex; align-items: flex-end; }
+  .mark b i {
+    width: .3em; height: .3em; margin-left: .04em; margin-bottom: .06em; border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #ff9a8a 0 18%, var(--tool) 45%, #a8180e 100%);
+    box-shadow: 0 2px 4px rgba(0,0,0,.25);
+  }
+  .mark span { font: 600 14px/1 var(--display); align-self: flex-end; margin-right: .1em; opacity: .95; }
+
+  /* ── Üst bar ── */
+  .bar {
+    position: sticky; top: env(safe-area-inset-top, 0px); z-index: 10;
+    background: rgba(11, 37, 105, .86); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  }
+  .bar .wrap { display: flex; align-items: center; gap: 24px; padding-block: 12px; }
+  .bar nav { display: flex; gap: 22px; margin-left: auto; }
+  .bar nav a { color: #dfe7ff; text-decoration: none; font-weight: 700; font-size: 15px; }
+  .bar nav a:hover { color: #fff; }
+  .lang {
+    display: inline-flex; border: 1.5px solid rgba(255,255,255,.35); border-radius: 999px; overflow: hidden;
+  }
+  .lang button {
+    font: 800 12px/1 var(--body); letter-spacing: .08em; color: #dfe7ff; background: none; border: 0;
+    padding: 7px 11px; cursor: pointer;
+  }
+  .lang button[aria-pressed="true"] { background: #fff; color: var(--deep); }
+
+  /* ── Hero ── */
+  .hero {
+    position: relative; overflow: hidden; color: #fff;
+    background:
+      radial-gradient(60% 70% at 18% 0%, rgba(140, 190, 255, .55), transparent 60%),
+      radial-gradient(50% 60% at 85% 10%, rgba(120, 170, 255, .35), transparent 60%),
+      linear-gradient(180deg, var(--sky) 0%, #1748d6 55%, var(--deep) 100%);
+  }
+  .hero .wrap {
+    display: grid; grid-template-columns: 1.1fr .9fr; align-items: center; gap: 48px;
+    padding-block: 72px 88px;
+  }
+  /* Ekip bandı (Dream Games sitesindeki oran): tam genişlik stüdyo zemini, ekip ortada ~%72 genişlikte, alt kenar
+     düz. Zemin = görselin KENDİ sağ kenar renkleri (dikey olarak görselle birebir hizalı → yanlarda geçiş görünmez). */
+  .teamband {
+    display: flex; justify-content: center; align-items: flex-end;
+    background: linear-gradient(180deg, rgb(75,94,127) 0%, rgb(94,114,148) 20%, rgb(120,140,175) 40%, rgb(168,172,204) 60%, rgb(179,198,230) 80%, rgb(178,194,230) 100%);
+  }
+  .teamband img {
+    display: block; width: min(72%, 1240px); height: auto;
+    /* Sol kenara değen porsuk kuyruğu/botu kesik görünmesin: kenarlarda kısa geçiş. */
+    -webkit-mask-image: linear-gradient(to right, transparent 0, #000 4%, #000 97%, transparent 100%);
+            mask-image: linear-gradient(to right, transparent 0, #000 4%, #000 97%, transparent 100%);
+  }
+  @media (max-width: 640px) { .teamband img { width: 100%; } }
+  section.hero { padding-top: 0; }   /* bant başlık çubuğuna yapışık başlar (genel section boşluğu yok) */
+  .teamband + .wrap { padding-top: 56px; }
+  .hero .eyebrow { color: var(--sun); }
+  .hero h1 { font-size: clamp(44px, 6.4vw, 84px); font-weight: 700; margin-top: 14px; letter-spacing: -.015em; }
+  .hero h1 em { font-style: normal; color: var(--sun); }
+  .hero .lede { font-size: 20px; line-height: 1.55; color: #e6edff; max-width: 34ch; margin-top: 20px; }
+  .stores { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 32px; align-items: center; }
+  .store {
+    display: inline-flex; align-items: center; gap: 10px; padding: 12px 18px; border-radius: 14px;
+    background: rgba(255,255,255,.12); border: 1.5px solid rgba(255,255,255,.3); color: #fff;
+    font-weight: 800; font-size: 15px;
+  }
+  .store svg { width: 20px; height: 20px; fill: currentColor; }
+  .soon { font-size: 14px; color: #c7d4ff; font-weight: 700; }
+
+  .postcard { position: relative; justify-self: center; width: min(400px, 100%); }
+  .postcard figure {
+    margin: 0; background: var(--paper); padding: 12px 12px 18px; border-radius: 22px;
+    transform: rotate(2.5deg); box-shadow: 0 30px 60px rgba(4, 16, 60, .45);
+    animation: float 7s ease-in-out infinite;
+  }
+  .postcard img { border-radius: 14px; width: 100%; height: auto; aspect-ratio: 4 / 5; object-fit: cover; object-position: 50% 40%; }
+  .postcard figcaption { color: var(--muted); font: 700 14px/1.3 var(--body); padding: 12px 6px 0; }
+  .stamp {
+    position: absolute; left: -26px; bottom: 64px; transform: rotate(-12deg);
+    font: 700 18px/1 var(--display); letter-spacing: .08em; text-transform: uppercase;
+    color: var(--tool); background: #fff6f2; border: 3px solid var(--tool); border-radius: 12px; padding: 10px 14px;
+    box-shadow: 0 8px 20px rgba(0,0,0,.18);
+  }
+  @keyframes float { 0%,100% { transform: rotate(2.5deg) translateY(0); } 50% { transform: rotate(1.5deg) translateY(-10px); } }
+
+  section { padding-block: 96px; }
+  .head { display: grid; gap: 12px; max-width: 720px; margin-bottom: 44px; }
+  .head h2 { font-size: clamp(32px, 4.2vw, 52px); font-weight: 700; }
+  .head p { color: var(--muted); font-size: 18px; max-width: 58ch; }
+
+  /* ── Nasıl oynanır: gerçek sıra (seviye → yıldız → tamir) ── */
+  .loop { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  .step { background: var(--paper); border: 1.5px solid var(--line); border-radius: 22px; padding: 26px; display: grid; gap: 10px; align-content: start; }
+  .step .n {
+    width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center;
+    font: 700 22px/1 var(--display); color: var(--deep); background: var(--sun);
+  }
+  .step h3 { font-size: 24px; font-weight: 600; }
+  .step p { color: var(--muted); }
+  .tiles { display: flex; gap: 6px; margin-top: 6px; }
+  .tiles span { width: 26px; height: 26px; border-radius: 8px; box-shadow: inset 0 -3px 0 rgba(0,0,0,.18); }
+
+  /* ── Taşlar, special'lar, jokerler ── */
+  .kit { background: var(--paper); border-block: 1.5px solid var(--line); }
+  .tilesrow { display: flex; flex-wrap: wrap; align-items: center; gap: 18px 28px; margin-bottom: 40px; }
+  .tilesrow .gems { display: flex; gap: 14px; }
+  .tilesrow img { width: 64px; height: 64px; object-fit: contain; }
+  .tilesrow p { color: var(--muted); font-size: 17px; max-width: 46ch; }
+  .cards4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
+  .cards5 { grid-template-columns: repeat(5, 1fr); gap: 14px; }
+  .item { border: 1.5px solid var(--line); border-radius: 22px; padding: 22px; display: grid; gap: 8px; align-content: start; background: var(--cream); }
+  .item img { width: 92px; height: 92px; object-fit: contain; margin-bottom: 6px; }
+  .item h3 { font-size: 22px; font-weight: 700; }
+  .item .how { font: 800 12px/1.3 var(--body); letter-spacing: .1em; text-transform: uppercase; color: var(--tool); }
+  .item p { color: var(--muted); font-size: 15.5px; }
+  .kit .subhead { margin-top: 48px; }
+  .combo { margin-top: 18px; color: var(--muted); font-weight: 700; }
+
+  /* ── Oyundan kareler: telefon çerçeveli şerit ── */
+  .shots {
+    display: grid; grid-auto-flow: column; grid-auto-columns: minmax(150px, 1fr); gap: 22px;
+    overflow-x: auto; scroll-snap-type: x mandatory; padding: 6px 2px 14px;
+  }
+  .subhead { font-size: 24px; font-weight: 600; margin: 8px 0 18px; }
+  .shots + .subhead { margin-top: 44px; }
+  .phone { scroll-snap-align: start; display: grid; gap: 12px; align-content: start; margin: 0; }
+  .phone .screen {
+    background: #14112b; padding: 7px; border-radius: 30px;
+    box-shadow: 0 18px 36px rgba(29, 26, 61, .22), inset 0 0 0 1.5px rgba(255,255,255,.08);
+  }
+  .phone img { border-radius: 24px; width: 100%; aspect-ratio: 600 / 1285; object-fit: cover; }
+  .phone figcaption { font-weight: 700; font-size: 15px; color: var(--ink); }
+  .phone figcaption span { display: block; }
+  .phone figcaption span + span { font-weight: 600; font-size: 14px; color: var(--muted); }
+
+  /* ── Harikalar: kartpostal şeridi + gerçek görev listesi ── */
+  .wonders { background: var(--paper); border-block: 1.5px solid var(--line); }
+  .strip {
+    display: grid; grid-template-columns: repeat(4, minmax(200px, 1fr)); gap: 28px 18px;   /* masaüstü: 4 + 3 (yana kaydırmasız) */
+    overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 8px;
+  }
+  .wcard { scroll-snap-align: start; display: grid; gap: 12px; align-content: start; }
+  .wcard .pic { position: relative; border-radius: 18px; overflow: hidden; aspect-ratio: 640 / 820; }
+  .wcard .pic img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 35%; }
+  .chip {
+    position: absolute; top: 12px; left: 12px; font: 800 12px/1 var(--body); letter-spacing: .06em;
+    text-transform: uppercase; padding: 7px 10px; border-radius: 999px; background: var(--sun); color: var(--deep);
+  }
+  .chip.next { background: rgba(11,37,105,.85); color: #fff; }
+  .wcard h3 { font-size: 22px; font-weight: 600; }
+  .wcard .where { color: var(--muted); font-size: 14px; font-weight: 700; margin-top: -8px; }
+  .tasks { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: 14.5px; font-weight: 700; }
+  .tasks li { display: flex; gap: 8px; align-items: baseline; }
+  .tasks li::before {
+    content: ""; flex: none; width: 10px; height: 10px; border-radius: 3px; border: 2px solid var(--sky);
+    transform: translateY(1px);
+  }
+  .tasks li.done::before { background: var(--sky); }
+  .tasks li.more { color: var(--muted); font-weight: 600; }
+  .tasks li.more::before { border-style: dashed; border-color: var(--muted); }
+
+  /* ── Ekip ── */
+  .crew { display: grid; grid-template-columns: repeat(6, 1fr); gap: 16px; }
+  .member { display: grid; gap: 10px; align-content: start; text-align: left; }
+  .member .portrait {
+    aspect-ratio: 4 / 5; border-radius: 28px; display: grid; place-items: end center; overflow: hidden;
+    background: var(--bg);
+  }
+  /* Mutlak boyut: yüzde yükseklik grid içinde belirsiz sayılıyordu → uzun/dar figür (tavşan) kartı taşırıyordu. */
+  .member .portrait img {
+    position: absolute; left: 0; right: 0; bottom: 4%; margin-inline: auto;
+    width: 86%; height: 86%; object-fit: contain; object-position: 50% 100%;
+    filter: drop-shadow(0 10px 12px rgba(29,26,61,.22));
+  }
+  .member h3 { font-size: 22px; font-weight: 600; }
+  /* Rol + tür ("Usta tamirci · Domuz") dar sütunda 2 satıra inebilir: 2 satırlık yer ayrılır, isimler hizalı kalır. */
+  .member .role { font: 800 12px/1.2 var(--body); letter-spacing: .1em; text-transform: uppercase; color: var(--tool); min-height: 2.4em; display: flex; align-items: flex-end; }
+  .member p { color: var(--muted); font-size: 15.5px; }
+
+
+  /* ── Rakipler (Boss Düellosu) ── */
+  .rivals { background: linear-gradient(180deg, var(--deep), #061846); color: #fff; }
+  .rivals .head p { color: #c7d4ff; }
+  .rivals .eyebrow { color: var(--sun); }
+  .duel { display: grid; grid-template-columns: 1fr auto 1fr; gap: 28px; align-items: center; }
+  .rival { display: grid; grid-template-columns: 160px 1fr; gap: 20px; align-items: center; }
+  .rival img { width: 160px; filter: drop-shadow(0 18px 30px rgba(0,0,0,.45)); }
+  .rival h3 { font-size: 26px; font-weight: 600; }
+  .rival p { color: #c7d4ff; font-size: 15.5px; margin-top: 6px; }
+  .vs { font: 700 44px/1 var(--display); color: var(--sun); }
+  .duelgrid { display: grid; grid-template-columns: 1fr 250px; gap: 48px; align-items: center; }
+  .rivals .phone figcaption { color: #fff; }
+  .rivals .phone figcaption span + span { color: #c7d4ff; }
+  .rules { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 40px; }
+  .rules span {
+    font-weight: 700; font-size: 15px; padding: 10px 14px; border-radius: 12px;
+    background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.18);
+  }
+
+  /* ── Etkinlikler ── */
+  .events { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  .event { background: var(--paper); border: 1.5px solid var(--line); border-radius: 18px; padding: 20px 22px; display: grid; gap: 6px; }
+  .event h3 { font-size: 20px; font-weight: 600; }
+  .event p { color: var(--muted); font-size: 15.5px; }
+
+  /* ── Stüdyo ── */
+  .studio .wrap { display: grid; grid-template-columns: 1fr 1.1fr; gap: 56px; align-items: center; }
+  .studio .bear { background: var(--sun); border-radius: 36px; display: grid; place-items: end center; padding-top: 28px; overflow: hidden; }
+  .studio .bear img { width: 78%; }
+  .values { display: grid; gap: 18px; margin-top: 28px; }
+  .values div { display: grid; gap: 4px; padding-left: 18px; border-left: 4px solid var(--sky); }
+  .values h3 { font-size: 20px; font-weight: 600; }
+  .values p { color: var(--muted); }
+
+  /* ── Alt ── */
+  footer { background: var(--deep); color: #dfe7ff; padding-block: 56px calc(40px + env(safe-area-inset-bottom, 0px)); }
+  footer .wrap { display: grid; grid-template-columns: 1fr auto; gap: 32px; align-items: end; }
+  footer h2 { color: #fff; font-size: 30px; font-weight: 600; }
+  footer .mail { font: 700 20px/1.2 var(--display); color: var(--sun); margin-top: 10px; user-select: all; }
+  footer .insta { display: inline-flex; align-items: center; gap: 8px; margin-top: 14px; color: #dfe7ff; font-weight: 800; text-decoration: none; }
+  footer .insta:hover { color: var(--sun); }
+  footer small { display: block; margin-top: 28px; color: #9fb0e6; font-size: 13px; }
+
+
+  /* ── Cam / şeker parlaklığı (oyundaki parlak butonların dili) ──────────────
+     Tek kural: parlak yüzeyde üstten gelen yumuşak yansıma + ışıklı ince kenar + derinlik.
+     Hover'da üzerinden ışık geçer. Hareket azaltma tercihinde animasyon yok. */
+  .step, .item, .event, .wcard .pic, .member .portrait, .store, .rules span {
+    position: relative; overflow: hidden; isolation: isolate;
+  }
+  .step, .item, .event {
+    background: linear-gradient(180deg, rgba(255,255,255,.96), rgba(255,255,255,.72));
+    border: 1px solid rgba(255,255,255,.9);
+    box-shadow: 0 1px 0 rgba(255,255,255,.9) inset, 0 -10px 24px rgba(31,91,255,.04) inset,
+                0 14px 34px rgba(29,26,61,.09), 0 2px 6px rgba(29,26,61,.05);
+  }
+  .item { background: linear-gradient(180deg, #fffdf8, rgba(255,247,234,.85)); }
+  /* üst yarı yansıması */
+  .step::before, .item::before, .event::before, .member .portrait::before, .store::before, .rules span::before {
+    content: ""; position: absolute; inset: 0 0 52% 0; z-index: -1; pointer-events: none;
+    background: linear-gradient(180deg, rgba(255,255,255,.75), rgba(255,255,255,0));
+    border-radius: inherit;
+  }
+  .member .portrait::before { z-index: 1; inset: 0 0 58% 0; background: linear-gradient(180deg, rgba(255,255,255,.55), rgba(255,255,255,0)); }
+  .member .portrait { box-shadow: inset 0 1px 0 rgba(255,255,255,.8), inset 0 -18px 30px rgba(0,0,0,.06), 0 12px 26px rgba(29,26,61,.10); }
+  /* hover ışık süzmesi */
+  .step::after, .item::after, .event::after, .wcard .pic::after, .member .portrait::after, .store::after {
+    content: ""; position: absolute; top: -20%; bottom: -20%; left: -60%; width: 40%; z-index: 2; pointer-events: none;
+    background: linear-gradient(100deg, transparent, rgba(255,255,255,.55), transparent);
+    transform: skewX(-18deg) translateX(0); opacity: 0;
+  }
+  .step:hover::after, .item:hover::after, .event:hover::after, .wcard:hover .pic::after,
+  .member:hover .portrait::after, .store:hover::after {
+    opacity: 1; animation: sweep .9s ease-out forwards;
+  }
+  @keyframes sweep { to { transform: skewX(-18deg) translateX(420%); } }
+  .step, .item, .event, .member .portrait { transition: transform .25s ease, box-shadow .25s ease; }
+  .step:hover, .item:hover, .event:hover { transform: translateY(-3px); box-shadow: 0 1px 0 #fff inset, 0 20px 40px rgba(29,26,61,.13); }
+  .member:hover .portrait { transform: translateY(-3px); }
+  .item img { filter: drop-shadow(0 8px 10px rgba(29,26,61,.18)); }
+  .tilesrow img { filter: drop-shadow(0 6px 8px rgba(29,26,61,.18)); }
+
+  /* telefon: cam yansıması + parlak çerçeve */
+  .phone .screen { position: relative; background: linear-gradient(160deg, #2b2650, #0e0b22 55%, #1b1740); }
+  .phone .screen::after {
+    content: ""; position: absolute; inset: 7px; border-radius: 24px; pointer-events: none;
+    background: linear-gradient(118deg, rgba(255,255,255,.22) 0%, rgba(255,255,255,.06) 28%, transparent 29%, transparent 100%);
+  }
+  .phone .screen::before {
+    content: ""; position: absolute; inset: 0; border-radius: 30px; pointer-events: none;
+    box-shadow: inset 0 1.5px 0 rgba(255,255,255,.35), inset 0 -1px 0 rgba(255,255,255,.08);
+  }
+  .phone { transition: transform .3s ease; }
+  .phone:hover { transform: translateY(-4px) rotate(-.6deg); }
+
+  /* koyu bölümlerde buzlu cam */
+  .rivals .rules span, .store {
+    background: linear-gradient(180deg, rgba(255,255,255,.22), rgba(255,255,255,.07));
+    border: 1px solid rgba(255,255,255,.35);
+    backdrop-filter: blur(10px) saturate(140%); -webkit-backdrop-filter: blur(10px) saturate(140%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.45), 0 8px 24px rgba(4,16,60,.25);
+  }
+  .rules span::before, .store::before { background: linear-gradient(180deg, rgba(255,255,255,.28), rgba(255,255,255,0)); }
+  .bar { box-shadow: inset 0 -1px 0 rgba(255,255,255,.12), 0 8px 24px rgba(4,16,60,.25); }
+
+  /* hero: kartpostalda ara ara parlama, başlıkta hafif parıltı */
+  .postcard figure { position: relative; overflow: hidden; }
+  .postcard figure::after {
+    content: ""; position: absolute; top: -30%; bottom: -30%; left: -50%; width: 30%; pointer-events: none;
+    background: linear-gradient(100deg, transparent, rgba(255,255,255,.45), transparent);
+    transform: skewX(-18deg); animation: glint 6s ease-in-out 1.2s infinite;
+  }
+  @keyframes glint { 0%, 70% { left: -50%; } 100% { left: 140%; } }
+  .hero h1 { text-shadow: 0 2px 0 rgba(4,16,60,.18), 0 18px 40px rgba(4,16,60,.35); }
+  .hero h1 em { background: linear-gradient(180deg, #fff3b8 0%, var(--sun) 45%, #f0a91c 100%); -webkit-background-clip: text; background-clip: text; color: transparent; text-shadow: none; filter: drop-shadow(0 3px 0 rgba(120,60,0,.25)); }
+  .wcard .pic { box-shadow: 0 14px 30px rgba(29,26,61,.14); }
+  .wcard .pic::before {
+    content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none; border-radius: inherit;
+    box-shadow: inset 0 1.5px 0 rgba(255,255,255,.5);
+    background: linear-gradient(180deg, rgba(255,255,255,.18), transparent 35%);
+  }
+  .chip { z-index: 3; box-shadow: inset 0 1px 0 rgba(255,255,255,.6), 0 4px 10px rgba(0,0,0,.18); }
+
+  @media (max-width: 980px) {
+    .hero .wrap, .studio .wrap { grid-template-columns: 1fr; }
+    .postcard { width: min(360px, 88%); }
+    .crew { grid-template-columns: repeat(3, 1fr); }
+    .events { grid-template-columns: repeat(2, 1fr); }
+    .duel { grid-template-columns: 1fr; }
+    .duelgrid { grid-template-columns: 1fr; }
+    .duelgrid .phone { max-width: 250px; }
+    .cards4 { grid-template-columns: repeat(2, 1fr); }
+    .cards5 { grid-template-columns: repeat(3, 1fr); }
+    .vs { justify-self: start; }
+    .strip { grid-template-columns: repeat(7, 230px); }
+    .shots { grid-auto-columns: 210px; }
+  }
+  @media (max-width: 640px) {
+    body { font-size: 16px; }
+    .bar nav { display: none; }
+    .lang { margin-left: auto; }
+    .hero .wrap { padding-block: 44px 64px; gap: 36px; }
+    .stamp { left: -6px; }
+    section { padding-block: 64px; }
+    .loop, .events, .cards4 { grid-template-columns: 1fr; }
+    .cards5 { grid-template-columns: repeat(2, 1fr); }
+    .crew { grid-template-columns: repeat(2, 1fr); }
+    .rival { grid-template-columns: 110px 1fr; }
+    .rival img { width: 110px; }
+    footer .wrap { grid-template-columns: 1fr; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    .postcard figure, .postcard figure::after { animation: none; }
+    .postcard figure::after { display: none; }
+    .step:hover::after, .item:hover::after, .event:hover::after, .wcard:hover .pic::after,
+    .member:hover .portrait::after, .store:hover::after { animation: none; opacity: 0; }
+    .step, .item, .event, .member .portrait, .phone { transition: none; }
+    .step:hover, .item:hover, .event:hover, .member:hover .portrait, .phone:hover { transform: none; }
+  }
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <div class="wrap">
+    <a class="mark" href="#top" aria-label="Wondi Games"><b>Wondi<i></i></b><span>Games</span></a>
+    <nav aria-label="Sections">
+      <a href="#play" data-i18n="nav_play">The game</a>
+      <a href="#wonders" data-i18n="nav_wonders">Wonders</a>
+      <a href="#crew" data-i18n="nav_crew">The crew</a>
+      <a href="#studio" data-i18n="nav_studio">Studio</a>
+    </nav>
+    <div class="lang" role="group" aria-label="Language">
+      <button type="button" data-lang="tr" aria-pressed="false">TR</button>
+      <button type="button" data-lang="en" aria-pressed="true">EN</button>
+    </div>
+  </div>
+</header>
+
+<main id="top">
+  <section class="hero" aria-labelledby="hero-title">
+    <div class="teamband">
+      <img src="/img/team5-hero-2048.webp" srcset="/img/team5-hero-1200.webp 1200w, /img/team5-hero-2048.webp 2048w" sizes="(max-width: 640px) 100vw, min(72vw, 1240px)"
+           width="2048" height="1045" fetchpriority="high" alt="The Wonder Fixers crew together: Brumo the bear, Bram the ram, Pemi the rabbit, Tinko the pig, Fiko the monkey and Pilo the bird, with their rivals Rumbo the badger and Zarko the hyena" data-i18n-alt="team_alt">
+    </div>
+    <div class="wrap">
+      <div>
+        <p class="eyebrow" data-i18n-html="hero_eyebrow"><span lang="en">Wonder Fixers</span> · Match-3 puzzle</p>
+        <h1 id="hero-title" data-i18n-html="hero_title">The world's wonders need <em>fixing.</em></h1>
+        <p class="lede" data-i18n="hero_lede">Match tiles, earn stars and help a crew of animal fixers bring the world's landmarks back to life, one repair at a time.</p>
+        <div class="stores">
+          <span class="store">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16.4 12.6c0-2.4 2-3.6 2.1-3.7-1.2-1.7-3-1.9-3.6-2-1.5-.2-3 .9-3.8.9-.8 0-2-.9-3.3-.9-1.7 0-3.3 1-4.2 2.5-1.8 3.1-.5 7.7 1.3 10.2.9 1.2 1.9 2.6 3.2 2.6 1.3-.1 1.8-.8 3.3-.8 1.6 0 2 .8 3.4.8 1.4 0 2.3-1.3 3.1-2.5 1-1.4 1.4-2.8 1.4-2.9 0 0-2.7-1-2.9-4.2zM13.9 5.2c.7-.8 1.2-2 1-3.2-1 .1-2.3.7-3 1.5-.7.8-1.2 2-1.1 3.1 1.2.1 2.4-.6 3.1-1.4z"/></svg>
+            App Store
+          </span>
+          <span class="store">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.6 2.3c-.3.3-.4.7-.4 1.2v17c0 .5.1.9.4 1.2l9.5-9.7-9.5-9.7zm10.6 10.8 2.7 2.7-11.6 6.6 8.9-9.3zm0-2.2L5.3 1.6l11.6 6.6-2.7 2.7zm3.9-1.5 3 1.7c.9.5.9 1.3 0 1.8l-3 1.7-3-3 3-2.2z"/></svg>
+            Google Play
+          </span>
+          <span class="soon" data-i18n="stores_soon">Coming soon</span>
+        </div>
+      </div>
+      <div class="postcard">
+        <figure>
+          <img src="/img/hero.webp" width="900" height="1599" alt="The bear, the pig and the ram climbing a ladder to repair an old stone wall" data-i18n-alt="hero_alt">
+          <figcaption data-i18n="hero_caption">The crew on the scaffolding, mid-repair.</figcaption>
+        </figure>
+        <span class="stamp" data-i18n="stamp">Under repair</span>
+      </div>
+    </div>
+  </section>
+
+  <section id="play" aria-labelledby="play-title">
+    <div class="wrap">
+      <div class="head">
+        <p class="eyebrow" data-i18n="play_eyebrow">How it plays</p>
+        <h2 id="play-title" data-i18n="play_title">Every level you beat fixes something real</h2>
+        <p data-i18n="play_lede">A classic match-3 at heart, with a reason to keep going: each win brings a famous landmark one step closer to its old glory.</p>
+      </div>
+      <div class="loop">
+        <article class="step">
+          <span class="n" aria-hidden="true">1</span>
+          <h3 data-i18n="s1_title">Match</h3>
+          <p data-i18n="s1_text">Swap tiles to make lines of three or more. Bigger matches build rockets, PatchBots and Pulse Cores.</p>
+          <div class="tiles" aria-hidden="true">
+            <span style="background:#ffc53d"></span><span style="background:#e8412f"></span><span style="background:#2f7bff"></span><span style="background:#3fbf5a"></span>
+          </div>
+        </article>
+        <article class="step">
+          <span class="n" aria-hidden="true">2</span>
+          <h3 data-i18n="s2_title">Earn stars</h3>
+          <p data-i18n="s2_text">Clear the level's goals: crates, mud, gel, statues under tarps. Every hand-made level you win pays out stars.</p>
+        </article>
+        <article class="step">
+          <span class="n" aria-hidden="true">3</span>
+          <h3 data-i18n="s3_title">Repair a wonder</h3>
+          <p data-i18n="s3_text">Spend stars on repair tasks: weld the columns, polish the marble, raise the flag. Finish them all and the wonder shines again.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section id="kit" class="kit" aria-labelledby="kit-title">
+    <div class="wrap">
+      <div class="head">
+        <p class="eyebrow" data-i18n="k_eyebrow">The toolbox</p>
+        <h2 id="kit-title" data-i18n="k_title">Tiles, specials and jokers</h2>
+      </div>
+      <div class="tilesrow">
+        <div class="gems" aria-hidden="true">
+          <img src="/img/tile-gear.webp" width="240" height="240" alt=""><img src="/img/tile-core.webp" width="240" height="240" alt=""><img src="/img/tile-bolt.webp" width="240" height="240" alt=""><img src="/img/tile-plate.webp" width="240" height="240" alt="">
+        </div>
+        <p data-i18n="k_tiles">Four colors, one rule: line up three or more of the same tile. Make bigger shapes and you get a special.</p>
+      </div>
+      <h3 class="subhead" data-i18n="k_specials">Specials</h3>
+      <div class="cards4">
+        <article class="item">
+          <img src="/img/sp-rocket.webp" width="240" height="240" loading="lazy" alt="">
+          <p class="how" data-i18n="sp1_how">Match 4 in a line</p>
+          <h3 data-i18n="sp1_name">Rocket</h3>
+          <p data-i18n="sp1_text">Clears a whole row or column.</p>
+        </article>
+        <article class="item">
+          <img src="/img/sp-patchbot.webp" width="240" height="240" loading="lazy" alt="">
+          <p class="how" data-i18n="sp2_how">2×2 square</p>
+          <h3 data-i18n="sp2_name">Patchbot</h3>
+          <p data-i18n="sp2_text">Flies off and hits a target on the board.</p>
+        </article>
+        <article class="item">
+          <img src="/img/sp-pulse.webp" width="240" height="240" loading="lazy" alt="">
+          <p class="how" data-i18n="sp3_how">Match 5 in a corner</p>
+          <h3 data-i18n="sp3_name">PulseCore</h3>
+          <p data-i18n="sp3_text">Blasts the 5×5 area around it.</p>
+        </article>
+        <article class="item">
+          <img src="/img/sp-spark.webp" width="240" height="240" loading="lazy" alt="">
+          <p class="how" data-i18n="sp4_how">Match 5 in a line</p>
+          <h3 data-i18n="sp4_name">Spark Orb</h3>
+          <p data-i18n="sp4_text">Clears every tile of one color.</p>
+        </article>
+      </div>
+      <p class="combo" data-i18n="k_combo">Swap two specials into each other for an even bigger combo.</p>
+      <h3 class="subhead" data-i18n="k_jokers">Jokers</h3>
+      <div class="cards4 cards5">
+        <article class="item">
+          <img src="/img/bo-hammer.webp" width="240" height="240" loading="lazy" alt="">
+          <p class="how" data-i18n="bo1_how">Single target</p>
+          <h3 data-i18n="bo1_name">Wonder Hammer</h3>
+          <p data-i18n="bo1_text">Tap any tile or obstacle to break it.</p>
+        </article>
+        <article class="item">
+          <img src="/img/bo-rocket.webp" width="240" height="240" loading="lazy" alt="">
+          <p class="how" data-i18n="bo2_how">Row</p>
+          <h3 data-i18n="bo2_name">Wonder Rocket</h3>
+          <p data-i18n="bo2_text">Clears the row you tap.</p>
+        </article>
+        <article class="item">
+          <img src="/img/bo-elevator.webp" width="240" height="240" loading="lazy" alt="">
+          <p class="how" data-i18n="bo3_how">Column</p>
+          <h3 data-i18n="bo3_name">Wonder Elevator</h3>
+          <p data-i18n="bo3_text">Clears the column you tap.</p>
+        </article>
+        <article class="item">
+          <img src="/img/bo-shuffle.webp" width="240" height="240" loading="lazy" alt="">
+          <p class="how" data-i18n="bo4_how">Whole board</p>
+          <h3 data-i18n="bo4_name">Wonder Shuffler</h3>
+          <p data-i18n="bo4_text">Shuffles every tile on the board.</p>
+        </article>
+        <article class="item">
+          <img src="/img/bo-paint.webp" width="240" height="240" loading="lazy" alt="">
+          <p class="how" data-i18n="bo5_how">One color, 3 moves</p>
+          <h3 data-i18n="bo5_name">Wonder Paint Bucket</h3>
+          <p data-i18n="bo5_text">Tap a tile: that color leaves the board for 3 moves.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section id="screens" aria-labelledby="screens-title">
+    <div class="wrap">
+      <div class="head">
+        <p class="eyebrow" data-i18n="sh_eyebrow">From the game</p>
+        <h2 id="screens-title" data-i18n="sh_title">A look inside Wonder Fixers</h2>
+      </div>
+      <h3 class="subhead" data-i18n="sh_levels">Levels</h3>
+      <div class="shots" role="list">
+        <figure class="phone" role="listitem">
+          <div class="screen"><img src="/img/lv-lanterns.webp" width="600" height="1285" loading="lazy" alt="Rows of orange lanterns above blue cabinets in a hall with a tall window" data-i18n-alt="l7_alt"></div>
+          <figcaption><span data-i18n="l7">Lantern rows</span><span data-i18n="l7t">25 moves</span></figcaption>
+        </figure>
+        <figure class="phone" role="listitem">
+          <div class="screen"><img src="/img/lv-seal-garden.webp" width="600" height="1285" loading="lazy" alt="A diamond-shaped board with an ancient seal, flowering grass and crates" data-i18n-alt="l1_alt"></div>
+          <figcaption><span data-i18n="l1">A seal in the flower garden</span><span data-i18n="l1t">32 moves</span></figcaption>
+        </figure>
+        <figure class="phone" role="listitem">
+          <div class="screen"><img src="/img/lv-magnet.webp" width="600" height="1285" loading="lazy" alt="Blue magnet rails bending around the board above green cabinets" data-i18n-alt="l3_alt"></div>
+          <figcaption><span data-i18n="l3">The magnet line</span><span data-i18n="l3t">26 moves</span></figcaption>
+        </figure>
+        <figure class="phone" role="listitem">
+          <div class="screen"><img src="/img/lv-crates.webp" width="600" height="1285" loading="lazy" alt="A wall of orange crates and lanterns in a brick vault" data-i18n-alt="l8_alt"></div>
+          <figcaption><span data-i18n="l8">The crate wall</span><span data-i18n="l8t">23 moves</span></figcaption>
+        </figure>
+        <figure class="phone" role="listitem">
+          <div class="screen"><img src="/img/lv-safes.webp" width="600" height="1285" loading="lazy" alt="Two three-color safes under a colorful board" data-i18n-alt="l4_alt"></div>
+          <figcaption><span data-i18n="l4">Twin safes</span><span data-i18n="l4t">23 moves</span></figcaption>
+        </figure>
+        <figure class="phone" role="listitem">
+          <div class="screen"><img src="/img/lv-grass.webp" width="600" height="1285" loading="lazy" alt="A grass field beside blue cabinets and a patch of mud in a blue stone hall" data-i18n-alt="l9_alt"></div>
+          <figcaption><span data-i18n="l9">Grass and cabinets</span><span data-i18n="l9t">30 moves</span></figcaption>
+        </figure>
+      </div>
+      <h3 class="subhead" data-i18n="sh_menus">Wonders and events</h3>
+      <div class="shots" role="list">
+        <figure class="phone" role="listitem">
+          <div class="screen"><img src="/img/ui-home-wall.webp" width="600" height="1285" loading="lazy" alt="Home screen with the pig and a great stone wall" data-i18n-alt="u1_alt"></div>
+          <figcaption><span data-i18n="u1">The next wonder</span><span data-i18n="u1t">Home screen</span></figcaption>
+        </figure>
+        <figure class="phone" role="listitem">
+          <div class="screen"><img src="/img/ui-home-bridge.webp" width="600" height="1285" loading="lazy" alt="Home screen with the bear in front of a red suspension bridge" data-i18n-alt="u2_alt"></div>
+          <figcaption><span data-i18n="u2">Golden Tail Bridge</span><span data-i18n="u2t">Repairs underway</span></figcaption>
+        </figure>
+        <figure class="phone" role="listitem">
+          <div class="screen"><img src="/img/ui-harvest.webp" width="600" height="1285" loading="lazy" alt="The bear next to a vegetable plot and a market stall" data-i18n-alt="u3_alt"></div>
+          <figcaption><span data-i18n="u3">Garden Harvest</span><span data-i18n="u3t">Harvest 5/5</span></figcaption>
+        </figure>
+        <figure class="phone" role="listitem">
+          <div class="screen"><img src="/img/ui-gearcup.webp" width="600" height="1285" loading="lazy" alt="Team leaderboard with the rabbit and the pig on a podium" data-i18n-alt="u4_alt"></div>
+          <figcaption><span data-i18n="u4">Gear Cup</span><span data-i18n="u4t">Teams compete</span></figcaption>
+        </figure>
+        <figure class="phone" role="listitem">
+          <div class="screen"><img src="/img/ui-spin.webp" width="600" height="1285" loading="lazy" alt="A prize wheel on a purple stage" data-i18n-alt="u5_alt"></div>
+          <figcaption><span data-i18n="u5">Daily Spin</span><span data-i18n="u5t">One free spin a day</span></figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <section id="wonders" class="wonders" aria-labelledby="wonders-title">
+    <div class="wrap">
+      <div class="head">
+        <p class="eyebrow" data-i18n="w_eyebrow">On the repair list</p>
+        <h2 id="wonders-title" data-i18n="w_title">Famous places, slightly furrier</h2>
+        <p data-i18n="w_lede">Each wonder has eight repair tasks. Here are a few from each work order.</p>
+      </div>
+      <div class="strip" role="list">
+        <article class="wcard" role="listitem">
+          <div class="pic"><img src="/img/wonder-pisa.webp" width="640" height="1006" loading="lazy" alt="The rabbit holding plans in front of a leaning tower" data-i18n-alt="pisa_alt"><span class="chip" data-i18n="chip_first">First job</span></div>
+          <h3 data-w="1">Leaning Paw Tower</h3>
+          <p class="where" data-i18n="pisa_where">Pisa, Italy</p>
+          <ul class="tasks" data-tasks="1"></ul>
+        </article>
+        <article class="wcard" role="listitem">
+          <div class="pic"><img src="/img/wonder-goldengate.webp" width="640" height="1006" loading="lazy" alt="The bear looking through binoculars at a red suspension bridge" data-i18n-alt="gg_alt"></div>
+          <h3 data-w="2">Golden Tail Bridge</h3>
+          <p class="where" data-i18n="gg_where">San Francisco, USA</p>
+          <ul class="tasks" data-tasks="2"></ul>
+        </article>
+        <article class="wcard" role="listitem">
+          <div class="pic"><img src="/img/wonder-eiffel.webp" width="640" height="1006" loading="lazy" alt="The ram with blueprints below an iron tower" data-i18n-alt="eiffel_alt"></div>
+          <h3 data-w="3">Eiffur Tower</h3>
+          <p class="where" data-i18n="eiffel_where">Paris, France</p>
+          <ul class="tasks" data-tasks="3"></ul>
+        </article>
+        <article class="wcard" role="listitem">
+          <div class="pic"><img src="/img/wonder-pyramid.webp" width="640" height="1006" loading="lazy" alt="The pig with a hammer in front of a pyramid" data-i18n-alt="pyr_alt"></div>
+          <h3 data-w="4">Purramid</h3>
+          <p class="where" data-i18n="pyr_where">Giza, Egypt</p>
+          <ul class="tasks" data-tasks="4"></ul>
+        </article>
+        <article class="wcard" role="listitem">
+          <div class="pic"><img src="/img/wonder-greatwall.webp" width="640" height="1006" loading="lazy" alt="Tinko the pig with a map in front of a great stone wall" data-i18n-alt="gw_alt"></div>
+          <h3 data-w="5">Great Paw Wall</h3>
+          <p class="where" data-i18n="gw_where">Great Wall, China</p>
+          <ul class="tasks" data-tasks="5"></ul>
+        </article>
+        <article class="wcard" role="listitem">
+          <div class="pic"><img src="/img/wonder-canyon2.webp" width="640" height="1006" loading="lazy" alt="Pemi the rabbit at a canyon lookout with a toolbox" data-i18n-alt="canyon2_alt"></div>
+          <h3 data-w="6">Tail Canyon</h3>
+          <p class="where" data-i18n="canyon2_where">Grand Canyon, USA</p>
+          <ul class="tasks" data-tasks="6"></ul>
+        </article>
+        <article class="wcard" role="listitem">
+          <div class="pic"><img src="/img/wonder-ayasofya.webp" width="640" height="1006" loading="lazy" alt="Pemi the rabbit holding plans in front of Hagia Sophia, scaffolding on one minaret" data-i18n-alt="aya_alt"><span class="chip" data-i18n="chip_new">New</span></div>
+          <h3 data-w="7">Hagia Sophia</h3>
+          <p class="where" data-i18n="aya_where">Istanbul, Türkiye</p>
+          <ul class="tasks" data-tasks="7"></ul>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section id="crew" aria-labelledby="crew-title">
+    <div class="wrap">
+      <div class="head">
+        <p class="eyebrow" data-i18n="c_eyebrow">Meet the fixers</p>
+        <h2 id="crew-title" data-i18n="c_title">A crew with a tool for everything</h2>
+        <p data-i18n="c_lede">Goggles on, bandanas tied. These are the animals you play alongside.</p>
+      </div>
+      <div class="crew">
+        <article class="member">
+          <div class="portrait" style="--bg:#cfe0ff"><img src="/img/crew2-ram.webp" width="432" height="640" loading="lazy" alt="Bram the ram with a map and a backpack" data-i18n-alt="ram_alt"></div>
+          <p class="role" data-i18n="ram_role">Crew chief · Ram</p>
+          <h3 data-i18n="ram_name">Bram</h3>
+          <p data-i18n="ram_text">Reads the blueprints, wins the duels and never leaves a job half done.</p>
+        </article>
+        <article class="member">
+          <div class="portrait" style="--bg:#ffe3b0"><img src="/img/crew2-bear.webp" width="435" height="640" loading="lazy" alt="Brumo the bear in green overalls" data-i18n-alt="bear_alt"></div>
+          <p class="role" data-i18n="bear_role">Heavy lifting · Bear</p>
+          <h3 data-i18n="bear_name">Brumo</h3>
+          <p data-i18n="bear_text">Carries the stone blocks. Also grows the best carrots in the garden.</p>
+        </article>
+        <article class="member">
+          <div class="portrait" style="--bg:#ffd6d6"><img src="/img/crew2-pig.webp" width="427" height="640" loading="lazy" alt="Tinko the pig holding a wrench" data-i18n-alt="pig_alt"></div>
+          <p class="role" data-i18n="pig_role">Master mechanic · Pig</p>
+          <h3 data-i18n="pig_name">Tinko</h3>
+          <p data-i18n="pig_text">If it is bolted, riveted or stuck, the hammer comes out.</p>
+        </article>
+        <article class="member">
+          <div class="portrait" style="--bg:#d8f0dc"><img src="/img/crew2-rabbit.webp" width="420" height="640" loading="lazy" alt="Pemi the rabbit with goggles and rolled-up plans" data-i18n-alt="rabbit_alt"></div>
+          <p class="role" data-i18n="rabbit_role">Scout · Rabbit</p>
+          <h3 data-i18n="rabbit_name">Pemi</h3>
+          <p data-i18n="rabbit_text">First on site. Finds the cracks before anyone else does.</p>
+        </article>
+        <article class="member">
+          <div class="portrait" style="--bg:#e6dcff"><img src="/img/crew2-monkey.webp" width="438" height="640" loading="lazy" alt="Fiko the monkey in a welding mask" data-i18n-alt="monkey_alt"></div>
+          <p class="role" data-i18n="monkey_role">Welder · Monkey</p>
+          <h3 data-i18n="monkey_name">Fiko</h3>
+          <p data-i18n="monkey_text">Patches up cracked screens and iron beams with the same steady hand.</p>
+        </article>
+        <article class="member">
+          <div class="portrait" style="--bg:#ffe0c7"><img src="/img/crew2-bird.webp" width="459" height="640" loading="lazy" alt="Pilo the orange bird flying with aviator goggles" data-i18n-alt="bird_alt"></div>
+          <p class="role" data-i18n="bird_role">Pilot · Bird</p>
+          <h3 data-i18n="bird_name">Pilo</h3>
+          <p data-i18n="bird_text">Scouts the route from the sky and drops the right part exactly where it is needed.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="rivals" aria-labelledby="rivals-title">
+    <div class="wrap">
+      <div class="head">
+        <p class="eyebrow" data-i18n="r_eyebrow">Boss Duel</p>
+        <h2 id="rivals-title" data-i18n="r_title">Not everyone wants the wonders fixed</h2>
+        <p data-i18n="r_lede">On special levels a rival shows up and the board becomes a duel. Your matches are your attacks.</p>
+      </div>
+      <div class="duelgrid">
+      <div>
+      <div class="duel">
+        <div class="rival">
+          <img src="/img/rival-badger.webp" width="600" height="730" loading="lazy" alt="Rumbo the badger holding a pickaxe" data-i18n-alt="badger_alt">
+          <div><h3 data-i18n="badger_name">Rumbo the Badger</h3><p data-i18n="badger_text">Digs under everything you build and throws mud on your board.</p></div>
+        </div>
+        <span class="vs" aria-hidden="true">VS</span>
+        <div class="rival">
+          <img src="/img/rival-hyena.webp" width="600" height="642" loading="lazy" alt="Zarko the hyena with a crowbar" data-i18n-alt="hyena_alt">
+          <div><h3 data-i18n="hyena_name">Zarko the Hyena</h3><p data-i18n="hyena_text">Steps in after Rumbo, pries everything loose and hits even harder.</p></div>
+        </div>
+      </div>
+      <div class="rules">
+        <span data-i18n="rule1">Match tiles to power up your attack</span>
+        <span data-i18n="rule2">You strike after your move, they strike back</span>
+        <span data-i18n="rule3">Shields soak up the hits</span>
+      </div>
+      </div>
+        <figure class="phone">
+          <div class="screen"><img src="/img/ui-boss.webp" width="600" height="1285" loading="lazy" alt="Bram the ram and Rumbo the badger facing off above a full board" data-i18n-alt="u6_alt"></div>
+          <figcaption><span data-i18n="u6">Bram vs. Rumbo</span><span data-i18n="u6t">A real duel, mid-match</span></figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="events-title">
+    <div class="wrap">
+      <div class="head">
+        <p class="eyebrow" data-i18n="e_eyebrow">Always something on</p>
+        <h2 id="events-title" data-i18n="e_title">Events between the repairs</h2>
+      </div>
+      <div class="events">
+        <article class="event"><h3 data-i18n="ev1">Bridge Repair</h3><p data-i18n="ev1t">Race four other players to finish your stretch of the bridge first.</p></article>
+        <article class="event"><h3 data-i18n="ev2">Garden Harvest</h3><p data-i18n="ev2t">Win levels to earn shovels, then dig the garden for hidden crops and prizes.</p></article>
+        <article class="event"><h3 data-i18n="ev3">The Climb</h3><p data-i18n="ev3t">Win on the first try to climb seven stops. Slip once and you start over. Everyone who finishes shares the gold pot.</p></article>
+        <article class="event"><h3 data-i18n="ev4">Weekly Tasks</h3><p data-i18n="ev4t">Fresh goals every few days, with a chest waiting at the end.</p></article>
+        <article class="event"><h3 data-i18n="ev5">Teams</h3><p data-i18n="ev5t">Join a team, chat and send each other lives when you run out.</p></article>
+        <article class="event"><h3 data-i18n="ev6">Boss Duel</h3><p data-i18n="ev6t">Face the rivals on special levels, each one tougher than the last.</p></article>
+        <article class="event"><h3 data-i18n="ev7">Gear Cup</h3><p data-i18n="ev7t">Collect gears with your team. The top three teams win prizes.</p></article>
+        <article class="event"><h3 data-i18n="ev8">Daily Spin</h3><p data-i18n="ev8t">One free spin of the prize wheel every day.</p></article>
+      </div>
+    </div>
+  </section>
+
+  <section id="studio" class="studio" aria-labelledby="studio-title">
+    <div class="wrap">
+      <div class="bear"><img src="/img/bear-cheer.webp" width="520" height="536" loading="lazy" alt="The bear cheering with a carrot" data-i18n-alt="cheer_alt"></div>
+      <div>
+        <p class="eyebrow" data-i18n-html="st_eyebrow">About <span lang="en">Wondi Games</span></p>
+        <h2 id="studio-title" style="font-size:clamp(32px,4.2vw,52px);font-weight:700;margin-top:12px" data-i18n="st_title">A small studio making warm, fair puzzle games</h2>
+        <div class="values">
+          <div><h3 data-i18n="v1">Every level is designed by hand</h3><p data-i18n="v1t">We shape each board ourselves, with its own silhouette and its own trick, and play it until it feels right.</p></div>
+          <div><h3 data-i18n="v2">Challenge you can earn</h3><p data-i18n="v2t">Some levels take a few tries. Winning should feel like your doing.</p></div>
+          <div><h3 data-i18n="v3">A world worth coming back to</h3><p data-i18n="v3t">A cast of characters, places to rebuild and friends to play with.</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div>
+      <h2 data-i18n="f_title">Say hello</h2>
+      <p class="mail">hello@wondigames.com</p>
+      <a class="insta" href="https://www.instagram.com/wondigames/" target="_blank" rel="noopener" aria-label="Instagram"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="17.5" cy="6.5" r="1.3" fill="currentColor"/></svg>@wondigames</a>
+    </div>
+    <a class="mark" href="#top" aria-label="Wondi Games"><b>Wondi<i></i></b><span>Games</span></a>
+  </div>
+  <div class="wrap"><small>© <span id="year">2026</span> Wondi Games. <span data-i18n="f_rights">Wonder Fixers and its characters belong to Wondi Games.</span> · <a href="/privacy/" style="color:inherit" data-i18n="f_privacy">Privacy Policy</a> · <a href="/terms/" style="color:inherit" data-i18n="f_terms">Terms of Service</a></small></div>
+</footer>
+
+<script>
+(() => {
+  const TASKS = {
+    tr: {
+      1: ["Zemini Sağlamlaştır", "Sütunları Kaynakla", "Çan Katını Onar", "Bayrağı Dik"],
+      2: ["Ayakları Güçlendir", "Askı Tellerini Bağla", "Turuncu Boyayı Sür", "Işıkları Yak"],
+      3: ["Dört Ayağı Sabitle", "İkinci Katı Yükselt", "Boyayı Yenile", "Işık Şovunu Başlat"],
+      4: ["Kumu Temizle", "Taş Blokları Taşı", "Kireç Taşını Parlat", "Altın Tepeyi Yerleştir"],
+      5: ["Zemini Hazırla", "Duvarları Yükselt", "Gözetleme Kulelerini Onar", "Pati Bayraklarını Dik"],
+      6: ["Patikayı Temizle", "Seyir Alanını Düzenle", "Korkulukları Onar", "Manzara Noktasını Tamamla"],
+      7: ["İskeleyi Kur", "Pencereleri Yenile", "Ana Kubbeyi Kapla", "Minareyi Restore Et"],
+    },
+    en: {
+      1: ["Reinforce the Ground", "Weld the Columns", "Fix the Bell Chamber", "Raise the Flag"],
+      2: ["Strengthen the Piers", "Attach the Suspenders", "Apply the Orange Paint", "Turn On the Lights"],
+      3: ["Anchor the Four Legs", "Raise the Second Floor", "Refresh the Paint", "Start the Light Show"],
+      4: ["Clear the Sand", "Haul the Stone Blocks", "Polish the Limestone", "Place the Golden Capstone"],
+      5: ["Prepare the Ground", "Raise the Walls", "Repair the Watchtowers", "Raise the Paw Flags"],
+      6: ["Clear the Trail", "Restore the Lookout", "Repair the Railings", "Complete the Scenic Lookout"],
+      7: ["Set Up the Scaffolding", "Restore the Windows", "Reseal the Main Dome", "Restore the Minaret"],
+    },
+  };
+  const WONDERS = {
+    tr: { 1: "Eğik Pati Kulesi", 2: "Altın Kuyruk Köprüsü", 3: "Eyfil Kulesi", 4: "Miyav Piramidi", 5: "Büyük Pati Seddi", 6: "Kuyruk Kanyonu", 7: "Ayasofya" },
+    en: { 1: "Leaning Paw Tower", 2: "Golden Tail Bridge", 3: "Eiffur Tower", 4: "Purramid", 5: "Great Paw Wall", 6: "Tail Canyon", 7: "Hagia Sophia" },
+  };
+  const MORE = { tr: "+4 görev daha", en: "+4 more tasks" };
+
+  const TR = {
+    nav_play: "Oyun", nav_wonders: "Harikalar", nav_crew: "Ekip", nav_studio: "Stüdyo",
+    hero_eyebrow: '<span lang="en">Wonder Fixers</span> · Eşleştirme bulmacası',
+    hero_title: "Dünyanın harikaları <em>tamir bekliyor.</em>",
+    hero_lede: "Taşları eşleştir, yıldız kazan ve hayvan tamirci ekibiyle dünyanın simge yapılarını onar, her seferinde bir tamir.",
+    stores_soon: "Yakında", hero_caption: "Ekip iskelede, tamirin ortasında.", stamp: "Tamirde",
+    hero_alt: "Ayı, domuz ve koç merdivene tırmanıp eski bir taş duvarı onarıyor",
+    team_alt: "Wonder Fixers ekibi bir arada: ayı Brumo, koç Bram, tavşan Pemi, domuz Tinko, maymun Fiko ve kuş Pilo; yanlarında rakipleri porsuk Rumbo ve sırtlan Zarko",
+    play_eyebrow: "Nasıl oynanır", play_title: "Geçtiğin her seviye gerçek bir şeyi onarır",
+    play_lede: "Özünde klasik bir eşleştirme oyunu; ama devam etmek için bir sebebin var: her galibiyet ünlü bir yapıyı eski günlerine bir adım daha yaklaştırır.",
+    s1_title: "Eşleştir", s1_text: "Taşların yerini değiştir, üç ve daha fazlasını yan yana getir. Büyük eşleşmeler roket, PatchBot ve Pulse Core yapar.",
+    s2_title: "Yıldız kazan", s2_text: "Seviyenin hedeflerini temizle: sandıklar, çamur, jel, brandalı heykeller. Kazandığın her el yapımı seviye yıldız getirir.",
+    s3_title: "Harikayı onar", s3_text: "Yıldızlarını tamir görevlerine harca: sütunları kaynakla, mermeri parlat, bayrağı dik. Hepsi bitince harika yeniden parlar.",
+    sh_eyebrow: "Oyundan kareler", sh_title: "Wonder Fixers'ın içinden",
+    sh_levels: "Seviyeler", sh_menus: "Harikalar ve etkinlikler",
+    k_eyebrow: "Alet çantası", k_title: "Taşlar, special'lar ve jokerler",
+    k_tiles: "Dört renk, tek kural: aynı taştan üç ya da daha fazlasını yan yana getir. Daha büyük şekiller special verir.",
+    k_specials: "Special'lar", k_jokers: "Jokerler", k_combo: "İki special'ı birbirine kaydır, daha büyük bir kombo çıkar.",
+    sp1_how: "4'lü sıra", sp1_name: "Rocket", sp1_text: "Bir satırı ya da sütunu baştan sona temizler.",
+    sp2_how: "2×2 kare", sp2_name: "Patchbot", sp2_text: "Uçup tahtadaki bir hedefi vurur.",
+    sp3_how: "Köşeli 5'li", sp3_name: "PulseCore", sp3_text: "Etrafındaki 5×5 alanı patlatır.",
+    sp4_how: "5'li sıra", sp4_name: "Spark Orb", sp4_text: "Bir rengin tahtadaki tüm taşlarını temizler.",
+    bo1_how: "Tek hedef", bo1_name: "Wonder Çekici", bo1_text: "Dokunduğun taşı ya da engeli kırar.",
+    bo2_how: "Satır", bo2_name: "Wonder Roketi", bo2_text: "Dokunduğun satırı temizler.",
+    bo3_how: "Sütun", bo3_name: "Wonder Asansör", bo3_text: "Dokunduğun sütunu temizler.",
+    bo4_how: "Tüm tahta", bo4_name: "Wonder Karıştırıcı", bo4_text: "Tahtadaki bütün taşları karıştırır.",
+    bo5_how: "Tek renk, 3 hamle", bo5_name: "Wonder Boya Kovası", bo5_text: "Bir taşa dokun: o renk 3 hamle boyunca tahtadan çıkar.",
+    l1: "Çiçek bahçesinde mühür", l1t: "32 hamle", l1_alt: "Antik mühür, çiçekli çim ve sandıklarla elmas şeklinde bir tahta",
+    l7: "Fener sıraları", l7t: "25 hamle", l7_alt: "Yüksek pencereli salonda mavi dolapların üstünde turuncu fener sıraları",
+    l8: "Sandık duvarı", l8t: "23 hamle", l8_alt: "Tuğla mahzende turuncu sandık ve fenerlerden bir duvar",
+    l9: "Çimenlik ve dolaplar", l9t: "30 hamle", l9_alt: "Mavi taş salonda mavi dolapların yanında çimenlik ve çamur",
+    l3: "Mıknatıs hattı", l3t: "26 hamle", l3_alt: "Yeşil dolapların üstünde tahtayı dolanan mavi mıknatıs rayları",
+    l4: "İkiz kasalar", l4t: "23 hamle", l4_alt: "Renkli tahtanın altında iki üç renkli kasa",
+    u1: "Sıradaki harika", u1t: "Ana ekran", u1_alt: "Domuz ve büyük taş surla ana ekran",
+    u2: "Altın Kuyruk Köprüsü", u2t: "Tamir sürüyor", u2_alt: "Kırmızı asma köprünün önünde ayıyla ana ekran",
+    u3: "Bostan Hasadı", u3t: "Hasat 5/5", u3_alt: "Sebze bostanı ve pazar tezgâhının yanında ayı",
+    u4: "Dişli Kupası", u4t: "Takımlar yarışır", u4_alt: "Kürsüde tavşan ve domuzla takım sıralaması",
+    u5: "Günlük Çark", u5t: "Her gün bir ücretsiz çevirme", u5_alt: "Mor sahnede ödül çarkı",
+    u6: "Bram ve Rumbo", u6t: "Gerçek bir düello, maçın ortasında", u6_alt: "Dolu bir tahtanın üstünde karşı karşıya koç Bram ve porsuk Rumbo",
+    ev7: "Dişli Kupası", ev7t: "Takımınla dişli topla. İlk üç takım ödül kazanır.",
+    ev8: "Günlük Çark", ev8t: "Her gün ödül çarkını bir kez ücretsiz çevir.",
+    lv1: "Brandalı heykeller", lv1t: "Renkleri topla, sonra taşı yont", lv1_alt: "Taş duvarlarla bölünmüş tahtada dört brandalı heykel",
+    lv2: "Üç renkli kasa", lv2t: "Her renkten beş taş açar", lv2_alt: "Kırmızı mantar sıralarının yanında dev üç renkli kasa",
+    lv3: "Kupa tahtası", lv3t: "Sandıklar ve fenerler, 32 hamle", lv3_alt: "Tahta sandık ve fenerlerden kupa şeklinde bir tahta",
+    lv4: "Tüp hattı", lv4t: "Cam tüpleri temizle", lv4_alt: "İki taş sütunu arasında tahtayı boydan geçen cam tüpler",
+    lv5: "Mühür ve toplar", lv5t: "Toplar special'larını kafesler", lv5_alt: "Üç lazer topunun üstünde antik bir mühür",
+    sh1: "Ana ekran", sh1t: "Harikan ve ekibin", sh1_alt: "Tamirdeki bir saray, önde ayı ve domuz, altta seviye butonu",
+    sh2: "Tamir görevleri", sh2t: "Yıldız harca, harikayı onar", sh2_alt: "Her görevi üç yıldız olan tamir listesi",
+    sh3: "Bostan Hasadı", sh3t: "Gizli sebzeleri kaz", sh3_alt: "Sebze bostanının yanında ayının olduğu Bostan Hasadı etkinliği",
+    w_eyebrow: "Tamir listesinde", w_title: "Ünlü yerler, biraz daha tüylü",
+    w_lede: "Her harikanın sekiz tamir görevi var. İşte her iş emrinden birkaçı.",
+    chip_first: "İlk iş", chip_next: "Sırada",
+    pisa_where: "Pisa, İtalya", gw_where: "Çin Seddi, Çin", canyon2_where: "Büyük Kanyon, ABD", aya_where: "İstanbul, Türkiye", chip_new: "Yeni",
+    gw_alt: "Büyük bir taş surun önünde haritalı domuz Tinko", canyon2_alt: "Alet kutusuyla kanyon seyir noktasında tavşan Pemi", aya_alt: "Ayasofya'nın önünde plan tutan tavşan Pemi, minarelerden birinde iskele", gg_where: "San Francisco, ABD", eiffel_where: "Paris, Fransa", pyr_where: "Gize, Mısır",
+   
+    pisa_alt: "Eğik bir kulenin önünde plan tutan tavşan", gg_alt: "Kırmızı asma köprüye dürbünle bakan ayı",
+    eiffel_alt: "Demir kulenin altında planlarla koç", pyr_alt: "Piramidin önünde çekiçli domuz",
+    c_eyebrow: "Tamircilerle tanış", c_title: "Her işe bir aleti olan ekip", c_lede: "Gözlükler takılı, bandanalar bağlı. Birlikte oynayacağın hayvanlar bunlar.",
+    ram_role: "Ekip şefi · Koç", ram_name: "Bram", ram_text: "Planları okur, düelloları kazanır, hiçbir işi yarım bırakmaz.", ram_alt: "Haritası ve sırt çantasıyla koç Bram",
+    bear_role: "Ağır işler · Ayı", bear_name: "Brumo", bear_text: "Taş blokları o taşır. Bostanın en iyi havuçları da onun.", bear_alt: "Yeşil tulumlu ayı Brumo",
+    pig_role: "Usta tamirci · Domuz", pig_name: "Tinko", pig_text: "Cıvatalı, perçinli ya da sıkışmışsa çekiç çıkar.", pig_alt: "İngiliz anahtarı tutan domuz Tinko",
+    rabbit_role: "Kâşif · Tavşan", rabbit_name: "Pemi", rabbit_text: "Sahaya ilk o gelir. Çatlakları herkesten önce bulur.", rabbit_alt: "Gözlüklü, elinde planlarla tavşan Pemi",
+    monkey_role: "Kaynakçı · Maymun", monkey_name: "Fiko", monkey_text: "Çatlak ekranları da demir kirişleri de aynı sağlam elle onarır.", monkey_alt: "Kaynak maskeli maymun Fiko",
+    r_eyebrow: "Boss Düellosu", r_title: "Herkes harikaların onarılmasını istemiyor",
+    r_lede: "Özel seviyelerde bir rakip çıkar ve tahta düelloya döner. Eşleşmelerin senin saldırındır.",
+    bird_role: "Pilot · Kuş", bird_name: "Pilo", bird_text: "Rotayı gökyüzünden keşfeder, doğru parçayı tam gereken yere bırakır.", bird_alt: "Pilot gözlüklü turuncu kuş Pilo",
+    badger_name: "Porsuk Rumbo", badger_text: "Yaptığın her şeyin altını kazar, tahtana çamur fırlatır.", badger_alt: "Kazma tutan porsuk Rumbo",
+    hyena_name: "Sırtlan Zarko", hyena_text: "Rumbo'dan sonra gelir, ne varsa söker ve daha da sert vurur.", hyena_alt: "Levyeli sırtlan Zarko",
+    rule1: "Taşları eşleştir, saldırını güçlendir", rule2: "Hamlen bitince vurursun, rakip karşılık verir", rule3: "Kalkanlar darbeleri karşılar",
+    e_eyebrow: "Hep bir şey var", e_title: "Tamirlerin arasında etkinlikler",
+    ev1: "Köprü Tamiri", ev1t: "Köprüdeki kendi bölümünü diğer dört oyuncudan önce bitirmek için yarış.",
+    ev2: "Bostan Hasadı", ev2t: "Seviye kazanıp kürek topla, sonra bostanı kaz; gizli sebzeleri ve ödülleri bul.",
+    ev3: "TIRMANIŞ", ev3t: "İlk denemede kazanarak yedi durağı tırman. Bir kez kayarsan baştan başlarsın. Bitiren herkes altın havuzunu paylaşır.",
+    ev4: "Haftalık Görevler", ev4t: "Birkaç günde bir yeni hedefler, sonunda bir sandık.",
+    ev5: "Takımlar", ev5t: "Bir takıma katıl, sohbet et, canın bitince birbirinize can gönderin.",
+    ev6: "Boss Düellosu", ev6t: "Özel seviyelerde rakiplerle karşılaş; her biri bir öncekinden zorlu.",
+    st_eyebrow: '<span lang="en">Wondi Games</span> hakkında', st_title: "Sıcak ve adil bulmaca oyunları yapan küçük bir stüdyo",
+    v1: "Her seviye elle tasarlanır", v1t: "Her tahtayı kendi silüeti ve kendi numarasıyla tek tek kurar, doğru hissettirene dek oynarız.",
+    v2: "Hak edilen zorluk", v2t: "Bazı seviyeler birkaç deneme ister. Kazandığında bunun senin başarın olduğunu hissetmelisin.",
+    v3: "Dönmeye değer bir dünya", v3t: "Karakterler, yeniden inşa edilecek yerler ve birlikte oynanacak arkadaşlar.",
+    cheer_alt: "Elinde havuçla sevinen ayı",
+    f_title: "Merhaba de", f_rights: "Wonder Fixers ve karakterleri Wondi Games'e aittir.", f_privacy: "Gizlilik Politikası", f_terms: "Kullanım Şartları",
+  };
+
+  const en = {};
+  document.querySelectorAll("[data-i18n]").forEach(el => en[el.dataset.i18n] = el.textContent);
+  document.querySelectorAll("[data-i18n-html]").forEach(el => en[el.dataset.i18nHtml] = el.innerHTML);
+  document.querySelectorAll("[data-i18n-alt]").forEach(el => en[el.dataset.i18nAlt] = el.alt);
+  const dict = { en, tr: TR };
+
+  function apply(lang) {
+    const d = dict[lang] || en;
+    document.documentElement.lang = lang;
+    document.querySelectorAll("[data-i18n]").forEach(el => { const v = d[el.dataset.i18n]; if (v) el.textContent = v; });
+    document.querySelectorAll("[data-i18n-html]").forEach(el => { const v = d[el.dataset.i18nHtml]; if (v) el.innerHTML = v; });
+    document.querySelectorAll("[data-i18n-alt]").forEach(el => { const v = d[el.dataset.i18nAlt]; if (v) el.alt = v; });
+    document.querySelectorAll("[data-w]").forEach(el => el.textContent = WONDERS[lang][el.dataset.w]);
+    document.querySelectorAll("[data-tasks]").forEach(ul => {
+      const list = TASKS[lang][ul.dataset.tasks];
+      ul.replaceChildren(...list.map((t, i) => {
+        const li = document.createElement("li");
+        li.textContent = t;
+        if (ul.dataset.tasks === "1" && i < 2) li.className = "done";
+        return li;
+      }), Object.assign(document.createElement("li"), { className: "more", textContent: MORE[lang] }));
+    });
+    document.querySelectorAll(".lang button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.lang === lang)));
+    try { localStorage.setItem("wondi_lang", lang); } catch (e) {}
+  }
+
+  // /tr/ sayfası <html data-lang="tr"> taşır → arama motoru da Türkçeyi görür. Kökte tarayıcı diline bakılır.
+  const forced = document.documentElement.dataset.lang;
+  let lang = forced || "";
+  if (!lang) { try { lang = localStorage.getItem("wondi_lang") || ""; } catch (e) { lang = ""; } }
+  if (!lang) lang = (navigator.language || "en").toLowerCase().startsWith("tr") ? "tr" : "en";
+  apply(lang);
+  const onSite = /(^|\.)wondigames\.com$/.test(location.hostname);
+  document.querySelectorAll(".lang button").forEach(b => b.addEventListener("click", () => {
+    const target = b.dataset.lang;
+    if (onSite) {
+      try { localStorage.setItem("wondi_lang", target); } catch (e) {}
+      const path = target === "tr" ? "/tr/" : "/";
+      if (location.pathname !== path) { location.href = path + location.hash; return; }
+    }
+    apply(target);
+  }));
+  document.getElementById("year").textContent = new Date().getFullYear();
+})();
+</script>
+<!--TAWK-START: canlı destek sohbeti (Tawk.to, ücretsiz). Önizleme sürümünden çıkarılır.-->
+<script type="text/javascript">
+var Tawk_API=Tawk_API||{}, Tawk_LoadStart=new Date();
+(function(){
+var s1=document.createElement("script"),s0=document.getElementsByTagName("script")[0];
+s1.async=true;
+s1.src='https://embed.tawk.to/6ad344724cf72734cbfe452f/1k54k6oid';
+s1.charset='UTF-8';
+s1.setAttribute('crossorigin','*');
+s0.parentNode.insertBefore(s1,s0);
+})();
+</script>
+<!--TAWK-END-->
+</body>
+</html>

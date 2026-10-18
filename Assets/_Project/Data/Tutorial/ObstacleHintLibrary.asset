@@ -295,3 +295,135 @@ MonoBehaviour:
     fallbackTitle: Colored Tool Threat
     locKey: hint_obstacle_toolthreat_color
     fallbackText: 
+  - id: 71
+    iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_colorcrate_name
+    fallbackTitle: Color Crate
+    locKey: hint_obstacle_colorcrate
+    fallbackText: 
+  - id: 72
+    iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_colorcrate_name
+    fallbackTitle: Color Crate
+    locKey: hint_obstacle_colorcrate
+    fallbackText: 
+  - id: 73
+    iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_colorcrate_name
+    fallbackTitle: Color Crate
+    locKey: hint_obstacle_colorcrate
+    fallbackText: 
+  - id: 74
+    iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_colorcrate_name
+    fallbackTitle: Color Crate
+    locKey: hint_obstacle_colorcrate
+    fallbackText: 
+  - id: 42
+    iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_grass_name
+    fallbackTitle: Grass
+    locKey: hint_obstacle_grass
+    fallbackText:
+  - id: 58
+    iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_grassflower_name
+    fallbackTitle: Flower Grass
+    locKey: hint_obstacle_grassflower
+    fallbackText:
+  - id: 43
+    iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_overridebattery_name
+    fallbackTitle: Override Battery
+    locKey: hint_obstacle_overridebattery
+    fallbackText:
+  - id: 44
+    iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_keygenerator_name
+    fallbackTitle: Key Generator
+    locKey: hint_obstacle_keygenerator
+    fallbackText:
+  - id: 45
+    iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_eggbird_name
+    fallbackTitle: Bird Egg
+    locKey: hint_obstacle_eggbird
+    fallbackText:
+  - id: 57
+    iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_hamster_name
+    fallbackTitle: Hungry Hamster
+    locKey: hint_obstacle_hamster
+    fallbackText:
+  - id: 59
+    iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_gellauncher_name
+    fallbackTitle: Gel Cartridge
+    locKey: hint_obstacle_gellauncher
+    fallbackText:
+  - id: 60
+    iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_gellauncher_name
+    fallbackTitle: Gel Cartridge
+    locKey: hint_obstacle_gellauncher
+    fallbackText:
+  - id: 61
+    iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_gellauncher_name
+    fallbackTitle: Gel Cartridge
+    locKey: hint_obstacle_gellauncher
+    fallbackText:
+  - id: 62
+    iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_gellauncher_name
+    fallbackTitle: Gel Cartridge
+    locKey: hint_obstacle_gellauncher
+    fallbackText:
+  - id: 63
+    iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_paintcanbox_name
+    fallbackTitle: Paint Can Pyramid
+    locKey: hint_obstacle_paintcanbox
+    fallbackText:
+  - id: 64
+    iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_ancientseal_name
+    fallbackTitle: Ancient Seal
+    locKey: hint_obstacle_ancientseal
+    fallbackText: Collect the displayed number of stones in the active color anywhere on the board. Each stone goes to only one seal. Complete all three colors to open it. Direct hits do not count.
+  - id: 65
+    iconOverride: {fileID: 21300000, guid: 9a14a1432fa3499a9b853be205ef44c8, type: 3}
+    titleLocKey: hint_obstacle_lasercannon_name
+    fallbackTitle: Laser Cannon
+    locKey: hint_obstacle_lasercannon
+    fallbackText: The cannon locks onto a special stone. If you don't use it within one move, it gets caged. Make a match next to the cage or hit it with another special's blast to free it. Only specials damage the cannon.
+  - id: 66
+    iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_billiard_name
+    fallbackTitle: Billiard Ball
+    locKey: hint_obstacle_billiard
+    fallbackText: The ball can't be broken or swapped. Clear the stones around it and it rolls into the gap - down, diagonally or sideways, never up. Get it into a pocket!
+  - id: 68
+    iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_tarpstatue_name
+    fallbackTitle: Covered Statue
+    locKey: hint_obstacle_tarpstatue
+    fallbackText: Collect stones of the tag's color anywhere on the board. When the number runs out, the tarp comes off. Then only specials can hit it - each hit carves the statue a little more.
+  - id: 70
+    iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_rhodes_statue_name
+    fallbackTitle: Rhodes Statue
+    locKey: hint_obstacle_rhodes_statue
+    fallbackText: Only specials damage this 2x2 statue. Each hit breaks another stage. Four special hits clear the whole statue.
+  - id: 69
+    iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_waterlily_name
+    fallbackTitle: Water Lily
+    locKey: hint_obstacle_waterlily
+    fallbackText: Four petals need a special hit. Once a petal falls, matches or specials remove the remaining petals. A nearby special is swallowed if it stays for another move. Only a special hit releases it onto a reusable board cell. Clear the grass underneath to finish.
+  - id: 67
+    iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_billiardpocket_name
+    fallbackTitle: Billiard Pocket
+    locKey: hint_obstacle_billiardpocket
+    fallbackText: Guide billiard balls into the pocket by clearing nearby stones. The pocket cannot be broken; each ball that enters is collected.

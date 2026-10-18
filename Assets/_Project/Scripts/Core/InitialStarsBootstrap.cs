@@ -14,7 +14,8 @@ using UnityEngine;
 public static class InitialStarsBootstrap
 {
     private const string KeyInitialStarsGranted = "initial_stars_granted";
-    private const int InitialStarAmount         = 100;
+    // Yeni oyuncu 10 yıldızla başlar — editör dahil her yerde (kullanıcı kararı 2026-10-17: 100 çok büyük ödül).
+    private const int InitialStarAmount         = 10;
 
     // AfterSceneLoad → TestLevelProgressionBootstrap'in (BeforeSceneLoad) flag silmesinden SONRA çalışır.
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -28,7 +29,5 @@ public static class InitialStarsBootstrap
         PlayerWallet.AddStars(InitialStarAmount);
         PlayerPrefs.SetInt(KeyInitialStarsGranted, 1);
         PlayerPrefs.Save();
-
-        Debug.Log($"[InitialStarsBootstrap] First launch — granted {InitialStarAmount} stars. Total: {PlayerWallet.TotalStars}");
     }
 }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -9,6 +10,8 @@ public class TutorialOverlayController : MonoBehaviour
     [Header("Dim")]
     [SerializeField] private Image dimImage;
     [SerializeField, Range(0f, 1f)] private float dimAlpha = 0.6f;
+    [Tooltip("Önceden tanımlı öğretici spot ışığında karartma (yalnız eşleşecek taşlar açık).")]
+    [SerializeField, Range(0f, 1f)] private float spotlightAlpha = 0.9f;
     [SerializeField] private float fadeSpeed = 8f;
 
     [Header("Description (Group 1 only)")]
@@ -53,6 +56,15 @@ public class TutorialOverlayController : MonoBehaviour
 
     public bool IsVisible => gameObject.activeInHierarchy;
 
+    // Spot ışığı (önceden tanımlı öğretici): ekran kararır, yalnız odak taşları açık kalır; tahtanın üstünde ikon + yazı.
+    private RectTransform spotlightRoot;
+    private CanvasGroup spotlightGroup;
+    private TutorialSpotlightGraphic spotlightDim;
+    private RectTransform captionRoot;
+    private Image captionIcon;
+    private TMP_Text captionText;
+    private readonly List<Rect> spotRects = new();
+
     private void Awake()
     {
         board = FindFirstObjectByType<BoardController>();
@@ -90,6 +102,7 @@ public class TutorialOverlayController : MonoBehaviour
         tutorialTo   = to;
 
         if (hintGroup != null) hintGroup.gameObject.SetActive(false);
+        if (spotlightRoot != null) spotlightRoot.gameObject.SetActive(false);
         if (dimImage != null) dimImage.gameObject.SetActive(true);
 
         if (dimImage != null) dimImage.raycastTarget = false;
@@ -136,6 +149,7 @@ public class TutorialOverlayController : MonoBehaviour
         hintOpenedAt = Time.unscaledTime;
         gameObject.SetActive(true);
         transform.SetAsLastSibling();
+        if (spotlightRoot != null) spotlightRoot.gameObject.SetActive(false);
         if (dimImage != null) dimImage.gameObject.SetActive(false);
         if (descriptionRoot != null) descriptionRoot.SetActive(false);
         if (illustrationImage != null) illustrationImage.gameObject.SetActive(false);
@@ -295,6 +309,204 @@ public class TutorialOverlayController : MonoBehaviour
         return label;
     }
 
+    // ── Spot ışığı ──
+
+    /// Önceden tanımlı öğretici: pencere YOK. Ekran kararır, yalnız <paramref name="focusCells"/> taşları açık kalır
+    /// (joker odağı tahtayı açar; burada yalnız taşlar). Tahtanın üstünde special ikonu + kısa yazı (DynaPuff), el hamleyi gösterir.
+    public void ShowSpotlight(TileView from, TileView to, ICollection<Vector2Int> focusCells, string caption, Sprite icon)
+    {
+        if (board == null) board = FindFirstObjectByType<BoardController>();
+
+        tutorialFrom = from;
+        tutorialTo   = to;
+
+        if (hintGroup != null) hintGroup.gameObject.SetActive(false);
+        if (descriptionRoot != null) descriptionRoot.SetActive(false);
+        if (illustrationImage != null) illustrationImage.gameObject.SetActive(false);
+        if (dimImage != null) dimImage.gameObject.SetActive(false);
+
+        gameObject.SetActive(true);
+        transform.SetAsLastSibling();
+        BuildSpotlight(focusCells, caption, icon);
+
+        StopFade();
+        fadeRoutine = StartCoroutine(FadeSpotlight(1f));
+
+        StopSwap();
+        if (from != null && to != null)
+            swapRoutine = StartCoroutine(LoopSwapWithHand(from, to));
+    }
+
+    private void EnsureSpotlight()
+    {
+        if (spotlightRoot != null) return;
+        spotlightRoot = new GameObject("TutorialSpotlight", typeof(RectTransform)).GetComponent<RectTransform>();
+        spotlightRoot.gameObject.layer = gameObject.layer;   // UI kamerası layer 0'ı çizmez
+        spotlightRoot.SetParent(transform, false);
+        spotlightRoot.anchorMin = Vector2.zero;
+        spotlightRoot.anchorMax = Vector2.one;
+        spotlightRoot.pivot = new Vector2(0.5f, 0.5f);
+        spotlightRoot.offsetMin = spotlightRoot.offsetMax = Vector2.zero;
+        spotlightGroup = spotlightRoot.gameObject.AddComponent<CanvasGroup>();
+        spotlightGroup.blocksRaycasts = false;
+        spotlightGroup.interactable = false;
+
+        var dimGo = new GameObject("Dim", typeof(RectTransform), typeof(CanvasRenderer), typeof(TutorialSpotlightGraphic));
+        dimGo.layer = gameObject.layer;
+        var dimRt = (RectTransform)dimGo.transform;
+        dimRt.SetParent(spotlightRoot, false);
+        dimRt.anchorMin = dimRt.anchorMax = dimRt.pivot = new Vector2(0.5f, 0.5f);
+        dimRt.sizeDelta = Vector2.zero;   // mesh köşeleri spotlightRoot merkezine göre (aynı uzay)
+        spotlightDim = dimGo.GetComponent<TutorialSpotlightGraphic>();
+        spotlightDim.raycastTarget = false;
+
+        captionRoot = new GameObject("Caption", typeof(RectTransform)).GetComponent<RectTransform>();
+        captionRoot.gameObject.layer = gameObject.layer;
+        captionRoot.SetParent(spotlightRoot, false);
+        captionRoot.anchorMin = captionRoot.anchorMax = captionRoot.pivot = new Vector2(0.5f, 0.5f);
+
+        var iconGo = new GameObject("Icon", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        iconGo.layer = gameObject.layer;
+        iconGo.transform.SetParent(captionRoot, false);
+        captionIcon = iconGo.GetComponent<Image>();
+        captionIcon.preserveAspect = true;
+        captionIcon.raycastTarget = false;
+
+        var textGo = new GameObject("Text", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
+        textGo.layer = gameObject.layer;
+        textGo.transform.SetParent(captionRoot, false);
+        captionText = textGo.GetComponent<TextMeshProUGUI>();
+        captionText.raycastTarget = false;
+        captionText.alignment = TextAlignmentOptions.MidlineLeft;
+        captionText.textWrappingMode = TextWrappingModes.Normal;
+        captionText.enableAutoSizing = true;
+        captionText.fontSizeMin = 30f;
+        captionText.fontSizeMax = 52f;
+        captionText.color = Color.white;
+        // Oyun anı yazısı → DynaPuff (CommonPopupSkin.celebrationFont: satın alma "HARİKA!" ile aynı stil).
+        var skin = CommonPopupSkin.Shared;
+        var font = skin != null && skin.celebrationFont != null ? skin.celebrationFont
+                 : skin != null && skin.titleFont != null ? skin.titleFont : null;
+        if (font != null) captionText.font = font;
+        if (skin != null && skin.celebrationFont != null && skin.celebrationMaterial != null)
+            captionText.fontSharedMaterial = skin.celebrationMaterial;
+    }
+
+    private void BuildSpotlight(ICollection<Vector2Int> focus, string caption, Sprite icon)
+    {
+        EnsureSpotlight();
+        spotlightRoot.gameObject.SetActive(true);
+        spotlightRoot.SetAsFirstSibling();   // elin altında
+        spotlightGroup.alpha = 0f;
+        spotlightDim.color = new Color(0f, 0f, 0f, spotlightAlpha);
+        spotRects.Clear();
+
+        float top = 0f, left = 0f, right = 0f;
+        bool hasGrid = TryGetCellGrid(out var xEdge, out var yEdge);
+        if (hasGrid)
+        {
+            int w = board.Width, h = board.Height;
+            left = xEdge[0]; right = xEdge[w];
+            top = yEdge[0];
+            float bottom = yEdge[h];
+            const float Far = 20000f;   // ekran boyundan bağımsız: dış paneller her zaman ekranı kaplar
+            spotRects.Add(Rect.MinMaxRect(left - Far, top, right + Far, top + Far));
+            spotRects.Add(Rect.MinMaxRect(left - Far, bottom - Far, right + Far, bottom));
+            spotRects.Add(Rect.MinMaxRect(left - Far, bottom, left, top));
+            spotRects.Add(Rect.MinMaxRect(right, bottom, right + Far, top));
+
+            // Tahta içi: odak dışı hücreler, satır başına birleşik şeritler. Kenarlar aynı ızgara dizilerinden →
+            // komşu şeritler tam ortak kenarda buluşur (binme/boşluk yok).
+            for (int y = 0; y < h; y++)
+            {
+                int x = 0;
+                while (x < w)
+                {
+                    if (focus != null && focus.Contains(new Vector2Int(x, y))) { x++; continue; }
+                    int start = x;
+                    while (x < w && (focus == null || !focus.Contains(new Vector2Int(x, y)))) x++;
+                    spotRects.Add(Rect.MinMaxRect(xEdge[start], yEdge[y + 1], xEdge[x], yEdge[y]));
+                }
+            }
+        }
+        else
+        {
+            spotRects.Add(Rect.MinMaxRect(-20000f, -20000f, 20000f, 20000f));
+        }
+        spotlightDim.SetRects(spotRects);
+        LayoutCaption(caption, icon, hasGrid, left, right, top);
+    }
+
+    // Hücre ızgarası (spotlightRoot uzayında): gerçek bir taşın ekrandaki köşelerinden (sol üst + sağ alt) türetilir.
+    // xEdge[i] = i. sütunun sol kenarı, yEdge[j] = j. satırın üst kenarı (y aşağı doğru azalır).
+    private bool TryGetCellGrid(out float[] xEdge, out float[] yEdge)
+    {
+        xEdge = yEdge = null;
+        if (board == null || board.Tiles == null || board.Width <= 0) return false;
+        TileView reference = null;
+        for (int y = 0; y < board.Height && reference == null; y++)
+            for (int x = 0; x < board.Width && reference == null; x++)
+                if (board.Tiles[x, y] != null && board.Tiles[x, y].RectTransform != null) reference = board.Tiles[x, y];
+        if (reference == null) return false;
+
+        var corners = new Vector3[4];   // 0 sol alt, 1 sol üst, 2 sağ üst, 3 sağ alt
+        reference.RectTransform.GetWorldCorners(corners);
+        Vector2 topLeft = spotlightRoot.InverseTransformPoint(corners[1]);
+        Vector2 bottomRight = spotlightRoot.InverseTransformPoint(corners[3]);
+        float cw = bottomRight.x - topLeft.x;
+        float ch = topLeft.y - bottomRight.y;
+        if (cw <= 0.01f || ch <= 0.01f) return false;
+
+        int rx = reference.X, ry = reference.Y;
+        xEdge = new float[board.Width + 1];
+        yEdge = new float[board.Height + 1];
+        for (int i = 0; i <= board.Width; i++) xEdge[i] = topLeft.x + (i - rx) * cw;
+        for (int j = 0; j <= board.Height; j++) yEdge[j] = topLeft.y - (j - ry) * ch;
+        return true;
+    }
+
+    // Tahtanın üstünde dikey blok: special ikonu ortada üstte, yazı onun altında ortalı (yan yana sıkışmasın).
+    private void LayoutCaption(string caption, Sprite icon, bool hasGrid, float left, float right, float top)
+    {
+        bool hasText = !string.IsNullOrEmpty(caption);
+        captionRoot.gameObject.SetActive(hasText || icon != null);
+        if (!captionRoot.gameObject.activeSelf) return;
+
+        float width = hasGrid ? right - left : 900f;
+        float iconSize = icon != null ? 120f : 0f;
+        float gap = icon != null && hasText ? 10f : 0f;
+        float textHeight = hasText ? 110f : 0f;
+        float total = iconSize + gap + textHeight;
+
+        captionRoot.sizeDelta = new Vector2(width, total);
+        captionRoot.anchoredPosition = new Vector2(hasGrid ? (left + right) * 0.5f : 0f, (hasGrid ? top : 0f) + total * 0.5f + 24f);
+
+        var iconRt = captionIcon.rectTransform;
+        captionIcon.gameObject.SetActive(icon != null);
+        captionIcon.sprite = icon;
+        iconRt.anchorMin = iconRt.anchorMax = iconRt.pivot = new Vector2(0.5f, 0.5f);
+        iconRt.sizeDelta = new Vector2(iconSize, iconSize);
+        iconRt.anchoredPosition = new Vector2(0f, total * 0.5f - iconSize * 0.5f);
+
+        var textRt = captionText.rectTransform;
+        captionText.gameObject.SetActive(hasText);
+        captionText.text = caption ?? string.Empty;
+        captionText.alignment = TextAlignmentOptions.Center;
+        textRt.anchorMin = textRt.anchorMax = textRt.pivot = new Vector2(0.5f, 0.5f);
+        textRt.sizeDelta = new Vector2(width - 20f, textHeight);
+        textRt.anchoredPosition = new Vector2(0f, -total * 0.5f + textHeight * 0.5f);
+    }
+
+    private IEnumerator FadeSpotlight(float target)
+    {
+        if (spotlightGroup == null) yield break;
+        while (!Mathf.Approximately(spotlightGroup.alpha, target))
+        {
+            spotlightGroup.alpha = Mathf.MoveTowards(spotlightGroup.alpha, target, fadeSpeed * Time.unscaledDeltaTime);
+            yield return null;
+        }
+    }
+
     // ── Synchronized swap + hand loop ──
 
     private IEnumerator LoopSwapWithHand(TileView from, TileView to)
@@ -397,6 +609,16 @@ public class TutorialOverlayController : MonoBehaviour
                 dimImage.color = c;
                 yield return null;
             }
+        }
+
+        if (spotlightGroup != null && spotlightRoot != null && spotlightRoot.gameObject.activeSelf)
+        {
+            while (spotlightGroup.alpha > 0f)
+            {
+                spotlightGroup.alpha = Mathf.MoveTowards(spotlightGroup.alpha, 0f, fadeSpeed * Time.unscaledDeltaTime);
+                yield return null;
+            }
+            spotlightRoot.gameObject.SetActive(false);
         }
 
         if (handIcon != null) handIcon.gameObject.SetActive(false);

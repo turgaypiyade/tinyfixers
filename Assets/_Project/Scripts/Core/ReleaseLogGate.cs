@@ -1,10 +1,8 @@
 using UnityEngine;
 
 /// <summary>
-/// Launch hijyeni (Docs/ProductionPlan.md P5): RELEASE build'de Debug.Log seli kapatılır —
-/// projede yüzlerce ayrıntılı log var (special zinciri, cloud save, workshop...);
-/// cihazda hem maliyet hem gürültü. Warning/Error AÇIK kalır (Crashlytics gelince
-/// breadcrumb olarak da onlar değerli). Editor ve Development Build'de her şey açık.
+/// Release filter for Unity/SDK informational output. Project diagnostic calls are separately
+/// controlled by Resources/GameDiagnostics.asset, including their warnings and errors.
 /// </summary>
 public static class ReleaseLogGate
 {

@@ -221,10 +221,8 @@ public class BonusMovesService : MonoBehaviour
             elapsed += Time.unscaledDeltaTime;
             if (elapsed >= boardSettleTimeout)
             {
-                Debug.LogWarning(
-                    $"[BonusMoves] Board settle timeout. context={context}, " +
-                    $"IsBusy={board.IsBusy}, ActiveBackgroundJobs={board.ActiveBackgroundJobs}, " +
-                    $"BlockingBackgroundJobs={board.BlockingBackgroundJobs}, FlyingGoalOrbs={board.FlyingGoalOrbs}");
+                if (GameDiagnostics.CriticalErrors)
+                    Debug.LogWarning($"[BonusMoves] Board settle timeout. context={context}, " + $"IsBusy={board.IsBusy}, ActiveBackgroundJobs={board.ActiveBackgroundJobs}, " + $"BlockingBackgroundJobs={board.BlockingBackgroundJobs}, FlyingGoalOrbs={board.FlyingGoalOrbs}");
                 yield break;
             }
 

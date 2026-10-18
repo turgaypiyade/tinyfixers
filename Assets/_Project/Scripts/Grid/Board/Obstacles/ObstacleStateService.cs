@@ -206,6 +206,11 @@ public class ObstacleStateService : ISimObstacleQuery
     // başlar; ilk tüketilen vuruş çiçekleri döker (OnGrassFlowerShed) ve hücre setten çıkar.
     private readonly HashSet<int> _grassFlowerCells = new();
     public event Action<int> OnGrassFlowerShed;
+    private readonly HashSet<int> waterLilyCells = new();
+    public event Action<int> OnWaterLilyCleared;
+    // Null result: petals are gone, so use ordinary grass damage. Otherwise the flower owns the hit.
+    public Func<int, ObstacleHitContext, bool?> WaterLilyHitInterceptor;
+    public Func<int, int> WaterLilyRemainingHitsQuery;
 
     /// Set by BoardController → RaiseObstacleCreatedDynamic. Restore edilen beneath obstacle'a
     /// (x,y) görselini oluşturmak için çağrılır.
@@ -344,6 +349,7 @@ public class ObstacleStateService : ISimObstacleQuery
         _underTileBeneathMovable.Clear();
         _stampedBeneathByCell.Clear();
         _grassFlowerCells.Clear();
+        waterLilyCells.Clear();
         wallRemainingHits.Clear();
         _revealGraceUntil.Clear();
 
@@ -457,13 +463,28 @@ public class ObstacleStateService : ISimObstacleQuery
         if (IsInRevealGrace(idx))
             return new ObstacleHitResult(false, false, false, default, default, Array.Empty<int>());
 
+        if (id == ObstacleId.Grass && waterLilyCells.Contains(idx))
+        {
+            bool? handled = WaterLilyHitInterceptor?.Invoke(idx, context);
+            if (handled.HasValue)
+                return new ObstacleHitResult(handled.Value, handled.Value, !handled.Value,
+                    new ObstacleVisualChange(-1, ObstacleId.GrassWaterLily, false, 0, null), default, Array.Empty<int>());
+        }
+
         // Cargo (exitAtBottom): KIRILMAZ — hiçbir kaynak (match/special/booster) hasar veremez.
         // Yalnızca en alta inip board'dan çıkınca toplanır (BoardController bottom-exit akışı).
         // AMA üstündeki örtü (Grass/Oil — kargo hücreye girince beneath store'a iner, görsel olarak
         // üstte durur) vuruşu alır: aşağıdaki STACK KURALI bu erken dönüşün arkasında kaldığı için
         // kargo'nun geçtiği grass hiç kırılmıyordu (L61 Override+Override: dalga 1. satıra varmadan
         // tepedeki kargolar grass hücrelerine indi, 3 grass sağ kaldı).
-        if (IsExitAtBottomObstacle(id))
+        // Brandalı heykel: branda kalkana (renk toplaması bitene) dek hiçbir vuruş ilerletmez.
+        if (id == ObstacleId.TarpStatue && IsTarpStatueCoveredAt(x, y))
+            return new ObstacleHitResult(false, false, false, default, default, Array.Empty<int>());
+
+        // Bilardo topu da aynı kuralda (kırılmaz hareketli); cep sabit ve tamamen kırılmaz.
+        if (id == ObstacleId.BilliardPocket)
+            return new ObstacleHitResult(false, false, false, default, default, Array.Empty<int>());
+        if (IsUnbreakableMovableObstacle(id))
         {
             if (TryConsumeCoveringOverlayHit(idx, context, out var coverChange))
                 return new ObstacleHitResult(true, true, false, coverChange, default, Array.Empty<int>());
@@ -579,6 +600,10 @@ public class ObstacleStateService : ISimObstacleQuery
             // Interceptor null = exhausted → invincible, block hit without clearing
             return new ObstacleHitResult(false, false, true, default, default, Array.Empty<int>());
         }
+
+        // Ancient Seal only advances through tile collection, including for boosters.
+        if (id == ObstacleId.AncientSeal)
+            return new ObstacleHitResult(false, false, true, default, default, Array.Empty<int>());
 
         // Safe: hits are fully managed by SafeObstacleService via the interceptor (lock state,
         // break + reveal). Hit is consumed; cells are NOT cleared here (safe stays until broken).
@@ -764,7 +789,9 @@ public class ObstacleStateService : ISimObstacleQuery
             }
         }
 
-        remaining--;
+        // Boya kutusu piramidi: special vuruşu İKİ kutu düşürür (normal match bir).
+        int damage = id == ObstacleId.PaintCanBox && context == ObstacleHitContext.SpecialActivation ? 2 : 1;
+        remaining = Mathf.Max(0, remaining - damage);
         remainingHitsByOrigin[origin] = remaining;
 
         bool grassFlowerShed = id == ObstacleId.Grass && ShedGrassFlowerIfAny(origin);
@@ -902,6 +929,40 @@ public class ObstacleStateService : ISimObstacleQuery
             }
         }
 
+        return false;
+    }
+
+    /// Zemin katmanı mı (çamur, jel, su birikintisi — taşın altında çizilen UnderTileLayered)?
+    public bool IsGroundLayer(ObstacleId id)
+    {
+        if (id == ObstacleId.None) return false;
+        if (id == ObstacleId.Mud || id == ObstacleId.SpreadingGel) return true;
+        var def = library != null ? library.Get(id) : null;
+        return def != null && def.IsUnderTileBehavior;
+    }
+
+    /// Hücrenin en üst katmanının ALTINDA saklı duran ilk zemin katmanı (hareketli engelin altındaki ya da yığında
+    /// saklı). Örtü açılınca ortaya çıkan katmanın altındaki zeminin görünümünü kurmak için.
+    public bool TryGetGroundBeneathTopAt(int x, int y, out ObstacleId id, out int origin)
+    {
+        id = ObstacleId.None;
+        origin = -1;
+        if (!IsValidCell(x, y)) return false;
+        int idx = level.Index(x, y);
+        if (_underTileBeneathMovable.TryGetValue(idx, out var beneath) && IsGroundLayer(beneath.Id) && beneath.Remaining != 0)
+        {
+            id = beneath.Id;
+            origin = idx;
+            return true;
+        }
+        if (_stampedBeneathByCell.TryGetValue(idx, out var layers) && layers != null)
+            for (int i = layers.Count - 1; i >= 0; i--)
+                if (IsGroundLayer(layers[i].Id) && layers[i].Remaining != 0)
+                {
+                    id = layers[i].Id;
+                    origin = layers[i].Origin;
+                    return true;
+                }
         return false;
     }
 
@@ -1125,7 +1186,7 @@ public class ObstacleStateService : ISimObstacleQuery
     {
         if (id == ObstacleId.None) return false;
         if (id == ObstacleId.Tube) return true;
-        if (id == ObstacleId.Safe) return true;
+        if (id == ObstacleId.Safe || id == ObstacleId.AncientSeal) return true;
         // Magnet path/uç hücreleri MagnetObstacleService ile yönetilir (normal hit-stage'i yok).
         // Tüm magnet alanı işgal edilmiş sayılır → taş spawn olmaz. Uç hit alıp küçüldükçe
         // FreeMagnetCell o hücreyi None yapar → hücre açılır ve gravity ile dolar (alan "kapanır").
@@ -1173,6 +1234,10 @@ public class ObstacleStateService : ISimObstacleQuery
             return true;
 
         if (IsCoveredByLockingOverlay(level.Index(x, y)))
+            return true;
+
+        // Bilardo topu swap'lanamaz; yalnız kendi kuralıyla yuvarlanır (CascadeLogic.Billiard).
+        if (level.obstacles[level.Index(x, y)] == (int)ObstacleId.BilliardBall)
             return true;
 
         // Yalnızca sabit OverTileBlocker (Stone vb.) altındaki tile'ı kilitler.
@@ -1389,6 +1454,7 @@ public class ObstacleStateService : ISimObstacleQuery
             ShedGrassFlowerIfAny(origin);
 
         OnObstacleDestroyed?.Invoke(origin, originId);
+        if (originId == ObstacleId.Grass) CompleteWaterLily(origin);
 
         // Cover view'ı OnObstacleDestroyed dinleyicilerinde temizlendikten sonra beneath view'ı
         // oluştur. Aynı origin key'i hâlâ cover'a aitken dynamic create skip'leniyordu.
@@ -1482,7 +1548,18 @@ public class ObstacleStateService : ISimObstacleQuery
 
     /// Saydam örtü: altındaki katman görünür kalır (Grass, GrassFlower, Oil). Opak katmanın altı gizlidir.
     public static bool IsSeeThroughLayer(ObstacleId id) =>
-        id == ObstacleId.Grass || id == ObstacleId.GrassFlower || id == ObstacleId.Oil;
+        id == ObstacleId.Grass || id == ObstacleId.GrassFlower || id == ObstacleId.GrassWaterLily || id == ObstacleId.Oil;
+
+    public void RegisterWaterLilyCell(int cell) => waterLilyCells.Add(cell);
+    public void CollectWaterLilyCells(ICollection<int> into)
+    {
+        if (into == null) return;
+        foreach (int cell in waterLilyCells) into.Add(cell);
+    }
+    private void CompleteWaterLily(int cell)
+    {
+        if (waterLilyCells.Remove(cell)) OnWaterLilyCleared?.Invoke(cell);
+    }
 
     // ── Çiçekli çim (GrassFlower) ────────────────────────────────────────────
 
@@ -1833,11 +1910,44 @@ public class ObstacleStateService : ISimObstacleQuery
         return def != null && def.exitAtBottom;
     }
 
-    /// Kırılmaz kargo (exitAtBottom) bir Grass/Oil hücresine girmiş ve örtü onun altında saklanıyor mu?
-    /// Special'lar kargo hücresini etkileyemez sayar (CanAffectCell), ama örtü vuruş almalı.
-    public bool HasCoveringOverlayOnCargoAt(int x, int y)
+    // Kırılmaz HAREKETLİ engel: kargo (exitAtBottom) + bilardo topu. Hiçbir match/special/booster/kombo onu
+    // temizleyemez ya da hasar veremez; yalnız kendi çıkış yolu (taban / cep) toplar. Kırılmazlık kontrolü
+    // yapan her yer bunu kullanmalı (tekrar "IsExitAtBottomAt" yazma — o yalnız kargoya özgü davranış içindir).
+    private bool IsUnbreakableMovableObstacle(ObstacleId id)
+        => id == ObstacleId.BilliardBall || IsExitAtBottomObstacle(id);
+
+    public bool IsUnbreakableMovableAt(int x, int y)
     {
-        if (!IsValidCell(x, y) || !IsExitAtBottomAt(x, y)) return false;
+        if (!IsValidCell(x, y)) return false;
+        return IsUnbreakableMovableObstacle((ObstacleId)level.obstacles[level.Index(x, y)]);
+    }
+
+    /// Hücredeki engel hiçbir vuruşla ilerlemez mi (kırılmaz hareketli engel ya da bilardo cebi)?
+    /// Hedefleyiciler (PatchBot, kuş vb.) bu hücreyi engel hedefi saymamalı.
+    public bool IsUnbreakableObstacleAt(int x, int y)
+        => IsUnbreakableMovableAt(x, y) || GetObstacleIdAt(x, y) == ObstacleId.BilliardPocket;
+
+    /// Brandalı heykel origin'i hâlâ brandalı mı (TarpStatueService bağlar). Bağlı değilse brandasız sayılır.
+    public Func<int, bool> TarpStatueCoveredQuery;
+
+    public bool IsTarpStatueCoveredAt(int x, int y)
+    {
+        if (!IsValidCell(x, y) || TarpStatueCoveredQuery == null) return false;
+        int idx = level.Index(x, y);
+        return level.obstacles[idx] == (int)ObstacleId.TarpStatue && TarpStatueCoveredQuery(level.obstacleOrigins[idx]);
+    }
+
+    public bool IsBilliardBallAt(int x, int y)
+        => IsValidCell(x, y) && level.obstacles[level.Index(x, y)] == (int)ObstacleId.BilliardBall;
+
+    public bool IsBilliardPocketAt(int x, int y)
+        => IsValidCell(x, y) && level.obstacles[level.Index(x, y)] == (int)ObstacleId.BilliardPocket;
+
+    /// Kırılmaz hareketli engel (kargo/top) bir Grass/Oil hücresine girmiş ve örtü onun altında saklanıyor mu?
+    /// Special'lar o hücreyi etkileyemez sayar (CanAffectCell), ama örtü vuruş almalı.
+    public bool HasCoveringOverlayOnUnbreakableMovableAt(int x, int y)
+    {
+        if (!IsValidCell(x, y) || !IsUnbreakableMovableAt(x, y)) return false;
         return _underTileBeneathMovable.TryGetValue(level.Index(x, y), out var beneath)
             && (beneath.Id == ObstacleId.Grass || beneath.Id == ObstacleId.Oil)
             && beneath.Remaining != 0;
@@ -1865,6 +1975,18 @@ public class ObstacleStateService : ISimObstacleQuery
 
         ClearObstacleFromLevel(origin, id);
         return id;
+    }
+
+    // Bilardo topu cebe girdi: hücre verisini temizler (altındaki örtü geri açılır) ve OnObstacleDestroyed
+    // tetikler (hedef +1). Tile görseli BilliardBallService'te ayrıca animasyonla çıkarılır.
+    public bool CollectBilliardBallAt(int x, int y)
+    {
+        if (!IsBilliardBallAt(x, y)) return false;
+        int origin = level.obstacleOrigins[level.Index(x, y)];
+        if (origin < 0 || origin >= remainingHitsByOrigin.Length) return false;
+
+        ClearObstacleFromLevel(origin, ObstacleId.BilliardBall);
+        return true;
     }
 
     public void MoveObstacle(int fromX, int fromY, int toX, int toY)
@@ -1930,7 +2052,8 @@ public class ObstacleStateService : ISimObstacleQuery
 
             if (candidateTargets.Contains(toIdx))
             {
-                Debug.LogWarning($"[Obstacle] Movable batch hedef çakışması ({to.x},{to.y}) — sonraki hareket korunup atlandı.");
+                if (GameDiagnostics.CriticalErrors)
+                    Debug.LogWarning($"[Obstacle] Movable batch hedef çakışması ({to.x},{to.y}) — sonraki hareket korunup atlandı.");
                 continue;
             }
 
@@ -1959,7 +2082,8 @@ public class ObstacleStateService : ISimObstacleQuery
                 if (!IsMovableObstacleAt(tx, ty) || candidateSources.Contains(toIdx))
                     continue;
 
-                Debug.LogWarning($"[Obstacle] Movable batch hedefi ({tx},{ty}) canlı movable ile dolu — hareket korunup atlandı.");
+                if (GameDiagnostics.CriticalErrors)
+                    Debug.LogWarning($"[Obstacle] Movable batch hedefi ({tx},{ty}) canlı movable ile dolu — hareket korunup atlandı.");
                 candidateSources.Remove(candidates[i].fromIdx);
                 candidateTargets.Remove(toIdx);
                 candidates.RemoveAt(i);
@@ -2002,7 +2126,8 @@ public class ObstacleStateService : ISimObstacleQuery
             int ty = toIdx / level.width;
             if (IsMovableObstacleAt(tx, ty))
             {
-                Debug.LogWarning($"[Obstacle] Movable {id} hedefi ({tx},{ty}) başka bir movable ({destId}) tarafından dolu — yerleştirme atlandı.");
+                if (GameDiagnostics.CriticalErrors)
+                    Debug.LogWarning($"[Obstacle] Movable {id} hedefi ({tx},{ty}) başka bir movable ({destId}) tarafından dolu — yerleştirme atlandı.");
                 return;
             }
             else
@@ -2097,6 +2222,17 @@ public class ObstacleStateService : ISimObstacleQuery
         if (beneath.Id != ObstacleId.Grass && beneath.Id != ObstacleId.Oil)
             return false;
 
+        if (beneath.Id == ObstacleId.Grass && waterLilyCells.Contains(idx))
+        {
+            bool? handled = WaterLilyHitInterceptor?.Invoke(idx, context);
+            if (handled.HasValue)
+            {
+                change = new ObstacleVisualChange(-1, ObstacleId.GrassWaterLily, false, 0, null);
+                // A rejected hit must still protect the movable beneath this flower.
+                return true;
+            }
+        }
+
         var overlayDef = library != null ? library.Get(beneath.Id) : null;
         int remaining = beneath.Remaining;
         if (remaining < 0)
@@ -2116,6 +2252,7 @@ public class ObstacleStateService : ISimObstacleQuery
             _underTileBeneathMovable.Remove(idx);
             // Normal grass-clear ile aynı olay: goal sayımı + GrassOverlayService/obstacle view temizliği.
             OnObstacleDestroyed?.Invoke(idx, beneath.Id);
+            if (beneath.Id == ObstacleId.Grass) CompleteWaterLily(idx);
             change = new ObstacleVisualChange(idx, beneath.Id, cleared: true, remainingHits: 0, sprite: null);
         }
         else
@@ -2130,6 +2267,7 @@ public class ObstacleStateService : ISimObstacleQuery
 
     public int CountAliveOrigins(ObstacleId obstacleId)
     {
+        if (obstacleId == ObstacleId.GrassWaterLily) return waterLilyCells.Count;
         if (level == null || level.obstacles == null || level.obstacleOrigins == null)
             return 0;
 
@@ -2262,6 +2400,9 @@ public class ObstacleStateService : ISimObstacleQuery
     /// stage kuralına bakmak "1 vuruş var" der ve PatchBot'lar bitmiş makineye gider).
     public Func<bool> KeyGeneratorCanProduceQuery;
 
+    // Producer quota/HUD eligibility is independent of the permanent obstacle stage.
+    public Func<bool> HatLauncherCanProduceQuery;
+
     public int GetActiveMeaningfulHitsAt(int x, int y)
     {
         if (!IsValidCell(x, y)) return 0;
@@ -2270,7 +2411,12 @@ public class ObstacleStateService : ISimObstacleQuery
         var id = (ObstacleId)level.obstacles[idx];
         if (id == ObstacleId.None) return 0;
 
+        if (id == ObstacleId.AncientSeal) return 0;
         if (id == ObstacleId.Tube) return 1;
+
+        if (id == ObstacleId.HatLauncher)
+            return HatLauncherHitInterceptor != null && HatLauncherCanProduceQuery != null
+                   && HatLauncherCanProduceQuery() ? 1 : 0;
 
         if (id == ObstacleId.KeyGenerator)
             return KeyGeneratorCanProduceQuery != null && KeyGeneratorCanProduceQuery() ? 1 : 0;
@@ -2285,7 +2431,7 @@ public class ObstacleStateService : ISimObstacleQuery
         if (def == null) return 0;
 
         int current = ResolveRemainingHitsForCell(idx, def);
-        int count = 0;
+        int count = waterLilyCells.Contains(idx) ? Mathf.Max(0, WaterLilyRemainingHitsQuery?.Invoke(idx) ?? 4) : 0;
 
         for (int r = current; r > 0; r--)
         {
@@ -2298,6 +2444,10 @@ public class ObstacleStateService : ISimObstacleQuery
         // Dolabın gerçek dayanıklılığı item'larda: remainingHits hep 2 (kapalı/açık) kalırken açık dolap
         // special vuruşu başına 2 item kırar, son item'la yıkılır. Bu olmadan hedefleme 8 item'lı dolabı
         // "1-2 vuruşluk" sanıp ilk bottan sonra listeden düşürüyordu (Override+PatchBot'ta tek bot gidiyordu).
+        // Boya kutusu piramidi: special vuruşu başına 2 kutu düşer.
+        if (id == ObstacleId.PaintCanBox)
+            return (count + 1) / 2;
+
         if (id == ObstacleId.Wardrobe && count > 0)
         {
             int origin = level.obstacleOrigins[idx];
@@ -2552,6 +2702,12 @@ public class ObstacleStateService : ISimObstacleQuery
         wallRemainingHits[(id, origin)] = Mathf.Max(1, remaining);
     }
 
+    /// All collection stages completed: count one Ancient Seal goal.
+    public void NotifyAncientSealBroken(int origin)
+    {
+        OnObstacleDestroyed?.Invoke(origin, ObstacleId.AncientSeal);
+    }
+
     /// Safe kırıldı → goal (Obstacle/Safe) ilerlesin. NotifyTubeFullyDestroyed analoğu.
     public void NotifySafeBroken(int origin)
     {
@@ -2638,7 +2794,7 @@ public class ObstacleStateService : ISimObstacleQuery
     {
         bool added = TrySpawnSingleCellObstacleAt(x, y, ObstacleId.Oil);
         if (added)
-            Debug.Log($"[Oil] Added at ({x},{y}). Total oil: {CountAliveOrigins(ObstacleId.Oil)}");
+            {}
         return added;
     }
 
@@ -2695,7 +2851,6 @@ public class ObstacleStateService : ISimObstacleQuery
                 if (IsGroundLayer(bottom.Id, bottom.Remaining)) return false;   // zemin zaten örtülü
                 layers.Insert(0, new StampedBeneath(obstacleId, idx, bottom.Origin, hits));
             }
-            Debug.Log($"[{obstacleId}] Added at the bottom of a {layers.Count}-layer stack at ({x},{y}).");
             return true;
         }
 
@@ -2704,7 +2859,6 @@ public class ObstacleStateService : ISimObstacleQuery
             return false;
 
         RegisterStampedBeneath(idx, obstacleId, idx, overOrigin);
-        Debug.Log($"[{obstacleId}] Added beneath over-tile obstacle at ({x},{y}). Total alive/stamped: {CountAliveOrStampedOrigins(obstacleId)}");
         return true;
     }
 
@@ -2729,7 +2883,6 @@ public class ObstacleStateService : ISimObstacleQuery
         if (!IsOilAt(x, y)) return false;
         int idx = level.Index(x, y);
         ClearObstacleFromLevel(idx, ObstacleId.Oil);
-        Debug.Log($"[Oil] Removed at ({x},{y}). Total oil: {CountAliveOrigins(ObstacleId.Oil)}");
         return true;
     }
 

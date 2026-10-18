@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: SafariConfig
   m_EditorClassIdentifier: Assembly-CSharp::SafariConfig
   eventId: tiny_safari
-  eventName: Tiny Safari
+  eventName: TIRMANIŞ
   lossIcon: {fileID: 21300000, guid: 81df43ff4e0bb4bc987a43acc5e0ae17, type: 3}
   pitstopCount: 7
   minLevelGate: 50

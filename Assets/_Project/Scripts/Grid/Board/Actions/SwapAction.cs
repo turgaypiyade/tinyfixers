@@ -17,6 +17,8 @@ public class SwapAction : BoardAction
     public override IEnumerator ExecuteVisuals(ActionSequencer sequencer)
     {
         if (tileA == null || tileB == null) yield break;
+        int lifetimeA = tileA.LifetimeVersion;
+        int lifetimeB = tileB.LifetimeVersion;
         tileA.SetRuntimeState(TileRuntimeState.Swapping);
         tileB.SetRuntimeState(TileRuntimeState.Swapping);
 
@@ -26,8 +28,10 @@ public class SwapAction : BoardAction
         }
         finally
         {
-            if (tileA != null && tileA) tileA.SetRuntimeState(TileRuntimeState.Idle);
-            if (tileB != null && tileB) tileB.SetRuntimeState(TileRuntimeState.Idle);
+            if (tileA != null && tileA.IsCurrentLifetime(lifetimeA) && tileA.RuntimeState == TileRuntimeState.Swapping)
+                tileA.SetRuntimeState(TileRuntimeState.Idle);
+            if (tileB != null && tileB.IsCurrentLifetime(lifetimeB) && tileB.RuntimeState == TileRuntimeState.Swapping)
+                tileB.SetRuntimeState(TileRuntimeState.Idle);
         }
     }
 }

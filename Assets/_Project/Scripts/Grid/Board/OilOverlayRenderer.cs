@@ -136,7 +136,8 @@ public sealed class OilOverlayRenderer
     {
         if (board?.ObstacleStateService != null)
         {
-            Refresh(board.ObstacleStateService.GetAllOilCells());
+            // Keep incoming-flight cells hidden, just like every other overlay refresh.
+            board.RefreshOilOverlays();
             return;
         }
 

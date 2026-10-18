@@ -78,7 +78,7 @@ public static class SpecialCellUtils
         // Etkilenemeyen hücrede yine de VURULMASI gereken tek katmanlar: magnet ucu ve kırılmaz
         // kargonun üstündeki örtü (Grass/Oil). Kargo kırılmaz; vuruş örtüye gider (ObstacleStateService).
         if (obstacles == null
-            || (!obstacles.IsMagnetEndpoint(x, y) && !obstacles.HasCoveringOverlayOnCargoAt(x, y)))
+            || (!obstacles.IsMagnetEndpoint(x, y) && !obstacles.HasCoveringOverlayOnUnbreakableMovableAt(x, y)))
             return false;
 
         impactCells.Add(new Vector2Int(x, y));
@@ -108,7 +108,7 @@ public static class SpecialCellUtils
             return;
 
         var obstacles = board.ObstacleStateService;
-        if (obstacles != null && obstacles.IsExitAtBottomAt(x, y))
+        if (obstacles != null && obstacles.IsUnbreakableMovableAt(x, y))
             return;
 
         if (!SpecialUtils.CanAffectCell(board, x, y))

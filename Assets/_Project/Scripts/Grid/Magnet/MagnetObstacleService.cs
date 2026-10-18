@@ -52,6 +52,9 @@ public class MagnetObstacleService : MonoBehaviour
     private static Sprite loadedLockerSprite;
     private static bool triedLoadLockerSprite;
 
+    /// Special kafesi görseli (Inspector'daki specialLockerSprite). LaserCannon kafesi de bunu kullanır — tek kaynak.
+    internal Sprite CageSprite => ResolveCageSprite();
+
     // Authored cage sprite: inspector field first, else loaded from Resources/Magnet/SpecialLocker.
     private Sprite ResolveCageSprite()
     {

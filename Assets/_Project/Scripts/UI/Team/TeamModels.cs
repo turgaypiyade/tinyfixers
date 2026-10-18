@@ -23,6 +23,9 @@ public sealed class TeamInfo
 public sealed class TeamChatMessage
 {
     public string senderName;
+    public string senderId;     // gerçek oyuncu mesajı (bot/sistem mesajında boş) — şikâyet/engelleme
+    public string messageId;
+    public string teamId;
     public Sprite avatar;
     public string text;
     public string timeLabel;

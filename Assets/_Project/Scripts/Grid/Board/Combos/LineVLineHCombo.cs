@@ -42,7 +42,6 @@ public sealed class LineVLineHCombo
         RegisterOrigins(rt);
 
         var centerCell = GetCenterCell(rt);
-        Debug.Log($"[LineVLineHCombo] delegate cross origin=virtual({centerCell.x},{centerCell.y})");
 
         // Ownership direction:
         // LineV+LineH combo decides the cross center.
@@ -77,8 +76,6 @@ public sealed class LineVLineHCombo
                 new Vector2Int(center.X, center.Y),
                 center));
         }
-
-        Debug.Log($"[LineVLineHCombo] PRE-FINALIZE center=virtual({centerCell.x},{centerCell.y}) affected={rt.Context.Affected.Count} lightningTargets={rt.Context.LightningVisualTargets.Count} strikes={rt.Context.LightningLineStrikes.Count}");
         return result;
     }
 

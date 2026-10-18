@@ -23,3 +23,14 @@ MonoBehaviour:
   - {fileID: -1602835991, guid: d549b445e4f7d4240a809d3614fea3a2, type: 3}
   - {fileID: -842979251, guid: d549b445e4f7d4240a809d3614fea3a2, type: 3}
   - {fileID: -553701343, guid: d549b445e4f7d4240a809d3614fea3a2, type: 3}
+  characterIds:
+  - ram
+  - bear
+  - pig
+  - rabbit
+  - monkey
+  - ram
+  - bear
+  - monkey
+  - rabbit
+  - pig

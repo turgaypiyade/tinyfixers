@@ -122,7 +122,6 @@ public class LightningBeam : MonoBehaviour
 
     public void Init(Vector3 start, Vector3 end)
     {
-        Debug.Log($"[LightningBeam.Init] start={start} end={end}");
 
         a = start;
         b = end;

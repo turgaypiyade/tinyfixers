@@ -109,8 +109,6 @@ public sealed class EnergyContainerService : MonoBehaviour
 
         totalGroupReleased = 0;
         board.ObstacleStateService.EnergyContainerHitInterceptor = HandleEnergyContainerHit;
-
-        Debug.Log($"[EnergyContainer] Bound. totalCapacity={TotalCapacity}");
     }
 
     private void HandleEnergyContainerHit(int originIndex)
@@ -155,11 +153,6 @@ public sealed class EnergyContainerService : MonoBehaviour
 
         if (logHits)
         {
-            Debug.Log(
-                $"[EnergyContainer] origin={originIndex} " +
-                $"totalReleased={totalGroupReleased}/{capacity} " +
-                $"remainingEnergy={remainingEnergy} collectible={collectible} " +
-                $"goalExists={goalExists} exhausted={isGroupExhausted}");
         }
 
         if (energyFx != null)

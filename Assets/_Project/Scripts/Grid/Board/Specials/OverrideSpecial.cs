@@ -30,7 +30,6 @@ public sealed class OverrideSpecial
 
         if (!TryResolveTiles(rt, out var overrideTile, out var partnerTile))
             return result;
-        Debug.Log($"[Override.Execute] origin=({overrideTile.X},{overrideTile.Y}) partner={(partnerTile != null ? $"({partnerTile.X},{partnerTile.Y})/{partnerTile.GetSpecial()}" : "null")} finalize={rt.FinalizeAtEnd}");
         if (rt.Context.OverrideFanoutOrigin != null && rt.Context.OverrideFanoutOrigin != overrideTile)
         {
             AddAffected(rt, overrideTile);
@@ -84,7 +83,6 @@ public sealed class OverrideSpecial
 
         SpecialCellUtils.CollectAllOfType(rt.Context.OverrideFanoutTargets, rt.Board, type, excludeSpecials: true);
         SpecialCellUtils.AddAllOfType(rt.Context.Affected, rt.Context, rt.Board, type, excludeSpecials: true);
-        Debug.Log($"[Override.Execute] fanoutType={type} forced={rt.ForcedPartnerType.HasValue} fanoutTargets={rt.Context.OverrideFanoutTargets.Count} affected={rt.Context.Affected.Count}");
         if (rt.FinalizeAtEnd)
             Finalize(rt, result);
 
@@ -145,7 +143,6 @@ public sealed class OverrideSpecial
         if (rt.Context.OverrideRadialClearDelays != null &&
             rt.Context.OverrideRadialClearDelays.Count > 0)
         {
-            Debug.Log($"[Override.Finalize] origin={(rt.Context.OverrideFanoutOrigin != null ? $"({rt.Context.OverrideFanoutOrigin.X},{rt.Context.OverrideFanoutOrigin.Y})" : "null")} radialDelays={(rt.Context.OverrideRadialClearDelays != null ? rt.Context.OverrideRadialClearDelays.Count : 0)} affected={rt.Context.Affected.Count}");
             rt.FireOverrideOverrideSpecialVisuals?.Invoke(rt.Context.Affected, rt.Context.OverrideRadialClearDelays);
         }
 

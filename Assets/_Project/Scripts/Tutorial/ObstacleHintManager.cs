@@ -8,7 +8,7 @@ public class ObstacleHintManager : MonoBehaviour
     private const string PrefKeyPrefix = "obstacle_hint_seen_";
 
     [Tooltip("Kapalıyken hiçbir hint gösterilmez. Hazır olduğunda aç.")]
-    [SerializeField] private bool enableHints = false;
+    [SerializeField] private bool enableHints = true;
     [SerializeField] private ObstacleHintLibrary hintLibrary;
     [SerializeField] private ObstacleLibrary obstacleLibrary;
     [SerializeField] private TutorialOverlayController overlay;
@@ -92,6 +92,12 @@ public class ObstacleHintManager : MonoBehaviour
             // Renkli alet tehditleri (sarı/kırmızı/mavi/yeşil) TEK kural → biri anlatılınca hepsi görülmüş.
             if (IsColoredToolThreat(id))
                 for (var c = ObstacleId.ToolThreatYellow; c <= ObstacleId.ToolThreatGreen; c++) MarkHintSeen(c);
+            // Renkli sandıklar da tek kural → biri anlatılınca hepsi görülmüş.
+            if (IsColorCrate(id))
+                for (var c = ObstacleId.ColorCrateYellow; c <= ObstacleId.ColorCrateGreen; c++) MarkHintSeen(c);
+            // Jel kartuşunun 4 yönü tek engel → biri anlatılınca hepsi görülmüş.
+            if (BoardController.IsGelLauncher(id))
+                for (var c = ObstacleId.GelLauncherUp; c <= ObstacleId.GelLauncherRight; c++) MarkHintSeen(c);
             yield return HighlightObstacles(id);
         }
     }
@@ -164,6 +170,7 @@ public class ObstacleHintManager : MonoBehaviour
     {
         var seen = new HashSet<ObstacleId>();
         var result = new List<ObstacleId>();
+        bool anyGelLauncher = false;
 
         var levelData = board?.ActiveLevelData;
         if (levelData == null) return result;
@@ -180,6 +187,17 @@ public class ObstacleHintManager : MonoBehaviour
         board.ObstacleStateService?.CollectStampedBeneathIds(beneath);
         foreach (var id in beneath)
             AddId(id);
+
+        // Flower IDs become Grass in the runtime level; their registered variants still need hints.
+        var flowerCells = new List<int>();
+        board.ObstacleStateService?.CollectWaterLilyCells(flowerCells);
+        if (flowerCells.Count > 0) AddId(ObstacleId.GrassWaterLily);
+        flowerCells.Clear();
+        board.ObstacleStateService?.CollectGrassFlowerCells(flowerCells);
+        if (flowerCells.Count > 0) AddId(ObstacleId.GrassFlower);
+
+        if (levelData.ancientSeals != null && levelData.ancientSeals.Length > 0)
+            AddId(ObstacleId.AncientSeal);
 
         if (levelData.safes != null)
         {
@@ -236,6 +254,12 @@ public class ObstacleHintManager : MonoBehaviour
         void AddId(ObstacleId id)
         {
             if (id == ObstacleId.None) return;
+            // Jel kartuşu yönleri tek ipucu: ilk görülen yön örnek olarak gösterilir.
+            if (BoardController.IsGelLauncher(id))
+            {
+                if (anyGelLauncher) return;
+                anyGelLauncher = true;
+            }
             if (seen.Add(id))
                 result.Add(id);
         }
@@ -243,6 +267,9 @@ public class ObstacleHintManager : MonoBehaviour
 
     private static bool IsColoredToolThreat(ObstacleId id)
         => id >= ObstacleId.ToolThreatYellow && id <= ObstacleId.ToolThreatGreen;
+
+    private static bool IsColorCrate(ObstacleId id)
+        => id >= ObstacleId.ColorCrateYellow && id <= ObstacleId.ColorCrateGreen;
 
     public static bool IsHintSeen(ObstacleId id) =>
         PlayerPrefs.GetInt(PrefKeyPrefix + (int)id, 0) == 1;

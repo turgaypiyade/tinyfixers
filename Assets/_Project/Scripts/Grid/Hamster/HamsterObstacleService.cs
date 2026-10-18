@@ -9,17 +9,22 @@ using UnityEngine.UI;
 /// yaşar, altı boşalınca düşer, oyuncu yanındaki taşla yer değiştirebilir). Bu servis yalnız BESLENME + KARE +
 /// ZIPLAMA'yı yönetir.
 ///  - Her vuruş (4-komşu eşleşme / special; ObstacleStateService.HamsterHitInterceptor) = 1 lokma, hasar yok.
-///  - Yanak kademeleri: Idle → Cheeks1 → Cheeks2 → Cheeks3. Kalıcı sayaç YOK (karakteri küçültüyordu):
+///  - Her lokmada yeme animasyonu: Eat1 (ağzı açık) → Eat2 (yanaklar dolu) → Eat3 (keyifle çiğner) → Idle.
+///    Kalıcı sayaç YOK (karakteri küçültüyordu):
 ///    her lokmada kalan sayı hamsterin üstünden havaya uçarak söner (eşik 10 → 10, 9, ... 1).
-///  - Doyunca: hedef sayacı +1 (TopHud) → PatchBot önceliğiyle hedef seçilir → hamster hedefin yakınındaki bir
-///    taşla yer değiştirerek oraya zıplar → indiği hücrenin çevresi (3x3) vurulur. Hedef tamamlandıysa ayrılır.
-///  - Level'da hamster HEDEFİ YOKSA: ilk doyumda bir kez zıplar (3x3), inişten sonra ayrılır (yardımcı karakter).
+///  - Her hamsterin kendi lokma sayısı var (LevelData.hamsterSatietyByCell, editörde yerleştirirken; 0 → level/
+///    kütüphane varsayılanı). Doyunca: hedef sayacı +1 (TopHud; hedef = tahtadaki hamster sayısı) → PatchBot
+///    önceliğiyle hedef seçilir → hamster oraya zıplar → indiği hücrenin çevresi (3x3) vurulur → AYRILIR.
+///    Hedefli ya da hedefsiz level'da davranış aynı (birden çok hamster çakışmasız).
 /// Sahne kurulumu yok: GridSpawner.DrawHamsterObstacles → Ensure(board).Build.
 /// </summary>
 public sealed class HamsterObstacleService : MonoBehaviour
 {
     private const string SpritePath = "Hamster/Hamster_";
     private const float ChompSeconds = 0.12f;
+    // Yeme animasyonu (her lokma): ağzı açık lokma → yanaklar dolu → keyifle çiğner, sonra beklemeye döner.
+    private static readonly string[] EatFrames = { "Eat1", "Eat2", "Eat3" };
+    private const float EatFrameSeconds = 0.11f;
     private const float PopSeconds = 0.18f;
     private const float CrouchSeconds = 0.16f;
     private const float JumpSeconds = 0.42f;
@@ -36,6 +41,7 @@ public sealed class HamsterObstacleService : MonoBehaviour
     private sealed class HamsterState
     {
         public int food;
+        public int satiety = 7;       // bu hamsterin lokma eşiği (konduğu hücreden)
         public bool jumping;
         public bool leaveRequested;   // hedefsiz level: zıplama bitti, sıradaki "vuruş" ayrılıştır
         public Coroutine biteRoutine;
@@ -43,8 +49,10 @@ public sealed class HamsterObstacleService : MonoBehaviour
 
     private BoardController board;
     private ObstacleStateService boundState;
-    private int satiety = 7;
-    private int feedsCompleted;
+    private int satiety = 7;          // level varsayılanı (hücre değeri yoksa)
+    private int[] satietyByCell;
+    private int levelWidth;
+    private int feedsCompleted;       // doyup ayrılan hamster sayısı (hedef sayacı)
     private bool decorated;
     private readonly Dictionary<TileView, HamsterState> hamsters = new();
     private readonly Dictionary<string, Sprite> sprites = new();
@@ -67,6 +75,8 @@ public sealed class HamsterObstacleService : MonoBehaviour
         var def = level.obstacleLibrary != null ? level.obstacleLibrary.Get(ObstacleId.Hamster) : null;
         satiety = Mathf.Max(1, level.hamsterSatietyOverride > 0 ? level.hamsterSatietyOverride
             : def != null ? def.hamsterSatiety : 7);
+        satietyByCell = level.hamsterSatietyByCell;
+        levelWidth = level.width;
         feedsCompleted = 0;
         decorated = false;
         Bind(board.ObstacleStateService);
@@ -113,7 +123,10 @@ public sealed class HamsterObstacleService : MonoBehaviour
     private HamsterState Ensure(TileView tile)
     {
         if (hamsters.TryGetValue(tile, out var h)) return h;
-        h = new HamsterState();
+        // Lokma eşiği konduğu hücreden: giydirme açılışın ilk karesinde, hamster henüz yerinden oynamamışken.
+        int cell = tile.Y * levelWidth + tile.X;
+        int own = satietyByCell != null && cell >= 0 && cell < satietyByCell.Length ? satietyByCell[cell] : 0;
+        h = new HamsterState { satiety = Mathf.Max(1, own > 0 ? own : satiety) };
         hamsters[tile] = h;
         SetFrame(tile, "Idle");
         return h;
@@ -138,29 +151,20 @@ public sealed class HamsterObstacleService : MonoBehaviour
         }
         if (h.jumping) return false;   // uçarken lokma sayılmaz
 
-        SpawnFloatingNumber(tile, satiety - h.food);   // bu lokmadan ÖNCE kalan (10, 9, ... 1)
+        SpawnFloatingNumber(tile, h.satiety - h.food);   // bu lokmadan ÖNCE kalan (10, 9, ... 1)
         h.food++;
-        if (h.food < satiety)
+        if (h.food < h.satiety)
         {
             PlayBite(tile, h);
             return false;
         }
 
+        // Doydu: hedefe +1 (hedef = hamster sayısı), bir kez zıplar (3x3), inişten sonra ayrılır.
         h.food = 0;
         feedsCompleted++;
         board.TopHud?.SetHamsterFeedsCompleted(feedsCompleted);
-
-        int goal = board.TopHud != null ? board.TopHud.GetHamsterGoalAmount() : 0;
-        if (goal > 0 && feedsCompleted >= goal)
-        {
-            StartLeave(tile, h);
-            hamsters.Remove(tile);
-            return true;
-        }
-
-        // Hedef yoksa: tek zıplama, sonra ayrılış (goal == 0). Hedef varsa: zıpla, devam et.
         if (!h.jumping)
-            StartCoroutine(CoJump(tile, h, leaveAfter: goal <= 0));
+            StartCoroutine(CoJump(tile, h, leaveAfter: true));
         return false;
     }
 
@@ -174,19 +178,16 @@ public sealed class HamsterObstacleService : MonoBehaviour
     private IEnumerator CoBite(TileView tile, HamsterState h)
     {
         var rt = Icon(tile);
-        SetFrame(tile, "Chomp");
-        yield return Pop(rt, 1.08f, ChompSeconds);
+        for (int i = 0; i < EatFrames.Length; i++)
+        {
+            if (h.jumping || tile == null) yield break;
+            SetFrame(tile, EatFrames[i]);
+            // İlk kare lokmayı kapar (belirgin pop), sonrakiler çiğneme ritmi (hafif).
+            yield return Pop(rt, i == 0 ? 1.1f : 1.05f, i == 0 ? ChompSeconds : EatFrameSeconds);
+        }
         if (h.jumping || tile == null) yield break;
-        SetFrame(tile, CheekFrame(h.food));
-        yield return Pop(rt, 1.1f, PopSeconds);
+        SetFrame(tile, "Idle");
         h.biteRoutine = null;
-    }
-
-    private string CheekFrame(int food)
-    {
-        if (food <= 0) return "Idle";
-        int level = 1 + Mathf.Min(2, (food - 1) * 3 / Mathf.Max(1, satiety));
-        return "Cheeks" + level;
     }
 
     // ── Zıplama: hedef seç → yer değiştir → uç → in (3x3 vur) ─────────
@@ -198,7 +199,7 @@ public sealed class HamsterObstacleService : MonoBehaviour
         using var job = board.BeginJob(BoardController.BoardJobKind.ObstacleSpread);
 
         var icon = Icon(tile);
-        SetFrame(tile, "Cheeks3");
+        SetFrame(tile, "Eat2");   // doydu: yanaklar dolu
         yield return Pop(icon, 1.12f, PopSeconds);
         if (tile == null) yield break;
 
@@ -286,7 +287,7 @@ public sealed class HamsterObstacleService : MonoBehaviour
             RequestLeave(tile, h);
             yield break;
         }
-        if (tile != null) SetFrame(tile, CheekFrame(h.food));
+        if (tile != null) SetFrame(tile, "Idle");
         h.jumping = false;
     }
 
@@ -475,7 +476,8 @@ public sealed class HamsterObstacleService : MonoBehaviour
         }
         catch (System.Exception e)
         {
-            Debug.LogWarning($"[Hamster] hedef seçilemedi: {e.Message}");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogWarning($"[Hamster] hedef seçilemedi: {e.Message}");
             return null;
         }
     }
@@ -498,7 +500,7 @@ public sealed class HamsterObstacleService : MonoBehaviour
         var img = ghostGo.GetComponent<Image>();
         img.preserveAspect = true;
         img.raycastTarget = false;
-        img.sprite = Frame("Cheeks3");
+        img.sprite = Frame("Eat2");
         StartCoroutine(CoLeave(img));
     }
 
@@ -578,7 +580,7 @@ public sealed class HamsterObstacleService : MonoBehaviour
         var rt = (RectTransform)go.transform;
         rt.SetParent(parent, false);
         float cell = board.TileSize;
-        rt.sizeDelta = new Vector2(cell * 0.8f, cell * 0.5f);
+        rt.sizeDelta = new Vector2(cell * 1.2f, cell * 0.8f);
         rt.position = icon.position;
         rt.anchoredPosition += new Vector2(0f, cell * 0.25f);
         rt.SetAsLastSibling();
@@ -587,17 +589,21 @@ public sealed class HamsterObstacleService : MonoBehaviour
             text.font = CommonPopupSkin.Shared.font;
         text.text = value.ToString();
         text.alignment = TextAlignmentOptions.Center;
-        text.fontSize = cell * 0.42f;
-        text.color = Color.white;
-        text.outlineWidth = 0.3f;
-        text.outlineColor = new Color32(70, 30, 10, 255);
+        text.textWrappingMode = TextWrappingModes.NoWrap;
+        text.overflowMode = TextOverflowModes.Overflow;
+        text.fontSize = cell * 0.62f;
+        text.color = new Color32(255, 46, 46, 255);   // canlı kırmızı: taşların üstünde okunur
         text.raycastTarget = false;
+        // Fontun yumuşak/buğulu varsayılan materyali yerine net materyal + kalın koyu kontur
+        // (doğrudan outlineWidth setter'ı yeni yaratılan yazıda materyal yokken uygulanmıyordu).
+        CrispTextMaterial.Apply(text);
+        TmpOutline.Apply(text, 0.32f, new Color32(60, 0, 8, 255));
         StartCoroutine(CoFloat(text, cell));
     }
 
     private static IEnumerator CoFloat(TMP_Text text, float cell)
     {
-        const float seconds = 0.8f;
+        const float seconds = 1.0f;
         var rt = text.rectTransform;
         Vector2 start = rt.anchoredPosition;
         for (float t = 0f; t < seconds; t += Time.deltaTime)
@@ -607,7 +613,7 @@ public sealed class HamsterObstacleService : MonoBehaviour
             rt.anchoredPosition = start + Vector2.up * (cell * 0.9f * (1f - (1f - k) * (1f - k)));
             float pop = k < 0.15f ? Mathf.Lerp(0.6f, 1.2f, k / 0.15f) : Mathf.Lerp(1.2f, 1f, Mathf.Clamp01((k - 0.15f) / 0.2f));
             rt.localScale = Vector3.one * pop;
-            text.alpha = 1f - Mathf.Clamp01((k - 0.55f) / 0.45f);
+            text.alpha = 1f - Mathf.Clamp01((k - 0.65f) / 0.35f);
             yield return null;
         }
         if (text != null) Destroy(text.gameObject);

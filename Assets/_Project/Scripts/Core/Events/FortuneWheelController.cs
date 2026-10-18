@@ -121,11 +121,6 @@ public class FortuneWheelController : MonoBehaviour
         if (spinButton  != null) spinButton.onClick.AddListener(OnSpinClicked);
         if (claimButton != null) claimButton.onClick.AddListener(OnClaimClicked);
         if (panelRoot   != null) panelRoot.SetActive(false);
-
-        Debug.Log($"[FortuneWheel] Awake — " +
-                  $"freeSpinConfig={SafeName(freeSpinConfig)} " +
-                  $"freeDefaultConfig={SafeName(freeSpinConfig != null ? freeSpinConfig.defaultConfig : null)} " +
-                  $"freeDirectConfig={SafeName(freeSpinDirectConfig)}", this);
     }
 
     // ── Public API ───────────────────────────────────────────────────────────
@@ -240,14 +235,10 @@ public class FortuneWheelController : MonoBehaviour
     {
         if (innerWheel == null) return;
         var config = GetDisplayConfig();
-        Debug.Log($"[Wheel] PlaceIcons config={SafeName(config)} " +
-                  $"free={SafeName(freeSpinConfig)}(def={SafeName(freeSpinConfig != null ? freeSpinConfig.defaultConfig : null)})(direct={SafeName(freeSpinDirectConfig)}) " +
-                  $"paid={SafeName(paidSpinConfig)}(def={SafeName(paidSpinConfig != null ? paidSpinConfig.defaultConfig : null)})(direct={SafeName(paidSpinDirectConfig)})");
         if (config == null)
         {
-            Debug.LogWarning("[Wheel] PlaceIcons: config NULL — LeveledWheelRewardConfig içindeki defaultConfig atanmamış " +
-                             "veya DailySlotRewardConfig build'a dahil edilmemiş. " +
-                             "FortuneWheelController inspector'ında freeSpinDirectConfig / paidSpinDirectConfig'i ata.");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogWarning("[Wheel] PlaceIcons: config NULL — LeveledWheelRewardConfig içindeki defaultConfig atanmamış " + "veya DailySlotRewardConfig build'a dahil edilmemiş. " + "FortuneWheelController inspector'ında freeSpinDirectConfig / paidSpinDirectConfig'i ata.");
             return;
         }
 
@@ -358,12 +349,8 @@ public class FortuneWheelController : MonoBehaviour
 
         if (config == null || config.rewards == null || config.rewards.Count == 0)
         {
-            Debug.LogWarning(
-                $"[FortuneWheel] Spin blocked: reward config missing/empty. " +
-                $"free={isFreeSpin} coins={PlayerWallet.Coins} cost={paidSpinCost} " +
-                $"freeConfig={SafeName(freeSpinConfig)} freeDirect={SafeName(freeSpinDirectConfig)} " +
-                $"paidConfig={SafeName(paidSpinConfig)} paidDirect={SafeName(paidSpinDirectConfig)}",
-                this);
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogWarning($"[FortuneWheel] Spin blocked: reward config missing/empty. " + $"free={isFreeSpin} coins={PlayerWallet.Coins} cost={paidSpinCost} " + $"freeConfig={SafeName(freeSpinConfig)} freeDirect={SafeName(freeSpinDirectConfig)} " + $"paidConfig={SafeName(paidSpinConfig)} paidDirect={SafeName(paidSpinDirectConfig)}", this);
             RefreshSpinButtonState();
             return;
         }
@@ -373,47 +360,34 @@ public class FortuneWheelController : MonoBehaviour
             activeSpinConfig = config;
             PlayerPrefs.SetString(KeyLastSpinTime, DateTime.UtcNow.Ticks.ToString());
             PlayerPrefs.Save();
-            Debug.Log(
-                $"[FortuneWheel] Spin accepted. free=True coins={PlayerWallet.Coins} " +
-                $"cost={paidSpinCost} config={SafeName(config)} rewards={config.rewards.Count}",
-                this);
         }
         else
         {
             int coinsBefore = PlayerWallet.Coins;
             if (coinsBefore < paidSpinCost)
             {
-                Debug.LogWarning(
-                    $"[FortuneWheel] Paid spin blocked: not enough coins. " +
-                    $"coins={coinsBefore} cost={paidSpinCost}",
-                    this);
+                if (GameDiagnostics.CriticalErrors)
+                    Debug.LogWarning($"[FortuneWheel] Paid spin blocked: not enough coins. " + $"coins={coinsBefore} cost={paidSpinCost}", this);
                 RefreshSpinButtonState();
                 return;
             }
 
             if (!PlayerWallet.SpendCoins(paidSpinCost))
             {
-                Debug.LogWarning(
-                    $"[FortuneWheel] Paid spin blocked: SpendCoins failed. " +
-                    $"coinsBefore={coinsBefore} currentCoins={PlayerWallet.Coins} cost={paidSpinCost}",
-                    this);
+                if (GameDiagnostics.CriticalErrors)
+                    Debug.LogWarning($"[FortuneWheel] Paid spin blocked: SpendCoins failed. " + $"coinsBefore={coinsBefore} currentCoins={PlayerWallet.Coins} cost={paidSpinCost}", this);
                 RefreshSpinButtonState();
                 return;
             }
             activeSpinConfig = config;
-            Debug.Log(
-                $"[FortuneWheel] Spin accepted. free=False coinsBefore={coinsBefore} " +
-                $"coinsAfter={PlayerWallet.Coins} cost={paidSpinCost} config={SafeName(config)} rewards={config.rewards.Count}",
-                this);
         }
 
         int count = Mathf.Min(activeSpinConfig.rewards.Count, 8);
         selectedIndex = PickRandomIndex(count, activeSpinConfig);
         if (selectedIndex < 0)
         {
-            Debug.LogWarning(
-                $"[FortuneWheel] Spin blocked: selectedIndex invalid. count={count} config={SafeName(activeSpinConfig)}",
-                this);
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogWarning($"[FortuneWheel] Spin blocked: selectedIndex invalid. count={count} config={SafeName(activeSpinConfig)}", this);
             RefreshSpinButtonState();
             return;
         }
@@ -431,7 +405,6 @@ public class FortuneWheelController : MonoBehaviour
 
         int   count        = Mathf.Min(activeSpinConfig.rewards.Count, 8);
         float segmentAngle = 360f / count;
-        Debug.Log($"[FortuneWheel] {(isFreeSpin ? "FREE" : "PAID")} selectedIndex={selectedIndex} reward={selectedReward?.fallbackName}");
 
         float landingOffset = UnityEngine.Random.Range(-segmentAngle * 0.25f, segmentAngle * 0.25f);
         float targetCW = (fullRotations + 1) * 360f
@@ -715,11 +688,10 @@ public class FortuneWheelController : MonoBehaviour
         bool leveledOk = leveled != null && leveled.defaultConfig != null;
         bool directOk  = direct != null;
         if (!leveledOk && !directOk)
-            Debug.LogWarning(
-                $"[FortuneWheel] {label} çözülemiyor! " +
-                $"LeveledConfig='{SafeName(leveled)}' defaultConfig={SafeName(leveled != null ? leveled.defaultConfig : null)}, " +
-                $"DirectConfig={SafeName(direct)}. " +
-                $"En az birini ata.", this);
+            {
+                if (GameDiagnostics.CriticalErrors)
+                    Debug.LogWarning($"[FortuneWheel] {label} çözülemiyor! " + $"LeveledConfig='{SafeName(leveled)}' defaultConfig={SafeName(leveled != null ? leveled.defaultConfig : null)}, " + $"DirectConfig={SafeName(direct)}. " + $"En az birini ata.", this);
+            }
     }
 
     [ContextMenu("Test Open")]
@@ -730,7 +702,6 @@ public class FortuneWheelController : MonoBehaviour
     {
         PlayerPrefs.DeleteKey(KeyLastSpinTime);
         PlayerPrefs.Save();
-        Debug.Log("[FortuneWheel] Daily spin reset.");
     }
 #endif
 }

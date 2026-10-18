@@ -365,6 +365,7 @@ public static class SimRunner
         if (level.tubes != null && level.tubes.Length > 0) ids.Add(ObstacleId.Tube);
         if (level.magnets != null && level.magnets.Length > 0) ids.Add(ObstacleId.Magnet);
         if (level.safes != null && level.safes.Length > 0) ids.Add(ObstacleId.Safe);
+        if (level.ancientSeals != null && level.ancientSeals.Length > 0) ids.Add(ObstacleId.AncientSeal);
         if (level.goals != null)
             foreach (var goal in level.goals)
                 if (goal.targetType == LevelGoalTargetType.Obstacle) ids.Add(goal.obstacleId);
@@ -379,6 +380,14 @@ public static class SimRunner
             }
             switch (id)
             {
+                case ObstacleId.AncientSeal:
+                    fidelity = SimGoalFidelity.NotSimulated;
+                    warnings.Add("AncientSeal: tahtadan renk sırasıyla taş toplama davranışı modellenmiyor.");
+                    break;
+                case ObstacleId.LaserCannon:
+                    fidelity = SimGoalFidelity.NotSimulated;
+                    warnings.Add("LaserCannon: special nişan/kafes döngüsü modellenmiyor.");
+                    break;
                 case ObstacleId.EnergyContainer:
                 case ObstacleId.HatLauncher:
                 case ObstacleId.KeyGenerator:
@@ -392,6 +401,8 @@ public static class SimRunner
                 case ObstacleId.OverrideBatteryBox:
                 case ObstacleId.SpreadingGel:
                 case ObstacleId.Oil:
+                case ObstacleId.BilliardBall:
+                case ObstacleId.BilliardPocket:
                     fidelity = SimGoalFidelity.NotSimulated;
                     warnings.Add($"{id}: üretim/yayılma/özel servis davranışı eksik; hedef olmasa da sonucu etkiler.");
                     break;
@@ -402,6 +413,7 @@ public static class SimRunner
                 case ObstacleId.Tube:
                 case ObstacleId.Wardrobe:
                 case ObstacleId.Cargo:
+                case ObstacleId.TarpStatue:   // taş evresi kütüphaneden doğru; branda toplaması modellenmiyor
                     warnings.Add($"{id}: servis zamanlaması/özel durumları yaklaşık modelleniyor.");
                     break;
             }

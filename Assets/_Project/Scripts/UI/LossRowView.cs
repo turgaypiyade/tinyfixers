@@ -9,7 +9,7 @@ using UnityEngine.UI;
 public sealed class LossRowView : MonoBehaviour
 {
     [SerializeField] private Image icon;
-    [Tooltip("Kaybedilen şeyin ADI (ör. 'Safari ilerlemesi'). Oyuncu ne kaybettiğini bundan anlar.")]
+    [Tooltip("Kaybedilen şeyin ADI (ör. 'TIRMANIŞ ilerlemesi'). Oyuncu ne kaybettiğini bundan anlar.")]
     [SerializeField] private TMP_Text label;
     [SerializeField] private TMP_Text amount;
     [Tooltip("Sağ-alt köşe rozeti: gerçekleşmişse checkmark, gerçekleşmemişse cancel ikonu.")]

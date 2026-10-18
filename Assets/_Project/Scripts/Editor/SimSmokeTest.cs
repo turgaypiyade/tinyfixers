@@ -22,7 +22,8 @@ public static class SimSmokeTest
     {
         SimRules.ClearCache();
         var levels = PickSpread(5);
-        if (levels.Count == 0) { Debug.LogError("[SimCheck] Level bulunamadı."); return; }
+        if (levels.Count == 0) { if (GameDiagnostics.EditorTools)
+            Debug.LogError("[SimCheck] Level bulunamadı."); return; }
 
         var sb = new StringBuilder();
         var problems = new List<string>();
@@ -57,7 +58,8 @@ public static class SimSmokeTest
         else
             foreach (var p in problems) sb.AppendLine("  • " + p);
 
-        Debug.Log(sb.ToString());
+        if (GameDiagnostics.EditorTools)
+            Debug.Log(sb.ToString());
     }
 
     // ── 1b) Tek level derin inceleme ─────────────────────────────────────────
@@ -70,10 +72,12 @@ public static class SimSmokeTest
     public static void CheckOne()
     {
         string name = System.Environment.GetEnvironmentVariable("SIM_LEVEL");
-        if (string.IsNullOrEmpty(name)) { Debug.LogError("[SimCheck] SIM_LEVEL ortam değişkeni boş."); return; }
+        if (string.IsNullOrEmpty(name)) { if (GameDiagnostics.EditorTools)
+            Debug.LogError("[SimCheck] SIM_LEVEL ortam değişkeni boş."); return; }
 
         var level = AssetDatabase.LoadAssetAtPath<LevelData>($"{Dir}/{name}.asset");
-        if (level == null) { Debug.LogError($"[SimCheck] {name} bulunamadı."); return; }
+        if (level == null) { if (GameDiagnostics.EditorTools)
+            Debug.LogError($"[SimCheck] {name} bulunamadı."); return; }
 
         SimRules.ClearCache();
 
@@ -95,7 +99,8 @@ public static class SimSmokeTest
         sb.AppendLine();
         sb.Append(SimRunner.FormatStats(SimRunner.Run(level, 300, SimPlayerProfile.Average, 7)));
 
-        Debug.Log(sb.ToString());
+        if (GameDiagnostics.EditorTools)
+            Debug.Log(sb.ToString());
         Trace(level, seed: 4242, maxMovesToPrint: 0);
     }
 
@@ -106,7 +111,8 @@ public static class SimSmokeTest
     {
         SimRules.ClearCache();
         var level = PickSpread(1).FirstOrDefault();
-        if (level == null) { Debug.LogError("[SimTrace] Level bulunamadı."); return; }
+        if (level == null) { if (GameDiagnostics.EditorTools)
+            Debug.LogError("[SimTrace] Level bulunamadı."); return; }
         Trace(level, seed: 12345, maxMovesToPrint: 6);
     }
 
@@ -160,7 +166,8 @@ public static class SimSmokeTest
                       $"combo={game.Totals.CombosActivated} en uzun zincir={game.Totals.MaxChain}");
         sb.AppendLine($"   {GoalsLine(game)}");
 
-        Debug.Log(sb.ToString());
+        if (GameDiagnostics.EditorTools)
+            Debug.Log(sb.ToString());
     }
 
     // ── Yardımcılar ──────────────────────────────────────────────────────────

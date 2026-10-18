@@ -19,6 +19,23 @@ public static class WonderRevealSetup
     const string ScenePath = "Assets/_Project/Scenes/WonderRevealTest.unity";
     const string WelderDir = "Assets/_Project/Art/UI/WonderCharacters/WDImgs/";
 
+    [MenuItem("TinyFixers/Wonders/Preview Rust Restoration (Play Mode)")]
+    static void PreviewRustRestoration()
+    {
+        var overlay = Object.FindFirstObjectByType<WonderRevealOverlay>(FindObjectsInactive.Include);
+        var wonder = AssetDatabase.LoadAssetAtPath<WonderDefinition>("Assets/_Project/Settings/Wonders/Wonder_mis1.asset");
+        if (overlay == null || wonder == null)
+        {
+            if (GameDiagnostics.EditorTools)
+                Debug.LogWarning("Restoration preview requires MainMenu in Play Mode and Wonder_mis1.");
+            return;
+        }
+        overlay.PreviewRustRestoration(wonder);
+    }
+
+    [MenuItem("TinyFixers/Wonders/Preview Rust Restoration (Play Mode)", true)]
+    static bool CanPreviewRustRestoration() => Application.isPlaying;
+
     [MenuItem("TinyFixers/Wonders/Setup Reveal Test")]
     public static void Setup()
     {
@@ -72,13 +89,13 @@ public static class WonderRevealSetup
         var img = imgGo.GetComponent<Image>();
         img.sprite = sprite;
         img.preserveAspect = false; // fitter zaten oranı korur
-        img.material = new Material(shader) { name = "WonderReveal_mis1" };
 
         var fitter = imgGo.GetComponent<AspectRatioFitter>();
         fitter.aspectMode = AspectRatioFitter.AspectMode.EnvelopeParent;
         fitter.aspectRatio = (float)sprite.texture.width / sprite.texture.height;
 
         var view = imgGo.GetComponent<WonderRevealView>();
+        view.ConfigureShader(shader);
         view.wonderId = "mis1";
         view.totalStages = 5;
         view.previewReveal = 0f; // başlangıçta hologram göster
@@ -179,7 +196,8 @@ public static class WonderRevealSetup
             ? AssetDatabase.LoadAssetAtPath<WonderBirdProfile>(BirdProfilePath) : null;
         if (style == AgentStyle.Bird && (birdProfile == null || birdProfile.body == null))
         {
-            Debug.LogError("Bird profile or body sprite missing: " + BirdProfilePath);
+            if (GameDiagnostics.EditorTools)
+                Debug.LogError("Bird profile or body sprite missing: " + BirdProfilePath);
             return;
         }
         var placeholder = AssetDatabase.LoadAssetAtPath<Sprite>(

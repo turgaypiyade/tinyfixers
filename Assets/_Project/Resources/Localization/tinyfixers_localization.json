@@ -5,6 +5,250 @@
       "code": "tr",
       "entries": [
         {
+          "key": "hint_obstacle_rhodes_statue_name",
+          "value": "Rodos Heykeli"
+        },
+        {
+          "key": "hint_obstacle_rhodes_statue",
+          "value": "Bu 2×2 heykel yalnız special ile hasar alır. Her vuruşta bir aşaması parçalanır; dört special vuruşuyla tamamen kalkar. Normal eşleşmeler ve güçlendiriciler hasar vermez."
+        },
+        {
+          "key": "welcome_back_reward_title",
+          "value": "TEKRAR HOŞ GELDİN!"
+        },
+        {
+          "key": "comeback_boost_title",
+          "value": "SENİ ÖZLEDİK!"
+        },
+        {
+          "key": "comeback_boost_message",
+          "value": "Hoş geldin! {0} dakika boyunca tüm jokerler ve oyun başı güçlendiriciler SINIRSIZ. Süre \"Başla\"ya bastığında başlar."
+        },
+        {
+          "key": "comeback_boost_start",
+          "value": "BAŞLA"
+        },
+        {
+          "key": "gearcup_unlock",
+          "value": "{0}. seviyede açılır."
+        },
+        {
+          "key": "gearcup_need_team",
+          "value": "Dişli Kupası’na katılmak için önce bir takıma katıl."
+        },
+        {
+          "key": "gearcup_team_locked",
+          "value": "Bu etkinlikte takımın sabittir. Yeni takımınla bir sonraki etkinliğe katılabilirsin."
+        },
+        {
+          "key": "gearcup_settling",
+          "value": "Etkinlik sonucu güncelleniyor. Lütfen biraz sonra tekrar dene."
+        },
+        {
+          "key": "gearcup_gears",
+          "value": "Dişli"
+        },
+        {
+          "key": "gearcup_next_event",
+          "value": "Yeni etkinliğe katılmak için dokun"
+        },
+        {
+          "key": "gearcup_live_hint",
+          "value": "Bölüm kazan, takımına dişli ekle!"
+        },
+        {
+          "key": "gearcup_scoring_rules",
+          "value": "Kırılan her normal taş +1 dişli verir. Dişliler yalnız bölüm kazanılınca takım puanına eklenir. Vazgeçersen o bölümde topladığın dişlileri kaybedersin."
+        },
+        {
+          "key": "gearcup_reward_live",
+          "value": "Etkinlik sonunda dişli katkısı olan takım üyelerine verilir."
+        },
+        {
+          "key": "gearcup_result",
+          "value": "Takımın etkinliği {0}. sırada tamamladı!"
+        },
+        {
+          "key": "gearcup_join_message",
+          "value": "Takımınla dişli topla! En yüksek puana ulaşan ilk üç takım ödül kazanır."
+        },
+        {
+          "key": "gearcup_join_later",
+          "value": "Şimdi Değil"
+        },
+        {
+          "key": "gearcup_title",
+          "value": "DİŞLİ KUPASI"
+        },
+        {
+          "key": "gearcup_preview",
+          "value": "Tasarım önizlemesi · örnek puanlar"
+        },
+        {
+          "key": "gearcup_contribution",
+          "value": "SENİN KATKIN"
+        },
+        {
+          "key": "gearcup_your_team",
+          "value": "SENİN TAKIMIN"
+        },
+        {
+          "key": "gearcup_ends_in",
+          "value": "KALAN SÜRE"
+        },
+        {
+          "key": "gearcup_howto",
+          "value": "Takımınla dişli topla. En yüksek toplam puana ulaşan ilk üç takım farklı ödüller kazanır."
+        },
+        {
+          "key": "gearcup_preview_note",
+          "value": "Bu ekran tasarım önizlemesidir. Puanlar ve ödüller örnektir; gerçek ödül verilmez."
+        },
+        {
+          "key": "gearcup_reward_preview",
+          "value": "Örnek ödül paketi · gerçek ödül verilmez"
+        },
+        {
+          "key": "gearcup_reward_item",
+          "value": "Etkinlik ödülü"
+        },
+        {
+          "key": "gearcup_team_total",
+          "value": "Takım toplamı: {0} dişli"
+        },
+        {
+          "key": "gearcup_members_preview",
+          "value": "Takım yarışında üyelerin katkıları burada listelenecek."
+        },
+        {
+          "key": "gearcup_rank_1",
+          "value": "1."
+        },
+        {
+          "key": "gearcup_rank_2",
+          "value": "2."
+        },
+        {
+          "key": "gearcup_rank_3",
+          "value": "3."
+        },
+        {
+          "key": "gearcup_sample_team_1",
+          "value": "Cıvata Ekibi"
+        },
+        {
+          "key": "gearcup_sample_team_2",
+          "value": "Turbo Kuyruklar"
+        },
+        {
+          "key": "gearcup_sample_team_3",
+          "value": "Bakır Yavrular"
+        },
+        {
+          "key": "gearcup_sample_team_4",
+          "value": "Kıvılcım Ekibi"
+        },
+        {
+          "key": "gearcup_sample_team_5",
+          "value": "Altın Kanatlar"
+        },
+        {
+          "key": "boss_howto_match",
+          "value": "Taşları eşleştir,\nsaldırını güçlendir!"
+        },
+        {
+          "key": "boss_howto_exchange",
+          "value": "Hamlen bitince vurursun.\nRakip de karşılık verir!"
+        },
+        {
+          "key": "boss_howto_finish",
+          "value": "Canın ve hamlen bitmeden\nrakipleri yen, hedefleri tamamla!"
+        },
+        {
+          "key": "boss_howto_header",
+          "value": "BOSS DÜELLOSU"
+        },
+        {
+          "key": "boss_howto_page",
+          "value": "{0} / 3"
+        },
+        {
+          "key": "boss_howto_you",
+          "value": "SEN"
+        },
+        {
+          "key": "boss_howto_enemy",
+          "value": "RAKİP"
+        },
+        {
+          "key": "boss_howto_start",
+          "value": "Düelloya başlamak için dokun"
+        },
+        {
+          "key": "boss_howto_next",
+          "value": "Devam etmek için dokun"
+        },
+        {
+          "key": "boss_howto_player_title",
+          "value": "Taşları kır, güç topla!"
+        },
+        {
+          "key": "boss_howto_player_body",
+          "value": "Soldaki karakter sensin. Taşları eşleştir; kırılan her taş saldırına güç katar. Hamlen bitince rakibe vurursun."
+        },
+        {
+          "key": "boss_howto_player_tip",
+          "value": "Özel taşları birleştir: daha çok taş kır, daha güçlü vur!"
+        },
+        {
+          "key": "boss_howto_enemy_title",
+          "value": "Rakip karşılık verir!"
+        },
+        {
+          "key": "boss_howto_enemy_body",
+          "value": "Sağdaki karakter rakibin. Saldırından sonra ayakta kalırsa sana bir kez vurur. Yeşil çubuk senin canın, mor çubuk rakibin canıdır."
+        },
+        {
+          "key": "boss_howto_enemy_tip",
+          "value": "Rakip tahtana engel de atabilir. Engelleri temizleyerek yer aç!"
+        },
+        {
+          "key": "boss_howto_enemy_tip_basic",
+          "value": "Güçlü hamlelerle rakibi daha az karşı saldırıda yen!"
+        },
+        {
+          "key": "boss_howto_win_title",
+          "value": "Canın ve hamlen bitmeden kazan!"
+        },
+        {
+          "key": "boss_howto_win_body",
+          "value": "Tüm rakipleri yen ve kalan seviye hedeflerini tamamla. Canın sıfıra iner ya da hamlelerin biterse düelloyu kaybedersin."
+        },
+        {
+          "key": "boss_howto_shields",
+          "value": "Yeşil kalkanı kırmak seni korur. Dikkat: mor kalkanı kırmak rakibe koruma verir!"
+        },
+        {
+          "key": "boss_howto_player_shield",
+          "value": "Yeşil kalkanı kır: gelen hasara karşı koruma kazan!"
+        },
+        {
+          "key": "boss_howto_enemy_shield",
+          "value": "Dikkat: mor kalkanı kırmak rakibe koruma verir!"
+        },
+        {
+          "key": "boss_howto_win_tip",
+          "value": "Her hamle değerli. Büyük eşleşmeler ve özel taşlarla gücünü artır!"
+        },
+        {
+          "key": "shop_purchase_thanks_life",
+          "value": "Teşekkür hediyesi: Can"
+        },
+        {
+          "key": "shop_purchase_thanks_pending",
+          "value": "Teşekkür hediyesi: Can\nYer açılınca sonraki denemende"
+        },
+        {
           "key": "bridge_tap_continue",
           "value": "Devam etmek için dokun"
         },
@@ -51,6 +295,54 @@
         {
           "key": "bridge_play",
           "value": "OYNA"
+        },
+        {
+          "key": "harvest_title",
+          "value": "BOSTAN HASADI"
+        },
+        {
+          "key": "harvest_sign_top",
+          "value": "Bostan"
+        },
+        {
+          "key": "harvest_sign_bottom",
+          "value": "Hasadı"
+        },
+        {
+          "key": "harvest_floor",
+          "value": "Hasat {0}/{1}"
+        },
+        {
+          "key": "harvest_no_trowel",
+          "value": "Seviye geç, kürek kazan!"
+        },
+        {
+          "key": "harvest_finished",
+          "value": "Hasat tamam! Harika iş çıkardın."
+        },
+        {
+          "key": "harvest_play",
+          "value": "OYNA"
+        },
+        {
+          "key": "harvest_howto_title",
+          "value": "Nasıl oynanır?"
+        },
+        {
+          "key": "harvest_howto_step1",
+          "value": "Seviye geç, kürek kazan!"
+        },
+        {
+          "key": "harvest_howto_step2",
+          "value": "Kareleri kaz, gizli ürünleri bul!"
+        },
+        {
+          "key": "harvest_howto_step3",
+          "value": "{0} hasadı tamamla, ödülleri kap!"
+        },
+        {
+          "key": "harvest_loss_trowel",
+          "value": "Kürek"
         },
         {
           "key": "bridge_you",
@@ -126,7 +418,7 @@
         },
         {
           "key": "rising_title",
-          "value": "Yükseliş"
+          "value": "TIRMANIŞ"
         },
         {
           "key": "safari_lost_title",
@@ -201,6 +493,18 @@
           "value": "Devam Et <space=0.5em><sprite name=\"goldmoney\">{0}"
         },
         {
+          "key": "level_end_billiard_stuck_title",
+          "value": "Top Takıldı!"
+        },
+        {
+          "key": "level_end_billiard_stuck_text",
+          "value": "Top cebe ulaşamıyor. Topu taşı ve devam et."
+        },
+        {
+          "key": "level_end_billiard_rescue_cost",
+          "value": "Topu Taşı <space=0.5em><sprite name=\"goldmoney\">{0}"
+        },
+        {
           "key": "level_end_loss_title",
           "value": "Şunları kaybedeceksin"
         },
@@ -210,11 +514,19 @@
         },
         {
           "key": "level_end_loss_safari",
-          "value": "Safari"
+          "value": "TIRMANIŞ"
         },
         {
           "key": "level_end_loss_alliance",
           "value": "İttifak güçleri"
+        },
+        {
+          "key": "level_end_loss_message",
+          "value": "Vazgeçersen {0} elinden gidecek!"
+        },
+        {
+          "key": "level_end_loss_and",
+          "value": " ve "
         },
         {
           "key": "level_end_success_title_level",
@@ -330,23 +642,23 @@
         },
         {
           "key": "tutorial_emitter_created_desc",
-          "value": "Rocket oluştu! Aktive etmek için sürükle."
+          "value": "4 taşı yan yana getir, Roket oluştur!"
         },
         {
           "key": "tutorial_patchbot_created_desc",
-          "value": "PatchBot oluştu! Aktive etmek için sürükle."
+          "value": "4 taşı kare yap, PatchBot oluştur! Uçup hedefe çarpar."
         },
         {
           "key": "tutorial_emitter_activated_desc",
-          "value": "Rocket tüm bir satırı temizler. Herhangi bir taşla değiştir!"
+          "value": "Roketi kaydır: bütün bir sırayı temizler!"
         },
         {
           "key": "tutorial_pulsecore_created_desc",
-          "value": "PulseCore oluştu! Çevresini patlatır, aktive etmek için sürükle."
+          "value": "Taşları L ya da T şeklinde birleştir, PulseCore oluştur! Çevresini patlatır."
         },
         {
           "key": "tutorial_override_created_desc",
-          "value": "Spark Orb oluştu! Aynı renkteki tüm taşları temizler."
+          "value": "5 taşı düz bir sırada birleştir, Spark Orb oluştur! Aynı renkteki tüm taşları temizler."
         },
         {
           "key": "workshop_repair_button",
@@ -649,6 +961,14 @@
           "value": "Kasa"
         },
         {
+          "key": "hint_obstacle_ancientseal_name",
+          "value": "Antik Mühür"
+        },
+        {
+          "key": "hint_obstacle_ancientseal",
+          "value": "Tahtanın herhangi bir yerinde, gösterilen renkten sayaçtaki sayı kadar taş topla. Her taş yalnızca bir mühre gider. Üç renk tamamlanınca mühür açılır. Doğrudan vuruşlar sayılmaz."
+        },
+        {
           "key": "hint_obstacle_cargo",
           "value": "Kargoyu en alta indir. Dibe ulaşınca hedefe sayılır."
         },
@@ -759,6 +1079,70 @@
         {
           "key": "hint_obstacle_metalwall_name",
           "value": "Metal Duvar"
+        },
+        {
+          "key": "hint_obstacle_grass",
+          "value": "Çim taşları örter. Yanında eşleşme yap ya da special kullan. Çiçekli çimde önce çiçekler dökülür, sonra çim kalkar."
+        },
+        {
+          "key": "hint_obstacle_grass_name",
+          "value": "Çim"
+        },
+        {
+          "key": "hint_obstacle_grassflower",
+          "value": "Çiçekli çim iki vuruşta temizlenir: ilk vuruş çiçekleri döker, ikincisi çimi kaldırır."
+        },
+        {
+          "key": "hint_obstacle_grassflower_name",
+          "value": "Çiçekli Çim"
+        },
+        {
+          "key": "hint_obstacle_overridebattery",
+          "value": "Yanında her renkten eşleşme yaparak bataryayı doldur. Dolunca bütün tahtaya güçlü bir dalga yayar!"
+        },
+        {
+          "key": "hint_obstacle_overridebattery_name",
+          "value": "Override Bataryası"
+        },
+        {
+          "key": "hint_obstacle_keygenerator",
+          "value": "Vurdukça anahtar üretir. Anahtarları eşleştirip topla!"
+        },
+        {
+          "key": "hint_obstacle_keygenerator_name",
+          "value": "Anahtar Makinesi"
+        },
+        {
+          "key": "hint_obstacle_eggbird",
+          "value": "Yumurta iki vuruşta çatlar. İçinden çıkan kuşlar tahtadaki üç hedefe uçup vurur!"
+        },
+        {
+          "key": "hint_obstacle_eggbird_name",
+          "value": "Kuş Yumurtası"
+        },
+        {
+          "key": "hint_obstacle_hamster",
+          "value": "Hamsterın yanında eşleşme yaparak onu besle. Doyunca hedeflerin yanına zıplar ve etrafını kırar!"
+        },
+        {
+          "key": "hint_obstacle_hamster_name",
+          "value": "Aç Hamster"
+        },
+        {
+          "key": "hint_obstacle_gellauncher",
+          "value": "Kartuş yalnız special ile kırılır. İkinci vuruşta kapağı fırlar, önündeki her şeyi kırar ve yolu jelle boyar!"
+        },
+        {
+          "key": "hint_obstacle_gellauncher_name",
+          "value": "Jel Kartuşu"
+        },
+        {
+          "key": "hint_obstacle_paintcanbox",
+          "value": "Yanında yaptığın her eşleşme bir boya kutusu, her special iki kutu düşürür. Tüm kutular düşünce kasa açılır!"
+        },
+        {
+          "key": "hint_obstacle_paintcanbox_name",
+          "value": "Boya Piramidi"
         },
         {
           "key": "progress_timer_days_hours",
@@ -1201,6 +1585,34 @@
           "value": "Wonder Karıştırıcı!"
         },
         {
+          "key": "joker_title_paint",
+          "value": "Wonder Boya Kovası!"
+        },
+        {
+          "key": "joker_hint_paint",
+          "value": "Bir taşa dokun: o renk 3 hamle boyunca tahtadan çıkar!"
+        },
+        {
+          "key": "joker_paint_reject_goal",
+          "value": "Bu renk hedeflerinde var, başka bir renk seç!"
+        },
+        {
+          "key": "joker_paint_reject_min",
+          "value": "Bu seviyede en az iki renk kalmalı."
+        },
+        {
+          "key": "joker_paint_reject_active",
+          "value": "Boya kovası zaten çalışıyor!"
+        },
+        {
+          "key": "joker_paint_reject_tile",
+          "value": "Normal bir taşa dokun."
+        },
+        {
+          "key": "shop_reward_paint",
+          "value": "Boya Kovası"
+        },
+        {
           "key": "lives_offer_title",
           "value": "Canın Bitti"
         },
@@ -1598,7 +2010,7 @@
         },
         {
           "key": "rising_intro_title",
-          "value": "SAFARİ BAŞLIYOR!"
+          "value": "TIRMANIŞ BAŞLIYOR!"
         },
         {
           "key": "rising_intro_ready",
@@ -1638,7 +2050,7 @@
         },
         {
           "key": "safari_reward_event",
-          "value": "SAFARİ TAMAMLANDI"
+          "value": "TIRMANIŞ TAMAMLANDI"
         },
         {
           "key": "safari_reward_title",
@@ -1670,7 +2082,7 @@
         },
         {
           "key": "safari_join_title",
-          "value": "SAFARİ"
+          "value": "TIRMANIŞ"
         },
         {
           "key": "safari_join_prize",
@@ -1762,7 +2174,7 @@
         },
         {
           "key": "rising_icon_label",
-          "value": "YÜKSELİŞ"
+          "value": "TIRMANIŞ"
         },
         {
           "key": "prelevel_booster_select",
@@ -1937,6 +2349,122 @@
           "value": "Terms&Privacy"
         },
         {
+          "key": "settings_terms_title",
+          "value": "Şartlar ve Gizlilik"
+        },
+        {
+          "key": "settings_terms_body",
+          "value": "Belgeleri okuyabilir ya da hesabını silebilirsin."
+        },
+        {
+          "key": "settings_terms_open_terms",
+          "value": "Kullanım Şartları"
+        },
+        {
+          "key": "settings_terms_open_privacy",
+          "value": "Gizlilik Politikası"
+        },
+        {
+          "key": "legal_title",
+          "value": "Hoş geldin!"
+        },
+        {
+          "key": "legal_body",
+          "value": "Oynamaya başlamadan önce Kullanım Şartları'nı ve Gizlilik Politikası'nı okuyup kabul etmen gerekiyor."
+        },
+        {
+          "key": "legal_body_update",
+          "value": "Kullanım Şartları'mızı ve Gizlilik Politikamızı güncelledik. Devam etmek için okuyup kabul etmen gerekiyor."
+        },
+        {
+          "key": "legal_accept",
+          "value": "Kabul Ediyorum"
+        },
+        {
+          "key": "legal_open_web",
+          "value": "Web'de Aç"
+        },
+        {
+          "key": "moderation_title",
+          "value": "Topluluk"
+        },
+        {
+          "key": "moderation_menu_body",
+          "value": "Bu mesajla ilgili ne yapmak istersin?"
+        },
+        {
+          "key": "moderation_report",
+          "value": "Şikâyet Et"
+        },
+        {
+          "key": "moderation_report_thanks",
+          "value": "Teşekkürler! Şikâyetini aldık; en geç 24 saat içinde inceleyeceğiz."
+        },
+        {
+          "key": "moderation_report_failed",
+          "value": "Şikâyet gönderilemedi. İnternet bağlantını kontrol edip tekrar dene."
+        },
+        {
+          "key": "moderation_block",
+          "value": "Oyuncuyu Engelle"
+        },
+        {
+          "key": "moderation_block_confirm",
+          "value": "{0} engellensin mi? Bu oyuncunun mesajlarını artık görmeyeceksin."
+        },
+        {
+          "key": "moderation_blocked",
+          "value": "Oyuncu engellendi."
+        },
+        {
+          "key": "moderation_name_rejected",
+          "value": "Bu ad uygunsuz kelimeler içeriyor. Lütfen başka bir ad seç."
+        },
+        {
+          "key": "settings_delete_account",
+          "value": "Hesabımı Sil"
+        },
+        {
+          "key": "settings_delete_account_sub",
+          "value": "İlerlemen kalıcı olarak silinir"
+        },
+        {
+          "key": "legal_card_terms_sub",
+          "value": "Oyunun kuralları ve hakların"
+        },
+        {
+          "key": "legal_card_privacy_sub",
+          "value": "Verilerini nasıl kullanıyor ve koruyoruz"
+        },
+        {
+          "key": "legal_card_viewed",
+          "value": "Göz attın"
+        },
+        {
+          "key": "account_delete_title",
+          "value": "Hesabı Sil"
+        },
+        {
+          "key": "account_delete_body",
+          "value": "Hesabın ve tüm verilerin kalıcı olarak silinecek: ilerlemen, altınların, jokerlerin, satın aldıkların, takım üyeliğin ve sohbet mesajların. Bu işlem geri alınamaz."
+        },
+        {
+          "key": "account_delete_confirm",
+          "value": "Kalıcı Olarak Sil"
+        },
+        {
+          "key": "account_delete_working",
+          "value": "Hesabın siliniyor… Bitince oyun baştan açılacak."
+        },
+        {
+          "key": "account_delete_failed",
+          "value": "Hesap silinemedi. İnternet bağlantını kontrol edip tekrar dene ya da hello@wondigames.com adresine yaz."
+        },
+        {
+          "key": "account_delete_offline",
+          "value": "Hesabı silmek için internet bağlantısı gerekiyor. Bağlanıp tekrar dene."
+        },
+        {
           "key": "settings_title",
           "value": "Ayarlar"
         },
@@ -1954,7 +2482,7 @@
         },
         {
           "key": "settings_hint",
-          "value": "Hin"
+          "value": "Hint"
         },
         {
           "key": "settings_notifications",
@@ -2169,6 +2697,114 @@
           "value": "Miyav Piramidi"
         },
         {
+          "key": "wonder_mis5_name",
+          "value": "Büyük Pati Seddi"
+        },
+        {
+          "key": "wonder_mis6_name",
+          "value": "Kuyruk Kanyonu"
+        },
+        {
+          "key": "wonder_mis5_task_1",
+          "value": "Zemini Hazırla"
+        },
+        {
+          "key": "wonder_mis5_task_2",
+          "value": "Temeli Güçlendir"
+        },
+        {
+          "key": "wonder_mis5_task_3",
+          "value": "Duvarları Yükselt"
+        },
+        {
+          "key": "wonder_mis5_task_4",
+          "value": "Merdivenleri Onar"
+        },
+        {
+          "key": "wonder_mis5_task_5",
+          "value": "Geçitleri Aç"
+        },
+        {
+          "key": "wonder_mis5_task_6",
+          "value": "Gözetleme Kulelerini Onar"
+        },
+        {
+          "key": "wonder_mis5_task_7",
+          "value": "Çatıları Yenile"
+        },
+        {
+          "key": "wonder_mis5_task_8",
+          "value": "Pati Bayraklarını Dik"
+        },
+        {
+          "key": "wonder_mis6_task_1",
+          "value": "Patikayı Temizle"
+        },
+        {
+          "key": "wonder_mis6_task_2",
+          "value": "Basamakları Sağlamlaştır"
+        },
+        {
+          "key": "wonder_mis6_task_3",
+          "value": "Seyir Alanını Düzenle"
+        },
+        {
+          "key": "wonder_mis6_task_4",
+          "value": "Ahşap Direkleri Sabitle"
+        },
+        {
+          "key": "wonder_mis6_task_5",
+          "value": "Korkulukları Onar"
+        },
+        {
+          "key": "wonder_mis6_task_6",
+          "value": "Yön Tabelasını Yerleştir"
+        },
+        {
+          "key": "wonder_mis6_task_7",
+          "value": "Alet Kutusunu Hazırla"
+        },
+        {
+          "key": "wonder_mis6_task_8",
+          "value": "Manzara Noktasını Tamamla"
+        },
+        {
+          "key": "wonder_mis7_name",
+          "value": "Ayasofya"
+        },
+        {
+          "key": "wonder_mis7_task_1",
+          "value": "İskeleyi Kur"
+        },
+        {
+          "key": "wonder_mis7_task_2",
+          "value": "Temeli Güçlendir"
+        },
+        {
+          "key": "wonder_mis7_task_3",
+          "value": "Duvarları Onar"
+        },
+        {
+          "key": "wonder_mis7_task_4",
+          "value": "Pencereleri Yenile"
+        },
+        {
+          "key": "wonder_mis7_task_5",
+          "value": "Yarım Kubbeleri Onar"
+        },
+        {
+          "key": "wonder_mis7_task_6",
+          "value": "Ana Kubbeyi Kapla"
+        },
+        {
+          "key": "wonder_mis7_task_7",
+          "value": "Minareyi Restore Et"
+        },
+        {
+          "key": "wonder_mis7_task_8",
+          "value": "Meydanı Düzenle"
+        },
+        {
           "key": "purchase_celebration_title",
           "value": "HARİKA!"
         },
@@ -2182,7 +2818,7 @@
         },
         {
           "key": "notif_event_rising_title",
-          "value": "Yükseliş başladı! 🎉"
+          "value": "TIRMANIŞ başladı! 🎉"
         },
         {
           "key": "notif_event_rising_body",
@@ -2198,7 +2834,7 @@
         },
         {
           "key": "notif_event_name_rising",
-          "value": "Yükseliş"
+          "value": "TIRMANIŞ"
         },
         {
           "key": "notif_event_name_bridge",
@@ -2223,6 +2859,14 @@
         {
           "key": "notif_comeback_title",
           "value": "Seni özledik! 🥺"
+        },
+        {
+          "key": "notif_comeback_boost_title",
+          "value": "Ödüller seni bekliyor! 🎁"
+        },
+        {
+          "key": "notif_comeback_boost_body",
+          "value": "Geri dön: 30 dakika boyunca tüm jokerler SINIRSIZ!"
         },
         {
           "key": "notif_comeback_body",
@@ -2295,12 +2939,396 @@
         {
           "key": "hint_obstacle_toolthreat_color",
           "value": "Düşman bu aleti tahtaya fırlatır! Yanında KENDİ RENGİNDEKİ taşlarla eşleşme yap ya da özel taş kullan. Üstündeki sayı her düşman turunda azalır. Sayı bitmeden kıramazsan alet ekranına fırlar: 3 saniye hamle yapamazsın ve düşman yeniden saldırır."
+        },
+        {
+          "key": "hint_obstacle_colorcrate_name",
+          "value": "Renkli Sandık"
+        },
+        {
+          "key": "hint_obstacle_colorcrate",
+          "value": "Yalnızca KENDİ RENGİNDEKİ taşlarla yanında eşleşme yaparak ya da special ile kırılır. Üç vuruşta parçalanır: sağlam, çatlak, kırık."
+        },
+        {
+          "key": "hint_obstacle_lasercannon_name",
+          "value": "Lazer Topu"
+        },
+        {
+          "key": "hint_obstacle_lasercannon",
+          "value": "Top bir özel taşa nişan alır. Onu bir hamle içinde kullanmazsan kafese kapatır. Kafesli taşın yanında eşleşme yap ya da onu başka bir özel taşın etki alanına sok, kafes açılır. Topu yalnızca özel taşlar kırar: 4 vuruşta parçalanır."
+        },
+        {
+          "key": "hint_obstacle_billiard_name",
+          "value": "Bilardo Topu"
+        },
+        {
+          "key": "hint_obstacle_billiard",
+          "value": "Top kırılmaz ve kaydırılamaz. Yanındaki taşları temizle; top boşluğa aşağı, çapraz ya da yana yuvarlanır, asla yukarı çıkmaz. Topu cebe ulaştır!"
+        },
+        {
+          "key": "hint_obstacle_tarpstatue_name",
+          "value": "Brandalı Heykel"
+        },
+        {
+          "key": "hint_obstacle_tarpstatue",
+          "value": "Etiketteki renkte taşları tahtanın herhangi bir yerinde topla; sayı bitince branda kalkar. Sonra yalnız special'lar vurabilir: her vuruşta heykel biraz daha ortaya çıkar."
+        },
+        {
+          "key": "harvest_leftover_title",
+          "value": "Hasat Bitti!"
+        },
+        {
+          "key": "harvest_leftover_msg",
+          "value": "Kalan {0} kürek altına dönüştü."
+        },
+        {
+          "key": "tutorial_combo_desc",
+          "value": "İki özel taşı birleştir: süper güçlü patlama!"
+        },
+        {
+          "key": "tutorial_rocket_h_activated_desc",
+          "value": "Roketi kaydır: bütün satırı temizler!"
+        },
+        {
+          "key": "tutorial_rocket_v_activated_desc",
+          "value": "Roketi kaydır: bütün sütunu temizler!"
+        },
+        {
+          "key": "tutorial_pulsecore_activated_desc",
+          "value": "PulseCore'u kaydır: çevresindeki her şeyi patlatır!"
+        },
+        {
+          "key": "tutorial_patchbot_activated_desc",
+          "value": "PatchBot'u kaydır: uçup hedefini vurur!"
+        },
+        {
+          "key": "tutorial_override_activated_desc",
+          "value": "Spark Orb'u bir taşla değiştir: o renkteki tüm taşları temizler!"
+        },
+        {
+          "key": "hint_obstacle_waterlily_name",
+          "value": "Nilüfer"
+        },
+        {
+          "key": "hint_obstacle_waterlily",
+          "value": "Dört yapraklı nilüfere yalnız special hasar verir. İlk yaprak düşünce kalan yaprakları normal eşleşmeler veya special ile dökebilirsin. Yanındaki special bir hamle daha kalırsa onu yutar. Yuttuğu special yalnız special vuruşuyla dışarı çıkar ve tahtada yeniden kullanılabilir. Son olarak altındaki çimi temizle."
+        },
+        {
+          "key": "hint_obstacle_billiardpocket_name",
+          "value": "Bilardo Deliği"
+        },
+        {
+          "key": "hint_obstacle_billiardpocket",
+          "value": "Yakındaki taşları temizleyerek bilardo toplarını deliğe yönlendir. Delik kırılmaz; içine giren toplar toplanır."
+        },
+        {
+          "key": "progress_goal_LineH",
+          "value": "{0} yatay roket kullan"
+        },
+        {
+          "key": "progress_event_name",
+          "value": "Haftalık Görevler"
+        },
+        {
+          "key": "progress_info_title",
+          "value": "Etkinlik Görevi"
+        },
+        {
+          "key": "progress_info_progress",
+          "value": "İlerleme: {0} / {1}"
+        },
+        {
+          "key": "progress_goal_LineV",
+          "value": "{0} dikey roket kullan"
+        },
+        {
+          "key": "progress_goal_LineAny",
+          "value": "{0} roket kullan"
+        },
+        {
+          "key": "progress_goal_TileCleared_Gear",
+          "value": "{0} sarı taş kır"
+        },
+        {
+          "key": "progress_goal_TileCleared_Core",
+          "value": "{0} kırmızı taş kır"
+        },
+        {
+          "key": "progress_goal_TileCleared_Bolt",
+          "value": "{0} mavi taş kır"
+        },
+        {
+          "key": "progress_goal_TileCleared_Plate",
+          "value": "{0} yeşil taş kır"
+        },
+        {
+          "key": "progress_goal_TileCleared_Any",
+          "value": "{0} renkli taş kır"
+        },
+        {
+          "key": "progress_goal_ObstacleCleared",
+          "value": "{0} engel temizle"
+        },
+        {
+          "key": "progress_goal_SpecialCreated",
+          "value": "{0} special oluştur"
+        },
+        {
+          "key": "progress_goal_LevelWon",
+          "value": "{0} seviye kazan"
+        },
+        {
+          "key": "progress_goal_FirstTryWin",
+          "value": "{0} seviyeyi ilk denemede kazan"
         }
       ]
     },
     {
       "code": "en",
       "entries": [
+        {
+          "key": "hint_obstacle_rhodes_statue_name",
+          "value": "Rhodes Statue"
+        },
+        {
+          "key": "hint_obstacle_rhodes_statue",
+          "value": "Only specials damage this 2×2 statue. Each hit breaks another stage; four special hits clear it completely. Normal matches and boosters do not damage it."
+        },
+        {
+          "key": "welcome_back_reward_title",
+          "value": "WELCOME BACK!"
+        },
+        {
+          "key": "comeback_boost_title",
+          "value": "WE MISSED YOU!"
+        },
+        {
+          "key": "comeback_boost_message",
+          "value": "Welcome back! For {0} minutes all jokers and pre-level boosters are UNLIMITED. The timer starts when you tap Start."
+        },
+        {
+          "key": "comeback_boost_start",
+          "value": "START"
+        },
+        {
+          "key": "gearcup_unlock",
+          "value": "Unlocks at level {0}."
+        },
+        {
+          "key": "gearcup_need_team",
+          "value": "Join a team first to enter Gear Cup."
+        },
+        {
+          "key": "gearcup_team_locked",
+          "value": "Your team is fixed for this event. Enter the next event with your new team."
+        },
+        {
+          "key": "gearcup_settling",
+          "value": "Event results are updating. Please try again shortly."
+        },
+        {
+          "key": "gearcup_gears",
+          "value": "Gears"
+        },
+        {
+          "key": "gearcup_next_event",
+          "value": "Tap to join the next event"
+        },
+        {
+          "key": "gearcup_live_hint",
+          "value": "Win levels to add gears to your team!"
+        },
+        {
+          "key": "gearcup_scoring_rules",
+          "value": "Each normal tile earns +1 gear. Gears only count toward the team score when you win the level. Giving up loses the gears collected in that level."
+        },
+        {
+          "key": "gearcup_reward_live",
+          "value": "Awarded to contributing team members at the end of the event."
+        },
+        {
+          "key": "gearcup_result",
+          "value": "Your team finished in place {0}!"
+        },
+        {
+          "key": "gearcup_join_message",
+          "value": "Collect gears with your team! The top three teams win rewards."
+        },
+        {
+          "key": "gearcup_join_later",
+          "value": "Not Now"
+        },
+        {
+          "key": "gearcup_title",
+          "value": "GEAR CUP"
+        },
+        {
+          "key": "gearcup_preview",
+          "value": "Design preview · sample scores"
+        },
+        {
+          "key": "gearcup_contribution",
+          "value": "YOUR CONTRIBUTION"
+        },
+        {
+          "key": "gearcup_your_team",
+          "value": "YOUR TEAM"
+        },
+        {
+          "key": "gearcup_ends_in",
+          "value": "ENDS IN"
+        },
+        {
+          "key": "gearcup_howto",
+          "value": "Collect gears with your team. The three highest-scoring teams win different rewards."
+        },
+        {
+          "key": "gearcup_preview_note",
+          "value": "This is a design preview. Scores and rewards are samples; no rewards are granted."
+        },
+        {
+          "key": "gearcup_reward_preview",
+          "value": "Sample reward package · no rewards are granted"
+        },
+        {
+          "key": "gearcup_reward_item",
+          "value": "Event reward"
+        },
+        {
+          "key": "gearcup_team_total",
+          "value": "Team total: {0} gears"
+        },
+        {
+          "key": "gearcup_members_preview",
+          "value": "Member contributions will appear here in the team competition."
+        },
+        {
+          "key": "gearcup_rank_1",
+          "value": "1st"
+        },
+        {
+          "key": "gearcup_rank_2",
+          "value": "2nd"
+        },
+        {
+          "key": "gearcup_rank_3",
+          "value": "3rd"
+        },
+        {
+          "key": "gearcup_sample_team_1",
+          "value": "Bolt Crew"
+        },
+        {
+          "key": "gearcup_sample_team_2",
+          "value": "Turbo Tails"
+        },
+        {
+          "key": "gearcup_sample_team_3",
+          "value": "Copper Cubs"
+        },
+        {
+          "key": "gearcup_sample_team_4",
+          "value": "Spark Squad"
+        },
+        {
+          "key": "gearcup_sample_team_5",
+          "value": "Golden Wings"
+        },
+        {
+          "key": "boss_howto_match",
+          "value": "Match tiles\nto power up your attack!"
+        },
+        {
+          "key": "boss_howto_exchange",
+          "value": "You strike after your move.\nYour opponent strikes back!"
+        },
+        {
+          "key": "boss_howto_finish",
+          "value": "Beat every opponent and finish the goals\nbefore health or moves run out!"
+        },
+        {
+          "key": "boss_howto_header",
+          "value": "BOSS DUEL"
+        },
+        {
+          "key": "boss_howto_page",
+          "value": "{0} / 3"
+        },
+        {
+          "key": "boss_howto_you",
+          "value": "YOU"
+        },
+        {
+          "key": "boss_howto_enemy",
+          "value": "OPPONENT"
+        },
+        {
+          "key": "boss_howto_start",
+          "value": "Tap to start the duel"
+        },
+        {
+          "key": "boss_howto_next",
+          "value": "Tap to continue"
+        },
+        {
+          "key": "boss_howto_player_title",
+          "value": "Clear tiles, build power!"
+        },
+        {
+          "key": "boss_howto_player_body",
+          "value": "You are the character on the left. Match tiles: every tile you clear adds power to your attack. You strike when your move finishes."
+        },
+        {
+          "key": "boss_howto_player_tip",
+          "value": "Combine special tiles to clear more tiles and hit harder!"
+        },
+        {
+          "key": "boss_howto_enemy_title",
+          "value": "Your opponent strikes back!"
+        },
+        {
+          "key": "boss_howto_enemy_body",
+          "value": "Your opponent is on the right. If they survive your attack, they hit you once. The green bar is your health; the purple bar is theirs."
+        },
+        {
+          "key": "boss_howto_enemy_tip",
+          "value": "Your opponent can also throw obstacles onto your board. Clear them to make room!"
+        },
+        {
+          "key": "boss_howto_enemy_tip_basic",
+          "value": "Make powerful moves to win before your opponent lands too many hits!"
+        },
+        {
+          "key": "boss_howto_win_title",
+          "value": "Win before health or moves run out!"
+        },
+        {
+          "key": "boss_howto_win_body",
+          "value": "Defeat every opponent and complete the remaining level goals. You lose if your health reaches zero or you run out of moves."
+        },
+        {
+          "key": "boss_howto_shields",
+          "value": "Clearing a green shield protects you. Be careful: clearing a purple shield gives your opponent protection!"
+        },
+        {
+          "key": "boss_howto_player_shield",
+          "value": "Clear a green shield to gain protection from incoming damage!"
+        },
+        {
+          "key": "boss_howto_enemy_shield",
+          "value": "Be careful: clearing a purple shield gives your opponent protection!"
+        },
+        {
+          "key": "boss_howto_win_tip",
+          "value": "Every move counts. Build power with big matches and special tiles!"
+        },
+        {
+          "key": "shop_purchase_thanks_life",
+          "value": "Thank-you gift: Life"
+        },
+        {
+          "key": "shop_purchase_thanks_pending",
+          "value": "Thank-you gift: Life\nNext attempt with room"
+        },
         {
           "key": "bridge_tap_continue",
           "value": "Tap to continue"
@@ -2348,6 +3376,54 @@
         {
           "key": "bridge_play",
           "value": "PLAY"
+        },
+        {
+          "key": "harvest_title",
+          "value": "GARDEN HARVEST"
+        },
+        {
+          "key": "harvest_sign_top",
+          "value": "Garden"
+        },
+        {
+          "key": "harvest_sign_bottom",
+          "value": "Harvest"
+        },
+        {
+          "key": "harvest_floor",
+          "value": "Harvest {0}/{1}"
+        },
+        {
+          "key": "harvest_no_trowel",
+          "value": "Win levels to earn trowels!"
+        },
+        {
+          "key": "harvest_finished",
+          "value": "Harvest complete! Great job."
+        },
+        {
+          "key": "harvest_play",
+          "value": "PLAY"
+        },
+        {
+          "key": "harvest_howto_title",
+          "value": "How to play?"
+        },
+        {
+          "key": "harvest_howto_step1",
+          "value": "Win levels to earn trowels!"
+        },
+        {
+          "key": "harvest_howto_step2",
+          "value": "Dig tiles to find hidden crops!"
+        },
+        {
+          "key": "harvest_howto_step3",
+          "value": "Complete {0} harvests, grab the rewards!"
+        },
+        {
+          "key": "harvest_loss_trowel",
+          "value": "Trowels"
         },
         {
           "key": "bridge_you",
@@ -2435,7 +3511,7 @@
         },
         {
           "key": "rising_title",
-          "value": "Rising"
+          "value": "THE CLIMB"
         },
         {
           "key": "rising_level",
@@ -2498,6 +3574,18 @@
           "value": "Continue <space=0.5em><sprite name=\"goldmoney\">{0}"
         },
         {
+          "key": "level_end_billiard_stuck_title",
+          "value": "Ball Stuck!"
+        },
+        {
+          "key": "level_end_billiard_stuck_text",
+          "value": "The ball can't reach a pocket. Move it and keep playing."
+        },
+        {
+          "key": "level_end_billiard_rescue_cost",
+          "value": "Move Ball <space=0.5em><sprite name=\"goldmoney\">{0}"
+        },
+        {
           "key": "level_end_loss_title",
           "value": "You'll lose these"
         },
@@ -2507,11 +3595,19 @@
         },
         {
           "key": "level_end_loss_safari",
-          "value": "Safari"
+          "value": "THE CLIMB"
         },
         {
           "key": "level_end_loss_alliance",
           "value": "Alliance boosts"
+        },
+        {
+          "key": "level_end_loss_message",
+          "value": "Give up and you'll lose {0}!"
+        },
+        {
+          "key": "level_end_loss_and",
+          "value": " and "
         },
         {
           "key": "level_end_success_title_level",
@@ -2627,23 +3723,23 @@
         },
         {
           "key": "tutorial_emitter_created_desc",
-          "value": "Rocket created! Swipe it to activate."
+          "value": "Line up 4 tiles to make a Rocket!"
         },
         {
           "key": "tutorial_patchbot_created_desc",
-          "value": "PatchBot created! Swipe it to activate."
+          "value": "Make a square of 4 tiles to create a PatchBot! It flies to a target."
         },
         {
           "key": "tutorial_emitter_activated_desc",
-          "value": "The Rocket clears an entire row. Swap it with any tile!"
+          "value": "Swipe the Rocket: it clears a whole line!"
         },
         {
           "key": "tutorial_pulsecore_created_desc",
-          "value": "PulseCore created! Explodes the surrounding area. Swipe to activate."
+          "value": "Match tiles in an L or T shape to make a PulseCore! It blasts everything around it."
         },
         {
           "key": "tutorial_override_created_desc",
-          "value": "Spark Orb created! Clears all tiles of the same color."
+          "value": "Line up 5 tiles to make a Spark Orb! It clears every tile of one color."
         },
         {
           "key": "workshop_repair_button",
@@ -2938,6 +4034,14 @@
           "value": "Safe"
         },
         {
+          "key": "hint_obstacle_ancientseal_name",
+          "value": "Ancient Seal"
+        },
+        {
+          "key": "hint_obstacle_ancientseal",
+          "value": "Collect the displayed number of stones in the active color anywhere on the board. Each stone goes to only one seal. Complete all three colors to open it. Direct hits do not count."
+        },
+        {
           "key": "hint_obstacle_cargo",
           "value": "Drop cargo to the bottom. It counts when it exits the board."
         },
@@ -3048,6 +4152,70 @@
         {
           "key": "hint_obstacle_metalwall_name",
           "value": "Metal Wall"
+        },
+        {
+          "key": "hint_obstacle_grass",
+          "value": "Grass covers the pieces. Match next to it or use a special. On flowered grass the flowers fall first, then the grass."
+        },
+        {
+          "key": "hint_obstacle_grass_name",
+          "value": "Grass"
+        },
+        {
+          "key": "hint_obstacle_grassflower",
+          "value": "Flower grass clears in two hits: the first knocks off the flowers, the second removes the grass."
+        },
+        {
+          "key": "hint_obstacle_grassflower_name",
+          "value": "Flower Grass"
+        },
+        {
+          "key": "hint_obstacle_overridebattery",
+          "value": "Charge the battery with matches of every color next to it. When full, it sends a powerful wave across the board!"
+        },
+        {
+          "key": "hint_obstacle_overridebattery_name",
+          "value": "Override Battery"
+        },
+        {
+          "key": "hint_obstacle_keygenerator",
+          "value": "Each hit makes a key. Match the keys to collect them!"
+        },
+        {
+          "key": "hint_obstacle_keygenerator_name",
+          "value": "Key Generator"
+        },
+        {
+          "key": "hint_obstacle_eggbird",
+          "value": "The egg cracks in two hits. The birds inside fly out and strike three targets on the board!"
+        },
+        {
+          "key": "hint_obstacle_eggbird_name",
+          "value": "Bird Egg"
+        },
+        {
+          "key": "hint_obstacle_hamster",
+          "value": "Feed the hamster by matching next to it. When it is full, it jumps next to your goals and smashes around!"
+        },
+        {
+          "key": "hint_obstacle_hamster_name",
+          "value": "Hungry Hamster"
+        },
+        {
+          "key": "hint_obstacle_gellauncher",
+          "value": "The cartridge breaks only with specials. On the second hit its cap shoots out, smashes everything ahead and paints the path with gel!"
+        },
+        {
+          "key": "hint_obstacle_gellauncher_name",
+          "value": "Gel Cartridge"
+        },
+        {
+          "key": "hint_obstacle_paintcanbox",
+          "value": "Every match next to it knocks down one paint can, every special knocks down two. Clear all the cans to open the crate!"
+        },
+        {
+          "key": "hint_obstacle_paintcanbox_name",
+          "value": "Paint Can Pyramid"
         },
         {
           "key": "progress_timer_days_hours",
@@ -3498,6 +4666,34 @@
           "value": "Wonder Shuffler!"
         },
         {
+          "key": "joker_title_paint",
+          "value": "Wonder Paint Bucket!"
+        },
+        {
+          "key": "joker_hint_paint",
+          "value": "Tap a tile: that color leaves the board for 3 moves!"
+        },
+        {
+          "key": "joker_paint_reject_goal",
+          "value": "This color is in your goals, pick another one!"
+        },
+        {
+          "key": "joker_paint_reject_min",
+          "value": "At least two colors must stay on this level."
+        },
+        {
+          "key": "joker_paint_reject_active",
+          "value": "The paint bucket is already working!"
+        },
+        {
+          "key": "joker_paint_reject_tile",
+          "value": "Tap a regular tile."
+        },
+        {
+          "key": "shop_reward_paint",
+          "value": "Paint Bucket"
+        },
+        {
           "key": "lives_offer_title",
           "value": "Out of Lives"
         },
@@ -3895,7 +5091,7 @@
         },
         {
           "key": "rising_intro_title",
-          "value": "SAFARI IS STARTING!"
+          "value": "THE CLIMB IS STARTING!"
         },
         {
           "key": "rising_intro_ready",
@@ -3935,7 +5131,7 @@
         },
         {
           "key": "safari_reward_event",
-          "value": "SAFARI COMPLETE"
+          "value": "CLIMB COMPLETE"
         },
         {
           "key": "safari_reward_title",
@@ -3967,7 +5163,7 @@
         },
         {
           "key": "safari_join_title",
-          "value": "SAFARI"
+          "value": "THE CLIMB"
         },
         {
           "key": "safari_join_prize",
@@ -4059,7 +5255,7 @@
         },
         {
           "key": "rising_icon_label",
-          "value": "RISING"
+          "value": "THE CLIMB"
         },
         {
           "key": "prelevel_booster_select",
@@ -4232,6 +5428,122 @@
         {
           "key": "settings_terms",
           "value": "Terms&Privacy"
+        },
+        {
+          "key": "settings_terms_title",
+          "value": "Terms & Privacy"
+        },
+        {
+          "key": "settings_terms_body",
+          "value": "Read our documents or delete your account."
+        },
+        {
+          "key": "settings_terms_open_terms",
+          "value": "Terms of Service"
+        },
+        {
+          "key": "settings_terms_open_privacy",
+          "value": "Privacy Policy"
+        },
+        {
+          "key": "legal_title",
+          "value": "Welcome!"
+        },
+        {
+          "key": "legal_body",
+          "value": "Before you start playing, please read and accept our Terms of Service and Privacy Policy."
+        },
+        {
+          "key": "legal_body_update",
+          "value": "We have updated our Terms of Service and Privacy Policy. Please read and accept them to continue."
+        },
+        {
+          "key": "legal_accept",
+          "value": "I Accept"
+        },
+        {
+          "key": "legal_open_web",
+          "value": "Open on Web"
+        },
+        {
+          "key": "moderation_title",
+          "value": "Community"
+        },
+        {
+          "key": "moderation_menu_body",
+          "value": "What would you like to do with this message?"
+        },
+        {
+          "key": "moderation_report",
+          "value": "Report"
+        },
+        {
+          "key": "moderation_report_thanks",
+          "value": "Thanks! We've received your report and will review it within 24 hours."
+        },
+        {
+          "key": "moderation_report_failed",
+          "value": "We couldn't send the report. Check your internet connection and try again."
+        },
+        {
+          "key": "moderation_block",
+          "value": "Block Player"
+        },
+        {
+          "key": "moderation_block_confirm",
+          "value": "Block {0}? You won't see this player's messages anymore."
+        },
+        {
+          "key": "moderation_blocked",
+          "value": "Player blocked."
+        },
+        {
+          "key": "moderation_name_rejected",
+          "value": "This name contains inappropriate words. Please choose another one."
+        },
+        {
+          "key": "settings_delete_account",
+          "value": "Delete My Account"
+        },
+        {
+          "key": "settings_delete_account_sub",
+          "value": "Your progress is deleted for good"
+        },
+        {
+          "key": "legal_card_terms_sub",
+          "value": "The rules of the game and your rights"
+        },
+        {
+          "key": "legal_card_privacy_sub",
+          "value": "How we use and protect your data"
+        },
+        {
+          "key": "legal_card_viewed",
+          "value": "Viewed"
+        },
+        {
+          "key": "account_delete_title",
+          "value": "Delete Account"
+        },
+        {
+          "key": "account_delete_body",
+          "value": "Your account and all your data will be permanently deleted: your progress, coins, boosters, purchases, team membership and chat messages. This cannot be undone."
+        },
+        {
+          "key": "account_delete_confirm",
+          "value": "Delete Permanently"
+        },
+        {
+          "key": "account_delete_working",
+          "value": "Deleting your account… The game will restart when it is done."
+        },
+        {
+          "key": "account_delete_failed",
+          "value": "We couldn't delete your account. Check your internet connection and try again, or email hello@wondigames.com."
+        },
+        {
+          "key": "account_delete_offline",
+          "value": "You need an internet connection to delete your account. Connect and try again."
         },
         {
           "key": "settings_title",
@@ -4466,6 +5778,114 @@
           "value": "Purramid"
         },
         {
+          "key": "wonder_mis5_name",
+          "value": "Great Paw Wall"
+        },
+        {
+          "key": "wonder_mis6_name",
+          "value": "Tail Canyon"
+        },
+        {
+          "key": "wonder_mis5_task_1",
+          "value": "Prepare the Ground"
+        },
+        {
+          "key": "wonder_mis5_task_2",
+          "value": "Reinforce the Foundation"
+        },
+        {
+          "key": "wonder_mis5_task_3",
+          "value": "Raise the Walls"
+        },
+        {
+          "key": "wonder_mis5_task_4",
+          "value": "Repair the Stairs"
+        },
+        {
+          "key": "wonder_mis5_task_5",
+          "value": "Open the Passages"
+        },
+        {
+          "key": "wonder_mis5_task_6",
+          "value": "Repair the Watchtowers"
+        },
+        {
+          "key": "wonder_mis5_task_7",
+          "value": "Restore the Roofs"
+        },
+        {
+          "key": "wonder_mis5_task_8",
+          "value": "Raise the Paw Flags"
+        },
+        {
+          "key": "wonder_mis6_task_1",
+          "value": "Clear the Trail"
+        },
+        {
+          "key": "wonder_mis6_task_2",
+          "value": "Reinforce the Steps"
+        },
+        {
+          "key": "wonder_mis6_task_3",
+          "value": "Restore the Lookout"
+        },
+        {
+          "key": "wonder_mis6_task_4",
+          "value": "Secure the Wooden Posts"
+        },
+        {
+          "key": "wonder_mis6_task_5",
+          "value": "Repair the Railings"
+        },
+        {
+          "key": "wonder_mis6_task_6",
+          "value": "Put Up the Trail Sign"
+        },
+        {
+          "key": "wonder_mis6_task_7",
+          "value": "Prepare the Toolbox"
+        },
+        {
+          "key": "wonder_mis6_task_8",
+          "value": "Complete the Scenic Lookout"
+        },
+        {
+          "key": "wonder_mis7_name",
+          "value": "Hagia Sophia"
+        },
+        {
+          "key": "wonder_mis7_task_1",
+          "value": "Set Up the Scaffolding"
+        },
+        {
+          "key": "wonder_mis7_task_2",
+          "value": "Reinforce the Foundation"
+        },
+        {
+          "key": "wonder_mis7_task_3",
+          "value": "Repair the Walls"
+        },
+        {
+          "key": "wonder_mis7_task_4",
+          "value": "Restore the Windows"
+        },
+        {
+          "key": "wonder_mis7_task_5",
+          "value": "Repair the Half-Domes"
+        },
+        {
+          "key": "wonder_mis7_task_6",
+          "value": "Reseal the Main Dome"
+        },
+        {
+          "key": "wonder_mis7_task_7",
+          "value": "Restore the Minaret"
+        },
+        {
+          "key": "wonder_mis7_task_8",
+          "value": "Tidy Up the Square"
+        },
+        {
           "key": "purchase_celebration_title",
           "value": "AWESOME!"
         },
@@ -4479,7 +5899,7 @@
         },
         {
           "key": "notif_event_rising_title",
-          "value": "Rising has started! 🎉"
+          "value": "The Climb has started! 🎉"
         },
         {
           "key": "notif_event_rising_body",
@@ -4495,7 +5915,7 @@
         },
         {
           "key": "notif_event_name_rising",
-          "value": "Rising"
+          "value": "The Climb"
         },
         {
           "key": "notif_event_name_bridge",
@@ -4520,6 +5940,14 @@
         {
           "key": "notif_comeback_title",
           "value": "We miss you! 🥺"
+        },
+        {
+          "key": "notif_comeback_boost_title",
+          "value": "Your rewards are waiting! 🎁"
+        },
+        {
+          "key": "notif_comeback_boost_body",
+          "value": "Come back: all jokers are UNLIMITED for 30 minutes!"
         },
         {
           "key": "notif_comeback_body",
@@ -4592,6 +6020,146 @@
         {
           "key": "hint_obstacle_toolthreat_color",
           "value": "The enemy throws this tool onto the board! Match pieces of ITS COLOR next to it, or use a special. The number drops every enemy turn. If you don't break it in time, the tool flies at your screen: you can't move for 3 seconds and the enemy attacks again."
+        },
+        {
+          "key": "hint_obstacle_colorcrate_name",
+          "value": "Color Crate"
+        },
+        {
+          "key": "hint_obstacle_colorcrate",
+          "value": "Breaks only with matches of ITS OWN COLOR next to it, or with specials. Takes three hits: solid, cracked, broken."
+        },
+        {
+          "key": "hint_obstacle_lasercannon_name",
+          "value": "Laser Cannon"
+        },
+        {
+          "key": "hint_obstacle_lasercannon",
+          "value": "The cannon locks onto a special stone. If you don't use it within one move, it gets caged. Make a match next to a caged stone or hit it with another special's blast to free it. Only specials damage the cannon: it breaks after 4 hits."
+        },
+        {
+          "key": "hint_obstacle_billiard_name",
+          "value": "Billiard Ball"
+        },
+        {
+          "key": "hint_obstacle_billiard",
+          "value": "The ball can't be broken or swapped. Clear the stones around it and it rolls into the gap - down, diagonally or sideways, never up. Get it into a pocket!"
+        },
+        {
+          "key": "hint_obstacle_tarpstatue_name",
+          "value": "Covered Statue"
+        },
+        {
+          "key": "hint_obstacle_tarpstatue",
+          "value": "Collect stones of the tag's color anywhere on the board. When the number runs out, the tarp comes off. Then only specials can hit it - each hit carves the statue a little more."
+        },
+        {
+          "key": "harvest_leftover_title",
+          "value": "Harvest Over!"
+        },
+        {
+          "key": "harvest_leftover_msg",
+          "value": "Your {0} leftover trowels turned into coins."
+        },
+        {
+          "key": "tutorial_combo_desc",
+          "value": "Swap two special tiles together for a super blast!"
+        },
+        {
+          "key": "tutorial_rocket_h_activated_desc",
+          "value": "Swipe the Rocket: it clears the whole row!"
+        },
+        {
+          "key": "tutorial_rocket_v_activated_desc",
+          "value": "Swipe the Rocket: it clears the whole column!"
+        },
+        {
+          "key": "tutorial_pulsecore_activated_desc",
+          "value": "Swipe the PulseCore: it blasts everything around it!"
+        },
+        {
+          "key": "tutorial_patchbot_activated_desc",
+          "value": "Swipe the PatchBot: it flies off and hits its target!"
+        },
+        {
+          "key": "tutorial_override_activated_desc",
+          "value": "Swap the Spark Orb with a tile: it clears every tile of that color!"
+        },
+        {
+          "key": "hint_obstacle_waterlily_name",
+          "value": "Water Lily"
+        },
+        {
+          "key": "hint_obstacle_waterlily",
+          "value": "Four petals need a special hit. Once a petal falls, matches or specials remove the remaining petals. A nearby special is swallowed if it stays for another move. Only a special hit releases it onto a reusable board cell. Clear the grass underneath to finish."
+        },
+        {
+          "key": "hint_obstacle_billiardpocket_name",
+          "value": "Billiard Pocket"
+        },
+        {
+          "key": "hint_obstacle_billiardpocket",
+          "value": "Guide billiard balls into the pocket by clearing nearby stones. The pocket cannot be broken; each ball that enters is collected."
+        },
+        {
+          "key": "progress_goal_LineH",
+          "value": "Use {0} horizontal rockets"
+        },
+        {
+          "key": "progress_event_name",
+          "value": "Weekly Missions"
+        },
+        {
+          "key": "progress_info_title",
+          "value": "Event Goal"
+        },
+        {
+          "key": "progress_info_progress",
+          "value": "Progress: {0} / {1}"
+        },
+        {
+          "key": "progress_goal_LineV",
+          "value": "Use {0} vertical rockets"
+        },
+        {
+          "key": "progress_goal_LineAny",
+          "value": "Use {0} rockets"
+        },
+        {
+          "key": "progress_goal_TileCleared_Gear",
+          "value": "Clear {0} yellow stones"
+        },
+        {
+          "key": "progress_goal_TileCleared_Core",
+          "value": "Clear {0} red stones"
+        },
+        {
+          "key": "progress_goal_TileCleared_Bolt",
+          "value": "Clear {0} blue stones"
+        },
+        {
+          "key": "progress_goal_TileCleared_Plate",
+          "value": "Clear {0} green stones"
+        },
+        {
+          "key": "progress_goal_TileCleared_Any",
+          "value": "Clear {0} colored stones"
+        },
+        {
+          "key": "progress_goal_ObstacleCleared",
+          "value": "Clear {0} obstacles"
+        },
+        {
+          "key": "progress_goal_SpecialCreated",
+          "value": "Create {0} specials"
+        },
+        {
+          "key": "progress_goal_LevelWon",
+          "value": "Win {0} levels"
+        },
+        {
+          "key": "progress_goal_FirstTryWin",
+          "value": "Win {0} levels on the first attempt"
         }
       ]
     }

@@ -42,7 +42,8 @@ public class ComboTutorialManager : MonoBehaviour
 
         if (!TryFindCenterPair(out var tileA, out var tileB))
         {
-            Debug.LogWarning($"[ComboTutorial] No eligible center pair found for {comboId}.");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogWarning($"[ComboTutorial] No eligible center pair found for {comboId}.");
             yield break;
         }
 

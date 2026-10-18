@@ -79,7 +79,8 @@ public sealed class RegionUnlockListPanel : MonoBehaviour
 
     public void Open()
     {
-        if (!WonderMode && worldMap == null) { Debug.LogWarning("[RegionPanel] worldMap atanmamış."); return; }
+        if (!WonderMode && worldMap == null) { if (GameDiagnostics.CriticalErrors)
+            Debug.LogWarning("[RegionPanel] worldMap atanmamış."); return; }
 
         if (!inViewMode)
         {
@@ -133,8 +134,8 @@ public sealed class RegionUnlockListPanel : MonoBehaviour
 
         if (!worldMap.TryUnlock(region))
         {
-            Debug.LogWarning($"[RegionPanel] Açılamadı (yetersiz yıldız? zaten açık? reveal sürüyor?). " +
-                             $"cost={region.StarCost}, stars={PlayerWallet.TotalStars}");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogWarning($"[RegionPanel] Açılamadı (yetersiz yıldız? zaten açık? reveal sürüyor?). " + $"cost={region.StarCost}, stars={PlayerWallet.TotalStars}");
             // TODO: yetersiz yıldız → shop/reklam yönlendirmesi
             return;
         }
@@ -372,16 +373,13 @@ public sealed class RegionUnlockListPanel : MonoBehaviour
 
         if (!WonderProgress.IsEventUnlocked(wonderCatalog, eventIndex))
         {
-            Debug.Log($"[WonderPanel] Event {eventIndex} kilitli — bölüm " +
-                      $"{WonderProgress.ChapterToFinishForNextEvent} bitmeli.");
             yield break;
         }
 
         if (!WonderProgress.CanAffordNextTask(wonderCatalog, eventIndex))
         {
-            Debug.LogWarning($"[WonderPanel] Yetersiz yıldız. " +
-                             $"cost={WonderProgress.NextTaskCost(wonderCatalog, eventIndex)}, " +
-                             $"stars={PlayerWallet.TotalStars}");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogWarning($"[WonderPanel] Yetersiz yıldız. " + $"cost={WonderProgress.NextTaskCost(wonderCatalog, eventIndex)}, " + $"stars={PlayerWallet.TotalStars}");
             // TODO: shop/reklam yönlendirmesi
             yield break;
         }

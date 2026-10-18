@@ -8,6 +8,8 @@ using UnityEngine;
 public sealed class AvatarLibrary : ScriptableObject
 {
     [SerializeField] private Sprite[] avatars;
+    [Tooltip("Avatar ile aynı indekste hayvan kimliği (ram, bear, pig, rabbit, monkey). Kostüm çeşitleri aynı kimliği kullanır.")]
+    [SerializeField] private string[] characterIds;
 
     public int Count => avatars != null ? avatars.Length : 0;
 
@@ -15,5 +17,12 @@ public sealed class AvatarLibrary : ScriptableObject
     {
         if (avatars == null || avatars.Length == 0) return null;
         return avatars[Mathf.Clamp(id, 0, avatars.Length - 1)];
+    }
+
+    public string GetCharacterId(int id)
+    {
+        if (Count == 0 || characterIds == null) return string.Empty;
+        int index = Mathf.Clamp(id, 0, Count - 1); // Sprite seçimi ile aynı fallback.
+        return index < characterIds.Length ? characterIds[index] ?? string.Empty : string.Empty;
     }
 }

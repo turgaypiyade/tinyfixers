@@ -14,21 +14,24 @@ public static class BridgeRepairDebugMenu
     private static void AddWin()
     {
         BridgeRepairState.DebugAddWin();
-        Debug.Log($"[BridgeRepairDebug] Köprü: {BridgeRepairState.Wins} (sıra {BridgeRepairState.FinalRank})");
+        if (GameDiagnostics.EditorTools)
+            Debug.Log($"[BridgeRepairDebug] Köprü: {BridgeRepairState.Wins} (sıra {BridgeRepairState.FinalRank})");
     }
 
     [MenuItem(Root + "Zamanı 3 Saat İlerlet (botlar)")]
     private static void ShiftTime()
     {
         BridgeRepairState.DebugShiftJoin(TimeSpan.FromHours(3));
-        Debug.Log("[BridgeRepairDebug] Katılım 3 saat geri alındı → botlar ilerledi. Haritayı açınca oynatılır.");
+        if (GameDiagnostics.EditorTools)
+            Debug.Log("[BridgeRepairDebug] Katılım 3 saat geri alındı → botlar ilerledi. Haritayı açınca oynatılır.");
     }
 
     [MenuItem(Root + "Yarış Ekranını Aç (Play)")]
     private static void OpenMap()
     {
         var ctrl = UnityEngine.Object.FindFirstObjectByType<BridgeRepairController>(FindObjectsInactive.Include);
-        if (ctrl == null) { Debug.LogWarning("[BridgeRepairDebug] Sahnede BridgeRepairController yok."); return; }
+        if (ctrl == null) { if (GameDiagnostics.EditorTools)
+            Debug.LogWarning("[BridgeRepairDebug] Sahnede BridgeRepairController yok."); return; }
         ctrl.OnIconClicked();
     }
 
@@ -41,7 +44,8 @@ public static class BridgeRepairDebugMenu
         var map = UnityEngine.Object.FindFirstObjectByType<BridgeRepairMapScreen>(FindObjectsInactive.Include);
         if (map == null || !map.IsOpen)
         {
-            Debug.LogWarning("[BridgeRepairVisuals] Önce yarış ekranını aç.");
+            if (GameDiagnostics.EditorTools)
+                Debug.LogWarning("[BridgeRepairVisuals] Önce yarış ekranını aç.");
             return;
         }
         map.StartCoroutine(ProbeVisuals(map));
@@ -55,21 +59,19 @@ public static class BridgeRepairDebugMenu
         const BindingFlags flags = BindingFlags.Instance | BindingFlags.NonPublic;
         var image = typeof(BridgeRepairMapScreen).GetField("boardImage", flags)?.GetValue(map) as Image;
         var motion = typeof(BridgeRepairMapScreen).GetField("screenMotion", flags)?.GetValue(map);
-        if (image == null) { Debug.LogError("[BridgeRepairVisuals] Board Image yok."); yield break; }
+        if (image == null) { if (GameDiagnostics.EditorTools)
+            Debug.LogError("[BridgeRepairVisuals] Board Image yok."); yield break; }
         var material = image.canvasRenderer.GetMaterial();
         bool river = material != null && material.HasProperty("_FlowClock");
         float before = river ? material.GetFloat("_FlowClock") : -1f;
-        Debug.Log($"[BridgeRepairVisuals] Screen={map.gameObject.scene.name}/{map.name}; " +
-            $"Image={image.name}; Sprite={image.overrideSprite?.name}; " +
-            $"RenderedShader={material?.shader?.name}; Mask={ (river ? material.GetTexture("_WaterMask")?.name : "none") }; " +
-            $"MotionCreated={motion != null}; EntranceComplete={(motion as BridgeRepairScreenMotion)?.EntranceComplete}; " +
-            $"Clock={before:F3}", map);
+        if (GameDiagnostics.EditorTools)
+            Debug.Log($"[BridgeRepairVisuals] Screen={map.gameObject.scene.name}/{map.name}; " + $"Image={image.name}; Sprite={image.overrideSprite?.name}; " + $"RenderedShader={material?.shader?.name}; Mask={(river ? material.GetTexture("_WaterMask")?.name : "none")}; " + $"MotionCreated={motion != null}; EntranceComplete={(motion as BridgeRepairScreenMotion)?.EntranceComplete}; " + $"Clock={before:F3}", map);
         yield return new WaitForSecondsRealtime(1f);
         if (image == null || map == null || !map.IsOpen) yield break;
         material = image.canvasRenderer.GetMaterial();
         float after = material != null && material.HasProperty("_FlowClock") ? material.GetFloat("_FlowClock") : -1f;
-        Debug.Log($"[BridgeRepairVisuals] Rendered clock {before:F3} → {after:F3}; " +
-            $"Advancing={after != before}; BoardScale={image.rectTransform.localScale}", map);
+        if (GameDiagnostics.EditorTools)
+            Debug.Log($"[BridgeRepairVisuals] Rendered clock {before:F3} → {after:F3}; " + $"Advancing={after != before}; BoardScale={image.rectTransform.localScale}", map);
     }
 
     [MenuItem(Root + "Nasıl Oynanır Göster (Play)")]
@@ -93,7 +95,8 @@ public static class BridgeRepairDebugMenu
     private static void PreviewVictory(int rank)
     {
         var ctrl = UnityEngine.Object.FindFirstObjectByType<BridgeRepairController>(FindObjectsInactive.Include);
-        if (ctrl == null) { Debug.LogWarning("[BridgeRepairDebug] Sahnede BridgeRepairController yok."); return; }
+        if (ctrl == null) { if (GameDiagnostics.EditorTools)
+            Debug.LogWarning("[BridgeRepairDebug] Sahnede BridgeRepairController yok."); return; }
         ctrl.ShowVictory(rank);
     }
 
@@ -101,20 +104,23 @@ public static class BridgeRepairDebugMenu
     private static void Clear()
     {
         BridgeRepairState.DebugClearAll();
-        Debug.Log("[BridgeRepairDebug] Bridge Repair durumu temizlendi.");
+        if (GameDiagnostics.EditorTools)
+            Debug.Log("[BridgeRepairDebug] Bridge Repair durumu temizlendi.");
     }
 
     [MenuItem(Root + "Takvimi Yazdır (4 hafta)")]
     private static void PrintSchedule()
     {
         var config = BridgeRepairConfig.Shared;
-        if (config == null) { Debug.LogWarning("[BridgeRepairDebug] Config yok."); return; }
+        if (config == null) { if (GameDiagnostics.EditorTools)
+            Debug.LogWarning("[BridgeRepairDebug] Config yok."); return; }
         var sb = new System.Text.StringBuilder("[BridgeRepairDebug] Etkinlik günleri (UTC):\n");
         for (int w = 0; w < 4; w++)
         {
             foreach (var day in BridgeRepairSchedule.GetWeekDays(config, DateTime.UtcNow.AddDays(7 * w)))
                 sb.AppendLine($"  {day:yyyy-MM-dd ddd}");
         }
-        Debug.Log(sb.ToString());
+        if (GameDiagnostics.EditorTools)
+            Debug.Log(sb.ToString());
     }
 }

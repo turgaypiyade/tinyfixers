@@ -53,6 +53,7 @@ public static class Mathf {
  public static float Max(float a,float b)=>Math.Max(a,b);public static float Clamp(float x,float a,float b)=>Math.Max(a,Math.Min(x,b));
  public static float Clamp01(float x)=>Clamp(x,0,1);public static float Lerp(float a,float b,float t)=>a+(b-a)*Clamp01(t);
 }
+public static class GameDiagnostics {public static bool CriticalErrors,BoardFlow;}
 public static class Debug {public static void Log(string s){}}
 public enum TileType { Gear }
 public enum TileSpecial { None }
@@ -76,7 +77,7 @@ public class BoardController {
  public void Pump(){foreach(var r in routines.ToArray())r.Step();}
  public float GetClearDurationForCurrentPass()=>.06f;
  public void TryPaintGelForClearedTile(TileView t){}
- public void ClearCellDataOnly(Vector2Int cell){var t=Tiles[cell.x,cell.y];if(t==null)return;releases++;releasedVisible|=t.gameObject.group.alpha>0&&t.transform.localScale.x>0;Tiles[cell.x,cell.y]=null;}
+ public void ClearCellDataOnly(Vector2Int cell,bool damageObstacle=true){var t=Tiles[cell.x,cell.y];if(t==null)return;releases++;releasedVisible|=t.gameObject.group.alpha>0&&t.transform.localScale.x>0;Tiles[cell.x,cell.y]=null;}
  public void ClearAndDestroyTile(TileView tile,Dictionary<TileType,int> counts){clears++;tile.Release();}
 }
 public class Routine {

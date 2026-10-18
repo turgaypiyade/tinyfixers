@@ -2,7 +2,7 @@ using System;
 using UnityEngine;
 
 /// <summary>
-/// Hammer / Row / Column / Shuffle gibi in-level boosterlar için sayaç deposu.
+/// Hammer / Row / Column / Shuffle / PaintBucket gibi in-level boosterlar için sayaç deposu.
 /// PreLevelSpecialInventory ile aynı pattern: PlayerPrefs tabanlı, static API.
 /// </summary>
 public static class BoosterInventory
@@ -13,6 +13,7 @@ public static class BoosterInventory
     private const string KeyRow     = "booster_row_count";
     private const string KeyColumn  = "booster_column_count";
     private const string KeyShuffle = "booster_shuffle_count";
+    private const string KeyPaint   = "booster_paint_count";
 
     public static event Action<BoardController.BoosterMode, int> OnCountChanged;
 
@@ -46,6 +47,13 @@ public static class BoosterInventory
 
     public static bool HasAny(BoardController.BoosterMode mode) => GetCount(mode) > 0;
 
+    // Bundle delivery stages all inventory changes before the wallet's single receipt save.
+    internal static void StageAddition(BoardController.BoosterMode mode, int amount)
+        => PlayerPrefs.SetInt(GetPrefsKey(mode), GetCount(mode) + Mathf.Max(0, amount));
+
+    internal static void NotifyCountChanged(BoardController.BoosterMode mode)
+        => OnCountChanged?.Invoke(mode, GetCount(mode));
+
     private static string GetPrefsKey(BoardController.BoosterMode mode)
     {
         return mode switch
@@ -54,6 +62,7 @@ public static class BoosterInventory
             BoardController.BoosterMode.Row     => KeyRow,
             BoardController.BoosterMode.Column  => KeyColumn,
             BoardController.BoosterMode.Shuffle => KeyShuffle,
+            BoardController.BoosterMode.PaintBucket => KeyPaint,
             _ => "booster_unknown_count"
         };
     }

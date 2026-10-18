@@ -66,7 +66,8 @@ public sealed class EggBirdFlightView : MonoBehaviour
         if (parent == null || def == null || def.auxiliarySprites == null
             || def.auxiliarySprites.Count < 21 || def.auxiliarySprites[0] == null)
         {
-            Debug.LogWarning("[EggBird] Flight needs BirdSheet_0..20 in auxiliarySprites and a board VFX root.");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogWarning("[EggBird] Flight needs BirdSheet_0..20 in auxiliarySprites and a board VFX root.");
             return null;
         }
 

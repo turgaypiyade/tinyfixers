@@ -21,6 +21,12 @@ Kaynaklar: [BoardController](../../Assets/_Project/Scripts/Grid/Board/BoardContr
 
 `LevelData.cs` jel açıklamasındaki eski swap özeti güncel eşleşme/zincir kurallarını bütünüyle açıklamıyor. Rehber yukarıdaki çalışan metotlara dayanır.
 
+## AncientSeal — ID 64
+
+Aynı aktif rengi bekleyen mühürler taşları eşit paylaşmaz: önce bir mührün o renk sayacı doldurulur, sonra sıradakine geçilir. İlk seçim origin indeksine göre yapılır; sonradan aynı renge geçen veya örtüsü açılan başka bir mühür mevcut hedefin önüne geçmez. Renklerin hedefleri birbirinden bağımsızdır.
+
+Uçuştaki taşlar ihtiyaçtan düşülerek rezerve edilir; bir mührün ihtiyacı tamamen karşılanınca aynı eşleşmenin fazlası sıradakine gidebilir. Görünen sayaç yalnız taş vardığında azalır, bu yüzden son uçuşlar kısa süreli örtüşebilir. Örtülü mühürler toplamaz. Kural, bir mührün üç renginin tamamını bitirmeyi beklemek değildir; o anda istenen renk sayacını sırayla bitirmektir.
+
 ## Yardımcı engeller
 
 Kullanıcının hedef politikası: **RocketBasket ve OverrideBatteryBox doğrudan goal yapılmaz.** EggBird yardımcı rolündeyse hedef zorunluluğu yoktur; tüm yumurtalar kırılmadan level tamamlanabilir. EggBird ancak özel olarak temizleme amacı seçildiğinde goal olur. Yardımcılar mümkün olduğunda bitişik bir grup halinde düzenlenir. Tam-board jel gibi ayrı hedefler, yardımcıların kapladığı hücrelere erişimi yine gerektirebilir; doğrudan yardımcı goal'ü olmaması bu dolaylı gereksinimi kaldırmaz.
@@ -70,9 +76,31 @@ Vuruş sayıları mevcut library'den okunmuştur; özel servislerin renk, öğe,
 | WaterTank · 52 | 93 | 2×2, iki vuruş ve güncel stage'lerde SpecialOnly; kırılınca WaterPuddle üretir. |
 | Wall · 55 | 101 | Bağlı parça ortak origin taşır. Tek hücreye beş vuruş bütün parçayı yıkar; hedef hücre değil parça sayısıdır. |
 | GrassFlower · 58 | 105 | Çimin üzerinde ilave çiçek katmanı. GrassFlower hedefi çiçek dökümünü; Grass hedefi alttaki çimin temizlenmesini ister. |
+| GelLauncher · 59–62 | — | Jel fırlatıcı (kartuş). Up/Down 1×2, Left/Right 2×1; ağız yönü id'den. Yalnız special, 2 vuruş (kapalı → çatlak). Kırılınca kapak ağızdan tahta kenarına kadar uçar, yolundaki her hücrede engel kalmayana kadar vurur (kırılmazlarda durur), taşı kırar/special'ı tetikler; jel 2 hücre geriden yolu ve kartuşun kendi hücrelerini boyar. Hedef değil, yardımcı. Köşelere/kenarlara, ağız tahtanın içine bakacak şekilde konur; dik olanı üst köşeye koymak o sütunun üst girişini kapatır. |
+| PaintCanBox · 63 | Boya Piramidi | 2×2 sabit kasa, içinde 4-3-2 dizili 9 boya kutusu (sayılabilir içerik). Bitişik her eşleşme 1, her special 2 kutu düşürür; vuruşta tüm kutular sallanır, düşen takla atarak uçar. Son kutuyla kasa kalkar. Hedef olarak kullanılabilir (obstacleId 63). Wardrobe'un kapısız, hemen başlayan hâli. Kova: Resources/PaintCanBox/PaintCan.png (kırmızı gövde + mavi boya). Kasa başına renk seçimi hazır: Resources'a PaintCanRed/Yellow/Green/Blue.png konursa o renk kullanılır, yoksa varsayılan kova; LevelData inspector'ında "Boya Kasası (x,y)"; Auto = satır bandına göre (her 2 satır bir renk). Çok kasalı levelda bölgesel renk düzeni kur. |
 
 WaterPuddle (53), WaterTank'tan doğan tek vuruşlu alt zemindir; kendi hücresindeki taş temizlenince kurur. Dinamik olarak görülmesi, yalnız doğrudan yerleştirilmiş obstacle dizilerinin taranmasıyla bulunmayabilir.
 
 Listede bulunmayan bir ID yalnız kodda mevcut diye yeni levele eklenmez. Katalog, üretici/katman verileri ve tanıtım sırası ayrıca incelenir.
 
+Yeni kütüphane engeli: **RhodesStatue · ID 70**, 2×2 sabit dev heykel; dört aşama/dört special isabeti, normal/booster hasarı almaz. İlk production tanıtımı 161; 162 ve 166'da yoğun yükle geri gelir. Goal/prelevel ikonu Resources/RhodesStatue/S1_Base'tir. Kapladığı dört hücre tek obstacle/goal'dür. Ayrıntı: [RhodesStatue](../RhodesStatue.md).
+
+## Diyagonal köşe geçişi — 148 geri bildirimi
+
+Wardrobe (27), PaintCanBox (63) ve TarpStatue (68) için **bütün stage'lerde `allowDiagonal = 1`**.
+148'in şekli korunarak kullanıcı isteğiyle ortak `ObstacleLibrary` ayarı açıldı; diğer levellarda da geçerlidir.
+Sonraki kullanıcı isteğiyle **OverrideBatteryBox (43), LaserCannon (65), KeyGenerator (44) ve SculptingStone (28)**
+için de bütün stage'lerde `allowDiagonal = 1` yapıldı. Üretim, hasar, vuruş sayıları ve `blocksCells` ayarları korunur;
+değişiklik yalnız köşe geçişini açar. Bu engellerin çevresindeki dolum kolaylaşabileceği için mevcut level dengeleri
+oynanarak değerlendirilmelidir; canlı oyun testi yapılmadı. Hareketli engeller ve diğer engel türleri değiştirilmedi.
+Bu ayar, taşın engelin köşesinden komşu alt hücreye çapraz kaymasını sağlar; engelin kapladığı hücreye taş yerleştirmez.
+Çapraz hedef ve kaynak oynanabilir olmalı; iki yan köşeden en az biri geçişe izin vermelidir.
+Dolum incelemesinde yalnız kaynak/hedef boşluğuna bakılmaz, `BoardCellStateQuery` ve `FindSlideSource` köşe kuralı da kontrol edilir.
+
 Temel kaynaklar: [LevelData](../../Assets/_Project/Scripts/Core/LevelData.cs), [ObstacleLibrary](../../Assets/_Project/Settings/ObstacleLibrary.asset), [LevelCatalogPro](../../Assets/_Project/Settings/LevelCatalogPro.asset). [Eski akış envanteri](../ObstacleFlow_Inventory.md) zamanlama geçmişi için faydalıdır; güncel gameplay ayarı olarak tek başına kullanılmaz.
+
+## GrassWaterLily — ID 69, ilk seviye 151
+
+Tek seçimle çim + nilüfer yerleşir; ayrıca Grass eklenmez. Komşu special ilk gözlemden sonra bir gerçek oyuncu hamlesi aynı hücrede kaldıysa yutulur. İçeride special varken ilk special vuruşu geri fırlatır; uygun hücreye patlamadan iner. İçerisi boşken normal veya special vuruşunda kalıcı yaprak kaybı başlar; her vuruş bir yaprak düşürür. Yeniden special yutmuş olsa da içi dolu çiçeği yalnız special açar; normal eşleşme zarar vermez. Dört yaprak bittiğinde alt çim normal akışla temizlenir. ID 69 hedefi ancak alttaki çim de bitince bir kez ilerler. Booster yaprak düşürmez; normal eşleşme sadece içerisi boşken hasar verir. Renk/ölçek hasarla değişmez.
+
+Tanıtımda çevresinde special üretme ve geri atılan special'ın inebileceği açık hücreler bırakılır; yoğun kaplama altında saklanmaz. Ayrıntı: [GrassWaterLily](../GrassWaterLily-Plan.md), ilk tasarım: [Nilüfer Göleti 151](Level151-Nilufer-Goleti.md).

@@ -128,7 +128,7 @@ public sealed class RisingMapScreen : SafariMapScreenBase
     private void Awake()
     {
         if (continueButton != null) continueButton.onClick.AddListener(OnContinueClicked);
-        if (closeButton != null)    closeButton.onClick.AddListener(Hide);
+        if (closeButton != null)    closeButton.onClick.AddListener(HideAnimated);
         PrepareContinuePrompt();
         ApplyPromptTextColor();
         if (root != null && root != gameObject) root.SetActive(false);
@@ -148,6 +148,7 @@ public sealed class RisingMapScreen : SafariMapScreenBase
         EnsureLift();
 
         StopPresentation();
+        PlayIrisOpen(root != null ? root.transform : transform, owner);   // EnsureLift'ten sonra (ölçüm)
         active = StartCoroutine(Present(outcome));
     }
 

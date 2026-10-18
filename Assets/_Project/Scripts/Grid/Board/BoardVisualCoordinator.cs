@@ -154,7 +154,8 @@ public class BoardVisualCoordinator
             {
                 bool hasNext;
                 try { hasNext = inner.MoveNext(); }
-                catch (Exception ex) { Debug.LogException(ex); break; }
+                catch (Exception ex) { if (GameDiagnostics.CriticalErrors)
+                    Debug.LogException(ex); break; }
                 if (!hasNext) break;
                 yield return inner.Current;
             }

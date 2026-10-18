@@ -41,6 +41,7 @@ public sealed class ShopPurchaseCelebration : MonoBehaviour
     }
 
     private static ShopPurchaseCelebration _instance;
+    public static bool IsShowing => _instance != null;
 
     private IReadOnlyList<RuntimeChoicePopup.RewardItem> _items;
     private Action _onDone;

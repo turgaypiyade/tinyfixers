@@ -52,6 +52,7 @@ public sealed class FirebaseTeamService : ITeamService, IDisposable
             missionText = "",
         };
 
+        ChatModeration.OnBlockedChanged += HandleBlockedChanged;
         if (FirebaseAuthService.IsReady) Connect();
         else FirebaseAuthService.OnReady += Connect;
     }
@@ -89,10 +90,14 @@ public sealed class FirebaseTeamService : ITeamService, IDisposable
                 foreach (var doc in snapshot.Documents)
                 {
                     string senderId = doc.ContainsField("senderId") ? doc.GetValue<string>("senderId") : "";
+                    if (ChatModeration.IsBlocked(senderId)) continue;   // engellenen oyuncunun mesajları görünmez
                     var msg = new TeamChatMessage
                     {
-                        senderName = doc.ContainsField("senderName") ? doc.GetValue<string>("senderName") : GameLocalization.Get("team_player"),
-                        text = doc.ContainsField("text") ? doc.GetValue<string>("text") : "",
+                        senderName = ChatModeration.Filter(doc.ContainsField("senderName") ? doc.GetValue<string>("senderName") : GameLocalization.Get("team_player")),
+                        senderId = senderId,
+                        messageId = doc.Id,
+                        teamId = teamId,
+                        text = ChatModeration.Filter(doc.ContainsField("text") ? doc.GetValue<string>("text") : ""),
                         timeLabel = TimeLabel(doc),
                         sentTicks = SentTicks(doc),
                         isMine = senderId == FirebaseAuthService.UserId,
@@ -172,9 +177,18 @@ public sealed class FirebaseTeamService : ITeamService, IDisposable
         // Yankı gerekmez: Listen local-cache yazımını aynı frame'lerde teslim eder.
     }
 
+    // Engellenen oyuncunun ekrandaki mesajları hemen kalksın (sonraki anlık görüntüyü beklemeden).
+    private void HandleBlockedChanged()
+    {
+        if (disposed) return;
+        realChat.RemoveAll(m => ChatModeration.IsBlocked(m.senderId));
+        OnChanged?.Invoke();
+    }
+
     public void Dispose()
     {
         disposed = true;
+        ChatModeration.OnBlockedChanged -= HandleBlockedChanged;
         chatListener?.Stop();
         chatListener = null;
         FirebaseAuthService.OnReady -= Connect;

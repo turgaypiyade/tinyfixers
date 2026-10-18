@@ -137,7 +137,8 @@ public static class FirebaseTeamCloud
             var list = new List<TeamDirectoryEntry>();
             if (task.IsFaulted || task.IsCanceled)
             {
-                Debug.LogWarning($"[TeamCloud] arama hatası: {task.Exception?.GetBaseException().Message}");
+                if (GameDiagnostics.CriticalErrors)
+                    Debug.LogWarning($"[TeamCloud] arama hatası: {task.Exception?.GetBaseException().Message}");
                 callback?.Invoke(list);
                 return;
             }
@@ -170,13 +171,16 @@ public static class FirebaseTeamCloud
         TeamDoc(teamId).Collection("chat").AddAsync(new Dictionary<string, object>
         {
             { "senderId", FirebaseAuthService.UserId ?? "" },
-            { "senderName", PlayerProfile.PlayerName },
-            { "text", text.Trim() },
+            { "senderName", ChatModeration.Filter(PlayerProfile.PlayerName) },
+            { "text", ChatModeration.Filter(text.Trim()) },
             { "sentAt", FieldValue.ServerTimestamp },
         }).ContinueWithOnMainThread(task =>
         {
             if (task.IsFaulted || task.IsCanceled)
-                Debug.LogWarning($"[TeamCloud] chat yazım hatası (offline olabilir, senkronlanacak): {task.Exception?.GetBaseException().Message}");
+                {
+                    if (GameDiagnostics.CriticalErrors)
+                        Debug.LogWarning($"[TeamCloud] chat yazım hatası (offline olabilir, senkronlanacak): {task.Exception?.GetBaseException().Message}");
+                }
         });
     }
 
@@ -197,6 +201,9 @@ public static class FirebaseTeamCloud
     private static Action<System.Threading.Tasks.Task> LogIfFailed(string op) => task =>
     {
         if (task.IsFaulted || task.IsCanceled)
-            Debug.LogWarning($"[TeamCloud] {op} yazım hatası (offline olabilir, senkronlanacak): {task.Exception?.GetBaseException().Message}");
+            {
+                if (GameDiagnostics.CriticalErrors)
+                    Debug.LogWarning($"[TeamCloud] {op} yazım hatası (offline olabilir, senkronlanacak): {task.Exception?.GetBaseException().Message}");
+            }
     };
 }

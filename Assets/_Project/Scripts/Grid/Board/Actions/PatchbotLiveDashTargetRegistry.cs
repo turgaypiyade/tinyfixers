@@ -53,7 +53,7 @@ public static class PatchbotLiveDashTargetRegistry
     /// <summary>
     /// Hands this dash's live resolver to the flight visual. The resolver is meant to
     /// be invoked repeatedly during the dive; null result = no valid target right now
-    /// (keep flying to the last known cell).
+    /// (cancel the dive instead of flying to a stale cell).
     /// </summary>
     public static bool TryAcquireLiveResolver(Vector2Int from, Vector2Int initialTo, out Func<Vector2Int?> resolver)
     {

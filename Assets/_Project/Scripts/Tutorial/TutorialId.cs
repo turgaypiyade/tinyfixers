@@ -6,6 +6,10 @@ public enum TutorialId
     LineHActivated    = 3,
     PulseCoreCreated  = 4,
     OverrideCreated   = 5,
+    SpecialCombo      = 6,   // iki special yan yana → birleştir (level'da pinli hazır special'larla)
+    PulseCoreActivated = 7,
+    PatchBotActivated  = 8,
+    OverrideActivated  = 9,
 }
 
 // Sadece level-controlled combo tutorial'ları için (Group 2)

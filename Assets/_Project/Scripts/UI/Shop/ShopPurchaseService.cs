@@ -16,6 +16,43 @@ public static class ShopPurchaseService
     /// <summary>Başarılı her alımda (içerik verildikten sonra) tetiklenir.</summary>
     public static event Action<ShopOffer> OnPurchased;
 
+    /// Receipt presentation: whether a separate +1 life thank-you was granted.
+    public static event Action<ShopOffer, bool> OnReceipt;
+
+    /// Integration hook for the future IAP adapter, AFTER store/server verification and
+    /// successful, idempotent fulfilment of the purchased contents. This method does NOT
+    /// verify receipts or deliver the main bundle. Pass a store-qualified transaction ID.
+    /// Replayed callbacks do not repeat the gift or its celebration on this saved profile.
+    public static bool NotifyVerifiedPurchaseFulfilled(ShopOffer offer, string transactionId)
+    {
+        if (offer == null || offer.priceType != ShopOffer.PriceType.RealMoney
+            || !LivesManager.GrantPurchaseThanks(transactionId)) return false;
+        LevelAssist.RecordPurchaseCompleted();
+        PublishReceipt(offer, true);
+        return true;
+    }
+
+    /// Mağaza bir gerçek para alımını bildirdi (StoreIap, onaydan ÖNCE): içerik + kayıt + teşekkür + makbuz.
+    /// Tekrar teslimi StoreIap işlem kimliğiyle engeller; burası her işlem için bir kez çağrılır.
+    public static void FulfillStorePurchase(ShopOffer offer, string transactionId)
+    {
+        if (offer == null) return;
+        ShopState.RecordPurchase(offer);
+        ShopRewardGranter.Grant(offer);
+        bool thanks = LivesManager.GrantPurchaseThanks(transactionId);
+        if (offer.priceType == ShopOffer.PriceType.RealMoney) LevelAssist.RecordPurchaseCompleted();
+        PublishReceipt(offer, thanks);
+    }
+
+    /// Arayan için: false dönen TryPurchase bir mağaza penceresi başlattıysa true ("yakında" ipucu gösterilmesin).
+    public static bool IsStorePurchasePending => StoreIap.IsPurchasing;
+
+    private static void PublishReceipt(ShopOffer offer, bool thanks)
+    {
+        OnReceipt?.Invoke(offer, thanks);
+        OnPurchased?.Invoke(offer);
+    }
+
     /// <summary>Teklifi satın almayı dener. İçerik verildiyse true.</summary>
     public static bool TryPurchase(ShopOffer offer)
     {
@@ -35,8 +72,14 @@ public static class ShopPurchaseService
                 break;
 
             case ShopOffer.PriceType.RealMoney:
+                // Mağaza bağlıysa (TF_IAP): pencere açılır, içerik mağaza onayında FulfillStorePurchase ile verilir.
+                // Bu çağrı false döner; arayanlar sonucu OnPurchased / StoreIap.OnPurchaseFailed ile alır.
+                if (StoreIap.IsAvailable)
+                {
+                    StoreIap.BeginPurchase(offer);
+                    return false;
+                }
                 if (!SimulateRealMoneyPurchases) return false;
-                Debug.Log($"[Shop] IAP simülasyonu: '{offer.displayName}' satın alındı sayıldı.");
                 break;
 
             default:
@@ -45,7 +88,10 @@ public static class ShopPurchaseService
 
         ShopState.RecordPurchase(offer);
         ShopRewardGranter.Grant(offer);
-        OnPurchased?.Invoke(offer);
+        // Development preview only; production RealMoney clicks still return false above.
+        bool thanks = offer.priceType == ShopOffer.PriceType.RealMoney
+            && LivesManager.GrantPurchaseThanks("dev-simulation:" + Guid.NewGuid().ToString("N"));
+        PublishReceipt(offer, thanks);
         return true;
     }
 }

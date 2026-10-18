@@ -27,6 +27,22 @@ public class LevelCatalog : ScriptableObject
 
     public List<LevelEntry> entries = new();
 
+    public int MaximumGlobalLevel
+    {
+        get
+        {
+            int max = 1;
+            if (entries == null) return max;
+            foreach (var entry in entries)
+            {
+                if (entry == null) continue;
+                max = Mathf.Max(max, entry.level);
+                if (TryGetGlobalLevelFromKey(entry.levelKey, out int keyLevel)) max = Mathf.Max(max, keyLevel);
+            }
+            return max;
+        }
+    }
+
     public bool TryGetLevel(int chapter, int level, out LevelData levelData)
     {
         for (int i = 0; i < entries.Count; i++)

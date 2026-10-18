@@ -7,7 +7,8 @@ public sealed class TeamLifeInbox
 {
     private const string SaveKey = "team_life_inbox_v1";
     private const int DonationLimit = 5;
-    private static readonly TimeSpan RequestCooldown = TimeSpan.FromHours(4);
+    // Kullanıcı kuralı (2026-10-10): 24 saatte bir istek; yeni istek eskisini iptal eder.
+    private static readonly TimeSpan RequestCooldown = TimeSpan.FromHours(24);
     private static readonly TimeSpan NewMemberLock = TimeSpan.FromHours(24);
 
     [Serializable]
@@ -40,6 +41,7 @@ public sealed class TeamLifeInbox
         public long nextBotRequestTicks;
         public List<BotRequest> botRequests;
         public long lastRequestTicks;
+        public List<string> requestSenders; // bu istekte can gönderenler — her oyuncu en fazla 1 can
     }
 
     private readonly State state;
@@ -52,12 +54,15 @@ public sealed class TeamLifeInbox
     public IReadOnlyList<BotRequest> BotRequests => state.botRequests;
     public int Pending => state.replies.FindAll(reply => !reply.accepted).Count;
     public bool IsWaiting => state.requested > 0;
-    public bool CanRequest => LivesManager.Current < LivesManager.MaxLives && Pending == 0 && !IsWaiting
+    // İstek yalnız can eksikken ve 24 saatlik kilit dolunca. Bekleyen (alınmamış) cevaplar ya da
+    // yarım kalmış eski istek ARTIK BLOKLAMAZ: eskiden can doluyken alınamayan cevaplar butonu
+    // sonsuza dek "Canların Hazır"da kilitliyordu.
+    public bool CanRequest => LivesManager.Current < LivesManager.MaxLives
                               && RequestLockRemaining(DateTime.UtcNow) <= TimeSpan.Zero;
 
     /// <summary>
-    /// Zaman kilidinin kalanı: takıma yeni katılan 24 saat, istek yapan (bu takımda) 4 saat
-    /// bekler. Zero = kilit yok. Takım değişince state sıfırlandığı için 4 saat takım başınadır.
+    /// Zaman kilidinin kalanı: takıma yeni katılan 24 saat, istek yapan (bu takımda) 24 saat
+    /// bekler. Zero = kilit yok. Takım değişince state sıfırlandığı için 24 saat takım başınadır.
     /// </summary>
     public TimeSpan RequestLockRemaining(DateTime now)
     {
@@ -86,6 +91,7 @@ public sealed class TeamLifeInbox
         }
         state.pending = 0;
         if (state.botRequests == null) state.botRequests = new List<BotRequest>();
+        if (state.requestSenders == null) state.requestSenders = new List<string>();
         if (state.nextBotRequestTicks <= 0 || state.nextBotRequestTicks > DateTime.MaxValue.Ticks)
             state.nextBotRequestTicks = DateTime.UtcNow.AddSeconds(this.randomRange(60, 121)).Ticks;
         state.requested = Mathf.Clamp(state.requested, 0, DonationLimit - Pending);
@@ -105,7 +111,12 @@ public sealed class TeamLifeInbox
     public bool Request(DateTime now)
     {
         if (!CanRequest) return false;
-        state.requested = Mathf.Min(DonationLimit, LivesManager.MaxLives - LivesManager.Current);
+        // Yeni istek eskisini iptal eder: gelmeyen cevaplar düşer, sayaç baştan (en fazla 5 can,
+        // her takım arkadaşından en fazla 1). Daha önce gelmiş ama alınmamış canlar alınabilir kalır.
+        int want = Mathf.Min(DonationLimit, LivesManager.MaxLives - LivesManager.Current);
+        if (botCount > 0) want = Mathf.Min(want, botCount);
+        state.requested = want;
+        state.requestSenders.Clear();
         state.lastRequestTicks = now.Ticks;
         Schedule(now);
         Save();
@@ -136,7 +147,16 @@ public sealed class TeamLifeInbox
             }
 
             var due = new DateTime(state.nextGiftTicks, DateTimeKind.Utc);
-            AddReply(pickSender?.Invoke(), due);
+            string sender = PickDistinctSender();
+            if (sender == null)
+            {
+                // Bu istekte can göndermemiş takım arkadaşı kalmadı → istek burada biter.
+                state.requested = 0;
+                state.nextGiftTicks = 0;
+                break;
+            }
+            state.requestSenders.Add(sender);
+            AddReply(sender, due);
             state.requested--;
             received = true;
             if (IsWaiting) Schedule(due);
@@ -194,6 +214,20 @@ public sealed class TeamLifeInbox
         LivesManager.AddLives(1);
         changed?.Invoke();
         return 1;
+    }
+
+    // Aynı istekte aynı oyuncu iki kez can göndermesin. Rastgele seçici birkaç denemede yeni isim
+    // bulamazsa (takımda kimse kalmadı) null döner.
+    private string PickDistinctSender()
+    {
+        if (pickSender == null) return GameLocalization.Get("team_teammate");
+        for (int attempt = 0; attempt < 12; attempt++)
+        {
+            string candidate = pickSender();
+            if (string.IsNullOrEmpty(candidate)) continue;
+            if (!state.requestSenders.Contains(candidate)) return candidate;
+        }
+        return null;
     }
 
     private void AddReply(string sender, DateTime sentAt)

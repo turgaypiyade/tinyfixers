@@ -12,11 +12,11 @@ public static class ShopPurchaseFeedback
     private static void Register()
     {
         // Also safe when entering Play Mode with domain reload disabled.
-        ShopPurchaseService.OnPurchased -= ShowSuccess;
-        ShopPurchaseService.OnPurchased += ShowSuccess;
+        ShopPurchaseService.OnReceipt -= ShowSuccess;
+        ShopPurchaseService.OnReceipt += ShowSuccess;
     }
 
-    private static void ShowSuccess(ShopOffer offer)
+    private static void ShowSuccess(ShopOffer offer, bool purchaseThanks)
     {
         if (offer == null || RuntimeSimulationSession.IsActive) return;
         var items = new List<RuntimeChoicePopup.RewardItem>();
@@ -53,6 +53,15 @@ public static class ShopPurchaseFeedback
                     if (reward.kind == ShopReward.Kind.Coins) coinGain += Mathf.Max(1, reward.amount);
                 }
             }
+        }
+
+        if (purchaseThanks)
+        {
+            // A distinct receipt item makes the gesture visible, including overflow at the life cap.
+            string giftName = GameLocalization.Get(LivesManager.PendingPurchaseThanks > 0
+                ? "shop_purchase_thanks_pending" : "shop_purchase_thanks_life");
+            items.Add(new RuntimeChoicePopup.RewardItem(null, "+1", giftName));
+            targets.Add(CollectTarget.Lives);
         }
 
         if (UseCelebration)
@@ -138,6 +147,7 @@ public static class ShopPurchaseFeedback
                     BoardController.BoosterMode.Row => "shop_reward_row",
                     BoardController.BoosterMode.Column => "shop_reward_column",
                     BoardController.BoosterMode.Shuffle => "shop_reward_shuffle",
+                    BoardController.BoosterMode.PaintBucket => "shop_reward_paint",
                     _ => "shop_reward_booster"
                 };
             case ShopReward.Kind.Timed:
@@ -152,6 +162,7 @@ public static class ShopPurchaseFeedback
                     DailySlotRewardType.Booster_Row => "shop_reward_row",
                     DailySlotRewardType.Booster_Column => "shop_reward_column",
                     DailySlotRewardType.Booster_Shuffle => "shop_reward_shuffle",
+                    DailySlotRewardType.Booster_PaintBucket => "shop_reward_paint",
                     _ => "shop_reward_timed"
                 };
             default: return "shop_reward_booster";

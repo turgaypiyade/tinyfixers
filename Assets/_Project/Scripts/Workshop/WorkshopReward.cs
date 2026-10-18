@@ -114,7 +114,5 @@ public static class WorkshopRewardService
                 BoosterInventory.Add(BoardController.BoosterMode.Shuffle, amt);
                 break;
         }
-
-        Debug.Log($"[WorkshopReward] Granted {amt}x {reward.type}");
     }
 }

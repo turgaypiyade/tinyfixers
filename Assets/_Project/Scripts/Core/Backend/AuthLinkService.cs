@@ -102,7 +102,6 @@ public static class AuthLinkService
         {
             if (!task.IsFaulted && !task.IsCanceled)
             {
-                Debug.Log($"[AuthLink] {provider} bağlandı ✅ uid korunmuş: {user.UserId}");
                 OnLinked?.Invoke(provider);
                 return;
             }
@@ -112,7 +111,6 @@ public static class AuthLinkService
             if (baseEx is FirebaseAccountLinkException || (baseEx?.Message?.Contains("already in use") ?? false)
                 || (baseEx?.Message?.Contains("already associated") ?? false))
             {
-                Debug.Log($"[AuthLink] {provider} çakışma — mevcut kayıt var, kullanıcıya soruluyor.");
                 OnLinkConflict?.Invoke(provider, credential);
                 return;
             }
@@ -135,8 +133,6 @@ public static class AuthLinkService
                 OnLinkFailed?.Invoke(provider, task.Exception?.GetBaseException().Message ?? "Giriş hatası.");
                 return;
             }
-
-            Debug.Log($"[AuthLink] {provider} mevcut hesaba geçildi → uid: {task.Result.UserId}");
             OnLinked?.Invoke(provider);
             // Not: FirebaseAuthService.UserId eski uid'i tutuyor olabilir; tam geçiş
             // uygulama yeniden başlatılınca netleşir. UI "yeniden başlat" önerir.

@@ -271,7 +271,10 @@ public sealed class OverrideSpecializedCombo
             if (rt.BuildPulseChainForCells != null)
                 result.Actions.Add(rt.BuildPulseChainForCells(pulseCells));
             else
-                Debug.LogError("[OverrideSpecializedCombo] BuildPulseChainForCells bağlanmadı — Pulse+Override implant pulse'ları patlamayacak!");
+                {
+                    if (GameDiagnostics.CriticalErrors)
+                        Debug.LogError("[OverrideSpecializedCombo] BuildPulseChainForCells bağlanmadı — Pulse+Override implant pulse'ları patlamayacak!");
+                }
 
             return;
         }

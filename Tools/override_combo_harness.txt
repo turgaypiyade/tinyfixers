@@ -1,0 +1,71 @@
+public class Combo {
+ /* MEMBERS */
+ void StopCoroutine(Coroutine c){c.stopped=true;(c.enumerator as IDisposable)?.Dispose();}
+ void RestoreStormDefaults(){}void StormStop(bool clear){}
+ void SaveStormDefaults(){_savedStartSpeed=_savedStartSize=_savedStartLifetime=1;}
+ void HideBlastRays(){}void UpdateFlameWave(float radius,float t){}
+ public GameObject gameObject=new GameObject();
+ static int checks;
+ static void Check(bool ok,string message){checks++;if(!ok)throw new Exception(message);}
+ static bool Near(float a,float b)=>Math.Abs(a-b)<.002f;
+ static Combo Setup(Vector2 a,Vector2 b){
+  var c=new Combo{pivot=new RectTransform(),centerFlash=new Image(),canvasGroup=new CanvasGroup(),stormParticles=new ParticleSystem(),
+   iconImageA=new Image{color=Color.white},iconImageB=new Image{color=Color.white},mergedIconImage=new Image(),_startOffsetA=a,_startOffsetB=b};
+  c.turnSourceA=View.Setup();c.turnSourceB=View.Setup();return c;
+ }
+ IEnumerator Start(){var e=Co_Play();_routine=new Coroutine{enumerator=e};return e;}
+ public static void Run(){
+  Check(IsFirstTurnRole(new Vector2(-1,0),new Vector2(1,0)),"left receives first role");
+  Check(!IsFirstTurnRole(new Vector2(1,0),new Vector2(-1,0)),"reversed arguments still assign left role geometrically");
+  Check(IsFirstTurnRole(new Vector2(0,1),new Vector2(0,-1)),"upper receives first role for vertical pair");
+  Check(!IsFirstTurnRole(new Vector2(0,-1),new Vector2(0,1)),"lower receives opposite role for reversed vertical arguments");
+  foreach(int fps in new[]{15,30,60,120})foreach(bool vertical in new[]{false,true})foreach(bool reversed in new[]{false,true}){
+   Time.deltaTime=1f/fps;var a=vertical?new Vector2(0,45):new Vector2(-45,0);var b=-a;if(reversed){var tmp=a;a=b;b=tmp;}
+   var c=Setup(a,b);bool aFirst=IsFirstTurnRole(a,b);int impacts=0;float previousRadius=-1;float impactPhase=0;bool spinAfterImpact=false;
+   c.OnImpact+=()=>{impacts++;Check(c.comboLink==null,"tether ends exactly at impact");Check(c.turnViewA!=null&&c.turnViewA.Phase>0,"sphere still turning at collision");impactPhase=c.turnViewA.Phase;};
+   c.OnWaveRadiusChanged+=r=>{Check(impacts==1,"wave callbacks follow impact");Check(r>=previousRadius,"existing wave grows monotonically");previousRadius=r;};
+   var e=c.Start();float phase=0;int frames=0;
+   while(e.MoveNext()){
+    Check(++frames<500,"combo completes");
+    if(c.turnViewA==null)continue;
+    Check(c.turnViewA.TopReverse==aFirst&&c.turnViewA.BottomReverse!=aFirst,"A cap and lower half obey position role");
+    Check(c.turnViewB.TopReverse!=aFirst&&c.turnViewB.BottomReverse==aFirst,"B mirrors both half directions");
+    Check(c.turnViewA.Phase>phase&&Near(c.turnViewA.Phase,c.turnViewB.Phase),"no phase reset/pause during separation, return or impact fade");phase=c.turnViewA.Phase;
+    Check(Near(c.iconImageA.color.a,0)&&Near(c.iconImageB.color.a,0),"static full icons do not cover spinning halves");
+    if(vertical&&impacts==0)Check(Near(c.IconRectA.anchoredPosition.x,0)&&Near(c.IconRectB.anchoredPosition.x,0),"vertical pair separates and returns on its own axis");
+    if(impacts==0){Check(c.comboLink!=null,"tether remains connected through opening and smash");
+     var mid=(c.IconRectA.anchoredPosition+c.IconRectB.anchoredPosition)*.5f;
+     Check(Near(c.comboLink.rectTransform.anchoredPosition.x,mid.x)&&Near(c.comboLink.rectTransform.anchoredPosition.y,mid.y),"tether follows horizontal/vertical sphere midpoint");}
+    else spinAfterImpact|=c.turnViewA.Phase>impactPhase;
+   }
+   Check(impacts==1&&spinAfterImpact&&Near(previousRadius,c.WaveMaxRadius),"one impact, continued turn and complete wave");
+   Check(Near(c.GetPreClearDuration(),.70f)&&Near(c.GetRadialWaveDuration(),1.5f)&&Near(c.GetTotalDuration(),2.35f),"gameplay synchronization durations unchanged");
+   Check(c.turnViewA==null&&c.turnViewB==null&&c.comboLink==null&&Near(c.canvasGroup.alpha,0),"normal completion returns every combo effect");
+   c.Stop();c.OnDisable();Check(UiVfxPool.rented==UiVfxPool.returned,"repeated cleanup never returns an object twice");
+  }
+  Time.deltaTime=1f/60;
+  foreach(int cancelFrame in new[]{4,35,50}){
+   var c=Setup(new Vector2(-45,0),new Vector2(45,0));var e=c.Start();for(int i=0;i<cancelFrame;i++)Check(e.MoveNext(),"cancel stage reachable");
+   if(cancelFrame==35)c.OnDisable();else c.Stop();
+   Check(c.turnViewA==null&&c.turnViewB==null&&c.comboLink==null&&!c.gameObject.activeInHierarchy,"stop/scene-disable clears separation, smash and wave effects");
+   Check(UiVfxPool.rented==UiVfxPool.returned,"cancelled combo returns both views, charge meshes and link");
+  }
+  var fallback=Setup(new Vector2(-45,0),new Vector2(45,0));fallback.turnSourceA=fallback.turnSourceB=null;var fallbackRun=fallback.Start();Check(fallbackRun.MoveNext()&&fallback.turnViewA==null&&fallback.iconImageA.color.a>0,"missing frame source keeps legacy full-icon visuals visible");fallback.Stop();
+  var reuse=Setup(new Vector2(-45,0),new Vector2(45,0));var run=reuse.Start();while(run.MoveNext()){}int images=Image.created,objects=GameObject.created;
+  run=reuse.Start();while(run.MoveNext()){}
+  Check(images==Image.created&&objects==GameObject.created,"warm combo reuses two sphere views and one link without new Images/GameObjects");
+  var link=new OverrideComboLinkGraphic();var mesh=new VertexHelper();
+  foreach(bool vertical in new[]{false,true}){
+   var a=Vector2.zero;var b=vertical?new Vector2(0,240):new Vector2(240,0);
+   link.SetConnection(a,b,40,40,100,.1f);link.Populate(mesh);Check(mesh.currentVertCount==192&&mesh.triangles==96,"bounded tether mesh");
+   var first=(Vector2)(mesh.points[0])+((Vector2)mesh.points[1]-(Vector2)mesh.points[0])*.5f;
+   var last=((Vector2)mesh.points[mesh.currentVertCount-2]+(Vector2)mesh.points[mesh.currentVertCount-1])*.5f;
+   var expectedStart=vertical?new Vector2(0,-80):new Vector2(-80,0);var expectedEnd=-expectedStart;
+   Check((first-expectedStart).magnitude<.002f&&(last-expectedEnd).magnitude<.002f,"tether endpoints anchored exactly to facing sphere edges");
+  }
+  link.SetConnection(Vector2.zero,Vector2.zero,40,40,100,1);link.Populate(mesh);Check(mesh.currentVertCount==0,"overlapping impact has no inverted tether");
+  link.ResetLink();link.Populate(mesh);Check(mesh.currentVertCount==0,"pool return clears tether geometry");
+  Check(UiVfxPool.rented==UiVfxPool.returned,"all animation and cancellation effects returned");
+  Console.WriteLine("PASS: "+checks+" combo direction, continuous motion, tether, wave timing, cancellation and warm-pool checks.");
+ }
+}

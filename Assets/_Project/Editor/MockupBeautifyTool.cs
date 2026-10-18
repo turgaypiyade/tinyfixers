@@ -102,7 +102,8 @@ public static class MockupBeautifyTool
         var importer = AssetImporter.GetAtPath(path) as TextureImporter;
         if (importer == null)
         {
-            Debug.LogWarning($"[Beautify] Importer bulunamadı: {path}");
+            if (GameDiagnostics.EditorTools)
+                Debug.LogWarning($"[Beautify] Importer bulunamadı: {path}");
             return;
         }
 

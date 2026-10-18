@@ -131,12 +131,11 @@ public sealed class StarFlyToWalletAnimator : MonoBehaviour
 
         if (starCountText == null)
         {
-            Debug.LogWarning("[StarFlyToWalletAnimator] StarCount text not found. Pending star reward will be skipped.");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogWarning("[StarFlyToWalletAnimator] StarCount text not found. Pending star reward will be skipped.");
             ClearPendingReward();
             yield break;
         }
-
-        Debug.Log($"[StarFlyToWalletAnimator] Pending star reward found. reward={pendingReward}, before={pendingBefore}, after={pendingAfter}");
 
         if (!CanPlayVisualStars())
         {
@@ -446,7 +445,8 @@ public sealed class StarFlyToWalletAnimator : MonoBehaviour
         if (starCountText == null && !hasWarnedMissingText)
         {
             hasWarnedMissingText = true;
-            Debug.LogWarning("[StarFlyToWalletAnimator] StarCount text not found. Star display will be skipped.");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogWarning("[StarFlyToWalletAnimator] StarCount text not found. Star display will be skipped.");
         }
     }
 

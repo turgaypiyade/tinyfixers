@@ -154,7 +154,6 @@ public class WorkshopController : MonoBehaviour
         int cur = CurrentChapterIndex;
         if (cur != lastAppliedChapter)
         {
-            Debug.Log($"[Workshop] Chapter değişti: {lastAppliedChapter} → {cur}. Yeniden uygulanıyor.");
             lastAppliedChapter = cur;
         }
         ApplyCurrentStageInstant();
@@ -174,38 +173,38 @@ public class WorkshopController : MonoBehaviour
 
         if (kb.spaceKey.wasPressedThisFrame)
         {
-            Debug.Log($"[Workshop] Space → FORCE repair. CurrentStage={CurrentStage}");
             if (!DebugForceRepairCurrent())
-                Debug.LogWarning("[Workshop] FORCE repair FAIL — son aşamadasın veya transition devam ediyor.");
+                {
+                    if (GameDiagnostics.CriticalErrors)
+                        Debug.LogWarning("[Workshop] FORCE repair FAIL — son aşamadasın veya transition devam ediyor.");
+                }
         }
         if (kb.rKey.wasPressedThisFrame)
         {
             DebugReset();
-            Debug.Log("[Workshop] R → reset to stage 0.");
         }
         if (kb.sKey.wasPressedThisFrame)
         {
             PlayerPrefs.SetInt("player_total_stars", 99);
             PlayerPrefs.Save();
-            Debug.Log("[Workshop] S → 99 yıldız cheat.");
         }
 #else
         if (Input.GetKeyDown(KeyCode.Space))
         {
-            Debug.Log($"[Workshop] Space → FORCE repair. CurrentStage={CurrentStage}");
             if (!DebugForceRepairCurrent())
-                Debug.LogWarning("[Workshop] FORCE repair FAIL — son aşamadasın veya transition devam ediyor.");
+                {
+                    if (GameDiagnostics.CriticalErrors)
+                        Debug.LogWarning("[Workshop] FORCE repair FAIL — son aşamadasın veya transition devam ediyor.");
+                }
         }
         if (Input.GetKeyDown(KeyCode.R))
         {
             DebugReset();
-            Debug.Log("[Workshop] R → reset to stage 0.");
         }
         if (Input.GetKeyDown(KeyCode.S))
         {
             PlayerPrefs.SetInt("player_total_stars", 99);
             PlayerPrefs.Save();
-            Debug.Log("[Workshop] S → 99 yıldız cheat.");
         }
 #endif
     }
@@ -221,16 +220,14 @@ public class WorkshopController : MonoBehaviour
         var data = StageData;
         if (data == null || data.stages.Count == 0)
         {
-            Debug.LogWarning($"[Workshop] StageData boş — Chapter {CurrentChapterIndex} için gösterilecek aşama yok.");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogWarning($"[Workshop] StageData boş — Chapter {CurrentChapterIndex} için gösterilecek aşama yok.");
             return;
         }
 
         if (flashOverlay != null) flashOverlay.alpha = 0f;
 
         var s0img = data.stages.Count > 0 ? data.stages[0].stageImage : null;
-        Debug.Log($"[Workshop] ApplyInstant — mode={data.mode} chapter={CurrentChapterIndex} stage={CurrentStage} " +
-                  $"stages[0].stageImage={(s0img != null ? s0img.name : "NULL")} " +
-                  $"currentImage={(currentImage != null ? currentImage.name : "NULL")}");
 
         if (data.mode == WorkshopMode.LayerFlyIn)
         {
@@ -268,13 +265,11 @@ public class WorkshopController : MonoBehaviour
         }
 
         Sprite bg = compositeStage >= 0 ? data.stages[compositeStage].stageImage : null;
-        Debug.Log($"[Workshop] LayerFlyIn apply — compositeStage={compositeStage} bg={(bg != null ? bg.name : "NULL")}");
         if (currentImage != null)
         {
             if (!currentImage.gameObject.activeSelf) currentImage.gameObject.SetActive(true);
             currentImage.sprite = bg;
             SetImageAlpha(currentImage, 1f);
-            Debug.Log($"[Workshop] currentImage.sprite SET → {(currentImage.sprite != null ? currentImage.sprite.name : "NULL")} alpha={currentImage.color.a}");
         }
         StartCoroutine(DebugCheckSpriteNextFrame());
         if (nextImage != null) SetImageAlpha(nextImage, 0f);
@@ -300,35 +295,34 @@ public class WorkshopController : MonoBehaviour
     /// </summary>
     public bool TryRepairCurrent()
     {
-        if (IsTransitioning) { Debug.Log("[Workshop] TryRepair FAIL: zaten transition var"); return false; }
-        if (IsAllCompleted)  { Debug.Log("[Workshop] TryRepair FAIL: tüm tasklar bitti"); return false; }
+        if (IsTransitioning) { return false; }
+        if (IsAllCompleted)  { return false; }
         var data = StageData;
-        if (data == null) { Debug.LogWarning("[Workshop] TryRepair FAIL: StageData null (chapter library veya theme'da workshop yok?)"); return false; }
+        if (data == null) { if (GameDiagnostics.CriticalErrors)
+            Debug.LogWarning("[Workshop] TryRepair FAIL: StageData null (chapter library veya theme'da workshop yok?)"); return false; }
 
         int nextIndex = CurrentStage + 1;
         if (nextIndex >= data.stages.Count)
         {
-            Debug.Log($"[Workshop] TryRepair FAIL: nextIndex {nextIndex} >= stagesCount {data.stages.Count}");
             return false;
         }
 
         var nextStage = data.stages[nextIndex];
         int cost = nextStage.starCost;
-        Debug.Log($"[Workshop] TryRepair: cost={cost}, stars={PlayerWallet.TotalStars}, nextIndex={nextIndex}");
 
         if (!PlayerWallet.HasEnoughStars(cost))
         {
-            Debug.LogWarning($"[Workshop] TryRepair FAIL: yetersiz yıldız ({PlayerWallet.TotalStars} < {cost})");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogWarning($"[Workshop] TryRepair FAIL: yetersiz yıldız ({PlayerWallet.TotalStars} < {cost})");
             return false;
         }
 
         if (!PlayerWallet.SpendStars(cost))
         {
-            Debug.LogError("[Workshop] TryRepair FAIL: SpendStars başarısız");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogError("[Workshop] TryRepair FAIL: SpendStars başarısız");
             return false;
         }
-
-        Debug.Log($"[Workshop] TryRepair OK: stages[{nextIndex}] yükleniyor, sprite={(nextStage.stageImage != null ? nextStage.stageImage.name : "NULL")}");
         StartCoroutine(PlayStageTransition(nextIndex));
         return true;
     }
@@ -442,10 +436,8 @@ public class WorkshopController : MonoBehaviour
     private IEnumerator PlaySpriteSwapTransition(int nextIndex)
     {
         IsTransitioning = true;
-        Debug.Log($"[Workshop] PlayStageTransition START → stages[{nextIndex}]. currentImage={(currentImage != null ? "OK" : "NULL")}, nextImage={(nextImage != null ? "OK" : "NULL")}");
 
         var nextStage = StageData.stages[nextIndex];
-        Debug.Log($"[Workshop] nextStage.stageImage = {(nextStage.stageImage != null ? nextStage.stageImage.name : "NULL")}");
 
         // 0. Yıldız uçma animasyonu için kısa gecikme (gelecek entegrasyon)
         if (starFlyToTargetDelay > 0f)
@@ -457,11 +449,11 @@ public class WorkshopController : MonoBehaviour
             if (!nextImage.gameObject.activeSelf) nextImage.gameObject.SetActive(true);
             nextImage.sprite = nextStage.stageImage;
             SetImageAlpha(nextImage, 0f);
-            Debug.Log($"[Workshop] NextImage sprite set, alpha=0, ready to crossfade");
         }
         else
         {
-            Debug.LogWarning("[Workshop] NextImage NULL! Crossfade çalışmayacak.");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogWarning("[Workshop] NextImage NULL! Crossfade çalışmayacak.");
         }
 
         // 2. Sparkle VFX patlat (focus point'te) — varsa prefab
@@ -502,7 +494,6 @@ public class WorkshopController : MonoBehaviour
             currentImage.sprite = nextStage.stageImage;
             SetImageAlpha(currentImage, 1f);
             SetImageAlpha(nextImage, 0f);
-            Debug.Log($"[Workshop] Crossfade DONE. currentImage.sprite = {(nextStage.stageImage != null ? nextStage.stageImage.name : "NULL")}");
         }
 
         // 9. Save progress
@@ -527,7 +518,6 @@ public class WorkshopController : MonoBehaviour
         OnFinalRewardGranted?.Invoke(data.finalReward);
 
         int itemCount = data.finalReward.items != null ? data.finalReward.items.Count : 0;
-        Debug.Log($"[Workshop] Final reward bundle verildi: {itemCount} item.");
     }
 
     private IEnumerator PlayFlash()
@@ -703,7 +693,8 @@ public class WorkshopController : MonoBehaviour
         var parent = layerParent != null ? layerParent : (vfxParent != null ? vfxParent : currentImage?.rectTransform?.parent as RectTransform);
         if (parent == null)
         {
-            Debug.LogWarning("[Workshop] LayerParent bulunamadı — layerParent alanını Inspector'da ata.");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogWarning("[Workshop] LayerParent bulunamadı — layerParent alanını Inspector'da ata.");
             return new GameObject("Layer_Fallback");
         }
 
@@ -736,6 +727,6 @@ public class WorkshopController : MonoBehaviour
     {
         yield return null;
         if (currentImage != null)
-            Debug.Log($"[Workshop] 1 frame sonra currentImage.sprite={(currentImage.sprite != null ? currentImage.sprite.name : "NULL")} alpha={currentImage.color.a}");
+            {}
     }
 }

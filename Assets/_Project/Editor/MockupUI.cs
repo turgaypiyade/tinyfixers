@@ -313,7 +313,8 @@ public static class MockupUI
     {
         var so = new SerializedObject(target);
         var p = so.FindProperty(field);
-        if (p == null) { Debug.LogError($"[MockupUI] '{field}' alanı {target} üzerinde yok."); return; }
+        if (p == null) { if (GameDiagnostics.EditorTools)
+            Debug.LogError($"[MockupUI] '{field}' alanı {target} üzerinde yok."); return; }
         p.arraySize = values.Length;
         for (int i = 0; i < values.Length; i++)
             p.GetArrayElementAtIndex(i).objectReferenceValue = values[i];
@@ -324,7 +325,8 @@ public static class MockupUI
     {
         var so = new SerializedObject(target);
         var p = so.FindProperty(field);
-        if (p == null) { Debug.LogError($"[MockupUI] '{field}' alanı {target} üzerinde yok."); return; }
+        if (p == null) { if (GameDiagnostics.EditorTools)
+            Debug.LogError($"[MockupUI] '{field}' alanı {target} üzerinde yok."); return; }
         p.objectReferenceValue = value;
         so.ApplyModifiedPropertiesWithoutUndo();
     }

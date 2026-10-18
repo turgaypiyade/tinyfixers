@@ -85,7 +85,8 @@ public class SimRunnerWindow : EditorWindow
                 Repaint();
                 if (stats.Fidelity == SimGoalFidelity.NotSimulated) break;
             }
-            Debug.Log(_lastReport);
+            if (GameDiagnostics.EditorTools)
+                Debug.Log(_lastReport);
         }
         catch (System.OperationCanceledException)
         {
@@ -94,7 +95,8 @@ public class SimRunnerWindow : EditorWindow
         catch (System.Exception ex)
         {
             _lastReport = sb + $"\nSimülasyon hatası: {ex.GetBaseException().Message}\nBu koşudan zorluk sonucu çıkarılmadı.";
-            Debug.LogException(ex);
+            if (GameDiagnostics.EditorTools)
+                Debug.LogException(ex);
         }
         finally
         {

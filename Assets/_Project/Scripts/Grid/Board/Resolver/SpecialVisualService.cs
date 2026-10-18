@@ -425,7 +425,6 @@ public class SpecialVisualService
 
     public void FireOverrideOverrideSpecialVisuals(HashSet<TileView> affected, Dictionary<TileView, float> radialDelays)
     {
-        Debug.Log($"[OverrideVisual] start affected={affected?.Count ?? -1} delays={radialDelays?.Count ?? -1}");
 
         if (affected == null || radialDelays == null || board == null)
             return;
@@ -445,41 +444,30 @@ public class SpecialVisualService
             int x = tile.X;
             int y = tile.Y;
 
-            Debug.Log($"[OverrideVisual] schedule cell=({x},{y}) special={special} delay={delay} tile={tile.name}");
-
             board.StartCoroutine(DelayedSpecialVisualTrigger(x, y, special, delay));
         }
     }
 
     private IEnumerator DelayedSpecialVisualTrigger(int x, int y, TileSpecial special, float delay)
     {
-        Debug.Log($"[DelayedSpecialVisualTrigger] begin cell=({x},{y}) special={special} delay={delay}");
 
         if (delay > 0f)
             yield return new WaitForSeconds(delay);
 
         if (board == null)
         {
-            Debug.Log($"[DelayedSpecialVisualTrigger] abort cell=({x},{y}) reason=board-null");
             yield break;
         }
 
         var tileNow = board.GetTileViewAt(x, y);
-        Debug.Log(
-            $"[DelayedSpecialVisualTrigger] fire cell=({x},{y}) special={special} " +
-            $"tileNow={(tileNow != null ? tileNow.name : "null")} " +
-            $"specialNow={(tileNow != null ? tileNow.GetSpecial().ToString() : "null")}");
 
         if (tileNow == null)
         {
-            Debug.Log($"[DelayedSpecialVisualTrigger] abort cell=({x},{y}) reason=tile-null");
             yield break;
         }
 
         if (tileNow.GetSpecial() != special)
         {
-            Debug.Log(
-                $"[DelayedSpecialVisualTrigger] abort cell=({x},{y}) reason=special-changed expected={special} actual={tileNow.GetSpecial()}");
             yield break;
         }
 
@@ -487,7 +475,6 @@ public class SpecialVisualService
         switch (special)
         {
             case TileSpecial.PulseCore:
-                Debug.Log($"[DelayedSpecialVisualTrigger] PLAY pulse cell=({x},{y})");
                 // Normal PulseCore aktivasyon VFX'i — PulseCoreSpecial.PlayPulseActivationVisual ile aynı yol.
                 // ⚠️ board.PlayPulsePulseExplosionVfxAtCell kullanma — o pulse+pulse COMBO VFX'i (bomb grow+shake),
                 // override+override fanout sırasında tek PulseCore'a uygulanırsa yanlış görsel verir.
@@ -499,7 +486,6 @@ public class SpecialVisualService
             case TileSpecial.LineH:
             case TileSpecial.LineV:
                 {
-                    Debug.Log($"[DelayedSpecialVisualTrigger] PLAY line cell=({x},{y}) horizontal={(special == TileSpecial.LineH)}");
 
                     var strikes = new List<LightningLineStrike>(1)
             {
@@ -511,7 +497,6 @@ public class SpecialVisualService
                 }
 
             default:
-                Debug.Log($"[DelayedSpecialVisualTrigger] skip cell=({x},{y}) reason=unsupported-special special={special}");
                 break;
         }
     }

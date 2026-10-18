@@ -101,9 +101,8 @@ public sealed class CoinFlyToWalletAnimator : MonoBehaviour
         {
             if (pendingAfter != walletCoins)
             {
-                Debug.LogWarning(
-                    $"[CoinFlyToWalletAnimator] Clearing stale pending coin reward. " +
-                    $"pendingReward={pendingReward} pendingBefore={pendingBefore} pendingAfter={pendingAfter} wallet={walletCoins}");
+                if (GameDiagnostics.CriticalErrors)
+                    Debug.LogWarning($"[CoinFlyToWalletAnimator] Clearing stale pending coin reward. " + $"pendingReward={pendingReward} pendingBefore={pendingBefore} pendingAfter={pendingAfter} wallet={walletCoins}");
                 ClearPendingReward();
                 pendingReward = 0;
                 pendingBefore = walletCoins;
@@ -171,7 +170,8 @@ public sealed class CoinFlyToWalletAnimator : MonoBehaviour
 
         if (chipMoneyText == null)
         {
-            Debug.LogWarning("[CoinFlyToWalletAnimator] ChipMoney text not found. Pending coin reward will be applied without text animation.");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogWarning("[CoinFlyToWalletAnimator] ChipMoney text not found. Pending coin reward will be applied without text animation.");
             ClearPendingReward();
             yield break;
         }
@@ -430,7 +430,8 @@ public sealed class CoinFlyToWalletAnimator : MonoBehaviour
         if (chipMoneyText == null && !hasWarnedMissingText)
         {
             hasWarnedMissingText = true;
-            Debug.LogWarning("[CoinFlyToWalletAnimator] ChipMoney text not found. Coin reward animation will be skipped.");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogWarning("[CoinFlyToWalletAnimator] ChipMoney text not found. Coin reward animation will be skipped.");
         }
     }
 

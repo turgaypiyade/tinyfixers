@@ -1,4 +1,3 @@
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -21,313 +20,286 @@ public sealed class OilSpreadAnimator : MonoBehaviour
     public Sprite OilOverlaySprite => oilOverlaySprite;
     public Texture OilInteriorTexture => oilInteriorTexture;
 
-    public IEnumerator PlaySpread(IReadOnlyList<OilSpreadPair> pairs)
+    // One driver for all flights. Views (including drop/blend children) use the shared UI pool.
+    // Each flight owns its level-end job explicitly, so disabling the component cannot leak it.
+    private sealed class Flight
     {
-        if (pairs == null || pairs.Count == 0) yield break;
-
-        int done = 0;
-        foreach (var pair in pairs)
-            StartCoroutine(PlayOnePair(pair, () => done++));
-
-        while (done < pairs.Count)
-            yield return null;
+        public GameObject root;
+        public Image bridge, target, drop, blend;
+        public RectTransform dropRect;
+        public Vector2 dropStart, dropEnd;
+        public Vector2Int cell;
+        public float age, growTime, revealTime, frameTime, fadeTime;
+        public Sprite finalSprite;
+        public readonly List<Sprite> frames = new(8);
+        public System.IDisposable job;
+        public string poolKey;
     }
 
-    private IEnumerator PlayOnePair(OilSpreadPair pair, System.Action onDone)
+    private readonly List<Flight> active = new(4);
+    private readonly Stack<Flight> reusable = new(4);
+    private string poolKey;
+    private int poolPrefabId;
+
+    public bool IsAnimatingTarget(Vector2Int cell)
     {
-        if (spreadFxPrefab == null || board == null) { onDone?.Invoke(); yield break; }
+        for (int i = 0; i < active.Count; i++)
+            if (active[i].cell == cell)
+                return true;
+        return false;
+    }
 
-        // TilesRoot: board'un tile'ları yerleştirdiği parent.
-        // DrawObstacleImage ile aynı koordinat sistemi: (x*ts, -y*ts) top-left origin.
-        var tilesRoot = board.TilesRoot;
-        if (tilesRoot == null) { onDone?.Invoke(); yield break; }
+    public void PlaySpread(IReadOnlyList<OilSpreadPair> pairs)
+    {
+        if (!isActiveAndEnabled || board == null || spreadFxPrefab == null || board.TilesRoot == null
+            || pairs == null)
+            return;
 
+        int prefabId = spreadFxPrefab.GetInstanceID();
+        if (poolKey == null || poolPrefabId != prefabId)
+        {
+            poolPrefabId = prefabId;
+            poolKey = "OilSpread:" + prefabId;
+        }
+
+        for (int i = 0; i < pairs.Count; i++)
+        {
+            var pair = pairs[i];
+            if (board.ObstacleStateService == null
+                || !board.ObstacleStateService.IsOilAt(pair.Target.x, pair.Target.y)
+                || IsAnimatingTarget(pair.Target))
+                continue;
+
+            var flight = reusable.Count > 0 ? reusable.Pop() : new Flight();
+            try
+            {
+                flight.poolKey = poolKey;
+                flight.root = UiVfxPool.TryRent(poolKey, board.TilesRoot, spreadFxPrefab.name);
+                if (flight.root == null)
+                    flight.root = Instantiate(spreadFxPrefab, board.TilesRoot);
+                Configure(flight, pair);
+                flight.job = board.BeginJob(BoardController.BoardJobKind.OilSpread);
+                active.Add(flight);
+            }
+            catch
+            {
+                Release(flight);
+                throw;
+            }
+        }
+    }
+
+    private void Configure(Flight f, OilSpreadPair pair)
+    {
         float ts = board.TileSize;
         int dx = pair.Target.x - pair.Source.x;
         int dy = pair.Target.y - pair.Source.y;
-        bool sameCell = dx == 0 && dy == 0;       // yeni oil: kendi hücresinde belirir
-        bool isH = !sameCell && dy == 0;          // aynı satır farklı sütun = yatay; aynı hücre = dikey
-        float spanTiles = sameCell ? 1f : Mathf.Max(1, Mathf.Abs(isH ? dx : dy));
-        float bridgeLen = spanTiles * ts;         // köprü kaynak↔hedef mesafesi kadar (bitişikte 1 tile)
+        bool same = dx == 0 && dy == 0;
+        bool horizontal = !same && dy == 0;
+        var source = new Vector2(pair.Source.x * ts + ts * .5f, -pair.Source.y * ts - ts * .5f);
+        var target = new Vector2(pair.Target.x * ts + ts * .5f, -pair.Target.y * ts - ts * .5f);
+        var midpoint = (source + target) * .5f;
+        var rt = f.root.GetComponent<RectTransform>();
+        rt.anchorMin = rt.anchorMax = new Vector2(0f, 1f);
+        rt.pivot = new Vector2(.5f, .5f);
+        rt.anchoredPosition = midpoint;
+        rt.localScale = Vector3.one;
+        rt.localRotation = Quaternion.identity;
+        // UiVfxPool resets root size on reuse; restore prefab geometry as well.
+        if (spreadFxPrefab.transform is RectTransform prefabRect)
+            rt.sizeDelta = prefabRect.sizeDelta;
+        rt.SetAsLastSibling();
+        f.root.SetActive(true);
 
-        // Hücre merkezleri: DrawObstacleImage ile aynı formül
-        Vector2 srcCenter = new Vector2(pair.Source.x * ts + ts * 0.5f, -pair.Source.y * ts - ts * 0.5f);
-        Vector2 tgtCenter = new Vector2(pair.Target.x * ts + ts * 0.5f, -pair.Target.y * ts - ts * 0.5f);
-        Vector2 midCenter = (srcCenter + tgtCenter) * 0.5f;
-
-        var go = Instantiate(spreadFxPrefab, tilesRoot);
-        go.transform.SetAsLastSibling();
-
-        var fxRt = go.GetComponent<RectTransform>();
-        fxRt.anchorMin = new Vector2(0f, 1f);
-        fxRt.anchorMax = new Vector2(0f, 1f);
-        fxRt.pivot     = new Vector2(0.5f, 0.5f);
-        fxRt.anchoredPosition = midCenter;
-
-        var bridgeH   = go.transform.Find("Bridge_H");
-        var bridgeV   = go.transform.Find("Bridge_V");
-        var targetOil = go.transform.Find("TargetOil");
-
-        if (bridgeH   != null) bridgeH.gameObject.SetActive(isH);
-        if (bridgeV   != null) bridgeV.gameObject.SetActive(!isH);
-        if (targetOil != null) targetOil.gameObject.SetActive(false);
-
-        Image dropImg = null;
-        RectTransform dropRt = null;
-        if (oilDropSprite != null)
+        var h = rt.Find("Bridge_H");
+        var v = rt.Find("Bridge_V");
+        if (h != null) h.gameObject.SetActive(horizontal);
+        if (v != null) v.gameObject.SetActive(!horizontal);
+        f.bridge = (horizontal ? h : v)?.GetComponent<Image>();
+        if (f.bridge != null)
         {
-            var dropGo = new GameObject("OilDrop", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-            dropRt = dropGo.GetComponent<RectTransform>();
-            dropRt.SetParent(fxRt, false);
-            dropRt.anchorMin = dropRt.anchorMax = new Vector2(0.5f, 0.5f);
-            dropRt.pivot = new Vector2(0.5f, 0.5f);
-            dropRt.anchoredPosition = (sameCell ? tgtCenter : srcCenter) - midCenter + Vector2.up * ts * 0.45f;
-            dropRt.sizeDelta = new Vector2(ts * 0.72f, ts);
-            dropRt.localScale = Vector3.one;
-
-            dropImg = dropGo.GetComponent<Image>();
-            dropImg.sprite = oilDropSprite;
-            dropImg.preserveAspect = true;
-            dropImg.raycastTarget = false;
-            dropImg.color = Color.white;
+            var bridgeRect = f.bridge.rectTransform;
+            bridgeRect.anchorMin = bridgeRect.anchorMax = bridgeRect.pivot = new Vector2(.5f, .5f);
+            bridgeRect.anchoredPosition = Vector2.zero;
+            float cross = horizontal ? bridgeRect.sizeDelta.y : bridgeRect.sizeDelta.x;
+            if (cross <= 1f) cross = 24f;
+            float length = (same ? 1f : Mathf.Max(1, Mathf.Abs(horizontal ? dx : dy))) * ts;
+            bridgeRect.sizeDelta = horizontal ? new Vector2(length, cross) : new Vector2(cross, length);
+            f.bridge.type = Image.Type.Filled;
+            f.bridge.fillMethod = horizontal ? Image.FillMethod.Horizontal : Image.FillMethod.Vertical;
+            // Grid Y grows down, so downward flow fills from the TOP of the image.
+            f.bridge.fillOrigin = horizontal
+                ? (int)(dx > 0 ? Image.OriginHorizontal.Left : Image.OriginHorizontal.Right)
+                : (int)(dy > 0 ? Image.OriginVertical.Top : Image.OriginVertical.Bottom);
+            f.bridge.fillAmount = 0f;
+            f.bridge.raycastTarget = false;
         }
 
-        var activeGo  = isH ? bridgeH : bridgeV;
-        var activeImg = activeGo?.GetComponent<Image>();
-        var bridgeRt  = activeGo?.GetComponent<RectTransform>();
-
-        // Bridge: ortala, tile arası mesafe = tileSize
-        if (bridgeRt != null)
+        var targetTransform = rt.Find("TargetOil");
+        f.target = targetTransform != null ? targetTransform.GetComponent<Image>() : null;
+        f.blend = null;
+        f.finalSprite = oilSpreadSprite != null ? oilSpreadSprite : oilOverlaySprite;
+        if (f.target != null)
         {
-            bridgeRt.anchorMin = new Vector2(0.5f, 0.5f);
-            bridgeRt.anchorMax = new Vector2(0.5f, 0.5f);
-            bridgeRt.pivot     = new Vector2(0.5f, 0.5f);
-            bridgeRt.anchoredPosition = Vector2.zero;
-            float crossSize = isH
-                ? (bridgeRt.sizeDelta.y > 1f ? bridgeRt.sizeDelta.y : 24f)
-                : (bridgeRt.sizeDelta.x > 1f ? bridgeRt.sizeDelta.x : 24f);
-            bridgeRt.sizeDelta = isH ? new Vector2(bridgeLen, crossSize) : new Vector2(crossSize, bridgeLen);
+            var targetRect = f.target.rectTransform;
+            targetRect.anchorMin = targetRect.anchorMax = targetRect.pivot = new Vector2(.5f, .5f);
+            targetRect.anchoredPosition = target - midpoint;
+            targetRect.sizeDelta = new Vector2(ts, ts);
+            targetRect.localScale = Vector3.one;
+            float rotation = same ? 0f : horizontal ? (dx < 0 ? 180f : 0f) : (dy > 0 ? 180f : 0f);
+            targetRect.localEulerAngles = new Vector3(0f, 0f, rotation);
+            f.target.sprite = f.finalSprite;
+            f.target.type = Image.Type.Simple;
+            f.target.preserveAspect = false;
+            f.target.color = Color.white;
+            f.target.raycastTarget = false;
+            f.blend = GetOrCreateImage(targetRect, "OilFrameBlend");
+            var blendRect = f.blend.rectTransform;
+            blendRect.anchorMin = Vector2.zero;
+            blendRect.anchorMax = Vector2.one;
+            blendRect.pivot = new Vector2(.5f, .5f);
+            blendRect.anchoredPosition = blendRect.sizeDelta = Vector2.zero;
+            blendRect.localScale = Vector3.one;
+            blendRect.localRotation = Quaternion.identity;
+            SetImageAlpha(f.blend, 0f);
+            f.target.gameObject.SetActive(false);
         }
 
-        // Image Fill modu
-        if (activeImg != null)
-        {
-            activeImg.type       = Image.Type.Filled;
-            activeImg.fillMethod = isH ? Image.FillMethod.Horizontal : Image.FillMethod.Vertical;
-            bool positiveDir = isH ? (dx > 0) : (dy > 0);
-            // NOT: grid y AŞAĞI doğru büyür (target.y > source.y => target ekranda ALTTA, kaynak ÜSTTE).
-            // Dolum kaynaktan hedefe akmalı → target alttayken Top'tan başla (yatayda x normal yönde).
-            activeImg.fillOrigin = isH
-                ? (int)(positiveDir ? Image.OriginHorizontal.Left : Image.OriginHorizontal.Right)
-                : (int)(positiveDir ? Image.OriginVertical.Top    : Image.OriginVertical.Bottom);
-            activeImg.fillAmount = 0f;
-        }
-
-        // Aşama 1: Bridge akışı
-        float elapsed  = 0f;
-        float growTime = duration * 0.65f;
-        while (elapsed < growTime)
-        {
-            elapsed += Time.deltaTime;
-            float k = Mathf.Clamp01(elapsed / growTime);
-            if (activeImg != null) activeImg.fillAmount = Mathf.SmoothStep(0f, 1f, k);
-            if (dropRt != null)
-            {
-                Vector2 start = (sameCell ? tgtCenter : srcCenter) - midCenter + Vector2.up * ts * 0.45f;
-                Vector2 end = tgtCenter - midCenter;
-                dropRt.anchoredPosition = Vector2.LerpUnclamped(start, end, Mathf.SmoothStep(0f, 1f, k));
-                dropRt.localScale = Vector3.one * Mathf.Lerp(1f, 0.72f, k);
-            }
-            yield return null;
-        }
-        if (activeImg != null) activeImg.fillAmount = 1f;
-        if (dropImg != null)
-            dropImg.color = new Color(1f, 1f, 1f, 0f);
-
-        Image targetOilImg = null;
-
-        // Aşama 2: TargetOil hedef hücre merkezine yerleştir
-        if (targetOil != null)
-        {
-            var tOilRt = targetOil.GetComponent<RectTransform>();
-            if (tOilRt != null)
-            {
-                // FX root local space'inde hedef hücrenin merkezi
-                tOilRt.anchorMin = new Vector2(0.5f, 0.5f);
-                tOilRt.anchorMax = new Vector2(0.5f, 0.5f);
-                tOilRt.pivot     = new Vector2(0.5f, 0.5f);
-                tOilRt.anchoredPosition = tgtCenter - midCenter;
-                tOilRt.sizeDelta = new Vector2(ts, ts);
-                tOilRt.localEulerAngles = new Vector3(0f, 0f, ResolveTargetRotation(dx, dy, sameCell, isH));
-            }
-
-            targetOilImg = targetOil.GetComponent<Image>();
-            if (targetOilImg != null)
-            {
-                Sprite targetSprite = ResolveFinalOilSprite();
-                if (targetSprite != null)
-                    targetOilImg.sprite = targetSprite;
-                targetOilImg.type = Image.Type.Simple;
-                targetOilImg.preserveAspect = false;
-                targetOilImg.color = Color.white;
-                targetOilImg.raycastTarget = false;
-            }
-
-            targetOil.gameObject.SetActive(true);
-        }
-
-        float revealTime = Mathf.Max(duration * 0.35f, spreadFrameSequenceDuration);
-        yield return AnimateTargetOilFrames(targetOilImg, dx, dy, sameCell, isH, revealTime);
-
-        Destroy(go);
-        onDone?.Invoke();
+        f.drop = GetOrCreateImage(rt, "OilDrop");
+        f.drop.sprite = oilDropSprite;
+        f.drop.color = Color.white;
+        f.drop.preserveAspect = true;
+        f.drop.gameObject.SetActive(oilDropSprite != null);
+        f.dropRect = f.drop.rectTransform;
+        f.dropRect.anchorMin = f.dropRect.anchorMax = f.dropRect.pivot = new Vector2(.5f, .5f);
+        f.dropStart = (same ? target : source) - midpoint + Vector2.up * ts * .45f;
+        f.dropEnd = target - midpoint;
+        f.dropRect.anchoredPosition = f.dropStart;
+        f.dropRect.sizeDelta = new Vector2(ts * .72f, ts);
+        f.dropRect.localScale = Vector3.one;
+        f.dropRect.localRotation = Quaternion.identity;
+        f.cell = pair.Target;
+        f.age = 0f;
+        f.growTime = Mathf.Max(.001f, duration * .65f);
+        f.revealTime = Mathf.Max(.001f, Mathf.Max(duration * .35f, spreadFrameSequenceDuration));
+        f.frames.Clear();
+        if (!same && !horizontal) AddFrame(f.frames, f.finalSprite);
+        if (!same) AddFrames(f.frames, horizontal ? spreadRightFrames : spreadUpFrames);
+        AddFrame(f.frames, f.finalSprite);
+        f.frameTime = Mathf.Max(.04f, f.revealTime / Mathf.Max(1, f.frames.Count));
+        f.fadeTime = Mathf.Clamp(f.frameTime * spreadFrameCrossFadeRatio, .025f, f.frameTime);
     }
 
-    private IEnumerator AnimateTargetOilFrames(Image image, int dx, int dy, bool sameCell, bool isH, float revealTime)
+    private void Update()
     {
+        bool changed = false;
+        for (int i = active.Count - 1; i >= 0; i--)
+        {
+            var f = active[i];
+            // A special can clear the incoming Oil while its blob is flying. Cancel its visual
+            // immediately; never re-add gameplay Oil or reveal a stale target on arrival.
+            if (board == null || !board.isActiveAndEnabled || f.root == null
+                || board.ObstacleStateService == null
+                || !board.ObstacleStateService.IsOilAt(f.cell.x, f.cell.y)
+                || !Tick(f, Time.deltaTime))
+            {
+                active[i] = active[active.Count - 1];
+                active.RemoveAt(active.Count - 1);
+                Release(f);
+                changed = true;
+            }
+        }
+        // No full-board scans/overlay rebuilds per animation frame.
+        if (changed && board != null && board.isActiveAndEnabled)
+            board.RefreshOilOverlays();
+    }
+
+    private static bool Tick(Flight f, float deltaTime)
+    {
+        f.age += deltaTime;
+        float k = Mathf.Clamp01(f.age / f.growTime);
+        float eased = Mathf.SmoothStep(0f, 1f, k);
+        if (f.bridge != null) f.bridge.fillAmount = eased;
+        if (f.dropRect != null)
+        {
+            f.dropRect.anchoredPosition = Vector2.LerpUnclamped(f.dropStart, f.dropEnd, eased);
+            f.dropRect.localScale = Vector3.one * Mathf.Lerp(1f, .72f, k);
+        }
+        if (f.age < f.growTime) return true;
+
+        if (f.drop != null) f.drop.gameObject.SetActive(false);
+        float revealAge = f.age - f.growTime;
+        if (f.frames.Count == 0) return revealAge < f.revealTime;
+        int index = (int)(revealAge / f.frameTime);
+        if (index >= f.frames.Count) return false;
+        if (f.target != null)
+        {
+            f.target.gameObject.SetActive(true);
+            float blend = Mathf.SmoothStep(0f, 1f,
+                Mathf.Clamp01((revealAge - index * f.frameTime) / f.fadeTime));
+            f.target.sprite = index > 0 ? f.frames[index - 1] : f.finalSprite;
+            SetImageAlpha(f.target, 1f - blend);
+            if (f.blend != null)
+            {
+                f.blend.sprite = f.frames[index];
+                SetImageAlpha(f.blend, blend);
+            }
+        }
+        return true;
+    }
+
+    private void OnDisable() => CancelSpreads();
+
+    public void CancelSpreads()
+    {
+        bool hadFlights = active.Count > 0;
+        while (active.Count > 0)
+        {
+            var flight = active[active.Count - 1];
+            active.RemoveAt(active.Count - 1);
+            Release(flight);
+        }
+        if (hadFlights && board != null && board.isActiveAndEnabled)
+            board.RefreshOilOverlays();
+    }
+
+    private void Release(Flight f)
+    {
+        try
+        {
+            if (f.root != null) UiVfxPool.Return(f.poolKey, f.root, 8);
+        }
+        finally
+        {
+            f.root = null;
+            f.bridge = f.target = f.drop = f.blend = null;
+            f.dropRect = null;
+            f.frames.Clear();
+            f.job?.Dispose();
+            f.job = null;
+            reusable.Push(f);
+        }
+    }
+
+    private static Image GetOrCreateImage(RectTransform parent, string name)
+    {
+        var child = parent.Find(name);
+        Image image = child != null ? child.GetComponent<Image>() : null;
         if (image == null)
         {
-            if (revealTime > 0f)
-                yield return new WaitForSeconds(revealTime);
-            yield break;
+            var go = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            go.transform.SetParent(parent, false);
+            image = go.GetComponent<Image>();
         }
-
-        var frames = BuildFrameSequence(dx, dy, sameCell, isH);
-        if (frames.Count == 0)
-        {
-            Sprite finalSprite = ResolveFinalOilSprite();
-            if (finalSprite != null)
-                image.sprite = finalSprite;
-            if (revealTime > 0f)
-                yield return new WaitForSeconds(revealTime);
-            yield break;
-        }
-
-        Image blendImage = CreateBlendImage(image);
-        float frameTime = Mathf.Max(0.04f, revealTime / frames.Count);
-        float fadeTime = Mathf.Clamp(frameTime * spreadFrameCrossFadeRatio, 0.025f, frameTime);
-        for (int i = 0; i < frames.Count; i++)
-        {
-            yield return CrossFadeFrame(image, blendImage, frames[i], fadeTime);
-
-            float holdTime = frameTime - fadeTime;
-            if (holdTime > 0f)
-                yield return new WaitForSeconds(holdTime);
-        }
-
-        if (blendImage != null)
-            Destroy(blendImage.gameObject);
-
-        Sprite final = ResolveFinalOilSprite();
-        if (final != null)
-            image.sprite = final;
-        SetImageAlpha(image, 1f);
-    }
-
-    private List<Sprite> BuildFrameSequence(int dx, int dy, bool sameCell, bool isH)
-    {
-        var frames = new List<Sprite>(6);
-        Sprite finalSprite = ResolveFinalOilSprite();
-
-        if (sameCell)
-        {
-            AddFrame(frames, finalSprite);
-            return frames;
-        }
-
-        if (isH)
-        {
-            AddFrames(frames, spreadRightFrames);
-            AddFrame(frames, finalSprite);
-            return frames;
-        }
-
-        AddFrame(frames, finalSprite);
-        AddFrames(frames, spreadUpFrames);
-        AddFrame(frames, finalSprite);
-        return frames;
-    }
-
-    private float ResolveTargetRotation(int dx, int dy, bool sameCell, bool isH)
-    {
-        if (sameCell)
-            return 0f;
-
-        if (isH)
-            return dx < 0 ? 180f : 0f;
-
-        // SpreadUp sprite'ları yukarı yön içindir; aşağı akışta 180° döndürülür.
-        return dy > 0 ? 180f : 0f;
-    }
-
-    private Sprite ResolveFinalOilSprite()
-    {
-        return oilSpreadSprite != null ? oilSpreadSprite : oilOverlaySprite;
-    }
-
-    private static Image CreateBlendImage(Image source)
-    {
-        if (source == null)
-            return null;
-
-        var go = new GameObject("OilFrameBlend", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-        var rt = go.GetComponent<RectTransform>();
-        rt.SetParent(source.rectTransform, false);
-        rt.anchorMin = Vector2.zero;
-        rt.anchorMax = Vector2.one;
-        rt.pivot = new Vector2(0.5f, 0.5f);
-        rt.anchoredPosition = Vector2.zero;
-        rt.sizeDelta = Vector2.zero;
-        rt.localScale = Vector3.one;
-        rt.localEulerAngles = Vector3.zero;
-
-        var image = go.GetComponent<Image>();
         image.type = Image.Type.Simple;
-        image.preserveAspect = source.preserveAspect;
         image.raycastTarget = false;
-        SetImageAlpha(image, 0f);
+        image.gameObject.SetActive(true);
         return image;
-    }
-
-    private static IEnumerator CrossFadeFrame(Image baseImage, Image blendImage, Sprite nextSprite, float fadeTime)
-    {
-        if (baseImage == null)
-            yield break;
-
-        if (nextSprite == null || blendImage == null || fadeTime <= 0f)
-        {
-            if (nextSprite != null)
-                baseImage.sprite = nextSprite;
-            SetImageAlpha(baseImage, 1f);
-            if (blendImage != null)
-                SetImageAlpha(blendImage, 0f);
-            yield break;
-        }
-
-        blendImage.sprite = nextSprite;
-        SetImageAlpha(blendImage, 0f);
-        SetImageAlpha(baseImage, 1f);
-
-        float elapsed = 0f;
-        while (elapsed < fadeTime)
-        {
-            elapsed += Time.deltaTime;
-            float k = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(elapsed / fadeTime));
-            SetImageAlpha(baseImage, 1f - k);
-            SetImageAlpha(blendImage, k);
-            yield return null;
-        }
-
-        baseImage.sprite = nextSprite;
-        SetImageAlpha(baseImage, 1f);
-        SetImageAlpha(blendImage, 0f);
     }
 
     private static void SetImageAlpha(Image image, float alpha)
     {
-        if (image == null)
-            return;
-
+        if (image == null) return;
         Color color = image.color;
         color.a = alpha;
         image.color = color;
@@ -335,16 +307,12 @@ public sealed class OilSpreadAnimator : MonoBehaviour
 
     private static void AddFrames(List<Sprite> frames, Sprite[] sprites)
     {
-        if (sprites == null)
-            return;
-
-        for (int i = 0; i < sprites.Length; i++)
-            AddFrame(frames, sprites[i]);
+        if (sprites == null) return;
+        for (int i = 0; i < sprites.Length; i++) AddFrame(frames, sprites[i]);
     }
 
     private static void AddFrame(List<Sprite> frames, Sprite sprite)
     {
-        if (sprite != null)
-            frames.Add(sprite);
+        if (sprite != null) frames.Add(sprite);
     }
 }

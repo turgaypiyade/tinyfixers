@@ -63,7 +63,8 @@ public static class PlayerDirectoryService
               if (task.IsFaulted || task.IsCanceled)
               {
                   lastUpsertSignature = null;   // sonraki döngüde tekrar dene
-                  Debug.LogWarning($"[PlayerDirectory] upsert hatası: {task.Exception?.GetBaseException().Message}");
+                  if (GameDiagnostics.Backend)
+                      Debug.LogWarning($"[PlayerDirectory] upsert hatası: {task.Exception?.GetBaseException().Message}");
               }
           });
     }
@@ -92,7 +93,8 @@ public static class PlayerDirectoryService
         {
             if (task.IsFaulted || task.IsCanceled)
             {
-                Debug.LogWarning($"[PlayerDirectory] arama hatası: {task.Exception?.GetBaseException().Message}");
+                if (GameDiagnostics.Backend)
+                    Debug.LogWarning($"[PlayerDirectory] arama hatası: {task.Exception?.GetBaseException().Message}");
                 callback?.Invoke(null);
                 return;
             }
@@ -114,16 +116,5 @@ public static class PlayerDirectoryService
     }
 
     /// <summary>Cihaz bölgesi ("TR" vb.) — liderlik Türkiye filtresi bunu kullanacak.</summary>
-    public static string DetectRegion()
-    {
-        try
-        {
-            var region = System.Globalization.RegionInfo.CurrentRegion;
-            if (region != null && !string.IsNullOrEmpty(region.TwoLetterISORegionName))
-                return region.TwoLetterISORegionName.ToUpperInvariant();
-        }
-        catch { /* bazı platformlarda InvariantCulture → aşağıdaki dil fallback'i */ }
-
-        return Application.systemLanguage == SystemLanguage.Turkish ? "TR" : "XX";
-    }
+    public static string DetectRegion() => DeviceCountry.Get();
 }

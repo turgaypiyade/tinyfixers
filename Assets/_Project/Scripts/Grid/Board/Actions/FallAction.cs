@@ -421,7 +421,8 @@ public class FallAction : BoardAction
         if (board != null && board.UseContinuousFallMotion)
         {
             // Spatial spacing and the column follower rule supply the waterfall rhythm.
-            // Per-pass stagger would repeatedly pause tiles joining an existing stream.
+            // Sıralı kalkış TileFallMotionSystem'de (yerel kural): plan sayısından ve yeniden
+            // planlamadan bağımsız işlesin diye burada gecikme verilmez.
             foreach (var r in fallRecords)
             {
                 r.phaseDelay = 0f;
@@ -892,9 +893,10 @@ public class FallAction : BoardAction
         bool trace = board != null && board.BoardFlowTraceEnabled;
 
         if (trace)
-            Debug.Log(useReferenceMotion
-                ? $"[Fall] START tiles={fallRecords.Count} maxDist={maxDist} (reference-frame accelerated motion)"
-                : $"[Fall] START tiles={fallRecords.Count} maxDist={maxDist} (cell-to-cell constant velocity)");
+            {
+                if (GameDiagnostics.BoardFlow)
+                    Debug.Log(useReferenceMotion ? $"[Fall] START tiles={fallRecords.Count} maxDist={maxDist} (reference-frame accelerated motion)" : $"[Fall] START tiles={fallRecords.Count} maxDist={maxDist} (cell-to-cell constant velocity)");
+            }
 
         if (!suppressBatchSfx)
             board.PlayTileFallSfx(fallRecords.Count, maxDist);
@@ -946,7 +948,10 @@ public class FallAction : BoardAction
                 : string.Empty;
 
             if (trace)
-                Debug.Log($"[FallExec] tile=({r.fromX},{r.fromY})->({r.toX},{r.toY}) path={isPath} delay={r.startDelay + r.phaseDelay:0.000}{visualNote}");
+                {
+                    if (GameDiagnostics.BoardFlow)
+                        Debug.Log($"[FallExec] tile=({r.fromX},{r.fromY})->({r.toX},{r.toY}) path={isPath} delay={r.startDelay + r.phaseDelay:0.000}{visualNote}");
+                }
 
             IEnumerator move;
 
@@ -1074,12 +1079,18 @@ public class FallAction : BoardAction
         }
 
         if (trace)
-            Debug.Log($"[Fall] stagger maxDelay={maxTotalDelay:0.000}s estimatedEnd={GetEstimatedVisualDuration(sequencer.Board):0.000}s");
+            {
+                if (GameDiagnostics.BoardFlow)
+                    Debug.Log($"[Fall] stagger maxDelay={maxTotalDelay:0.000}s estimatedEnd={GetEstimatedVisualDuration(sequencer.Board):0.000}s");
+            }
 
         yield return sequencer.Animator.RunManyWithDelays(moves, delays);
 
         if (trace)
-            Debug.Log($"[Fall] DONE +{(Time.realtimeSinceStartup - faStart):0.000}s");
+            {
+                if (GameDiagnostics.BoardFlow)
+                    Debug.Log($"[Fall] DONE +{(Time.realtimeSinceStartup - faStart):0.000}s");
+            }
     }
 
     private static TileFallMotionSystem.Ticket StartContinuous(FallRecord r, TileFallMotionSystem motion,
@@ -1190,7 +1201,8 @@ public class FallAction : BoardAction
             waited += Time.deltaTime;
             if (waited > 10f)
             {
-                Debug.LogError($"[FallMotion] FallAction 10 sn'de bitmedi (tiles={tickets.Count}); bekleme bırakıldı.");
+                if (GameDiagnostics.CriticalErrors)
+                    Debug.LogError($"[FallMotion] FallAction 10 sn'de bitmedi (tiles={tickets.Count}); bekleme bırakıldı.");
                 break;
             }
 

@@ -13,10 +13,10 @@ MonoBehaviour:
   m_Name: ProgressEventConfig
   m_EditorClassIdentifier: Assembly-CSharp::ProgressEventConfig
   eventName: "Haftal\u0131k G\xF6revler"
-  durationHours: 48
+  durationHours: 72
   goals:
   - goalType: 3
-    targetCount: 600
+    targetCount: 150
     reward:
       type: 1
       amount: 1
@@ -27,9 +27,9 @@ MonoBehaviour:
     rewardDurationMinutes: 15
     rewardWaveSprite: {fileID: 21300000, guid: b79cae8d55bdc485db315a11f3feb725, type: 3}
     fallbackDescription: 
-    goalIcon: {fileID: 21300000, guid: 6a12756c63b26574bb12b794a8e4dca2, type: 3}
+    goalIcon: {fileID: 21300000, guid: eeecba4f60ec04d09965bf4d4c3a0a49, type: 3}
   - goalType: 2
-    targetCount: 800
+    targetCount: 25
     reward:
       type: 11
       amount: 1
@@ -40,22 +40,22 @@ MonoBehaviour:
     rewardDurationMinutes: 15
     rewardWaveSprite: {fileID: 21300000, guid: b79cae8d55bdc485db315a11f3feb725, type: 3}
     fallbackDescription: 
-    goalIcon: {fileID: 21300000, guid: d555b0e5421bf4e77ba8a17e0f5f73ad, type: 3}
+    goalIcon: {fileID: 21300000, guid: 2a754af4759b54bd3a1d36f710c306fb, type: 3}
   - goalType: 5
-    targetCount: 800
+    targetCount: 250
     reward:
-      type: 2
-      amount: 10
-      icon: {fileID: 21300000, guid: 3777501fcbb794f35a8cee09ef4e7973, type: 3}
+      type: 0
+      amount: 150
+      icon: {fileID: 21300000, guid: a734466fad6ff4da59d52aef3779e940, type: 3}
       nameLocalizationKey: 
       fallbackName: 
       weight: 0
     rewardDurationMinutes: 0
     rewardWaveSprite: {fileID: 0}
     fallbackDescription: 
-    goalIcon: {fileID: 21300000, guid: 3777501fcbb794f35a8cee09ef4e7973, type: 3}
+    goalIcon: {fileID: 21300000, guid: 61c7ba969b2154f14b32626e233396f0, type: 3}
   - goalType: 4
-    targetCount: 800
+    targetCount: 250
     reward:
       type: 20
       amount: 1
@@ -63,15 +63,15 @@ MonoBehaviour:
       nameLocalizationKey: 
       fallbackName: 
       weight: 100
-    rewardDurationMinutes: 15
+    rewardDurationMinutes: 0
     rewardWaveSprite: {fileID: 0}
     fallbackDescription: 
-    goalIcon: {fileID: 21300000, guid: ed345d94ee5f64d2ca7e7fbd7f8a9aff, type: 3}
+    goalIcon: {fileID: 21300000, guid: 08eff3596bce24d5d9f9f47a1e53c7ec, type: 3}
   - goalType: 2
-    targetCount: 450
+    targetCount: 20
     reward:
       type: 11
-      amount: 0
+      amount: 1
       icon: {fileID: 21300000, guid: 7cc20196928fb40aaa2bef28661a9bc3, type: 3}
       nameLocalizationKey: 
       fallbackName: 
@@ -79,4 +79,4 @@ MonoBehaviour:
     rewardDurationMinutes: 0
     rewardWaveSprite: {fileID: 0}
     fallbackDescription: 
-    goalIcon: {fileID: 21300000, guid: d555b0e5421bf4e77ba8a17e0f5f73ad, type: 3}
+    goalIcon: {fileID: 21300000, guid: 2a754af4759b54bd3a1d36f710c306fb, type: 3}

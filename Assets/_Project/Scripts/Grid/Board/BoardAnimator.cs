@@ -6,6 +6,18 @@ using UnityEngine.UI;
 
 public class BoardAnimator
 {
+    // Bir etki (temizleme geçişi) bir engele en fazla BİR vuruş verir — engelin kaç hücresine/kaç taşına değdiğinden
+    // bağımsız. Normal eşleşmede yalnız her FARKLI renkteki eşleşme ayrı vuruş sayılır. Eskiden seçilen hücrenin
+    // her kaynağı (örn. Pulse'ın engel çevresinde temizlediği her taş) ayrı vuruştu → 3 aşamalı engel bir anda bitiyordu.
+    private readonly System.Collections.Generic.List<TileType?> appliedHitSources = new(4);
+
+    private bool IsRepeatHitSource(ObstacleHitContext context, TileType? source)
+    {
+        if (appliedHitSources.Count == 0) return false;
+        if (context != ObstacleHitContext.NormalMatch) return true;   // special/booster: tek vuruş
+        return appliedHitSources.Contains(source);                    // aynı renk eşleşme: tek vuruş
+    }
+
     private readonly BoardController board;
     private readonly TileClearEffectOrchestrator clearEffectOrchestrator;
     private readonly TileAnimator tileAnimator;
@@ -169,7 +181,7 @@ public class BoardAnimator
         try
         {
             yield return RunTogether(
-                a.MoveToGrid(board.TileSize, duration, board.SwapMoveCurve),
+                a.MoveToGrid(board.TileSize, duration, board.SwapMoveCurve, liftDuringSwap: true),
                 b.MoveToGrid(board.TileSize, duration, board.SwapMoveCurve)
             );
         }
@@ -238,7 +250,8 @@ public class BoardAnimator
             }
             catch (System.Exception ex)
             {
-                Debug.LogException(ex);
+                if (GameDiagnostics.CriticalErrors)
+                    Debug.LogException(ex);
                 break;
             }
             if (!hasNext) break;
@@ -312,11 +325,11 @@ public class BoardAnimator
             && tileLifetimes.TryGetValue(tile, out int version)
             && tile.IsCurrentLifetime(version);
 
-        // Cargo (exitAtBottom) KIRILMAZ: hiçbir clear (special/combo/booster/match) onu yok edemez.
+        // Kırılmaz hareketli engel (kargo/bilardo topu): hiçbir clear (special/combo/booster/match) onu yok edemez.
         // Tek choke point'te evrensel filtre — combo yolları CanAffectCell'i atlasa bile cargo korunur.
         // Yalnızca en alta inip board'dan çıkınca toplanır (ayrı akış).
         if (board.ObstacleStateService != null)
-            list.RemoveAll(t => t != null && board.ObstacleStateService.IsExitAtBottomAt(t.X, t.Y));
+            list.RemoveAll(t => t != null && board.ObstacleStateService.IsUnbreakableMovableAt(t.X, t.Y));
 
         var pops = new List<IEnumerator>();
         var pulseImpacts = new List<IEnumerator>();
@@ -348,14 +361,8 @@ public class BoardAnimator
 
         if (trace)
         {
-            Debug.Log(
-                $"[PulseClearDebug][BA] ENTER " +
-                $"list={list.Count} " +
-                $"mode={animationMode} " +
-                $"specialPhase={isSpecialPhase} " +
-                $"stagger={(staggerDelays != null ? staggerDelays.Count : 0)} " +
-                $"perTile={(perTileClearDelays != null ? perTileClearDelays.Count : 0)} " +
-                $"suppress={suppressPerTileClearVfx}");
+            if (GameDiagnostics.BoardFlow)
+                Debug.Log($"[PulseClearDebug][BA] ENTER " + $"list={list.Count} " + $"mode={animationMode} " + $"specialPhase={isSpecialPhase} " + $"stagger={(staggerDelays != null ? staggerDelays.Count : 0)} " + $"perTile={(perTileClearDelays != null ? perTileClearDelays.Count : 0)} " + $"suppress={suppressPerTileClearVfx}");
         }
 
         if (consumePatchbotDashRequests)
@@ -432,23 +439,22 @@ public class BoardAnimator
             {
                 var tile = list[i];
                 if (tile == null) continue;
-                bool debugLive =
-                tile.X >= 0 && tile.X < board.Width &&
-                tile.Y >= 0 && tile.Y < board.Height &&
-                board.Tiles[tile.X, tile.Y] == tile;
-
-                bool debugHasStagger =
-                    staggerDelays != null && staggerDelays.ContainsKey(tile);
-
-                bool debugHasPerTile =
-                    perTileClearDelays != null && perTileClearDelays.ContainsKey(tile);
-
                 if (trace)
                 {
-                    Debug.Log(
-                        $"[PulseClearDebug][BA] LOOP tile=({tile.X},{tile.Y}) " +
-                        $"type={tile.GetTileType()} special={tile.GetSpecial()} " +
-                        $"live={debugLive} hasStagger={debugHasStagger} hasPerTile={debugHasPerTile}");
+                    bool debugLive =
+                    tile.X >= 0 && tile.X < board.Width &&
+                    tile.Y >= 0 && tile.Y < board.Height &&
+                    board.Tiles[tile.X, tile.Y] == tile;
+
+                    bool debugHasStagger =
+                        staggerDelays != null && staggerDelays.ContainsKey(tile);
+
+                    bool debugHasPerTile =
+                        perTileClearDelays != null && perTileClearDelays.ContainsKey(tile);
+
+
+                    if (GameDiagnostics.BoardFlow)
+                        Debug.Log($"[PulseClearDebug][BA] LOOP tile=({tile.X},{tile.Y}) " + $"type={tile.GetTileType()} special={tile.GetSpecial()} " + $"live={debugLive} hasStagger={debugHasStagger} hasPerTile={debugHasPerTile}");
                 }
 
                 impactCells.Add(new Vector2Int(tile.X, tile.Y));
@@ -509,6 +515,7 @@ public class BoardAnimator
                 clearTile =
                     !board.ObstacleStateService.IsCellBlocked(tile.X, tile.Y) &&
                     !board.ObstacleStateService.IsInteractionLockedAt(tile.X, tile.Y) &&
+                    !tile.CageGrace &&   // kafesten bu hamlede çıkan special aynı geçişte kırılmaz
                     // Canlı movable obstacle tile'ı normal clear ile YOK EDİLMEZ — sadece
                     // obstacle hasarı alır; veri sıfırlanınca tile'ı HandleObstacleDestroyed
                     // söker. Aksi hâlde çok-hit movable'da (PlasticTwoStage) tile ölüp veri
@@ -532,7 +539,10 @@ public class BoardAnimator
             if (!shouldSuppressVfx && staggerDelays != null && staggerDelays.TryGetValue(tile, out var d))
             {
                 if (trace)
-                    Debug.Log($"[PulseClearDebug][BA] STAGGER_BRANCH tile=({tile.X},{tile.Y}) delay={d:0.000}");
+                    {
+                        if (GameDiagnostics.BoardFlow)
+                            Debug.Log($"[PulseClearDebug][BA] STAGGER_BRANCH tile=({tile.X},{tile.Y}) delay={d:0.000}");
+                    }
                 pulseImpacts.Add(tileAnimator.PlayPulseImpact(tile, d, staggerAnimTime));
                 if (d > maxStaggerDelay) maxStaggerDelay = d;
             }
@@ -583,9 +593,8 @@ public class BoardAnimator
                     ClearAnimationMode.Default));
                 if (trace)
                 {
-                    Debug.Log(
-                        $"[PulseClearDebug][BA] POP_BRANCH tile=({tile.X},{tile.Y}) " +
-                        $"delay={delay:0.000} mode={tileAnimationMode}");
+                    if (GameDiagnostics.BoardFlow)
+                        Debug.Log($"[PulseClearDebug][BA] POP_BRANCH tile=({tile.X},{tile.Y}) " + $"delay={delay:0.000} mode={tileAnimationMode}");
                 }
 
                 if (tileAnimationMode == ClearAnimationMode.Default && implodeTargetCell.HasValue && !shouldSuppressVfx)
@@ -869,10 +878,8 @@ public class BoardAnimator
 
         if (trace)
         {
-            Debug.Log(
-                $"[PulseClearDebug][BA] BEFORE_FINAL " +
-                $"list={list.Count} shouldClear={shouldClearTile.Count} " +
-                $"pulseImpacts={pulseImpacts.Count} pops={pops.Count}");
+            if (GameDiagnostics.BoardFlow)
+                Debug.Log($"[PulseClearDebug][BA] BEFORE_FINAL " + $"list={list.Count} shouldClear={shouldClearTile.Count} " + $"pulseImpacts={pulseImpacts.Count} pops={pops.Count}");
         }
 
         for (int i = 0; i < list.Count; i++)
@@ -897,11 +904,14 @@ public class BoardAnimator
             {
                 board.TryPaintGelForClearedTile(t);   // jel: taşın GÖRSEL kırılma anında (per-tile senkron)
                 var cell = new Vector2Int(t.X, t.Y);
-                if (damageContext == ObstacleHitContext.SpecialActivation
-                    && IsSameCellObstacleDamageOwnedByTileClear(cell))
+                // Special geçişi: hücredeki engelin vuruşu taş temizliğine aittir (patlama anında); sondaki impact
+                // döngüsü bu hücreyi atlar. Normal eşleşme / booster: vuruşu YALNIZ impact döngüsü verir (doğru bağlam
+                // + taş rengi). Eskiden burada da "special" diye vuruluyordu → bir eşleşme çamuru iki kez vuruyordu.
+                bool specialPass = damageContext == ObstacleHitContext.SpecialActivation;
+                if (specialPass && IsSameCellObstacleDamageOwnedByTileClear(cell))
                     tileClearOwnedObstacleCells.Add(cell);
 
-                board.ClearCellDataOnly(cell);
+                board.ClearCellDataOnly(cell, damageObstacle: specialPass);
             }
         }
 
@@ -1017,7 +1027,10 @@ public class BoardAnimator
             if (!IsOriginalTile(tile) || !finalizedTiles.Add(tile))
             {
                 if (trace)
-                    Debug.Log("[PulseClearDebug] FinalizeTileClear skip stale/already cleared tile");
+                    {
+                        if (GameDiagnostics.BoardFlow)
+                            Debug.Log("[PulseClearDebug] FinalizeTileClear skip stale/already cleared tile");
+                    }
                 return;
             }
 
@@ -1028,10 +1041,8 @@ public class BoardAnimator
 
             if (trace)
             {
-                Debug.Log(
-                    $"[PulseClearDebug] FinalizeTileClear tile=({tile.X},{tile.Y}) " +
-                    $"type={tile.GetTileType()} special={tile.GetSpecial()} " +
-                    $"live={live} specialPhase={isSpecialPhase}");
+                if (GameDiagnostics.BoardFlow)
+                    Debug.Log($"[PulseClearDebug] FinalizeTileClear tile=({tile.X},{tile.Y}) " + $"type={tile.GetTileType()} special={tile.GetSpecial()} " + $"live={live} specialPhase={isSpecialPhase}");
             }
 
             if (!skipBreakFxTiles.Contains(tile))
@@ -1068,6 +1079,7 @@ public class BoardAnimator
                     : null;
 
             AddObstacleDamageCell(cell, sourceTileType);
+            board.NoteCageImpact(cell, damageContext);
 
             // Normal match komşu Oil/Grass'ı aşındırır. Line/special footprint ise sadece geçtiği
             // hücreyi vurmalı; includeAdjacentOverTileBlockerDamage=false olduğunda komşu Oil/Grass
@@ -1106,8 +1118,11 @@ public class BoardAnimator
 
             bool isSafeHit = board.ObstacleStateService.GetObstacleIdAt(cell.x, cell.y) == ObstacleId.Safe;
 
+            appliedHitSources.Clear();
             for (int i = 0; i < sources.Count; i++)
             {
+                if (IsRepeatHitSource(damageContext, sources[i])) continue;
+                appliedHitSources.Add(sources[i]);
                 var hit = board.ApplyObstacleDamageAt(cell.x, cell.y, damageContext, sources[i]);
                 if (hit.didHit)
                 {
@@ -1489,6 +1504,7 @@ public class BoardAnimator
                 sourceTileType);
 
             AddDamageRequest(request);
+            board.NoteCageImpact(cell, plan.ObstacleHitContext);
 
             // Normal match komşu Oil/Grass'ı aşındırır. Special/line planlarında bayrak false ise
             // sadece footprint hücreleri hasar alır.
@@ -1526,8 +1542,11 @@ public class BoardAnimator
                 }
             }
 
+            appliedHitSources.Clear();
             for (int i = 0; i < requests.Count; i++)
             {
+                if (IsRepeatHitSource(requests[i].context, requests[i].normalMatchTileType)) continue;
+                appliedHitSources.Add(requests[i].normalMatchTileType);
                 var hit = board.ApplyObstacleDamage(requests[i]);
                 if (hit.didHit)
                 {

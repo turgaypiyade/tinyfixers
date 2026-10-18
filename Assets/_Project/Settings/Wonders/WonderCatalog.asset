@@ -18,3 +18,210 @@ MonoBehaviour:
   - {fileID: 11400000, guid: c1d9cec3030b642d19cc484df36f45a3, type: 2}
   - {fileID: 11400000, guid: 82d4a6eb99976408ca1f09a1a01b8676, type: 2}
   - {fileID: 11400000, guid: 03f748b56b0c34f94bafd581389e140c, type: 2}
+  - {fileID: 11400000, guid: 5753c39a413941719a8ecbd50164d37f, type: 2}
+  - {fileID: 11400000, guid: 1f73b518581643c7bd3d3442466dbc08, type: 2}
+  - {fileID: 11400000, guid: 68f5f8ac6c2e49448c18fee915393c7b, type: 2}
+  chestTiers:
+  - rewards:
+    - type: 0
+      amount: 100
+      durationMinutes: 0
+      icon: {fileID: 0}
+      nameLocalizationKey: 
+      fallbackName: 
+      weight: 10
+    - type: 13
+      amount: 1
+      durationMinutes: 0
+      icon: {fileID: 0}
+      nameLocalizationKey: 
+      fallbackName: 
+      weight: 10
+    - type: 20
+      amount: 1
+      durationMinutes: 0
+      icon: {fileID: 0}
+      nameLocalizationKey: 
+      fallbackName: 
+      weight: 10
+  - rewards:
+    - type: 0
+      amount: 150
+      durationMinutes: 0
+      icon: {fileID: 0}
+      nameLocalizationKey: 
+      fallbackName: 
+      weight: 10
+    - type: 11
+      amount: 1
+      durationMinutes: 0
+      icon: {fileID: 0}
+      nameLocalizationKey: 
+      fallbackName: 
+      weight: 10
+    - type: 23
+      amount: 1
+      durationMinutes: 0
+      icon: {fileID: 0}
+      nameLocalizationKey: 
+      fallbackName: 
+      weight: 10
+    - type: 1
+      amount: 1
+      durationMinutes: 15
+      icon: {fileID: 0}
+      nameLocalizationKey: 
+      fallbackName: 
+      weight: 10
+  - rewards:
+    - type: 0
+      amount: 200
+      durationMinutes: 0
+      icon: {fileID: 0}
+      nameLocalizationKey: 
+      fallbackName: 
+      weight: 10
+    - type: 12
+      amount: 1
+      durationMinutes: 0
+      icon: {fileID: 0}
+      nameLocalizationKey: 
+      fallbackName: 
+      weight: 10
+    - type: 21
+      amount: 1
+      durationMinutes: 0
+      icon: {fileID: 0}
+      nameLocalizationKey: 
+      fallbackName: 
+      weight: 10
+    - type: 22
+      amount: 1
+      durationMinutes: 0
+      icon: {fileID: 0}
+      nameLocalizationKey: 
+      fallbackName: 
+      weight: 10
+  - rewards:
+    - type: 0
+      amount: 300
+      durationMinutes: 0
+      icon: {fileID: 0}
+      nameLocalizationKey: 
+      fallbackName: 
+      weight: 10
+    - type: 13
+      amount: 2
+      durationMinutes: 0
+      icon: {fileID: 0}
+      nameLocalizationKey: 
+      fallbackName: 
+      weight: 10
+    - type: 20
+      amount: 2
+      durationMinutes: 0
+      icon: {fileID: 0}
+      nameLocalizationKey: 
+      fallbackName: 
+      weight: 10
+    - type: 1
+      amount: 1
+      durationMinutes: 30
+      icon: {fileID: 0}
+      nameLocalizationKey: 
+      fallbackName: 
+      weight: 10
+  - rewards:
+    - type: 0
+      amount: 350
+      durationMinutes: 0
+      icon: {fileID: 0}
+      nameLocalizationKey: 
+      fallbackName: 
+      weight: 10
+    - type: 11
+      amount: 2
+      durationMinutes: 0
+      icon: {fileID: 0}
+      nameLocalizationKey: 
+      fallbackName: 
+      weight: 10
+    - type: 24
+      amount: 1
+      durationMinutes: 0
+      icon: {fileID: 0}
+      nameLocalizationKey: 
+      fallbackName: 
+      weight: 10
+    - type: 13
+      amount: 1
+      durationMinutes: 30
+      icon: {fileID: 0}
+      nameLocalizationKey: 
+      fallbackName: 
+      weight: 10
+  - rewards:
+    - type: 0
+      amount: 450
+      durationMinutes: 0
+      icon: {fileID: 0}
+      nameLocalizationKey: 
+      fallbackName: 
+      weight: 10
+    - type: 12
+      amount: 2
+      durationMinutes: 0
+      icon: {fileID: 0}
+      nameLocalizationKey: 
+      fallbackName: 
+      weight: 10
+    - type: 23
+      amount: 2
+      durationMinutes: 0
+      icon: {fileID: 0}
+      nameLocalizationKey: 
+      fallbackName: 
+      weight: 10
+    - type: 1
+      amount: 1
+      durationMinutes: 60
+      icon: {fileID: 0}
+      nameLocalizationKey: 
+      fallbackName: 
+      weight: 10
+  - rewards:
+    - type: 0
+      amount: 500
+      durationMinutes: 0
+      icon: {fileID: 0}
+      nameLocalizationKey: 
+      fallbackName: 
+      weight: 10
+    - type: 24
+      amount: 2
+      durationMinutes: 0
+      icon: {fileID: 0}
+      nameLocalizationKey: 
+      fallbackName: 
+      weight: 10
+    - type: 21
+      amount: 2
+      durationMinutes: 0
+      icon: {fileID: 0}
+      nameLocalizationKey: 
+      fallbackName: 
+      weight: 10
+    - type: 11
+      amount: 1
+      durationMinutes: 30
+      icon: {fileID: 0}
+      nameLocalizationKey: 
+      fallbackName: 
+      weight: 10
+    - type: 1
+      amount: 1
+      durationMinutes: 60
+      icon: {fileID: 0}
+      nameLocalizationKey: 
+      fallbackName: 
+      weight: 10

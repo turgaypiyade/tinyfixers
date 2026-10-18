@@ -41,7 +41,7 @@ public class BoardController {
  public TileView[,] tiles=new TileView[5,5];public int TileSize=100,cellHoldEpoch;
  public Motion fallMotion=new Motion();
  public Dictionary<Vector2Int,int> cellHolds=new Dictionary<Vector2Int,int>();
- public HashSet<Vector2Int> pendingTriggeredSpecialCells=new HashSet<Vector2Int>();
+ public Dictionary<Vector2Int,List<object>> pendingTriggeredSpecialOwners=new Dictionary<Vector2Int,List<object>>();
  public HashSet<Vector2Int> reserved=new HashSet<Vector2Int>();
  public TileView GetTileViewAt(int x,int y)=>tiles[x,y];
  public bool IsReservedTileTargetCell(int x,int y)=>reserved.Contains(new Vector2Int(x,y));
@@ -65,8 +65,8 @@ public static class Checks {
   Check(!b.Valid(group,own),""A second owner of the endpoint still blocks validation"");b.cellHolds[ac]--;
   b.cellHolds[cc]=1;
   Check(!b.Valid(group,own),""An unrelated held match contributor is rejected"");b.cellHolds.Remove(cc);
-  b.pendingTriggeredSpecialCells.Add(ac);
-  Check(!b.Valid(group,own),""The swap cannot bypass a pending special anchor"");b.pendingTriggeredSpecialCells.Clear();
+  b.pendingTriggeredSpecialOwners.Add(ac,new List<object>());
+  Check(!b.Valid(group,own),""The swap cannot bypass a pending special anchor"");b.pendingTriggeredSpecialOwners.Clear();
   b.fallMotion.pending.Add(c);
   Check(!b.Valid(group,own),""Queued/active fall contributors are not settled"");b.fallMotion.pending.Clear();
   c.IsRuntimeIdle=false;Check(!b.Valid(group,own),""Clearing/swapping contributors are not settled"");c.IsRuntimeIdle=true;

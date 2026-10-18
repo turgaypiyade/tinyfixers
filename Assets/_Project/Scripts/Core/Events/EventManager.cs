@@ -58,7 +58,6 @@ public class EventManager : MonoBehaviour
         {
             // GetCooldownRemaining zaten status'ü Active'e çekti
             OnStatusChanged?.Invoke(EventParticipantStatus.Active);
-            Debug.Log("[EventManager] Cooldown bitti, oyuncu Active.");
         }
     }
 

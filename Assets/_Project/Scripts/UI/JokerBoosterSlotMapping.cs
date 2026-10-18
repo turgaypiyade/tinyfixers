@@ -7,4 +7,7 @@ public class JokerBoosterSlotMapping : MonoBehaviour
 
     public bool IsBoosterSlot => isBoosterSlot;
     public int BoosterIndex => boosterIndex;
+
+    /// Çalışma anında kopyalanan slot (5. joker) için.
+    public void SetBoosterIndex(int index) { isBoosterSlot = true; boosterIndex = index; }
 }

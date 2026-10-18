@@ -23,7 +23,8 @@ public class LevelRuntimeSelector : MonoBehaviour
         if (RuntimeSimulationSession.IsActive) return RuntimeSimulationSession.CurrentLevel;
         if (levelCatalog == null)
         {
-            Debug.LogError("[LevelRuntimeSelector] LevelCatalog is null.");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogError("[LevelRuntimeSelector] LevelCatalog is null.");
             return null;
         }
 
@@ -34,31 +35,29 @@ public class LevelRuntimeSelector : MonoBehaviour
             // ana menü "Seviye 1" gösterirken oyun 22. level'ı (LevelP_00240) açıyordu.
             int selectedLevel = CurrentLevel.Global;
 
-            Debug.Log($"[LevelRuntimeSelector] Loading from PlayerPrefs. Chapter={chapter}, Level={selectedLevel}");
-
             if (levelCatalog.TryGetGlobalLevel(selectedLevel, out var byPrefsLevel))
                 return byPrefsLevel;
 
-            Debug.LogWarning($"[LevelRuntimeSelector] PlayerPrefs level not found in catalog. Chapter={chapter}, Level={selectedLevel}. Falling back to inspector selection.");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogWarning($"[LevelRuntimeSelector] PlayerPrefs level not found in catalog. Chapter={chapter}, Level={selectedLevel}. Falling back to inspector selection.");
         }
 
         if (useLevelKey)
         {
-            Debug.Log($"[LevelRuntimeSelector] Loading by key: {levelKey}");
 
             if (levelCatalog.TryGetLevel(levelKey, out var byKey))
                 return byKey;
 
-            Debug.LogWarning($"[LevelRuntimeSelector] Level key not found: {levelKey}");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogWarning($"[LevelRuntimeSelector] Level key not found: {levelKey}");
             return null;
         }
-
-        Debug.Log($"[LevelRuntimeSelector] Loading from inspector. Chapter={chapter}, Level={level}");
 
         if (levelCatalog.TryGetLevel(chapter, level, out var byChapterAndLevel))
             return byChapterAndLevel;
 
-        Debug.LogWarning($"[LevelRuntimeSelector] Inspector level not found. Chapter={chapter}, Level={level}");
+        if (GameDiagnostics.CriticalErrors)
+            Debug.LogWarning($"[LevelRuntimeSelector] Inspector level not found. Chapter={chapter}, Level={level}");
         return null;
     }
 

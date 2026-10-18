@@ -125,11 +125,6 @@ public sealed class EnergyContainerFx : MonoBehaviour
 
             if (logDebug)
             {
-                Debug.Log(
-                    $"[EnergyContainerFx] release origin={originIndex} " +
-                    $"target={(target != null ? target.name : "null")} " +
-                    $"image={(image != null ? image.name : "null")} " +
-                    $"goalAccepted={goalAccepted} remainingEnergy={remainingEnergy}");
             }
 
             if (target != null)
@@ -226,7 +221,10 @@ public sealed class EnergyContainerFx : MonoBehaviour
             if (image == null)
             {
                 if (logDebug)
-                    Debug.LogWarning($"[EnergyContainerFx] Exhausted image not found. origin={originIndex}");
+                    {
+                        if (GameDiagnostics.CriticalErrors)
+                            Debug.LogWarning($"[EnergyContainerFx] Exhausted image not found. origin={originIndex}");
+                    }
                 yield break;
             }
 
@@ -309,9 +307,6 @@ public sealed class EnergyContainerFx : MonoBehaviour
 
             if (logDebug)
             {
-                Debug.Log(
-                    $"[EnergyContainerFx] FlyOrb root={root.name} start={start} end={end} " +
-                    $"sprite={(energyOrbSprite != null ? energyOrbSprite.name : "null")}");
             }
 
             Vector2 flightStart = start + Vector2.up * orbRiseHeight;
@@ -489,10 +484,8 @@ public sealed class EnergyContainerFx : MonoBehaviour
 
         if (logDebug)
         {
-            Debug.LogWarning(
-                $"[EnergyContainerFx] No obstacle image found. origin={originIndex} " +
-                $"expected={expected} best={(best != null ? best.name : "null")} bestDist={Mathf.Sqrt(bestDistance):0.0} " +
-                $"loose={(bestLoose != null ? bestLoose.name : "null")} looseDist={Mathf.Sqrt(bestLooseDistance):0.0}");
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogWarning($"[EnergyContainerFx] No obstacle image found. origin={originIndex} " + $"expected={expected} best={(best != null ? best.name : "null")} bestDist={Mathf.Sqrt(bestDistance):0.0} " + $"loose={(bestLoose != null ? bestLoose.name : "null")} looseDist={Mathf.Sqrt(bestLooseDistance):0.0}");
         }
 
         return null;
@@ -588,9 +581,6 @@ public sealed class EnergyContainerFx : MonoBehaviour
 
         if (logDebug)
         {
-            Debug.Log(
-                $"[EnergyContainerFx] FitToCell origin={originIndex} image={image.name} " +
-                $"pos={rt.anchoredPosition} size={rt.sizeDelta} preserveAspect={image.preserveAspect}");
         }
     }
 
@@ -612,7 +602,7 @@ public sealed class EnergyContainerFx : MonoBehaviour
         image.color = c;
 
         if (logDebug)
-            Debug.Log($"[EnergyContainerFx] ApplyFrame image={image.name} sprite={(image.sprite != null ? image.sprite.name : "null")}");
+            {}
     }
 
     private int IncrementActiveSequence(int originIndex)

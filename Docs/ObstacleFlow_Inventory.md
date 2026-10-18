@@ -41,7 +41,7 @@ her obstacle **kendi zamanlama modeline** dallanıyor:
 | **KeyGenerator** | key üretimi/uçuşu | `BeginJob(KeyFlight)` + `RequestResolveAfterActionSequence` | ❌ hayır (non-blocking) |
 | **RocketBasket** | settle'da kuyruktan fırlat | `StartCoroutine(...ExecuteVisuals(null))` fire-and-forget (PatchBotDash sayacı) | ❌ hayır |
 | **EnergyContainer** | `EnergyContainerFx` (kapak/orb animasyonları) | kendi coroutine'leri, ~12 serialized süre | kısmi |
-| *(ayrıca)* **Oil spread** | ResolveBoard döngüsü içinde | `actionSequencer.Enqueue(OilSpreadAction)` + `while(IsPlaying)` | ✅ **EVET — kuyrukta blocking** |
+| *(ayrıca)* **Oil spread** | settle’da hedefi commit et → `OilSpreadAnimator` | `BeginJob(OilSpread)` + non-blocking `Presentation`; hedef hücre Oil verisiyle korunur | ❌ hayır; yalnız level-end bekler |
 
 **Sonuç:** hit tek kapıdan, ama yok-olma **8 farklı icra primitifi** kullanıyor (Resolve-job, async-job,
 sequencer-blocking, fire-and-forget, kendi kuyruğu, senkron). Bu, special/combo tarafındaki dağınıklığın
@@ -73,7 +73,7 @@ bayrakları var. Tüm zamanlamalar koda/prefab'a gömülü:
 |---|---|---|
 | Barrel splat (`ObstacleSpread` job) | `ObstacleSpread` | zaten async; birebir eşlenir |
 | Safe hold (`BeginBackgroundJob`) | `Clear` (blocking) | 0.5s park; Activity'ye alınınca "neden bekliyoruz" görünür olur |
-| Oil spread (sequencer blocking) | `ObstacleSpread` | döngü-içi `while(IsPlaying)` yerine Activity |
+| Oil spread (hedef commit edilmiş) | non-blocking `Presentation` | `OilSpread` job: eski `ObstacleSpread` global input kapısına girmez |
 | OBB detonation (kendi kuyruğu) | `SpecialSweep` + `Fall` | kendi settle-wait'i ÖLMELİ (self-count riski burada) |
 | KeyGenerator / RocketBasket | `Flight` | akışı bloklamaz, level-end bekler |
 | EnergyContainer FX | `Presentation` | saf görsel |
@@ -87,10 +87,13 @@ bayrakları var. Tüm zamanlamalar koda/prefab'a gömülü:
 2. **Süreleri `ObstacleDef`'e taşımayı düşün** (hitFxLifetime/breakHold/spreadDuration) → data-driven,
    level bazında ayarlanabilir, kodda sabit avlamak biter.
 3. **Safe hold'u Activity'ye çevir** — 0.5s'lik resolve parkı bugün görünmez; Activity olunca ölçülebilir/gevşetilebilir.
-4. **Oil spread'i döngüden çıkar** — `while(IsPlaying)` yerine Activity → ResolveBoard sadeleşir.
+4. **Oil spread tamamlandı (2026-10-16)** — sequencer bekleyişi kaldırıldı; hedef verisi anında, animasyon bağımsız. Havuz, isabet iptali ve teardown: `Oil-Async-QA.md`.
 5. Migrasyon sırası önerisi: Barrel/Key/Rocket (zaten async, düşük risk) → EnergyContainer (görsel) →
    Oil spread → Safe hold → **OBB en son** (en karmaşık, kendi kuyruğu + wind-up).
 
 ## 6. Durum
 Envanter çıkarıldı, kod değişmedi. İlgili: `UnifiedSpecialFlow_Plan.md` (Faz 1 çekirdeği kodlandı),
 `project_override_batterybox_bugs`, `project_device_stutter_perf_pass`.
+
+
+2026-10-16 güncellemesi: Oil yayılması artık blocking sequencer kullanmaz. `OilSpread` job yalnız bölüm sonunu bekletir; görseller tek Update döngüsünde ve ortak UI havuzunda çalışır. Yukarıdaki diğer migrasyon önerileri bu değişikliğin kapsamında değildir.

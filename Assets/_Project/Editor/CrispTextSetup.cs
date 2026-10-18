@@ -149,8 +149,8 @@ public static class CrispTextSetup
         AssignCommonPopupSkin(titleFont, buttonFont);
 
         AssetDatabase.SaveAssets();
-        Debug.Log($"[CrispText] Başlık + buton: {count} yazı (Baloo 2 başlık / Nunito buton) + zemin stili; " +
-                  "ortak popup skin'i bağlandı (başlık/yeşil/mavi buton).");
+        if (GameDiagnostics.EditorTools)
+            Debug.Log($"[CrispText] Başlık + buton: {count} yazı (Baloo 2 başlık / Nunito buton) + zemin stili; " + "ortak popup skin'i bağlandı (başlık/yeşil/mavi buton).");
     }
 
     /// fontOverride verilirse önce yazının fontu değişir; preset o font'un materyalinden üretilir
@@ -269,7 +269,8 @@ public static class CrispTextSetup
     {
         if (mat == null) return;
         var full = Shader.Find("TextMeshPro/Distance Field");
-        if (full == null) { Debug.LogWarning("[CrispText] TMP 'Distance Field' shader bulunamadı; kabartma atlandı."); return; }
+        if (full == null) { if (GameDiagnostics.EditorTools)
+            Debug.LogWarning("[CrispText] TMP 'Distance Field' shader bulunamadı; kabartma atlandı."); return; }
         if (mat.shader != full) mat.shader = full;
 
         mat.EnableKeyword("BEVEL_ON");
@@ -358,7 +359,8 @@ public static class CrispTextSetup
 
         int assigned = AssignJokerCountStyle();
         AssetDatabase.SaveAssets();
-        Debug.Log($"[CrispText] Joker denemesi: {assigned} joker sayısına OnRed atandı.");
+        if (GameDiagnostics.EditorTools)
+            Debug.Log($"[CrispText] Joker denemesi: {assigned} joker sayısına OnRed atandı.");
     }
 
     [MenuItem("TinyFixers/Fonts/2) Tüm Yazılara Sert Gölge (joker beğenilince)")]
@@ -376,7 +378,8 @@ public static class CrispTextSetup
             if (mat != null) ApplyHardShadow(mat);
         }
         AssetDatabase.SaveAssets();
-        Debug.Log("[CrispText] Ortak yazı stilleri sert gölgede.");
+        if (GameDiagnostics.EditorTools)
+            Debug.Log("[CrispText] Ortak yazı stilleri sert gölgede.");
     }
 
     // ── 3) Joker başlığı ("Wonder Çekici!") — referans: Royal Match "Kraliyet Çekici!" ──────────
@@ -422,7 +425,8 @@ public static class CrispTextSetup
             EditorSceneManager.OpenScene(previous, OpenSceneMode.Single);
 
         AssetDatabase.SaveAssets();
-        Debug.Log($"[CrispText] Oyun anı başlık stili: joker={joker}, boss dalga={boss}, övgü={praise}.");
+        if (GameDiagnostics.EditorTools)
+            Debug.Log($"[CrispText] Oyun anı başlık stili: joker={joker}, boss dalga={boss}, övgü={praise}.");
     }
 
     private static int AssignFontFields<T>(string fontField, string materialField, TMP_FontAsset font, Material mat)
@@ -459,7 +463,8 @@ public static class CrispTextSetup
         var source = AssetDatabase.LoadAssetAtPath<Font>(ttfPath);
         if (source == null)
         {
-            Debug.LogWarning($"[CrispText] Font dosyası yok: {ttfPath}");
+            if (GameDiagnostics.EditorTools)
+                Debug.LogWarning($"[CrispText] Font dosyası yok: {ttfPath}");
             return null;
         }
 

@@ -92,12 +92,14 @@ public sealed class RuntimeSimulationWindow : EditorWindow
     private void StartRun()
     {
         var scene = AssetDatabase.LoadAssetAtPath<SceneAsset>(GameScene);
-        if (scene == null) { Debug.LogError("[RuntimeSim] Gameplay scene not found: " + GameScene); return; }
+        if (scene == null) { if (GameDiagnostics.EditorTools)
+            Debug.LogError("[RuntimeSim] Gameplay scene not found: " + GameScene); return; }
         string[] paths = _allLevels
             ? AssetDatabase.FindAssets("t:LevelData", new[] { "Assets/_Project/Settings/ProductionLevels" })
                 .Select(AssetDatabase.GUIDToAssetPath).OrderBy(path => path).ToArray()
             : _level != null ? new[] { AssetDatabase.GetAssetPath(_level) } : Array.Empty<string>();
-        if (paths.Length == 0) { Debug.LogError("[RuntimeSim] Test edilecek level seç."); return; }
+        if (paths.Length == 0) { if (GameDiagnostics.EditorTools)
+            Debug.LogError("[RuntimeSim] Test edilecek level seç."); return; }
         var config = new RuntimeSimulationSession.Config
         {
             levelPaths = paths, gamesPerLevel = _games, seed = _seed, policy = _policy,

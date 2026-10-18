@@ -20,6 +20,9 @@ public sealed class BridgeRepairEventButton : MonoBehaviour
 
     private int lastShownSecond = int.MinValue;
 
+    /// Yarış ekranı bu noktadan daireyle açılır / buraya kapanır.
+    public RectTransform IconRect => EventScreenIris.IconRect(this, visibilityRoot);
+
     private void Awake()
     {
         if (button == null) button = GetComponent<Button>();

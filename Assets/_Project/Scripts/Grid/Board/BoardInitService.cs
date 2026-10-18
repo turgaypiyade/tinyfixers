@@ -8,7 +8,10 @@ using System.Collections.Generic;
 /// </summary>
 public class BoardInitService
 {
-    public TileType[,] SimulateInitialTypes(int width, int height, bool[,] holes, TileType[] randomPool)
+    /// <param name="pinnedTypes">İsteğe bağlı: hücre başına TileType+1 (0 = rastgele). Pinli hücreler sabit kalır ve
+    /// rastgele komşular onlarla hazır eşleşme kurmayacak şekilde seçilir (önceden tanımlı öğretici tahtaları).</param>
+    public TileType[,] SimulateInitialTypes(int width, int height, bool[,] holes, TileType[] randomPool,
+        int[,] pinnedTypes = null)
     {
         var types = new TileType[width, height];
         var filled = new bool[width, height];
@@ -21,11 +24,23 @@ public class BoardInitService
             System.Array.Clear(types, 0, types.Length);
             System.Array.Clear(filled, 0, filled.Length);
 
+            // Pinler önce yerleşir: rastgele seçim her yönde onları görür (sağ/alt komşu pin dahil).
+            if (pinnedTypes != null)
+                for (int y = 0; y < height; y++)
+                for (int x = 0; x < width; x++)
+                {
+                    if (holes[x, y] || pinnedTypes[x, y] <= 0) continue;
+                    types[x, y] = (TileType)(pinnedTypes[x, y] - 1);
+                    filled[x, y] = true;
+                }
+
             for (int y = 0; y < height; y++)
             {
                 for (int x = 0; x < width; x++)
                 {
                     if (holes[x, y])
+                        continue;
+                    if (pinnedTypes != null && pinnedTypes[x, y] > 0)
                         continue;
 
                     types[x, y] = PickTypeAvoidingMatch(

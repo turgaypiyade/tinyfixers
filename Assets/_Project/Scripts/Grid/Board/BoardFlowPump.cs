@@ -26,6 +26,11 @@ internal sealed class BoardFlowPump
     private readonly Stack<TileView> stack = new();
     private readonly List<TileView> group = new();
     private int lastDiagonalTry = -1;
+    private int quietVersion, quietClears, quietLandings;
+    private bool hasQuietSnapshot, hasPendingMatches;
+
+    private bool CanSleep => !board.IsBusy && board.ActiveBackgroundJobs == 0
+        && !board.IsActionSequencePlaying && !board.CascadeLogic.IsGravityBusy;
 
     public BoardFlowPump(BoardController board) => this.board = board;
 
@@ -33,6 +38,16 @@ internal sealed class BoardFlowPump
     {
         if (board.CascadeLogic == null || board.MatchFinder == null || board.Tiles == null)
             return;
+
+        // A proven quiet board needs no full-grid polls. Changes/arrivals/hold releases wake it;
+        // active effects still use the existing continuous pump and its lost-wakeup fallback.
+        int version = board.MatchFinder.ChangeVersion;
+        int clears = board.ClearedCellCount;
+        int landings = board.FallMotion.LandedCount;
+        if (hasQuietSnapshot && CanSleep && version == quietVersion
+            && clears == quietClears && landings == quietLandings)
+            return;
+        hasQuietSnapshot = false;
 
         bool worked = false;
 
@@ -53,6 +68,14 @@ internal sealed class BoardFlowPump
 
         if (worked)
             board.NoteFlowPumpWork();
+        else if (!hasPendingMatches && CanSleep && version == board.MatchFinder.ChangeVersion
+            && clears == board.ClearedCellCount && landings == board.FallMotion.LandedCount)
+        {
+            quietVersion = version;
+            quietClears = clears;
+            quietLandings = landings;
+            hasQuietSnapshot = true;
+        }
     }
 
     // Dikey dolum gereken boşluk varsa her zaman planla. Yalnız çapraz dolabilecek boşluk varsa
@@ -95,6 +118,7 @@ internal sealed class BoardFlowPump
     private bool ClearSettledGroups()
     {
         var matches = board.MatchFinder.FindAllMatches(logDiagnostics: false);
+        hasPendingMatches = matches.Count > 0;
         if (matches.Count == 0)
             return false;
 

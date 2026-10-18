@@ -79,7 +79,8 @@ public abstract class ShopOfferCardBase : MonoBehaviour
     /// <summary>Fiyat butonunda yazan metin (uygun bir teklif için).</summary>
     public static string PriceLabel(ShopOffer o) => o.priceType switch
     {
-        ShopOffer.PriceType.RealMoney => o.priceLabel,
+        // Mağaza bağlıyken fiyat mağazadan (oyuncunun ülkesi/para birimi); yoksa katalogdaki yedek etiket.
+        ShopOffer.PriceType.RealMoney => StoreIap.TryGetPrice(o, out var storePrice) ? storePrice : o.priceLabel,
         ShopOffer.PriceType.Coins     => o.priceAmount.ToString("N0"),
         ShopOffer.PriceType.Stars     => o.priceAmount.ToString("N0"),
         ShopOffer.PriceType.Free      => "BEDAVA",

@@ -67,7 +67,10 @@ public sealed class OverrideBatteryBoxDetonationAction : BoardAction
         activeBoard.PlayObstacleBreakSound(ObstacleId.OverrideBatteryBox);
 
         if (activeBoard.BoardFlowTraceEnabled)
-            Debug.Log($"[OBBTL] burst origin={originIndex} t={Time.realtimeSinceStartup:0.000}");
+            {
+                if (GameDiagnostics.BoardFlow)
+                    Debug.Log($"[OBBTL] burst origin={originIndex} t={Time.realtimeSinceStartup:0.000}");
+            }
 
         var impactCells = new List<Vector2Int>();
         var specialTiles = new List<TileView>();
@@ -81,7 +84,7 @@ public sealed class OverrideBatteryBoxDetonationAction : BoardAction
                 var obstacles = activeBoard.ObstacleStateService;
                 if (obstacles != null
                     && obstacles.HasObstacleAt(x, y)
-                    && !obstacles.IsExitAtBottomAt(x, y))
+                    && !obstacles.IsUnbreakableObstacleAt(x, y))
                 {
                     int obstacleOrigin = obstacles.GetObstacleOriginAt(x, y);
                     if (obstacleOrigin >= 0 && obstacleOrigin != originIndex && impactedOrigins.Add(obstacleOrigin))
@@ -133,11 +136,8 @@ public sealed class OverrideBatteryBoxDetonationAction : BoardAction
 
         if (activeBoard.BoardFlowTraceEnabled)
         {
-            Debug.Log(
-                $"[OBBDust] detonate origin=({originCell.x},{originCell.y}) " +
-                $"impacts={impactCells.Count} specials={specialTiles.Count} " +
-                $"duration={duration:0.000} maxRadiusPx={maxRadiusPx:0.0} " +
-                $"eventDriven={canPlayDust}");
+            if (GameDiagnostics.BoardFlow)
+                Debug.Log($"[OBBDust] detonate origin=({originCell.x},{originCell.y}) " + $"impacts={impactCells.Count} specials={specialTiles.Count} " + $"duration={duration:0.000} maxRadiusPx={maxRadiusPx:0.0} " + $"eventDriven={canPlayDust}");
         }
 
         int pending = 0;
@@ -188,7 +188,10 @@ public sealed class OverrideBatteryBoxDetonationAction : BoardAction
         }
 
         if (activeBoard.BoardFlowTraceEnabled)
-            Debug.Log($"[OBBTL] wave_done origin={originIndex} t={Time.realtimeSinceStartup:0.000} pendingLeft={pending}");
+            {
+                if (GameDiagnostics.BoardFlow)
+                    Debug.Log($"[OBBTL] wave_done origin={originIndex} t={Time.realtimeSinceStartup:0.000} pendingLeft={pending}");
+            }
 
         if (ownResolve) activeBoard.RequestResolveAfterActionSequence();
     }
@@ -207,7 +210,7 @@ public sealed class OverrideBatteryBoxDetonationAction : BoardAction
             && cell.y >= 0 && cell.y < b.Height
             && b.ObstacleStateService != null
             && b.ObstacleStateService.HasObstacleAt(cell.x, cell.y)
-            && !b.ObstacleStateService.IsExitAtBottomAt(cell.x, cell.y))
+            && !b.ObstacleStateService.IsUnbreakableObstacleAt(cell.x, cell.y))
         {
             var hit = b.ApplyObstacleDamageAt(cell.x, cell.y, ObstacleHitContext.SpecialActivation, null);
             if (hit.didHit)
@@ -277,7 +280,10 @@ public sealed class OverrideBatteryBoxDetonationAction : BoardAction
         if (root == null)
         {
             if (b != null && b.BoardFlowTraceEnabled)
-                Debug.LogWarning("[OBBDust] yield break: no active RectTransform root for dust UI.");
+                {
+                    if (GameDiagnostics.CriticalErrors)
+                        Debug.LogWarning("[OBBDust] yield break: no active RectTransform root for dust UI.");
+                }
             yield break;
         }
 
@@ -745,16 +751,6 @@ public sealed class OverrideBatteryBoxDetonationAction : BoardAction
 
         Debug.DrawLine(world + Vector3.left * 0.25f, world + Vector3.right * 0.25f, Color.yellow, duration + 0.5f);
         Debug.DrawLine(world + Vector3.down * 0.25f, world + Vector3.up * 0.25f, Color.yellow, duration + 0.5f);
-
-        Debug.Log(
-            $"[OBBDust] root={root.name} activeSelf={root.gameObject.activeSelf} " +
-            $"activeInHierarchy={root.gameObject.activeInHierarchy} layer={LayerMask.LayerToName(root.gameObject.layer)} " +
-            $"rect={root.rect.size} scale={root.lossyScale} sibling={root.GetSiblingIndex()}/{root.parent?.childCount ?? 0} " +
-            $"canvas={(canvas != null ? canvas.renderMode.ToString() : "null")} " +
-            $"canvasActive={(canvas != null && canvas.gameObject.activeInHierarchy)} " +
-            $"camera={(canvasCamera != null ? canvasCamera.name : "null")} " +
-            $"cameraMask={(canvasCamera != null ? canvasCamera.cullingMask.ToString() : "n/a")} " +
-            $"originWorld={world} originAnchored={anchored} maxRadius={maxRadius:0.0} duration={duration:0.000}");
     }
 
     private static void LogDustRootUnavailable(BoardController b)
@@ -766,11 +762,8 @@ public sealed class OverrideBatteryBoxDetonationAction : BoardAction
         RectTransform breakRoot = b.BreakFxParent;
         RectTransform parent = b.Parent;
 
-        Debug.LogWarning(
-            "[OBBDust] event-driven dust disabled: no active root. " +
-            $"BoardVfxPlayer.VfxRoot={RootState(vfxRoot)} " +
-            $"BreakFxParent={RootState(breakRoot)} " +
-            $"Parent={RootState(parent)}");
+        if (GameDiagnostics.CriticalErrors)
+            Debug.LogWarning("[OBBDust] event-driven dust disabled: no active root. " + $"BoardVfxPlayer.VfxRoot={RootState(vfxRoot)} " + $"BreakFxParent={RootState(breakRoot)} " + $"Parent={RootState(parent)}");
     }
 
     private static string RootState(RectTransform root)

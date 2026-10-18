@@ -40,9 +40,15 @@ public class LeveledWheelRewardConfig : ScriptableObject
         bool hasAnyConfig = defaultConfig != null
             || (levelOverrides != null && levelOverrides.Exists(e => e.config != null));
         if (!hasAnyConfig)
-            Debug.LogWarning($"[LeveledWheelRewardConfig] '{name}': defaultConfig atanmamış ve hiçbir levelOverride'da config yok!", this);
+            {
+                if (GameDiagnostics.CriticalErrors)
+                    Debug.LogWarning($"[LeveledWheelRewardConfig] '{name}': defaultConfig atanmamış ve hiçbir levelOverride'da config yok!", this);
+            }
         else if (defaultConfig == null)
-            Debug.LogWarning($"[LeveledWheelRewardConfig] '{name}': defaultConfig boş — level eşiği tutmazsa fallback çalışmaz.", this);
+            {
+                if (GameDiagnostics.CriticalErrors)
+                    Debug.LogWarning($"[LeveledWheelRewardConfig] '{name}': defaultConfig boş — level eşiği tutmazsa fallback çalışmaz.", this);
+            }
     }
 #endif
 

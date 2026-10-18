@@ -275,7 +275,7 @@ public sealed class RisingIntroOverlay : MonoBehaviour
     private void ApplyStaticText()
     {
         if (titleText != null)
-            titleText.text = LocalizedText("rising_intro_title", "SAFARİ BAŞLIYOR!");
+            titleText.text = LocalizedText("rising_intro_title", "TIRMANIŞ BAŞLIYOR!");
         if (tapText != null)
             tapText.text = LocalizedText("rising_intro_ready", "ZİRVEYE HAZIR MISIN?\n<size=38>Devam etmek için dokun</size>");
     }

@@ -131,10 +131,6 @@ public sealed class SafeObstacleService : MonoBehaviour
 
         // 2) Goal (Obstacle/Safe) ilerlesin.
         state?.NotifySafeBroken(safeOrigin);
-
-        // 3) Açılan boş hücreler, devam eden resolve/cascade ile gravity+spawn'dan dolar
-        //    (kasa kırılması bir match-clear sırasında olur). Gerekirse board kendi akışında refill eder.
-        Debug.Log($"[Safe] REVEALED origin={safeOrigin}");
     }
 
     public bool HasSafe(int origin)  => _byOrigin.ContainsKey(origin);
@@ -143,6 +139,10 @@ public sealed class SafeObstacleService : MonoBehaviour
     /// Aktif kilit index'i (0..2), kırıksa LockCount, kasa yoksa -1.
     public int GetActiveLock(int origin)
         => _byOrigin.TryGetValue(origin, out var s) ? GetFirstOpenLockInOrder(s) : -1;
+
+    /// Ordered sıradaki <paramref name="step"/>. kilidin index'i (0..2); kasa yoksa -1.
+    public int GetLockAtStep(int origin, int step)
+        => _byOrigin.TryGetValue(origin, out var s) && step >= 0 && step < LockCount ? (int)s.order[step] : -1;
 
     public SafeLockHitMode GetHitMode(int origin)
         => _byOrigin.TryGetValue(origin, out var s) ? s.hitMode : SafeLockHitMode.Ordered;

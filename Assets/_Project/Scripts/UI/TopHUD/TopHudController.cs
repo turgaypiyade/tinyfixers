@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class TopHudController : MonoBehaviour
 {
@@ -39,6 +40,11 @@ public class TopHudController : MonoBehaviour
 
     private readonly List<RuntimeGoal> runtimeGoals = new();
     private bool initialized;
+    private bool goalsRootBaseCaptured;
+    private Vector3 goalsRootBaseScale;
+    private GridLayoutGroup goalsGrid;
+    private GridLayoutGroup.Constraint goalsGridBaseConstraint;
+    private int goalsGridBaseConstraintCount;
 
     // Kırılmış ama saçılımı henüz bitmemiş kaynak sayısı, saçılan obstacle başına
     // (Mud ← Barrel, WaterPuddle ← WaterTank/WaterTankSmall). Saçılan-obstacle hedefinin placeholder'ı.
@@ -139,6 +145,7 @@ public class TopHudController : MonoBehaviour
 
         if (levelData == null || levelData.goals == null)
         {
+            ApplyGoalsRowLayout();
             UpdateGoalsCompletionState();
             return;
         }
@@ -184,7 +191,49 @@ public class TopHudController : MonoBehaviour
             runtimeGoals.Add(runtime);
         }
 
+        ApplyGoalsRowLayout();
         UpdateGoalsCompletionState();
+    }
+
+    private void ApplyGoalsRowLayout()
+    {
+        if (goalsRoot is not RectTransform rt)
+            return;
+
+        if (!goalsRootBaseCaptured)
+        {
+            goalsRootBaseScale = rt.localScale;
+            goalsGrid = rt.GetComponent<GridLayoutGroup>();
+            if (goalsGrid != null)
+            {
+                goalsGridBaseConstraint = goalsGrid.constraint;
+                goalsGridBaseConstraintCount = goalsGrid.constraintCount;
+            }
+            goalsRootBaseCaptured = true;
+        }
+
+        // Keep the original four-goal footprint, including counters and completion checks.
+        // This runs only when goals are built or a spreading obstacle adds a new goal.
+        float scale = 1f;
+        if (goalsGrid != null)
+        {
+            int count = runtimeGoals.Count;
+            bool compactRow = count > 4;
+            goalsGrid.constraint = compactRow
+                ? GridLayoutGroup.Constraint.FixedColumnCount : goalsGridBaseConstraint;
+            goalsGrid.constraintCount = compactRow ? count : goalsGridBaseConstraintCount;
+            if (compactRow)
+            {
+                float normalWidth = 4f * goalsGrid.cellSize.x + 3f * goalsGrid.spacing.x;
+                float rowWidth = count * goalsGrid.cellSize.x + (count - 1) * goalsGrid.spacing.x;
+                if (normalWidth > 0f && rowWidth > 0f)
+                    scale = Mathf.Min(1f, normalWidth / rowWidth);
+            }
+        }
+
+        // Left/Right remain owned by the scene, including adjustments made during Play mode.
+        // Reapplying a cached position here would undo those adjustments when a goal is added.
+        rt.localScale = goalsRootBaseScale * scale;
     }
 
     private RuntimeGoal FindRuntimeObstacleGoal(ObstacleId obstacleId)
@@ -224,6 +273,7 @@ public class TopHudController : MonoBehaviour
 
         runtime.slot?.SetRemaining(runtime.remaining);
         runtimeGoals.Add(runtime);
+        ApplyGoalsRowLayout();
         return runtime;
     }
 
@@ -315,7 +365,7 @@ public class TopHudController : MonoBehaviour
             ? levelData.obstacleLibrary.Get(goal.obstacleId)
             : null;
 
-        var preview = obstacleDef != null ? obstacleDef.GetPreviewSprite() : null;
+        var preview = obstacleDef != null ? obstacleDef.GetGoalIconSprite() : null;
         if (preview == null && goal.obstacleId == ObstacleId.Tube)
             preview = tubeGoalFallbackIcon;
 
@@ -408,7 +458,7 @@ public class TopHudController : MonoBehaviour
             UpdateGoalsCompletionState();
     }
 
-    /// Aç Hamster: hedef "X kez doyur" — HamsterObstacleService her doyumda tamamlanan sayıyı yazar
+    /// Aç Hamster: hedef = tahtadaki hamster sayısı — HamsterObstacleService her hamster doyduğunda tamamlanan sayıyı yazar
     /// (hamster ayrılırken gelen OnObstacleDestroyed hedefi ayrıca düşürmez).
     public void SetHamsterFeedsCompleted(int completed)
     {

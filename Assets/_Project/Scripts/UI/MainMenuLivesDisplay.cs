@@ -169,7 +169,7 @@ public class MainMenuLivesDisplay : MonoBehaviour
 
     private void StartAd()
     {
-#if UNITY_EDITOR
+#if UNITY_EDITOR && !TF_ADMOB
         if (simulateAdInEditor)
         {
             if (!LevelAdRight.TryConsume()) return;
@@ -177,7 +177,15 @@ public class MainMenuLivesDisplay : MonoBehaviour
             return;
         }
 #endif
-        Debug.LogWarning("[LivesDisplay] Reklam SDK'sı bağlanmadı. simulateAdInEditor=true yapın veya SDK entegre edin.");
+        if (AdService.IsShowing) return;
+        _adInProgress = true;
+        // Hak yalnız reklam gerçekten izlenince harcanır.
+        AdService.ShowRewarded(earned =>
+        {
+            _adInProgress = false;
+            if (!earned || this == null || !LevelAdRight.TryConsume()) return;
+            OnAdRewarded();
+        });
     }
 
     public void OnAdRewarded()
@@ -309,9 +317,7 @@ public class MainMenuLivesDisplay : MonoBehaviour
     private IEnumerator SimulateAd()
     {
         _adInProgress = true;
-        Debug.Log($"[LivesDisplay] Reklam simülasyonu ({simulatedAdDuration}s)...");
         yield return new WaitForSecondsRealtime(simulatedAdDuration);
-        Debug.Log("[LivesDisplay] Simülasyon tamamlandı — 1 can eklendi.");
         OnAdRewarded();
     }
 #endif

@@ -1,0 +1,416 @@
+fileFormatVersion: 2
+guid: e950d2e7005cc49e49b656d5c66a60f9
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: 7346852461802714614
+    second: Futuristic Gold-Accented Sci-Fi Podium_0
+  - first:
+      213: 2503919530138595651
+    second: Futuristic Gold-Accented Sci-Fi Podium_1
+  - first:
+      213: -1567458785124280693
+    second: Futuristic Gold-Accented Sci-Fi Podium_2
+  - first:
+      213: -1420916663133696406
+    second: Futuristic Gold-Accented Sci-Fi Podium_3
+  - first:
+      213: -7386675520597999958
+    second: Futuristic Gold-Accented Sci-Fi Podium_4
+  - first:
+      213: 3060804497882330358
+    second: Futuristic Gold-Accented Sci-Fi Podium_5
+  - first:
+      213: 6259348799869532793
+    second: Futuristic Gold-Accented Sci-Fi Podium_6
+  - first:
+      213: 3893446917093764856
+    second: Futuristic Gold-Accented Sci-Fi Podium_7
+  - first:
+      213: 3253398517608204078
+    second: Futuristic Gold-Accented Sci-Fi Podium_8
+  - first:
+      213: -6916510153210789735
+    second: Futuristic Gold-Accented Sci-Fi Podium_9
+  - first:
+      213: 1025785534913820337
+    second: Futuristic Gold-Accented Sci-Fi Podium_10
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 1
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 1
+  spriteExtrude: 1
+  spriteMeshType: 0
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 1024
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: iOS
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: Futuristic Gold-Accented Sci-Fi Podium_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 0
+        width: 2027
+        height: 744
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6f574f2836345f560800000000000000
+      internalID: 7346852461802714614
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Futuristic Gold-Accented Sci-Fi Podium_1
+      rect:
+        serializedVersion: 2
+        x: 964
+        y: 734
+        width: 49
+        height: 13
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 341f21cdb85bfb220800000000000000
+      internalID: 2503919530138595651
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Futuristic Gold-Accented Sci-Fi Podium_2
+      rect:
+        serializedVersion: 2
+        x: 1829
+        y: 659
+        width: 10
+        height: 14
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b861a982a844f3ae0800000000000000
+      internalID: -1567458785124280693
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Futuristic Gold-Accented Sci-Fi Podium_3
+      rect:
+        serializedVersion: 2
+        x: 1934
+        y: 605
+        width: 11
+        height: 13
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a6e8b7eb2d3e74ce0800000000000000
+      internalID: -1420916663133696406
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Futuristic Gold-Accented Sci-Fi Podium_4
+      rect:
+        serializedVersion: 2
+        x: 1946
+        y: 527
+        width: 83
+        height: 123
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: aaebea310c14d7990800000000000000
+      internalID: -7386675520597999958
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Futuristic Gold-Accented Sci-Fi Podium_5
+      rect:
+        serializedVersion: 2
+        x: 272
+        y: 62
+        width: 7
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6f4b13759792a7a20800000000000000
+      internalID: 3060804497882330358
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Futuristic Gold-Accented Sci-Fi Podium_6
+      rect:
+        serializedVersion: 2
+        x: 296
+        y: 63
+        width: 7
+        height: 17
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 97abd7de19cadd650800000000000000
+      internalID: 6259348799869532793
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Futuristic Gold-Accented Sci-Fi Podium_7
+      rect:
+        serializedVersion: 2
+        x: 1320
+        y: 49
+        width: 7
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8fea63db75d480630800000000000000
+      internalID: 3893446917093764856
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Futuristic Gold-Accented Sci-Fi Podium_8
+      rect:
+        serializedVersion: 2
+        x: 1362
+        y: 43
+        width: 7
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e27c1dae6b4662d20800000000000000
+      internalID: 3253398517608204078
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Futuristic Gold-Accented Sci-Fi Podium_9
+      rect:
+        serializedVersion: 2
+        x: 736
+        y: 33
+        width: 9
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9900d7039ae9300a0800000000000000
+      internalID: -6916510153210789735
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Futuristic Gold-Accented Sci-Fi Podium_10
+      rect:
+        serializedVersion: 2
+        x: 1688
+        y: 12
+        width: 9
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1b6b54852825c3e00800000000000000
+      internalID: 1025785534913820337
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 5e97eb03825dee720800000000000000
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      Futuristic Gold-Accented Sci-Fi Podium_0: 7346852461802714614
+      Futuristic Gold-Accented Sci-Fi Podium_1: 2503919530138595651
+      Futuristic Gold-Accented Sci-Fi Podium_10: 1025785534913820337
+      Futuristic Gold-Accented Sci-Fi Podium_2: -1567458785124280693
+      Futuristic Gold-Accented Sci-Fi Podium_3: -1420916663133696406
+      Futuristic Gold-Accented Sci-Fi Podium_4: -7386675520597999958
+      Futuristic Gold-Accented Sci-Fi Podium_5: 3060804497882330358
+      Futuristic Gold-Accented Sci-Fi Podium_6: 6259348799869532793
+      Futuristic Gold-Accented Sci-Fi Podium_7: 3893446917093764856
+      Futuristic Gold-Accented Sci-Fi Podium_8: 3253398517608204078
+      Futuristic Gold-Accented Sci-Fi Podium_9: -6916510153210789735
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
