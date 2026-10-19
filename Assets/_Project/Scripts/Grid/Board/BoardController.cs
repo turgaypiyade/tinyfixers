@@ -959,6 +959,8 @@ public class BoardController : MonoBehaviour
     /// Joker hedefi kabul edilmedi (hak düşmedi, joker seçili kalır). Argüman: yerelleştirme anahtarı.
     public event Action<string> OnBoosterTargetRejected;
     internal LevelData LevelData => levelData;
+    /// Refill'in kendiliğinden special tamamlamasının engellenme oranı (0-1); level kurulurken bir kez çözülür.
+    internal float RefillSpecialGuardStrength { get; private set; }
     internal int PatchBotPulseComboSize => patchBotPulseComboSize;
     internal PatchBotPairGhostTuning PatchBotGhostTuning => patchBotPairGhostTuning.Sanitized;
     internal float PulseImpactDelayStep => pulseImpactDelayStep;
@@ -2002,6 +2004,7 @@ public class BoardController : MonoBehaviour
     public void SetLevelData(LevelData levelData)
     {
         this.levelData = levelData;
+        RefillSpecialGuardStrength = levelData != null ? RefillSpecialGuard.Resolve(levelData, CurrentLevel.Global) : 0f;
         RemainingMoves = levelData != null ? Mathf.Max(0, levelData.moves) : 0;
         OnMovesChanged?.Invoke(RemainingMoves);
         EnsureServices();

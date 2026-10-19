@@ -429,6 +429,18 @@ public class LevelDataEditor : Editor
                 "(az tip = sürekli istemsiz match riski).",
                 MessageType.Warning);
         }
+
+        bool auto = level.refillSpecialGuard < 0f;
+        bool newAuto = EditorGUILayout.Toggle("Refill Special Koruması: Otomatik", auto);
+        if (newAuto != auto)
+            level.refillSpecialGuard = newAuto ? RefillSpecialGuard.Auto : 0.8f;
+        if (!newAuto)
+            level.refillSpecialGuard = EditorGUILayout.Slider("Engelleme Oranı", level.refillSpecialGuard, 0f, 1f);
+        EditorGUILayout.HelpBox(
+            "Yeni düşen taşın kendiliğinden Rocket/PulseCore/PatchBot şekli tamamlamasının engellenme oranı " +
+            "(0 = kapalı, 1 = hepsi). Otomatik: seviye 1-50 → 0.8, 51+ → seviyeye göre 0.4-0.9. " +
+            "Düz 3'lü cascade ve gizli yardım etkilenmez.",
+            MessageType.None);
     }
 
     private void DrawGoals(LevelData level)

@@ -2,6 +2,7 @@
   python3 ig.py me                       → hesap bilgisi
   python3 ig.py post <jpeg_url> <caption_file>   → tek görsel paylaş (görsel herkese açık JPEG adresi olmalı)
   python3 ig.py carousel <caption_file> <url1> <url2> ...  → kaydırmalı paylaşım (2–10 görsel)
+  python3 ig.py reel <mp4_url> <caption_file>   → Reels (akışta da görünür); video herkese açık MP4 adresi olmalı
   python3 ig.py refresh                  → 60 günlük anahtarı yeniler (en az 24 saatlik anahtar), dosyaya yazar
 Görseller: Website/social/<gönderi>/ altında, build.py ile wondigames.com/social/... adresinde yayınlanır."""
 import json, os, pathlib, sys, time, urllib.parse, urllib.request
@@ -24,8 +25,8 @@ def call(path, params=None, post=False):
     except urllib.error.HTTPError as e:
         sys.exit(f'HTTP {e.code}: {e.read().decode()[:500]}')
 
-def wait_ready(cid):
-    for _ in range(30):
+def wait_ready(cid, tries=30):
+    for _ in range(tries):
         st = call(cid, {'fields': 'status_code'}).get('status_code')
         if st == 'FINISHED': return
         if st == 'ERROR': sys.exit(f'container {cid} ERROR')
@@ -50,6 +51,11 @@ def main():
         kids = [call('me/media', {'image_url': u, 'is_carousel_item': 'true'}, post=True)['id'] for u in sys.argv[3:]]
         for k in kids: wait_ready(k)
         publish(call('me/media', {'media_type': 'CAROUSEL', 'children': ','.join(kids), 'caption': cap}, post=True)['id'])
+    elif cmd == 'reel':
+        url, cap = sys.argv[2], pathlib.Path(sys.argv[3]).read_text(encoding='utf-8')
+        cid = call('me/media', {'media_type': 'REELS', 'video_url': url, 'caption': cap, 'share_to_feed': 'true'}, post=True)['id']
+        wait_ready(cid, tries=120)   # video işleme dakikalar sürebilir (~6 dk tavan)
+        publish(cid)
     elif cmd == 'refresh':
         req = urllib.request.Request('https://graph.instagram.com/refresh_access_token?' + urllib.parse.urlencode(
             {'grant_type': 'ig_refresh_token', 'access_token': token()}))

@@ -90,3 +90,6 @@ Assets/Firebase/Plugins/x86_64/FirebaseCppApp-*.bundle.meta
 /Website/raw/
 /Website/IMGStore/
 /Website/.wrangler/
+
+# Instagram Reels videoları (büyük; make_reels.py çıktısı, site derlemesinde yayınlanır)
+Website/social/reels/*.mp4

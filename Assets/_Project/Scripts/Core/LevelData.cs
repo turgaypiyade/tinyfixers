@@ -566,6 +566,11 @@ public class LevelData : ScriptableObject
              "havuz hiç kullanılmaz, yalnızca buradakiler üretilir. Boşsa GridSpawner'daki geçerlidir.")]
     public TileType[] randomPool;
 
+    [Tooltip("Refill special koruması: yeni düşen taşın, durduğu yerde 4+ dizi / T-L / 2x2 (Rocket, " +
+             "PulseCore, PatchBot) tamamlama olasılığından engellenen oran. 0 = kapalı, 1 = hepsi engellenir. " +
+             "-1 = otomatik (seviye numarasına göre, RefillSpecialGuard). Normal 3'lü cascade serbest kalır.")]
+    [Range(-1f, 1f)] public float refillSpecialGuard = RefillSpecialGuard.Auto;
+
     [Header("Energy Container")]
     [Tooltip("How many EnergyOrb collectibles each EnergyContainer releases in this level. EnergyContainerRuntime can still provide a fallback, but level data owns the tuning.")]
     [Min(1)] public int energyPerContainer = 10;

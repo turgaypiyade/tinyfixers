@@ -24,6 +24,8 @@ public partial class CascadeLogic
         public TileView View;
         public TileType SpawnType;
         public bool IsSpawned;
+        // Gizli yardımın (LevelAssist) bilerek seçtiği renk: special koruması dokunmaz.
+        public bool AssistPicked;
 
         public bool IsMovableObstacle;
         public ObstacleId SpawnObstacleId;
@@ -54,8 +56,9 @@ public partial class CascadeLogic
     // Mercy's scored color selection deliberately bypasses this limit to enable natural specials.
     private const int MAX_REFILL_RUN = 3;
 
-    private TileType PickRefillType(VirtualTile[,] vb, int x, int toY)
+    private TileType PickRefillType(VirtualTile[,] vb, int x, int toY, out bool assistPicked)
     {
+        assistPicked = false;
         var pool = board.RandomPool;
         if (pool == null || pool.Length == 0)
             return TileType.Gear;
@@ -65,7 +68,10 @@ public partial class CascadeLogic
         float assistBias = LevelAssist.RefillBias;
         if (assistBias > 0f && UnityEngine.Random.value < assistBias
             && TryPickHelpfulRefillColor(vb, x, toY, out var helpful))
+        {
+            assistPicked = true;
             return helpful;
+        }
 
         for (int attempt = 0; attempt < 12; attempt++)
         {
@@ -143,6 +149,84 @@ public partial class CascadeLogic
         if (left + 1 > MAX_REFILL_RUN) return true;
 
         return false;
+    }
+
+    // Refill special koruması (RefillSpecialGuard). Planlama sütun sütun ilerlediği ve çapraz kaymalar
+    // sonradan geldiği için spawn anındaki kontrol (WouldExtendRunTooFar) komşuları eksik görür; bu tur
+    // tüm taşların SON yerinde koşar. Yeni taş special şekli (4+ dizi, T/L, 2x2) tamamlıyorsa, `strength`
+    // olasılığıyla şekil kurmayan başka bir havuz rengine çevrilir. Rengin değişmesi yalnız bu hücreyi
+    // içeren şekilleri etkiler; hepsi yeni renkle denetlendiği için düzeltme başka yerde special doğurmaz.
+    // Düz 3'lü cascade serbest; mevcut taşların kendi kayarak kurduğu şekillere dokunulmaz.
+    private void GuardSpawnedSpecialShapes(VirtualTile[,] vb, float strength)
+    {
+        var pool = board.RandomPool;
+        if (pool == null || pool.Length < 2) return;
+
+        for (int x = 0; x < board.Width; x++)
+        {
+            for (int y = 0; y < board.Height; y++)
+            {
+                var vt = vb[x, y];
+                if (vt == null || !vt.IsSpawned || vt.IsMovableObstacle || vt.AssistPicked) continue;
+                if (!FormsSpecialShape(vb, x, y, vt.SpawnType)) continue;
+                if (UnityEngine.Random.value >= strength) continue;
+
+                int start = UnityEngine.Random.Range(0, pool.Length);
+                for (int i = 0; i < pool.Length; i++)
+                {
+                    var cand = pool[(start + i) % pool.Length];
+                    if (cand == vt.SpawnType || FormsSpecialShape(vb, x, y, cand)) continue;
+                    vt.SpawnType = cand;
+                    break;
+                }
+            }
+        }
+    }
+
+    // (x, y) `color` olsaydı MatchFinder.DecideSpecialAt'in special verdiği bir şeklin parçası olur muydu?
+    private bool FormsSpecialShape(VirtualTile[,] vb, int x, int y, TileType color)
+    {
+        int left = SameColorRun(vb, x, y, -1, 0, color, x, y);
+        int right = SameColorRun(vb, x, y, 1, 0, color, x, y);
+        int up = SameColorRun(vb, x, y, 0, -1, color, x, y);
+        int down = SameColorRun(vb, x, y, 0, 1, color, x, y);
+        int h = left + right + 1, v = up + down + 1;
+        if (h >= 4 || v >= 4) return true;
+
+        // T/L: dizinin herhangi bir hücresinden dik yönde 3'lü geçiyorsa PulseCore.
+        if (h >= 3)
+            for (int cx = x - left; cx <= x + right; cx++)
+                if (SameColorRun(vb, cx, y, 0, -1, color, x, y) + SameColorRun(vb, cx, y, 0, 1, color, x, y) >= 2)
+                    return true;
+        if (v >= 3)
+            for (int cy = y - up; cy <= y + down; cy++)
+                if (SameColorRun(vb, x, cy, -1, 0, color, x, y) + SameColorRun(vb, x, cy, 1, 0, color, x, y) >= 2)
+                    return true;
+
+        // 2x2 (PatchBot): hücreyi içeren dört kareden biri.
+        for (int ox = -1; ox <= 0; ox++)
+            for (int oy = -1; oy <= 0; oy++)
+            {
+                int sx = x + ox, sy = y + oy;
+                if (IsColorAt(vb, sx, sy, color, x, y) && IsColorAt(vb, sx + 1, sy, color, x, y)
+                    && IsColorAt(vb, sx, sy + 1, color, x, y) && IsColorAt(vb, sx + 1, sy + 1, color, x, y))
+                    return true;
+            }
+        return false;
+    }
+
+    // (fromX, fromY)'den (dx, dy) yönünde, başlangıç hariç ardışık `color` sayısı. (px, py) adayın hücresi.
+    private int SameColorRun(VirtualTile[,] vb, int fromX, int fromY, int dx, int dy, TileType color, int px, int py)
+    {
+        int n = 0;
+        for (int cx = fromX + dx, cy = fromY + dy; IsColorAt(vb, cx, cy, color, px, py); cx += dx, cy += dy) n++;
+        return n;
+    }
+
+    private bool IsColorAt(VirtualTile[,] vb, int cx, int cy, TileType color, int px, int py)
+    {
+        if (cx == px && cy == py) return true;
+        return TryGetAssistColor(vb, cx, cy, out var t) && t == color;
     }
 
     // Bir sanal hücrenin match'lenebilir rengini döndürür. Obstacle/movable/boş = renk yok.
@@ -249,6 +333,10 @@ public partial class CascadeLogic
                 PruneVerticalOnlyGaps(virtualBoard, verticalOnlyGaps);
             }
         }
+
+        // Taşların son yerleri artık kesin: refill'in kendiliğinden special tamamlamasını burada kıs.
+        if (board.RefillSpecialGuardStrength > 0f)
+            GuardSpawnedSpecialShapes(virtualBoard, board.RefillSpecialGuardStrength);
 
         // COMPILE ACTION
         var action = new FallAction();
@@ -654,7 +742,7 @@ public partial class CascadeLogic
                     {
                         // Normal refill limits accidental 4+ runs. A mercy pick may deliberately
                         // complete a special-producing match using normal colored stones.
-                        newTile.SpawnType = PickRefillType(virtualBoard, x, toY);
+                        newTile.SpawnType = PickRefillType(virtualBoard, x, toY, out newTile.AssistPicked);
                     }
 
                     virtualBoard[x, toY] = newTile;

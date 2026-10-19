@@ -63,6 +63,11 @@ def main() -> None:
     (OUT / "tr" / "index.html").write_text(turkish_page(html), encoding="utf-8")
     shutil.copytree(ROOT / "img", OUT / "img", ignore=shutil.ignore_patterns(".DS_Store"))
     # Instagram görselleri (API herkese açık JPEG adresi ister): yalnız .jpg, betik/metin yayınlanmaz.
+    # Reels videoları: social/reels/*.mp4 (git'e girmez — .gitignore; make_reels.py çıktısından kopyalanır)
+    for mp4 in (ROOT / "social" / "reels").glob("*.mp4"):
+        dst = OUT / "social" / "reels" / mp4.name
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(mp4, dst)
     for jpg in (ROOT / "social").glob("*/*.jpg"):
         dst = OUT / "social" / jpg.parent.name / jpg.name
         dst.parent.mkdir(parents=True, exist_ok=True); shutil.copy2(jpg, dst)

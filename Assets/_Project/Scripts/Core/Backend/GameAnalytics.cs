@@ -33,6 +33,8 @@ public static class GameAnalytics
         {
             Log("level_end",
                 ("level", r.Level), ("attempt", r.Attempt), ("success", r.Won ? 1 : 0),
+                // Numeric twin of success: summable custom metric → GA4 calculated "pass rate" = won / event count.
+                ("won", r.Won ? 1 : 0),
                 ("seconds", r.Seconds), ("moves_left", r.MovesLeft),
                 ("assist_tier", r.AssistTier), ("fails_before", r.FailsBefore), ("moves_total", r.MovesTotal),
                 ("struggles_before", r.StrugglesBefore), ("struggled", r.Struggled ? 1 : 0),
@@ -49,7 +51,7 @@ public static class GameAnalytics
     private static void SetCurrentLevel(int level)
     {
 #if TF_FIREBASE_ANALYTICS
-        FirebaseAnalytics.SetUserProperty("current_level", level.ToString());
+        FirebaseAnalytics.SetUserProperty("current_level", LevelText(level));
 #endif
     }
 
@@ -90,9 +92,7 @@ public static class GameAnalytics
 
         var p = new Parameter[count];
         int next = 0;
-        string levelText = isLevelEvent
-            ? level.ToString(System.Globalization.CultureInfo.InvariantCulture)
-            : null;
+        string levelText = isLevelEvent ? LevelText(level) : null;
         if (isLevelEvent) p[next++] = new Parameter("level", levelText);
         for (int i = 0; i < parameters.Length; i++)
         {
@@ -114,6 +114,11 @@ public static class GameAnalytics
         }
 #endif
     }
+
+    // GA4 boyutları metindir ve metin olarak sıralanır ("100" < "35"). Sıfır dolgulu 6 hane
+    // ("000035", "020000") 999999 seviyeye kadar metin sırasını sayı sırasıyla aynı yapar.
+    private static string LevelText(long level) =>
+        level.ToString("D6", System.Globalization.CultureInfo.InvariantCulture);
 
     // Mobile app custom dimensions require text; measured quantities stay numeric metrics.
     private static bool IsLevelDimension(string name) =>
