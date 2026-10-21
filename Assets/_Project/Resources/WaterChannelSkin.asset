@@ -1,0 +1,46 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 939488484bdf436e8412cf01e865ae67, type: 3}
+  m_Name: WaterChannelSkin
+  m_EditorClassIdentifier: Assembly-CSharp::WaterChannelSkin
+  closed:
+  - {fileID: 21300000, guid: c36718efdc894e348876a66acf10c509, type: 3}
+  - {fileID: 21300000, guid: c82ba79c481d4b8fa458e7b74638ffc5, type: 3}
+  - {fileID: 21300000, guid: 1b5da03ec0024fbb9328a30ba8e4613a, type: 3}
+  - {fileID: 21300000, guid: ffee22acd4734c38848b80e4f895c92f, type: 3}
+  - {fileID: 21300000, guid: d9b35fc7f7d840b9b551e27a1d7030a0, type: 3}
+  - {fileID: 21300000, guid: b20852893b88493aacb9434bec09b22e, type: 3}
+  open:
+  - {fileID: 21300000, guid: 866ae7f465c34bc6a79322be801af651, type: 3}
+  - {fileID: 21300000, guid: 3907189cb0eb44c0bcfaca1ac8aa8687, type: 3}
+  - {fileID: 21300000, guid: 8c04c604036842bc8c6589ab600dba18, type: 3}
+  - {fileID: 21300000, guid: 48f77aeeff7c4f85916cf6def54ab90f, type: 3}
+  - {fileID: 21300000, guid: ba5ad2977f2e43bf9cb2e9bec4172a9e, type: 3}
+  - {fileID: 21300000, guid: abb976dd48ee43b58b6678f9638fe033, type: 3}
+  water:
+  - {fileID: 21300000, guid: 3a586987c496497c8f2df3bd9d5f65a7, type: 3}
+  - {fileID: 21300000, guid: 65c939384b6845e8a548d56906e2a326, type: 3}
+  - {fileID: 21300000, guid: 886a8bc4ab67447e884661f24e6961b2, type: 3}
+  - {fileID: 21300000, guid: 52bb534b0578406b9dc0de48dc6f1df2, type: 3}
+  - {fileID: 21300000, guid: c6821167791f454aac14320d81211d67, type: 3}
+  - {fileID: 21300000, guid: 1f135244daac4990ab03024096ff2410, type: 3}
+  source: {fileID: 21300000, guid: 97524b036cab40119fb10377c8a17694, type: 3}
+  foam: {fileID: 21300000, guid: 1f360a350ebb4f83859bc5d29d4fc856, type: 3}
+  droplet: {fileID: 21300000, guid: 039cb319261f4a968a864e8678e92394, type: 3}
+  waterfallTexture: {fileID: 2800000, guid: 0836886adf2c4c6abb01506a653002bd, type: 3}
+  waterfallMaterial: {fileID: 2100000, guid: ca3e87cc0c1147e2ae3f0cba519694c0, type: 2}
+  openSound: {fileID: 8300000, guid: 82699982454843409bdefedb7f562052, type: 3}
+  openSoundVolume: 1
+  flowSound: {fileID: 8300000, guid: 99084b33c9d543cdb7eedc424fde770f, type: 3}
+  flowSoundVolume: 0.8
+  splashSound: {fileID: 8300000, guid: 1fbc98e7ac224d68bf85310c12b0e049, type: 3}
+  splashSoundVolume: 1

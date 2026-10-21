@@ -1,0 +1,36 @@
+{
+  "source": "Docs/LevelDesign/References/12-Aynali-Serit-Referansi.png",
+  "originalRows": [
+    "......ooo",
+    "EEEEEEooo",
+    "EEEEEEooo",
+    "EEEEEEooo",
+    "SSSEEEEEE",
+    "...EEEEEE",
+    "GG.EEEEEE",
+    "G..SSSEEE",
+    "GG....EEE",
+    "G.G.G.EEE",
+    ".GGGG.SSS"
+  ],
+  "mirroredRows": [
+    "ooo......",
+    "oooEEEEEE",
+    "oooEEEEEE",
+    "oooEEEEEE",
+    "EEEEEESSS",
+    "EEEEEE...",
+    "EEEEEE.GG",
+    "EEESSS..G",
+    "EEE....GG",
+    "EEE.G.G.G",
+    "SSS.GGGG."
+  ],
+  "transform": "horizontal mirror x -> 8-x",
+  "activeComponents": [
+    66,
+    6,
+    6
+  ],
+  "diagonalOnlyNodes": 2
+}

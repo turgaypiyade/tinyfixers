@@ -105,11 +105,19 @@ public class BoosterSlotView : MonoBehaviour
         if (freeBadge != null) freeBadge.transform.SetAsLastSibling();
     }
 
+    // Rozetler (adet/kilit/Free) yazılarıyla birlikte aynı oranda küçülür: ölçek kökte → çocuk yazılar da orantılı.
+    // Telefonda rozetler ikonu fazla örtüyor, köşe rozeti yandaki jokerin çerçevesine biniyordu (aralıklar daraldı):
+    // %10 küçük + köşe rozetleri (adet/kilit) slot merkezine doğru içeri çekilir. Free (x=0) yerinde kalır.
+    private const float BadgeScale = 0.90f;
+    private const float CornerBadgeInset = 12f;
+
     private void PlaceBadge(RectTransform rt, Vector2 size, float x)
     {
         rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
         rt.pivot = new Vector2(0.5f, 0.5f);
         rt.sizeDelta = size;
+        rt.localScale = new Vector3(BadgeScale, BadgeScale, 1f);
+        if (x != 0f) x -= Mathf.Sign(x) * CornerBadgeInset;
         rt.anchoredPosition = new Vector2(x, badgeY);
     }
 

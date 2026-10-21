@@ -300,6 +300,17 @@ public enum ObstacleId : int
     ColorCrateRed = 72,
     ColorCrateBlue = 73,
     ColorCrateGreen = 74,
+
+    // Fener: PlasticTwoStage (40) ile birebir aynı davranış (hareketli, 2 vuruş, hedefse tepeden yenisi doğar);
+    // yalnız görsel farklı — 1. aşama sönük, ilk vuruşta yanar, ikinci vuruşta hedefe uçar. Kod gerekmez (veri).
+    Lantern = 75,
+
+    // Su kanalı: depodan (herhangi bir hücre) tahtanın sol/sağ/alt kenarına serbest çizilen, hiç yukarı çıkmayan yol
+    // (LevelData.waterChannels).
+    // Kapalı hücre taşın altında durur; üstündeki taş eşleşince açılır, açık hücreden taş geçer ama durmaz,
+    // su depoya kesintisiz bağlı açık hücrelere akar; tamamı açılınca su son hücrenin kenarından çıkar → hedef +1.
+    // Ayrıntı: Docs/WaterChannel_Plan.md.
+    WaterChannel = 76,
 }
 
 public enum TubeDirection { Up, Down, Left, Right }
@@ -324,6 +335,60 @@ public struct TubeEntry
     public TubeDirection direction;
     [Tooltip("Total number of cells the tube occupies (including base).")]
     [Min(2)] public int length;
+}
+
+[System.Serializable]
+public struct WaterChannelEntry
+{
+    [Tooltip("Sıralı yol (flat index y*width+x). İLK hücre = DEPO (herhangi bir oynanır hücre; oyunda taşın geçtiği " +
+             "geçirgen hücre, üstünde çeşme). Sonrakiler kanal: dik komşu, hiçbir adım YUKARI çıkmaz (aşağı ya da yana). " +
+             "SON hücre tahtanın sol/sağ/alt kenarına ya da bir boşluğa değer; su o kenardan çıkar.")]
+    public int[] pathCellIndices;
+
+    /// Yol kurallara uyuyor mu? Hata varsa okunur açıklama döner (editör uyarısı + runtime koruması).
+    public static bool Validate(LevelData level, int[] path, out string error)
+    {
+        error = null;
+        if (level == null || level.cells == null) { error = "Level verisi yok."; return false; }
+        if (path == null || path.Length < 2) { error = "Depo + en az 1 kanal hücresi gerekli."; return false; }
+        int w = level.width, h = level.height;
+        var seen = new System.Collections.Generic.HashSet<int>();
+        for (int i = 0; i < path.Length; i++)
+        {
+            int c = path[i];
+            if (c < 0 || c >= w * h || level.cells[c] != (int)CellType.Normal) { error = $"{i + 1}. hücre oynanır değil."; return false; }
+            if (!seen.Add(c)) { error = $"{i + 1}. hücre yolda iki kez geçiyor."; return false; }
+            if (i > 0)
+            {
+                int p = path[i - 1], dx = c % w - p % w, dy = c / w - p / w;
+                if (Mathf.Abs(dx) + Mathf.Abs(dy) != 1) { error = $"{i}. ve {i + 1}. hücre dik komşu değil."; return false; }
+                if (dy < 0) { error = $"{i + 1}. hücre yukarı çıkıyor (su yalnız aşağı ya da yana akar)."; return false; }
+            }
+        }
+        if (ExitSide(level, path) == '\0') { error = "Son hücre tahtanın sol, sağ ya da alt kenarına (veya bir boşluğa) değmeli."; return false; }
+        return true;
+    }
+
+    /// Suyun çıktığı kenar: son hücrenin dışarıya (tahta dışı ya da boş hücre) açılan kenarı. Öncelik: son adımın
+    /// yönünde devam eden kenar, sonra alt, sonra sol/sağ. Yukarı çıkış yok. Uygun kenar yoksa '\0'.
+    public static char ExitSide(LevelData level, int[] path)
+    {
+        if (level == null || path == null || path.Length < 2) return '\0';
+        int w = level.width, last = path[path.Length - 1], prev = path[path.Length - 2];
+        int x = last % w, y = last / w;
+        char forward = (last % w) > (prev % w) ? 'R' : (last % w) < (prev % w) ? 'L' : 'B';
+        bool Out(char s)
+        {
+            int nx = x + (s == 'R' ? 1 : s == 'L' ? -1 : 0), ny = y + (s == 'B' ? 1 : 0);
+            if (nx < 0 || nx >= w || ny >= level.height) return true;
+            return level.cells[ny * w + nx] != (int)CellType.Normal;
+        }
+        if (Out(forward)) return forward;
+        if (Out('B')) return 'B';
+        if (Out('L') && forward != 'R') return 'L';
+        if (Out('R') && forward != 'L') return 'R';
+        return '\0';
+    }
 }
 
 [System.Serializable]
@@ -436,6 +501,14 @@ public struct PaintCanBoxColorEntry
 }
 
 [System.Serializable]
+public struct ColorCrateInitialHitsEntry
+{
+    public int originCellIndex;
+    public ObstacleId obstacleId;
+    [Min(1)] public int remainingHits;
+}
+
+[System.Serializable]
 public struct StackedObstacleEntry
 {
     [Tooltip("Üstteki obstacle'ın SOL-ÜST (origin) hücresinin flat index'i (y*width+x).")]
@@ -445,6 +518,21 @@ public struct StackedObstacleEntry
     public ObstacleId obstacleId;
     [Tooltip("Yığın sırası: kasalarla (safes) birlikte alttan üste bu sayıya göre kurulur (SafeEntry.stackOrder).")]
     public int stackOrder;
+
+    [Tooltip("Renkli 1x1 sandıkların başlangıçta kalan vuruşu. 0 = kütüphane varsayılanı; " +
+             "2/1 = hasarlı aşamadan başlar. Diğer engellerde kullanılmaz.")]
+    [Min(0)] public int initialRemainingHits;
+
+    public static bool SupportsInitialHits(ObstacleId id)
+        => id == ObstacleId.ColorCrateYellow || id == ObstacleId.ColorCrateRed
+        || id == ObstacleId.ColorCrateBlue || id == ObstacleId.ColorCrateGreen;
+
+    public int ResolveInitialRemainingHits(ObstacleDef def)
+    {
+        int maxHits = Mathf.Max(1, def != null ? def.hits : 1);
+        return SupportsInitialHits(obstacleId) && initialRemainingHits > 0
+            ? Mathf.Clamp(initialRemainingHits, 1, maxHits) : maxHits;
+    }
 }
 
 /// <summary>
@@ -606,11 +694,55 @@ public class LevelData : ScriptableObject
     [Tooltip("For multi-cell obstacles: stores the origin cell index. -1 means none.")]
     public int[] obstacleOrigins;
 
+    [Tooltip("Normal Obstacle fırçasıyla konan renkli sandıkların başlangıç kalan vuruşu. " +
+             "Listede olmayan sandık kütüphane varsayılanından başlar; katman eklemez.")]
+    public ColorCrateInitialHitsEntry[] colorCrateInitialHits;
+
+    public int GetColorCrateInitialHits(int origin, ObstacleId id)
+    {
+        if (colorCrateInitialHits != null)
+            foreach (var entry in colorCrateInitialHits)
+                if (entry.originCellIndex == origin && entry.obstacleId == id)
+                    return entry.remainingHits;
+        return 0;
+    }
+
+    // Authoring only; runtime builds its lookup once during initialization.
+    public void SetColorCrateInitialHits(int origin, ObstacleId id, int remaining)
+    {
+        ClearColorCrateInitialHitsAt(origin);
+        if (!StackedObstacleEntry.SupportsInitialHits(id) || remaining <= 0) return;
+        var def = obstacleLibrary != null ? obstacleLibrary.Get(id) : null;
+        int maxHits = Mathf.Max(1, def != null ? def.hits : 3);
+        remaining = Mathf.Clamp(remaining, 1, maxHits);
+        if (remaining == maxHits) return;  // Full-health/default needs no extra record.
+        var list = new System.Collections.Generic.List<ColorCrateInitialHitsEntry>(
+            colorCrateInitialHits ?? System.Array.Empty<ColorCrateInitialHitsEntry>());
+        list.Add(new ColorCrateInitialHitsEntry { originCellIndex = origin, obstacleId = id, remainingHits = remaining });
+        colorCrateInitialHits = list.ToArray();
+    }
+
+    public void ClearColorCrateInitialHitsAt(int origin)
+    {
+        if (colorCrateInitialHits == null) return;
+        for (int i = 0; i < colorCrateInitialHits.Length; i++)
+            if (colorCrateInitialHits[i].originCellIndex == origin)
+            {
+                var list = new System.Collections.Generic.List<ColorCrateInitialHitsEntry>(colorCrateInitialHits);
+                list.RemoveAll(entry => entry.originCellIndex == origin);
+                colorCrateInitialHits = list.ToArray();
+                return;
+            }
+    }
+
     [Tooltip("Shrinking tube obstacles. Cells are stamped into obstacles[] at runtime by GridSpawner.")]
     public TubeEntry[] tubes;
 
     [Tooltip("Magnet pair obstacles. Cells are stamped into obstacles[] at runtime by GridSpawner.")]
     public MagnetEntry[] magnets;
+
+    [Tooltip("Su kanalları (ilk hücre depo → son hücre kenardan çıkış). Seviye editörünün 'Kanal' modunda çizilir.")]
+    public WaterChannelEntry[] waterChannels;
 
     [Tooltip("Safe (kasa) kapakları. Kapladıkları NxN bölgenin altındaki içerik dokunulmaz kalır; " +
              "kasa kırılınca açılır. Cells runtime'da SafeObstacleService ile işlenir.")]
@@ -772,6 +904,9 @@ public class LevelData : ScriptableObject
 
         if (magnets == null)
             magnets = System.Array.Empty<MagnetEntry>();
+
+        if (waterChannels == null)
+            waterChannels = System.Array.Empty<WaterChannelEntry>();
 
         if (safes == null)
             safes = System.Array.Empty<SafeEntry>();

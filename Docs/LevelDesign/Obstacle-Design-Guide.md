@@ -85,6 +85,18 @@ Listede bulunmayan bir ID yalnız kodda mevcut diye yeni levele eklenmez. Katalo
 
 Yeni kütüphane engeli: **RhodesStatue · ID 70**, 2×2 sabit dev heykel; dört aşama/dört special isabeti, normal/booster hasarı almaz. İlk production tanıtımı 161; 162 ve 166'da yoğun yükle geri gelir. Goal/prelevel ikonu Resources/RhodesStatue/S1_Base'tir. Kapladığı dört hücre tek obstacle/goal'dür. Ayrıntı: [RhodesStatue](../RhodesStatue.md).
 
+## Yeni fener — Lantern, ID 75 · ilk production 182
+
+Kullanıcının eklediği 1×1 hareketli engel; `hits=2`, her iki stage `behavior=MovableObstacle`, normal/special hit alır ve renk kısıtı yoktur. İlk sprite `Lantern_1_Unlit`, ilk hitten sonra `Lantern_2_Lit`; ikinci hit engeli toplar. HUD/prelevel goal ikonu yanan fenerdir. Hint 75 kaydı/lokalizasyonu mevcut.
+
+PlasticTwoStage 40 ile aynı temel iki-hit/movable davranışındadır; eski dokümanlarda turuncu PlasticTwoStage'e de “fener” denir, bu yeni ID 75 ile karıştırılmaz. Genel hedef refill'inde kalan miktar yaşayan+gömülü+planlanmış sayının üzerindeyse üretilebilir. **ID 40'a özel hamle başına bir spawn kilidi 75'e uygulanmıyor**; genel pass başına tek movable sınırı geçerlidir. Hedefi başlangıç adedinin üzerinde tasarlarken bu fark gözetilir. 182 v1 tanıtımında başlangıç 30/goal 30 idi. Kullanıcının tek sütun isteğiyle v2 başlangıç 11/goal 30 oldu; 19 kandil mevcut hedef refill kotasıyla gelir. Bu açılış sütunu kalıcı spawn sütunu değildir. Yeni fener adına özel runtime/VFX servisi yazılmadı.
+
+## Renkli sandıklar — ColorCrate, ID 71–74
+
+Sabit 1×1, üç aşamalı sandıklar: **71 sarı/Gear, 72 kırmızı/Core, 73 mavi/Bolt, 74 yeşil/Plate**. Komşu normal eşleşme yalnız sandığın kendi rengindeyse hasar verir; special bu renk kısıtını aşar. `ObstacleLibrary` içinde her biri `hits=3`, `restrictNormalMatchTileType=1`, bütün aşamalarda `allowDiagonal=1` taşır. Son aşamada `holdsTile=1` vardır; açılışta serbest taş hücresi sayılmazlar. ID 21 ColorChest'ten farklı, tek hücreli ayrı bir ailedir.
+
+Kırmızı/yeşil ilk production kullanımı **169**; sarı/mavi renk varyantlarının ilk kullanımı **171**. 171 [Renkli Çerçeve](Level171-Renkli-Cerceve.md), dört renkli sandıkları 7×3 hole boşluğunu çevreleyen kesintisiz bir konturda birleştirir. Renk hedefleri ayrı ayrı sayılır. Sandıklar birbirinden kopuk adacıklar yerine kenarı/şekli tamamlayan bantlarda kullanılır.
+
 ## Diyagonal köşe geçişi — 148 geri bildirimi
 
 Wardrobe (27), PaintCanBox (63) ve TarpStatue (68) için **bütün stage'lerde `allowDiagonal = 1`**.
@@ -104,3 +116,17 @@ Temel kaynaklar: [LevelData](../../Assets/_Project/Scripts/Core/LevelData.cs), [
 Tek seçimle çim + nilüfer yerleşir; ayrıca Grass eklenmez. Komşu special ilk gözlemden sonra bir gerçek oyuncu hamlesi aynı hücrede kaldıysa yutulur. İçeride special varken ilk special vuruşu geri fırlatır; uygun hücreye patlamadan iner. İçerisi boşken normal veya special vuruşunda kalıcı yaprak kaybı başlar; her vuruş bir yaprak düşürür. Yeniden special yutmuş olsa da içi dolu çiçeği yalnız special açar; normal eşleşme zarar vermez. Dört yaprak bittiğinde alt çim normal akışla temizlenir. ID 69 hedefi ancak alttaki çim de bitince bir kez ilerler. Booster yaprak düşürmez; normal eşleşme sadece içerisi boşken hasar verir. Renk/ölçek hasarla değişmez.
 
 Tanıtımda çevresinde special üretme ve geri atılan special'ın inebileceği açık hücreler bırakılır; yoğun kaplama altında saklanmaz. Ayrıntı: [GrassWaterLily](../GrassWaterLily-Plan.md), ilk tasarım: [Nilüfer Göleti 151](Level151-Nilufer-Goleti.md).
+
+## Su kanalı — WaterChannel, ID 76 · ilk production 183
+
+Güncel `WaterChannelService` ve `WaterChannelEntry` esas alınır: yolun ilk hücresi herhangi bir aktif kaynak/depo; tekrar yok, dik komşu adımlarla yalnız yana/aşağı gidilir. Son hücre sol/sağ/alt sınır veya hole'a açılmalıdır; ExitSide son adım, alt, uygun yan sırasıyla seçer. Kaynak runtime geçirgendir, normal taş tutmaz. Diğer kanal hücreleri tek vuruşlu oynanabilir alt katmandır; açılınca **normal oynanabilir kalırlar**, taşlar üstlerine gelir. LevelData enum yorumundaki açılan kanalı hole sayan eski cümle güncel davranışı anlatmaz.
+
+Yol `waterChannels[].pathCellIndices` içinde sıralı int dizisidir; kaynak dışındaki hücreler GridSpawner'da ID76 ve kendi origin'iyle damgalanır. Kanal/depo başka engel veya yığınla örtülmez (şimdiki damgalama diğer içeriği ezer). Üstteki taşın temizlenmesi/special isabeti hücreyi açar; depodan kesintisiz açık bölge su alır, ortadan açılan parça bağlantı gelene kadar kuru kalır. Goal miktarı hücre değil **tamamlanacak kanal sayısı**dır; TopHUD hücre yıkımını saymaz, OnWaterChannelCompleted olayını sayar. ID76 altında statik sprite yerine Resources/WaterChannelSkin şekilleri kullanılır; goal ikonu ChannelSource, hint76/lokalizasyon mevcut.
+
+183 ilk tanıtımı: tek 21 hücrelik yol (1 kaynak + 20 açılacak hücre), alt çıkış. İki aileli ek yük Lantern75 ve SculptingStone28. Kanal açık kaldığında oyuncu alanını bölmüş sayma; eski dinamik-hole/kanala-swap planı geçersizdir. Performans/teardown sınırı 183 notunda; yeni level için runtime değiştirilmedi.
+
+### Renkli sandık başlangıç aşaması — 179 revizyonu
+
+`StackedObstacleEntry.initialRemainingHits` yalnız ColorCrate71–74 için geçerlidir. 0 veya eksik alan library varsayılanıdır; pozitif değer1…def.hits aralığına clamp olur. Max hits3 kalır; kalan2 ikinci görsel/kural aşaması, kalan1 son aşamadır (`holdsTile=1` de o aşamadan gelir). 179'da satırlar3/2/1/1, son12hücrede örtü altında taş tutulur.
+
+State kurulumda id+origin anahtarıyla başlangıç hitlerini bir kez toplar; exposed ve beneath kaydı aynı değeri kullanır. Kırılma/snapshot mevcut kalan-hit akışıyla sürer. Spawn/editor/PNG başlangıç aşamasını görselleştirir. Başka bir kapak aynı origin'de diye sandığın başlangıç hitini devralmaz. Eski levellarda alan0 kalır; paylaşılan library değişmez. Başlangıç aşaması normal **Obstacle → ColorCrate → Başlangıç kalan vuruş (1/2/3)** yolundan seçilir. Normal sandıklar `LevelData.colorCrateInitialHits` girdisinde saklanır; yeni katman oluşturulmaz. Aynı sandığa tıklamak aşamasını değiştirir; silme/üzerine başka engel boyama başlangıç kaydını temizler. Gerçek üst katmanlar için Overlay mevcut `StackedObstacleEntry.initialRemainingHits` desteğini korur. Obstacle fırçası, aynı origin üzerinde mevcut en üst generic katman aynı sandıksa yalnız aşamasını günceller; 179 gibi Mud tabanını korur. Kütüphanenin ortak Hits/stage ayarları tüm levelları etkilediğinden ayrı, kapalı bir foldout altında gösterilir. Bu UI düzeltmesi level assetlerini değiştirmedi; doğrulama `Checks/ColorCrate-Obstacle-Brush/` içinde. Unity derleme/Play yapılmadı.

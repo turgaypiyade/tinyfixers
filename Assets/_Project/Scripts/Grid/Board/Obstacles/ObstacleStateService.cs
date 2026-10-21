@@ -158,6 +158,10 @@ public class ObstacleStateService : ISimObstacleQuery
     // Sadece origin hücre indexi anlamlıdır. -1 => obstacle yok.
     private int[] remainingHitsByOrigin = Array.Empty<int>();
 
+    // Built only at level setup, and only allocated for authored damaged ColorCrates.
+    // Key includes the id so a cover cannot inherit a buried crate's starting HP.
+    private Dictionary<(ObstacleId id, int origin), int> initialColorCrateHits;
+
     // A wall can take hits while its origin cell still holds a live cover. Keep its
     // capacity separate so neither the wall nor the cover overwrites the other's HP.
     private readonly Dictionary<(ObstacleId id, int origin), int> wallRemainingHits = new();
@@ -331,6 +335,7 @@ public class ObstacleStateService : ISimObstacleQuery
 
     public void InitializeFromLevel()
     {
+        initialColorCrateHits?.Clear();
         if (level == null || level.obstacles == null || level.obstacleOrigins == null)
             return;
 
@@ -352,6 +357,18 @@ public class ObstacleStateService : ISimObstacleQuery
         waterLilyCells.Clear();
         wallRemainingHits.Clear();
         _revealGraceUntil.Clear();
+
+        if (level.colorCrateInitialHits != null)
+            foreach (var entry in level.colorCrateInitialHits)
+                CacheInitialColorCrateHits(entry.obstacleId, entry.originCellIndex, entry.remainingHits, size,
+                    level.colorCrateInitialHits.Length);
+
+        if (level.stackedObstacles != null)
+            foreach (var entry in level.stackedObstacles)
+            {
+                CacheInitialColorCrateHits(entry.obstacleId, entry.originCellIndex, entry.initialRemainingHits, size,
+                    level.stackedObstacles.Length);
+            }
 
         for (int idx = 0; idx < size; idx++)
         {
@@ -395,7 +412,7 @@ public class ObstacleStateService : ISimObstacleQuery
             }
             else
             {
-                hits = Mathf.Max(1, def != null ? def.hits : 1);
+                hits = ResolveInitialColorCrateHits(id, origin, Mathf.Max(1, def != null ? def.hits : 1));
             }
             remainingHitsByOrigin[origin] = hits;
 
@@ -403,6 +420,19 @@ public class ObstacleStateService : ISimObstacleQuery
                 _chestColorStates[origin] = ChestColorMask.All;
         }
     }
+
+    private void CacheInitialColorCrateHits(ObstacleId id, int origin, int remaining, int size, int capacity)
+    {
+        if (remaining <= 0 || !StackedObstacleEntry.SupportsInitialHits(id) || origin < 0 || origin >= size) return;
+        var def = library != null ? library.Get(id) : null;
+        if (def == null) return;
+        initialColorCrateHits ??= new Dictionary<(ObstacleId id, int origin), int>(capacity);
+        initialColorCrateHits[(id, origin)] = Mathf.Clamp(remaining, 1, Mathf.Max(1, def.hits));
+    }
+
+    internal int ResolveInitialColorCrateHits(ObstacleId id, int origin, int fallback)
+        => initialColorCrateHits != null && initialColorCrateHits.TryGetValue((id, origin), out int authored)
+            ? authored : fallback;
 
     public bool TryDamageAt(int x, int y, out ObstacleVisualChange change)
     {
@@ -1487,7 +1517,7 @@ public class ObstacleStateService : ISimObstacleQuery
         if (beneathId != ObstacleId.None)
         {
             var def = library != null ? library.Get(beneathId) : null;
-            remaining = Mathf.Max(1, def != null ? def.hits : 1);
+            remaining = ResolveInitialColorCrateHits(beneathId, beneathOrigin, Mathf.Max(1, def != null ? def.hits : 1));
         }
 
         var stamped = new StampedBeneath(beneathId, beneathOrigin, overOrigin, remaining);
@@ -2760,7 +2790,14 @@ public class ObstacleStateService : ISimObstacleQuery
     // Diğer under-tile obstacle'lar swap/select'i bloklar; bunlar istisna (taş üstünde normal
     // oynanır + hareket eder).
     public bool IsInteractiveUnderTileOverlayAt(int x, int y)
-        => IsMudAt(x, y) || IsSpreadingGelAt(x, y) || IsWaterPuddleAt(x, y);
+        => IsMudAt(x, y) || IsSpreadingGelAt(x, y) || IsWaterPuddleAt(x, y) || IsWaterChannelAt(x, y);
+
+    // Kapalı su kanalı: su birikintisi gibi pasif taş altı katman; üstündeki taş normal oynanır.
+    public bool IsWaterChannelAt(int x, int y)
+    {
+        if (!IsValidCell(x, y)) return false;
+        return (ObstacleId)level.obstacles[level.Index(x, y)] == ObstacleId.WaterChannel;
+    }
 
     // Oil (veya herhangi bir holdsTile=true obstacle) bu hücredeki taşı tutuyorsa true.
     // allowDiagonal=true ise çapraz akış yine izinli — bu method sadece dikey blok için.

@@ -430,6 +430,7 @@ MonoBehaviour:
   pauseAtPoint: 0.2
   visual: {fileID: 1207480803}
   visualImage: {fileID: 1207480804}
+  birdProfile: {fileID: 0}
   bobAmplitude: 8
   bobFrequency: 6
   facingMode: 0
@@ -1197,57 +1198,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1101868746}
   m_CullTransparentMesh: 1
---- !u!21 &1111936318
-Material:
-  serializedVersion: 8
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_Name: WonderReveal_pisa
-  m_Shader: {fileID: 4800000, guid: 7aa4857f3c5db4c34a57e0abbe7bc1f8, type: 3}
-  m_Parent: {fileID: 0}
-  m_ModifiedSerializedProperties: 0
-  m_ValidKeywords: []
-  m_InvalidKeywords: []
-  m_LightmapFlags: 4
-  m_EnableInstancingVariants: 0
-  m_DoubleSidedGI: 0
-  m_CustomRenderQueue: -1
-  stringTagMap: {}
-  disabledShaderPasses: []
-  m_LockedProperties: 
-  m_SavedProperties:
-    serializedVersion: 3
-    m_TexEnvs:
-    - _MainTex:
-        m_Texture: {fileID: 0}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    m_Ints: []
-    m_Floats:
-    - _ColorMask: 15
-    - _EdgeNoise: 0.04
-    - _EdgeWidth: 0.05
-    - _HoloAlpha: 0.55
-    - _HoloDesat: 0.85
-    - _NoiseScale: 26
-    - _Reveal: 1
-    - _ScanFreq: 340
-    - _ScanStrength: 0.25
-    - _Stencil: 0
-    - _StencilComp: 8
-    - _StencilOp: 0
-    - _StencilReadMask: 255
-    - _StencilWriteMask: 255
-    - _UseUIAlphaClip: 0
-    m_Colors:
-    - _ClipRect: {r: -32767, g: -32767, b: 32767, a: 32767}
-    - _Color: {r: 1, g: 1, b: 1, a: 1}
-    - _EdgeColor: {r: 1.9, g: 1.45, b: 0.7, a: 1}
-    - _HoloColor: {r: 0.34999996, g: 0.75, b: 1, a: 1}
-  m_BuildTextureStacks: []
-  m_AllowLocking: 1
 --- !u!1 &1168313831
 GameObject:
   m_ObjectHideFlags: 0
@@ -1500,6 +1450,8 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+  useRustRestoration: 0
+  restorationDuration: 1.15
   welderRobot: {fileID: 0}
   welderImage: {fileID: 0}
   welderSparks: {fileID: 0}
@@ -1510,6 +1462,8 @@ MonoBehaviour:
   weldLightScale: 1
   welderFrames: []
   welderFps: 10
+  minimumWeldHold: 0.6
+  weldTipNormalized: {x: 0.9, y: 0.14}
   ambientAgents:
   - {fileID: 159165578}
   - {fileID: 1710573718}
@@ -1542,7 +1496,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
-  m_Material: {fileID: 1111936318}
+  m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
@@ -1777,6 +1731,7 @@ MonoBehaviour:
   pauseAtPoint: 0.2
   visual: {fileID: 348314455}
   visualImage: {fileID: 348314456}
+  birdProfile: {fileID: 0}
   bobAmplitude: 5
   bobFrequency: 3
   facingMode: 0
@@ -2020,6 +1975,7 @@ MonoBehaviour:
   pauseAtPoint: 0.1
   visual: {fileID: 2114482525}
   visualImage: {fileID: 2114482526}
+  birdProfile: {fileID: 0}
   bobAmplitude: 8
   bobFrequency: 3
   facingMode: 0
@@ -2250,10 +2206,10 @@ MonoBehaviour:
   pauseAtPoint: 0.4
   visual: {fileID: 1670411246}
   visualImage: {fileID: 1670411247}
+  birdProfile: {fileID: 11400000, guid: d485cd392d5c4583ac65214fc4eb90f8, type: 2}
   bobAmplitude: 20
   bobFrequency: 3
   facingMode: 1
-  birdProfile: {fileID: 11400000, guid: d485cd392d5c4583ac65214fc4eb90f8, type: 2}
   frontFrames: []
   backFrames: []
   walkFrames: []

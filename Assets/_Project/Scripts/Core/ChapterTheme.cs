@@ -30,6 +30,10 @@ public class ChapterTheme : ScriptableObject
     public BorderColorId    borderColorId      = BorderColorId.Orange;
     [Tooltip("Leave null to keep the border applier's existing library.")]
     public BorderSpriteLibrary borderSpriteLibrary;
+    [Tooltip("Açık = bölümün arka planı KOYU: tahta hücreleri ve ızgara çizgisi açık palette (ilk renkler #A9A7D9 / #B8B4DD) " +
+             "→ zeminden ayrışır. Kapalı = arka plan açık: koyu palet (#8483B9 / #9392C3). Ölçüt: arka planın tahta bölgesi " +
+             "parlaklığı 0.60'ın altındaysa açık palet (hangi palet zeminden daha çok ayrışıyorsa).")]
+    public bool lightBoardCells;
 
     [Header("Success Animation")]
     [Tooltip("Background shown behind the success frame animation. Leave null to hide the background.")]

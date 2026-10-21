@@ -1,0 +1,28 @@
+{
+  "level": 181,
+  "revision": 2,
+  "passed": true,
+  "yamlParsed": true,
+  "active": 99,
+  "holes": 0,
+  "openingTileCells": 59,
+  "directRefillReachable": 59,
+  "obstacleInstances": {
+    "25": 40,
+    "28": 16,
+    "21": 6,
+    "27": 4
+  },
+  "maxLayerDepth": 3,
+  "stackedEntries": 26,
+  "previousUse": {
+    "25": 179,
+    "21": 154,
+    "27": 176,
+    "28": 172
+  },
+  "protectedFilesUnchanged": 1859,
+  "unityBuildRun": false,
+  "gameplaySimulationRun": false,
+  "winRateMeasured": false
+}

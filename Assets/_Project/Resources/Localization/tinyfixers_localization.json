@@ -1669,6 +1669,18 @@
           "value": "{0} alındı!"
         },
         {
+          "key": "store_unavailable_title",
+          "value": "Mağaza"
+        },
+        {
+          "key": "store_unavailable_body",
+          "value": "Mağazaya şu an ulaşılamıyor. İnternet bağlantını kontrol edip biraz sonra tekrar dene."
+        },
+        {
+          "key": "store_purchase_failed_body",
+          "value": "Satın alma tamamlanamadı. Lütfen tekrar dene."
+        },
+        {
           "key": "shop_balance_gold",
           "value": "Altın: {0:N0}"
         },
@@ -2805,6 +2817,42 @@
           "value": "Meydanı Düzenle"
         },
         {
+          "key": "wonder_mis8_name",
+          "value": "Rodos Devi"
+        },
+        {
+          "key": "wonder_mis8_task_1",
+          "value": "İskeleyi Kur"
+        },
+        {
+          "key": "wonder_mis8_task_2",
+          "value": "Kaideleri Sağlamlaştır"
+        },
+        {
+          "key": "wonder_mis8_task_3",
+          "value": "Bronz Bacakları Kaynakla"
+        },
+        {
+          "key": "wonder_mis8_task_4",
+          "value": "Perçinleri Sabitle"
+        },
+        {
+          "key": "wonder_mis8_task_5",
+          "value": "Pelerini Onar"
+        },
+        {
+          "key": "wonder_mis8_task_6",
+          "value": "Bronzu Parlat"
+        },
+        {
+          "key": "wonder_mis8_task_7",
+          "value": "Güneş Tacını Tak"
+        },
+        {
+          "key": "wonder_mis8_task_8",
+          "value": "Meşaleyi Yak"
+        },
+        {
           "key": "purchase_celebration_title",
           "value": "HARİKA!"
         },
@@ -2947,6 +2995,22 @@
         {
           "key": "hint_obstacle_colorcrate",
           "value": "Yalnızca KENDİ RENGİNDEKİ taşlarla yanında eşleşme yaparak ya da special ile kırılır. Üç vuruşta parçalanır: sağlam, çatlak, kırık."
+        },
+        {
+          "key": "hint_obstacle_lantern_name",
+          "value": "Fener"
+        },
+        {
+          "key": "hint_obstacle_lantern",
+          "value": "Sönük fener. Yanında eşleştirme yap ya da özel taş kullan: ilk vuruşta yanar, ikinci vuruşta toplanır. Taşlar gibi düşer."
+        },
+        {
+          "key": "hint_obstacle_waterchannel_name",
+          "value": "Su Kanalı"
+        },
+        {
+          "key": "hint_obstacle_waterchannel",
+          "value": "Depodaki suyu kanaldan aşağı akıt! Kanal kapaklarının üstündeki taşları eşleştir ya da özel taş kullan: kapak açılır, su ilerler. Taşlar açık kanalın üstünden geçer. Kanal baştan sona açılınca su alttan akıp gider."
         },
         {
           "key": "hint_obstacle_lasercannon_name",
@@ -4750,6 +4814,18 @@
           "value": "{0} purchased!"
         },
         {
+          "key": "store_unavailable_title",
+          "value": "Store"
+        },
+        {
+          "key": "store_unavailable_body",
+          "value": "We can't reach the store right now. Check your connection and try again in a moment."
+        },
+        {
+          "key": "store_purchase_failed_body",
+          "value": "The purchase couldn't be completed. Please try again."
+        },
+        {
           "key": "shop_balance_gold",
           "value": "Gold: {0:N0}"
         },
@@ -5886,6 +5962,42 @@
           "value": "Tidy Up the Square"
         },
         {
+          "key": "wonder_mis8_name",
+          "value": "Colossus of Rhodes"
+        },
+        {
+          "key": "wonder_mis8_task_1",
+          "value": "Set Up the Scaffold"
+        },
+        {
+          "key": "wonder_mis8_task_2",
+          "value": "Reinforce the Pedestals"
+        },
+        {
+          "key": "wonder_mis8_task_3",
+          "value": "Weld the Bronze Legs"
+        },
+        {
+          "key": "wonder_mis8_task_4",
+          "value": "Fix the Rivets"
+        },
+        {
+          "key": "wonder_mis8_task_5",
+          "value": "Mend the Cloak"
+        },
+        {
+          "key": "wonder_mis8_task_6",
+          "value": "Polish the Bronze"
+        },
+        {
+          "key": "wonder_mis8_task_7",
+          "value": "Fit the Sun Crown"
+        },
+        {
+          "key": "wonder_mis8_task_8",
+          "value": "Light the Torch"
+        },
+        {
           "key": "purchase_celebration_title",
           "value": "AWESOME!"
         },
@@ -6028,6 +6140,22 @@
         {
           "key": "hint_obstacle_colorcrate",
           "value": "Breaks only with matches of ITS OWN COLOR next to it, or with specials. Takes three hits: solid, cracked, broken."
+        },
+        {
+          "key": "hint_obstacle_lantern_name",
+          "value": "Lantern"
+        },
+        {
+          "key": "hint_obstacle_lantern",
+          "value": "An unlit lantern. Match next to it or use a special: the first hit lights it up, the second collects it. It falls like a tile."
+        },
+        {
+          "key": "hint_obstacle_waterchannel_name",
+          "value": "Water Channel"
+        },
+        {
+          "key": "hint_obstacle_waterchannel",
+          "value": "Let the water flow down the channel! Match tiles on the channel covers or use a special: the cover opens and the water moves on. Tiles pass over open channel cells. When the whole channel is open, the water flows out at the bottom."
         },
         {
           "key": "hint_obstacle_lasercannon_name",

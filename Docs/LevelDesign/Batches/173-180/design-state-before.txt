@@ -1,0 +1,10 @@
+# Level tasarım çalışma durumu
+
+Son güncelleme: 2026-10-19.
+
+- **171 onaylı:** Renkli Çerçeve → `Assets/_Project/Settings/ProductionLevels/LevelP_001750.asset`. 9×11; 78 aktif/21 hole; 24 renkli sandık; 28 hamle. Kullanıcı “171 oldu bence onu kullanabiliriz” dedi. Asset korunur.
+- **172 hazır / kullanıcı incelemesini bekliyor:** Boya İskelesi → `LevelP_001760.asset`; 9×11 T maskesi; 87 aktif/12 hole; 29 hamle; oyma taş + boya kasası + su deposu + mor plastik/porselen dama. Dört authored hedef ve dinamik su hedefi. Görsel: `Level172-Boya-Iskelesi.png`. 173 istenmedi.
+- **Son yönlendirme:** Gönderilen dış görseller öğrenme içindir; aktif leveli her örneğe göre yeniden yapma talebi değildir. Kullanıcı 1–170'in görünümünü başarılı buluyor: ana yerel havuz orasıdır. Farklı engeller ve farklı maskeler kullan; örnekteki sandık zorunlu değil.
+- **Hafıza:** `Skills/tinyfixers-level-design/SKILL.md`; kanıt/yerel örnekler `Design-Feedback.md`; on kalıcı dış görsel `References/Index.md`. 125/135/145/147/155/163/167/168 PNG'leri ve ilgili tasarım notlarından bir bölümü incelendi; bütün 170 level tek tek incelenmiş değildir.
+- **Denge:** 170 sonrası %40–50 geçiş yönü hedef; 5 Hard, 9 Super Hard. 171/172 geçiş oranları ölçülmedi.
+- **Doğrulama:** 172 maske/footprint/hedef/başlangıç dolumu/görsel kontrolü geçti. Onaylı 171 ve 566 önceki dosya korundu. Unity Play/build ve bot simülasyonu yapılmadı. Skill `.agents/skills/tinyfixers-level-design` altında kaynak dosyaya symlink ile bağlandı; AGENTS yönlendirmesi de mevcut. Frontmatter Ruby Psych ile, dosya/link ve referans bütünlüğü Python ile doğrulandı. Python bundled validator bu ortamda eksik PyYAML nedeniyle çalışmadı; paket kurulmadı.

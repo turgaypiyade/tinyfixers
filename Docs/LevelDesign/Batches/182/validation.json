@@ -1,0 +1,36 @@
+{
+  "level": 182,
+  "revision": 2,
+  "passed": true,
+  "active": 81,
+  "holes": 18,
+  "openingTileCells": 49,
+  "directRefillReachable": 49,
+  "activeMaskComponents": 1,
+  "diagonalCornerOnlyNodes": 0,
+  "obstacleInstances": {
+    "75": 11,
+    "30": 21
+  },
+  "lanternColumnOneBased": 4,
+  "lanternColumnLength": 11,
+  "porcelainBlock": [
+    3,
+    7
+  ],
+  "boardMaskUnchanged": true,
+  "goalsUnchanged": true,
+  "moves": 28,
+  "goalDemandAboveInitial": {
+    "75": 19,
+    "30": 0
+  },
+  "previousSettingsAndScriptsMatchingV1Baseline": 1860,
+  "existingLibraryChangePreserved": [
+    "Assets/_Project/Settings/ObstacleLibrary.asset"
+  ],
+  "firstLanternProductionLevel": true,
+  "unityBuildRun": false,
+  "gameplaySimulationRun": false,
+  "winRateMeasured": false
+}

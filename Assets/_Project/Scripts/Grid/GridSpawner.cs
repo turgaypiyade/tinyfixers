@@ -50,6 +50,7 @@ public class GridSpawner : MonoBehaviour
     [SerializeField] private RectTransform obstaclesRoot;
     [SerializeField] private RectTransform underTilesObstaclesRoot;
     [SerializeField] private RectTransform overTilesObstaclesRoot;
+    private WaterChannelService waterChannelService;   // su kanalı görünüm + akış (Docs/WaterChannel_Plan.md)
     [SerializeField] private RectTransform tilesRoot;
 
     [Header("Mud Overlay")]
@@ -75,6 +76,13 @@ public class GridSpawner : MonoBehaviour
     [SerializeField] private Color runtimeNormalCell = new Color(1f, 1f, 1f, 0.16f);
     [SerializeField] private RectTransform gridLinesRoot;
     [SerializeField] private Color runtimeGridLineColor = new Color32(0x93, 0x92, 0xC3, 0xFF);
+    // Koyu arka planlı bölümler (ChapterTheme.lightBoardCells) için açık palet: 2026-10-18 öncesi renkler.
+    [SerializeField] private Color lightCellBgColor = new Color32(0xA9, 0xA7, 0xD9, 0xFF);
+    [SerializeField] private Color lightGridLineColor = new Color32(0xB8, 0xB4, 0xDD, 0xFF);
+    [SerializeField] private Color lightUnderTileCellBgTint = new Color32(0xA9, 0xA7, 0xD9, 0xFF);
+    private bool useLightBoardCells;
+    private Color GridLineColor => useLightBoardCells ? lightGridLineColor : runtimeGridLineColor;
+    private Color UnderTileCellBgTint => useLightBoardCells ? lightUnderTileCellBgTint : underTileCellBgTint;
     [SerializeField, Min(1f)] private float runtimeGridLineThickness = 2f;
     [SerializeField] private bool gridJunctionEnabled = false;
     [Tooltip("Diamond boyutu. 0 = otomatik (çizgi kalınlığı × 2.5).")]
@@ -250,6 +258,8 @@ public class GridSpawner : MonoBehaviour
     private void OnDestroy()
     {
         StopAllObstacleHitShakes();
+        waterChannelService?.Dispose();
+        waterChannelService = null;
 
         if (ownsResolvedLevelInstance && resolvedLevel != null)
             Destroy(resolvedLevel);
@@ -272,6 +282,9 @@ public class GridSpawner : MonoBehaviour
         ConvertGrassFlowersToGrass(resolvedLevel); // must happen before stacking + SetLevelData
         StampTubeCellsIntoLevel(resolvedLevel);    // must happen before SetLevelData
         StampMagnetCellsIntoLevel(resolvedLevel);  // must happen before SetLevelData
+        channelCovers.Clear();
+        StampWaterChannelCellsIntoLevel(resolvedLevel);   // must happen before SetLevelData
+        StampChannelCoversIntoLevel(resolvedLevel);       // kanal üstündeki çim vb. → yığın katmanı
         // Üst üste konan engeller (stackedObstacles + safes) TEK yığın sırasıyla (stackOrder) kurulur:
         // Safe artık zorunlu en üst değil — sandık Safe'in üstüne de konabilir (Docs/ObstacleStack_Plan.md).
         StampLayeredEntriesIntoLevel(resolvedLevel);   // must happen before SetLevelData (saves beneath content)
@@ -284,6 +297,9 @@ public class GridSpawner : MonoBehaviour
             yield break;
         }
         PlayLevelMusic(resolvedLevel);
+        var themeLibrary = Resources.Load<ChapterThemeLibrary>("ChapterThemeLibrary");
+        var boardTheme = themeLibrary != null ? themeLibrary.GetCurrentTheme() : null;
+        useLightBoardCells = boardTheme != null && boardTheme.lightBoardCells;
         width = resolvedLevel.width;
         height = resolvedLevel.height;
 
@@ -656,6 +672,7 @@ public class GridSpawner : MonoBehaviour
             DrawGrassFlowerOverlays();     // çiçekli çimlerin menekşeleri (grass kökünde, en üstte)
             DrawTubeObstacles();
             DrawMagnetObstacles();
+            DrawWaterChannels();
             DrawSafeObstacles();
             DrawAncientSealObstacles();
             // Grass root'unu border'ın üstüne taşı (worldPositionStays: hücre hizası korunur) +
@@ -671,6 +688,13 @@ public class GridSpawner : MonoBehaviour
 
                 bool isEmpty = (resolvedLevel.cells != null && idx >= 0 && idx < resolvedLevel.cells.Length && resolvedLevel.cells[idx] == (int)CellType.Empty);
                 if (isEmpty)
+                {
+                    board.SetHole(x, y, true);
+                    continue;
+                }
+
+                // Oyun sırasında geçirgen yapılmış hücre (su kanalı deposu): delik gibi, taş konmaz, zemin çizilmez.
+                if (board.IsMaskHoleCell(x, y))
                 {
                     board.SetHole(x, y, true);
                     continue;
@@ -1214,6 +1238,8 @@ public class GridSpawner : MonoBehaviour
                 // Magnet kendi MagnetView renderer'ını (DrawMagnetObstacles) kullanır; buradaki
                 // def yalnızca goal ikonu içindir, board görselini üretmez (çift-çizim olmasın).
                 if (obsId == ObstacleId.Magnet) continue;
+                // Su kanalı kendi renderer'ını kullanır (WaterChannelService; şekil yoldaki komşulardan).
+                if (obsId == ObstacleId.WaterChannel) continue;
 
                 var image = DrawObstacleImage(def, x, y);
                 if (image != null)
@@ -1576,6 +1602,71 @@ public class GridSpawner : MonoBehaviour
                 lvl.obstacleOrigins[cellIdx] = origin;
             }
         }
+    }
+
+    // Su kanalı: ilk hücre DEPO (engel değil; WaterChannelService onu geçirgen deliğe çevirir), kalan yol hücreleri tek
+    // vuruşluk taş altı katman olarak damgalanır; HER hücre kendi origin'i (bir hücre açılınca kalanı kalır).
+    // v1: kanal/depo hücresinde başka engel yok (yazılan engel ezilir).
+    private void StampWaterChannelCellsIntoLevel(LevelData lvl)
+    {
+        if (lvl?.waterChannels == null || lvl.waterChannels.Length == 0) return;
+        if (lvl.obstacles == null || lvl.obstacleOrigins == null) return;
+
+        foreach (var entry in lvl.waterChannels)
+        {
+            if (!WaterChannelEntry.Validate(lvl, entry.pathCellIndices, out string error))
+            {
+                if (GameDiagnostics.CriticalErrors)
+                    Debug.LogWarning($"[WaterChannel] Geçersiz kanal atlandı: {error}");
+                continue;
+            }
+            var path = entry.pathCellIndices;
+            lvl.obstacles[path[0]] = (int)ObstacleId.None;
+            lvl.obstacleOrigins[path[0]] = -1;
+            for (int i = 1; i < path.Length; i++)
+            {
+                int cell = path[i];
+                // Kanal hücresine boyanmış 1x1 engel (çim vb.) silinmez: kanalın ÜSTÜNE yığın katmanı olur. Engel
+                // temizlenince altındaki kanal açığa çıkar ve normal kuralla (üstündeki taş eşleşince) açılır.
+                var authored = (ObstacleId)lvl.obstacles[cell];
+                bool cover = authored != ObstacleId.None && authored != ObstacleId.WaterChannel
+                    && lvl.obstacleOrigins[cell] == cell && IsSingleCellObstacle(lvl, authored);
+                if (authored != ObstacleId.None && authored != ObstacleId.WaterChannel && !cover
+                    && GameDiagnostics.CriticalErrors)
+                    Debug.LogWarning($"[WaterChannel] Hücre {cell}: çok hücreli engel kanal üstünde desteklenmiyor ({authored}), silindi.");
+
+                lvl.obstacles[cell] = (int)ObstacleId.WaterChannel;
+                lvl.obstacleOrigins[cell] = cell;
+                if (cover) channelCovers.Add((cell, authored));
+            }
+        }
+    }
+
+    // Kanal üstüne düşen 1x1 engeller: kanal damgası SONRASI, diğer yığın katmanlarından (stackedObstacles/safes)
+    // ÖNCE kurulur → sıra alttan üste: kanal → boyanmış engel → yazarın yığın katmanları.
+    private readonly List<(int cell, ObstacleId id)> channelCovers = new();
+
+    private void StampChannelCoversIntoLevel(LevelData lvl)
+    {
+        foreach (var (cell, id) in channelCovers)
+            StampStackedEntry(lvl, new StackedObstacleEntry { originCellIndex = cell, obstacleId = id });
+        channelCovers.Clear();
+    }
+
+    private static bool IsSingleCellObstacle(LevelData lvl, ObstacleId id)
+    {
+        var def = lvl.obstacleLibrary != null ? lvl.obstacleLibrary.Get(id) : null;
+        var foot = lvl.GetObstacleFootprint(id, 0, def);
+        return foot.x == 1 && foot.y == 1;
+    }
+
+    private void DrawWaterChannels()
+    {
+        waterChannelService?.Dispose();
+        waterChannelService = null;
+        if (resolvedLevel?.waterChannels == null || resolvedLevel.waterChannels.Length == 0) return;
+        waterChannelService = new WaterChannelService(board, resolvedLevel, underTilesObstaclesRoot, overTilesObstaclesRoot,
+            tileSize);
     }
 
     // Safe (kasa): NxN bölgeyi kaplar. Model (a): altındaki MEVCUT içeriği per-cell kaydeder
@@ -2026,7 +2117,9 @@ public class GridSpawner : MonoBehaviour
             resolvedLevel.obstacles[p.cell] = (int)p.beneathId;
             resolvedLevel.obstacleOrigins[p.cell] = p.beneathOrigin;
 
-            Image beneathImage = DrawObstacleImage(def, bx, by);
+            int beneathRemaining = board?.ObstacleStateService != null
+                ? board.ObstacleStateService.ResolveInitialColorCrateHits(p.beneathId, p.beneathOrigin, Mathf.Max(1, def.hits)) : 0;
+            Image beneathImage = DrawObstacleImage(def, bx, by, beneathRemaining);
 
             resolvedLevel.obstacles[p.cell] = savedObs;
             resolvedLevel.obstacleOrigins[p.cell] = savedOrg;
@@ -2869,7 +2962,7 @@ public class GridSpawner : MonoBehaviour
             rt.sizeDelta = size;
 
             var img = go.GetComponent<Image>();
-            img.color = runtimeGridLineColor;
+            img.color = GridLineColor;
             img.raycastTarget = false;
         }
 
@@ -2965,7 +3058,7 @@ public class GridSpawner : MonoBehaviour
                     jRt.localScale       = Vector3.one;
 
                     var jImg = jGo.GetComponent<Image>();
-                    jImg.color         = runtimeGridLineColor;
+                    jImg.color         = GridLineColor;
                     jImg.raycastTarget = false;
                 }
             }
@@ -2989,6 +3082,7 @@ public class GridSpawner : MonoBehaviour
         cellBgByIndex[idx] = go;
         if (go.TryGetComponent<Image>(out var image))
         {
+            if (useLightBoardCells) image.color = lightCellBgColor;
             cellBgImageByIndex[idx] = image;
             baseCellBgColorByIndex[idx] = image.color;
         }
@@ -3053,7 +3147,7 @@ public class GridSpawner : MonoBehaviour
                 }
             }
 
-            cellImage.color = tint ? underTileCellBgTint : baseColor;
+            cellImage.color = tint ? UnderTileCellBgTint : baseColor;
         }
     }
 
@@ -3597,7 +3691,7 @@ public class GridSpawner : MonoBehaviour
         view.Shake();
     }
 
-    private Image DrawObstacleImage(ObstacleDef def, int x, int y)
+    private Image DrawObstacleImage(ObstacleDef def, int x, int y, int initialRemainingHits = 0)
     {
         if (def == null)
             return null;
@@ -3640,7 +3734,12 @@ public class GridSpawner : MonoBehaviour
         }
         else
         {
-            sprite = def.GetPreviewSprite();
+            // Authored damaged ColorCrates must show the same initial stage as their HP.
+            int remaining = 0;
+            if (StackedObstacleEntry.SupportsInitialHits(def.id))
+                remaining = initialRemainingHits > 0 ? initialRemainingHits
+                    : board?.ObstacleStateService != null ? board.ObstacleStateService.GetRemainingHitsAt(x, y) : 0;
+            sprite = remaining > 0 ? def.GetSpriteForRemainingHits(remaining) : def.GetPreviewSprite();
         }
         if (sprite == null) return null;
 
@@ -3924,7 +4023,7 @@ public class GridSpawner : MonoBehaviour
         // Magnet/Tube already have path-level renderers created from LevelData entries.
         // When a cover such as Grass reveals one cell, do not spawn a generic 1x1
         // obstacle image on top of that renderer; it has no path orientation and looks flipped.
-        if (obsId == ObstacleId.Magnet || obsId == ObstacleId.Tube)
+        if (obsId == ObstacleId.Magnet || obsId == ObstacleId.Tube || obsId == ObstacleId.WaterChannel)
             return;
 
         // Duvar: parça görseli + kalan vuruş WallObstacleService'te (OnObstacleViewRestored'ı o da dinler);

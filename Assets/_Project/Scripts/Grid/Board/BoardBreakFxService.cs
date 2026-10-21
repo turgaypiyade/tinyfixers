@@ -175,6 +175,7 @@ public class BoardBreakFxService
             fxColor,
             particleSprites,
             scale: particleDef != null ? particleDef.particleScale : 1f,
+            overrideParticleCount: particleDef != null ? particleDef.particleCount : 0,
             useOilDropletMotion: UsesDropletBreakFx(change.obstacleId));
     }
 
@@ -295,7 +296,13 @@ public class BoardBreakFxService
             FxWarn($"[ObstacleFX] Custom particle sprite list has no valid sprites. id={change.obstacleId}, cleared={change.cleared}");
         }
 
-        Sprite fallback = change.sprite;
+        // Özel parça yoksa döküntü VURULAN görselden gelir: change.sprite vuruştan SONRAKİ aşama (kırılmada boş),
+        // vurulan aşama = kalan can + 1 (tekrar vuruşta aşama değişmez). Ör. fener: sönükken vurulunca sönük,
+        // yanarken kırılınca yanan fenerin parçaları dökülür.
+        Sprite fallback = def.GetSpriteForRemainingHits(change.isRepeatHit ? change.remainingHits : change.remainingHits + 1);
+
+        if (fallback == null)
+            fallback = change.sprite;
 
         if (fallback == null)
             fallback = def.GetPreviewSprite();

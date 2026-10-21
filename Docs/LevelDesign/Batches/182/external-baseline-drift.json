@@ -1,0 +1,7 @@
+{
+  "Assets/_Project/Settings/ObstacleLibrary.asset": {
+    "originalHash": "fac2738404aad8f730537156004c2fbaafb8837f39a2c0e8d15efab1f99bc04a",
+    "observedHash": "a7601df47ac23a0b5c4ab628f845b5decaffe6b11c248157491a85f1c3d103dd",
+    "reason": "Library differs from the v1 authoring baseline. Column revision reads but never writes this library; preserve the existing working copy."
+  }
+}

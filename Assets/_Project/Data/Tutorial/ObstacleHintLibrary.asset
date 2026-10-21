@@ -427,3 +427,15 @@ MonoBehaviour:
     fallbackTitle: Billiard Pocket
     locKey: hint_obstacle_billiardpocket
     fallbackText: Guide billiard balls into the pocket by clearing nearby stones. The pocket cannot be broken; each ball that enters is collected.
+  - id: 75
+    iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_lantern_name
+    fallbackTitle: Lantern
+    locKey: hint_obstacle_lantern
+    fallbackText:
+  - id: 76
+    iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_waterchannel_name
+    fallbackTitle: Water Channel
+    locKey: hint_obstacle_waterchannel
+    fallbackText:

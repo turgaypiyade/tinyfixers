@@ -1,0 +1,2917 @@
+using System;
+using System.Collections.Generic;
+using UnityEngine;
+
+public enum ObstacleHitContext
+{
+    NormalMatch = 0,
+    SpecialActivation = 1,
+    Booster = 2,
+    Scripted = 3
+}
+
+/// Wall vuruşunun sonucu (WallObstacleService karar verir).
+public enum WallHitOutcome
+{
+    Ignored = 0,    // vuruş tüketilmedi (ör. parça zaten yıkılıyor)
+    Advanced = 1,   // vurulan hücrenin aşaması ilerledi, parça yerinde
+    Collapse = 2,   // son aşamadaki hücre tekrar vuruldu → parçanın tamamı yıkılır
+}
+
+public readonly struct ObstacleVisualChange
+{
+    public readonly int originIndex;
+    public readonly ObstacleId obstacleId;
+    public readonly bool cleared;
+    public readonly int remainingHits;
+    public readonly Sprite sprite;
+    public readonly ChestColorMask removedColor;
+    /// remainingHits değişmeden tekrar hit geldi (örn. Wardrobe item kırılması).
+    /// Ses sistemi genel hitSound'a düşer; stage sesi çalmaz.
+    public readonly bool isRepeatHit;
+    /// Gerçekten vurulan hücre (-1 = bilinmiyor). Çok hücreli engelde vuruş efekti origin'de (sol üst / ilk
+    /// konan hücre) değil vurulan yerde çıkmalı → FxCellIndex.
+    public readonly int hitCellIndex;
+    /// Bu vuruş çiçekli çimin çiçeklerini döktü (çim yerinde kaldı). Çimin kendi hit efekti/sesi
+    /// çalmaz; dökülme görselini GrassFlowerOverlayService oynar.
+    public readonly bool isGrassFlowerShed;
+
+    /// Vuruş/kırılma efektinin çıkacağı hücre: vurulan hücre biliniyorsa o, yoksa origin.
+    public int FxCellIndex => hitCellIndex >= 0 ? hitCellIndex : originIndex;
+
+    public ObstacleVisualChange(int originIndex, ObstacleId obstacleId, bool cleared, int remainingHits, Sprite sprite, ChestColorMask removedColor = ChestColorMask.None, bool isRepeatHit = false, int hitCellIndex = -1, bool isGrassFlowerShed = false)
+    {
+        this.hitCellIndex = hitCellIndex;
+        this.isGrassFlowerShed = isGrassFlowerShed;
+        this.originIndex = originIndex;
+        this.obstacleId = obstacleId;
+        this.cleared = cleared;
+        this.remainingHits = remainingHits;
+        this.sprite = sprite;
+        this.removedColor = removedColor;
+        this.isRepeatHit = isRepeatHit;
+    }
+}
+
+public readonly struct ObstacleStageSnapshot
+{
+    public readonly ObstacleBehaviorType behavior;
+    public readonly bool blocksCells;
+    public readonly bool allowDiagonal;
+    public readonly ObstacleDamageSourceRule damageRule;
+    public readonly Sprite sprite;
+
+    public ObstacleStageSnapshot(
+        ObstacleBehaviorType behavior,
+        bool blocksCells,
+        bool allowDiagonal,
+        ObstacleDamageSourceRule damageRule,
+        Sprite sprite)
+    {
+        this.behavior = behavior;
+        this.blocksCells = blocksCells;
+        this.allowDiagonal = allowDiagonal;
+        this.damageRule = damageRule;
+        this.sprite = sprite;
+    }
+}
+
+public readonly struct ObstacleStageTransition
+{
+    public readonly bool hasTransition;
+    public readonly int originIndex;
+    public readonly ObstacleId obstacleId;
+    public readonly int remainingHitsAfter;
+    public readonly bool cleared;
+    public readonly ObstacleStageSnapshot previousStage;
+    public readonly ObstacleStageSnapshot currentStage;
+
+    public ObstacleStageTransition(
+        bool hasTransition,
+        int originIndex,
+        ObstacleId obstacleId,
+        int remainingHitsAfter,
+        bool cleared,
+        ObstacleStageSnapshot previousStage,
+        ObstacleStageSnapshot currentStage)
+    {
+        this.hasTransition = hasTransition;
+        this.originIndex = originIndex;
+        this.obstacleId = obstacleId;
+        this.remainingHitsAfter = remainingHitsAfter;
+        this.cleared = cleared;
+        this.previousStage = previousStage;
+        this.currentStage = currentStage;
+    }
+}
+
+public class ObstacleStateService : ISimObstacleQuery
+{
+    private LevelData level;
+    private ObstacleLibrary library;
+
+    // Optional hook: a caged special (SpecialLockCoordinator) reports as interaction-locked so every
+    // existing consumer (swap gates, hints, deadlock detection, drain-target exclusion, and
+    // SpecialUtils.CanTargetTileContent → "unbreakable") respects it through ONE check. The flag lives
+    // on TileView so it rides gravity; this delegate lets the data-oriented service query it by cell.
+    private Func<int, int, bool> specialLockQuery;
+    public void SetSpecialLockQuery(Func<int, int, bool> query) => specialLockQuery = query;
+
+    public sealed class ObstacleSwapStateSnapshot
+    {
+        internal readonly int[] Obstacles;
+        internal readonly int[] ObstacleOrigins;
+        internal readonly int[] RemainingHitsByOrigin;
+        internal readonly Dictionary<int, ChestColorMask> ChestColorStates;
+        internal readonly Dictionary<int, int[]> BatteryHitsByOrigin;
+        internal readonly Dictionary<int, int[]> OverrideBatteryHitsByOrigin;
+        internal readonly Dictionary<int, int> OverrideBatteryProgressByOrigin;
+        internal readonly Dictionary<int, int> WardrobeItemCounts;
+        internal readonly Dictionary<int, (ObstacleId Id, int Remaining)> UnderTileBeneathMovable;
+        internal readonly Dictionary<int, List<StampedBeneath>> StampedBeneathByCell;
+
+        internal ObstacleSwapStateSnapshot(
+            int[] obstacles,
+            int[] obstacleOrigins,
+            int[] remainingHitsByOrigin,
+            Dictionary<int, ChestColorMask> chestColorStates,
+            Dictionary<int, int[]> batteryHitsByOrigin,
+            Dictionary<int, int[]> overrideBatteryHitsByOrigin,
+            Dictionary<int, int> overrideBatteryProgressByOrigin,
+            Dictionary<int, int> wardrobeItemCounts,
+            Dictionary<int, (ObstacleId Id, int Remaining)> underTileBeneathMovable,
+            Dictionary<int, List<StampedBeneath>> stampedBeneathByCell)
+        {
+            Obstacles = obstacles;
+            ObstacleOrigins = obstacleOrigins;
+            RemainingHitsByOrigin = remainingHitsByOrigin;
+            ChestColorStates = chestColorStates;
+            BatteryHitsByOrigin = batteryHitsByOrigin;
+            OverrideBatteryHitsByOrigin = overrideBatteryHitsByOrigin;
+            OverrideBatteryProgressByOrigin = overrideBatteryProgressByOrigin;
+            WardrobeItemCounts = wardrobeItemCounts;
+            UnderTileBeneathMovable = underTileBeneathMovable;
+            StampedBeneathByCell = stampedBeneathByCell;
+        }
+    }
+
+    // Sadece origin hücre indexi anlamlıdır. -1 => obstacle yok.
+    private int[] remainingHitsByOrigin = Array.Empty<int>();
+
+    // A wall can take hits while its origin cell still holds a live cover. Keep its
+    // capacity separate so neither the wall nor the cover overwrites the other's HP.
+    private readonly Dictionary<(ObstacleId id, int origin), int> wallRemainingHits = new();
+
+    // ColorChest: origin index → kalan renk maskesi
+    private readonly Dictionary<int, ChestColorMask> _chestColorStates = new();
+
+    // BatteryBox: origin index → int[4] kalan hit (Gear/Core/Bolt/Plate sırasıyla)
+    private readonly Dictionary<int, int[]> _batteryHitsByOrigin = new();
+
+    // OverrideBatteryBox: origin index → int[4] kalan hit ve toplam ilerleme.
+    private readonly Dictionary<int, int[]> _overrideBatteryHitsByOrigin = new();
+    private readonly Dictionary<int, int> _overrideBatteryProgressByOrigin = new();
+
+    // Wardrobe: origin index → kalan item sayısı (kapı açıldıktan sonra)
+    private readonly Dictionary<int, int> _wardrobeItemCounts = new();
+
+    // Under-tile obstacle (Mud) bir movable obstacle (Helmet vb.) ALTINDA kaldığında
+    // saklanır. Movable obstacle aynı cell'i kapladığında level.obstacles[idx] ezilirdi
+    // ve mud kalıcı kaybolurdu; bunun yerine mud'ı burada saklayıp movable cell'i
+    // terk edince/kırılınca geri yüklüyoruz. Key = cell index.
+    private readonly Dictionary<int, (ObstacleId Id, int Remaining)> _underTileBeneathMovable = new();
+
+    // Generic "stacked obstacle" beneath store. Bir cell'de base + overlay + Safe gibi
+    // birden fazla katman olabilir. Liste sırası alttan üste doğru tutulur; son item,
+    // canlı üst obstacle kırılınca hemen geri yüklenecek katmandır.
+    public readonly struct StampedBeneath
+    {
+        public readonly ObstacleId Id;     // alttaki obstacle (None = boş/normal)
+        public readonly int Origin;        // alttaki obstacle'ın origin'i (single-cell ise == cell)
+        public readonly int OverOrigin;    // üstteki obstacle'ın origin'i (Safe gibi origin-bazlı reveal için)
+        public readonly int Remaining;     // üst kapalıyken alttaki obstacle'ın kalan hit'i
+
+        public StampedBeneath(ObstacleId id, int origin, int overOrigin, int remaining)
+        {
+            Id = id;
+            Origin = origin;
+            OverOrigin = overOrigin;
+            Remaining = remaining;
+        }
+
+    }
+    private readonly Dictionary<int, List<StampedBeneath>> _stampedBeneathByCell = new();
+
+    // Çiçekli çim (GrassFlower) hücreleri. Runtime'da bu hücrelerdeki Grass, def.hits + 1 vuruşla
+    // başlar; ilk tüketilen vuruş çiçekleri döker (OnGrassFlowerShed) ve hücre setten çıkar.
+    private readonly HashSet<int> _grassFlowerCells = new();
+    public event Action<int> OnGrassFlowerShed;
+    private readonly HashSet<int> waterLilyCells = new();
+    public event Action<int> OnWaterLilyCleared;
+    // Null result: petals are gone, so use ordinary grass damage. Otherwise the flower owns the hit.
+    public Func<int, ObstacleHitContext, bool?> WaterLilyHitInterceptor;
+    public Func<int, int> WaterLilyRemainingHitsQuery;
+
+    /// Set by BoardController → RaiseObstacleCreatedDynamic. Restore edilen beneath obstacle'a
+    /// (x,y) görselini oluşturmak için çağrılır.
+    public Action<int, int> RequestObstacleViewCreate;
+
+    public event Action<int, ObstacleStageSnapshot> OnObstacleStageChanged;
+    public event Action<int, ObstacleId> OnObstacleDestroyed;
+    public event Action<int> OnCellUnlocked;
+
+    /// Set by TubeObstacleService. Called with the tube's ORIGIN cell index when any tube cell is hit.
+    public Action<int> TubeHitInterceptor;
+    /// Set by EnergyContainerService. Called with the ORIGIN cell index when an active container is hit.
+    /// The container state is NOT decremented; exhaustion is handled globally by EnergyContainerService.
+    public Action<int> EnergyContainerHitInterceptor;
+    /// Set by MagnetObstacleService. Called with the ACTUAL HIT cell index (not origin) so the
+    /// service can determine which magnet endpoint was struck.
+    public Func<int, bool> MagnetHitInterceptor;
+
+    /// Set by GridSpawner → MagnetObstacleService.IsMagnetEndpoint. cell index → güncel uç (A/B) mu?
+    /// Adjacency hasarı sadece uçları hedeflesin diye kullanılır (orta yol hücreleri inert).
+    public Func<int, bool> MagnetEndpointQuery;
+
+    /// <summary>HatLauncher: set by HatLauncherService. Null = invincible (exhausted).</summary>
+    public Action<int> HatLauncherHitInterceptor;
+    /// <summary>KeyGenerator: set by KeyGeneratorService. Returns true only when a key is produced.</summary>
+    public Func<int, bool> KeyGeneratorHitInterceptor;
+
+    // Per-move emit guard for HatLauncher / EnergyContainer. These obstacles never break per hit
+    // (they only "exhaust" once the shared goal capacity is reached), so without a per-move cap a
+    // single cascade-heavy combo re-hits the same emitters on every resolve pass and drains the
+    // whole goal in one move. Each origin may emit at most once per player move; reset at move start.
+    private readonly HashSet<int> emittedOriginsThisMove = new();
+
+    /// <summary>Called at the start of each player move so emitter obstacles can fire again.</summary>
+    public void ResetPerMoveEmitGuard() => emittedOriginsThisMove.Clear();
+
+    // Special activations each get their own emit (footprint visits a cell once), so they stack.
+    // Everything else (normal match / cascade adjacency) shares the per-move cap.
+    private static bool IsEmitStackingContext(ObstacleHitContext context)
+        => context == ObstacleHitContext.SpecialActivation;
+    /// <summary>Safe: set by SafeObstacleService. Called with the safe's ORIGIN cell when any safe
+    /// cell is hit. Lock state + break/reveal are owned by SafeObstacleService.</summary>
+    public Func<int, ObstacleHitContext, TileType?, bool> SafeHitInterceptor;
+    /// <summary>Wall: set by WallObstacleService. Called with (piece ORIGIN, hit CELL index, context) when a
+    /// wall cell is hit. Per-cell stage state is owned by the service; it answers whether the hit only
+    /// advanced that cell's stage or must collapse the whole piece.</summary>
+    public Func<int, int, ObstacleHitContext, WallHitOutcome> WallHitInterceptor;
+
+    /// Aç Hamster: HamsterObstacleService set eder (origin, vurulan hücre). Vuruş hamsteri BESLER, asla hasar
+    /// vermez. true → bu vuruş son doyumu tamamladı, hamster ayrılıyor (engel temizlenir); false → yerinde kalır.
+    public Func<int, int, ObstacleHitContext, bool> HamsterHitInterceptor;
+    /// <summary>RocketBasket: set by RocketBasketService. Called with (origin, context, sourceTileType)
+    /// when a RocketBasket cell is hit. Returns true if a rocket launched → hit consumed. Normal match
+    /// launches only the MATCHING color; special/combo/booster/scripted hits ALWAYS launch a remaining
+    /// rocket (color-agnostic). false = no matching charge → no-op (basket stays, no break).</summary>
+    public Func<int, ObstacleHitContext, TileType?, bool> RocketBasketHitInterceptor;
+    // ColorChest açılış ve renk kırılması bildirimleri
+    public event Action<int> OnChestOpened;
+    public event Action<int, ChestColorMask> OnChestColorRemoved;
+    // BatteryBox: origin, hangi renk pilin kaç hiti kaldı
+    public event Action<int, ChestColorMask, int> OnBatteryHit;
+    // OverrideBatteryBox: origin, renk, renkte kalan hit, toplam progress, toplam hit
+    public event Action<int, ChestColorMask, int, int, int> OnOverrideBatteryBoxHit;
+    // origin + patlayan kutunun TÜM footprint hücreleri (2x2/NxN). Handler wind-up boyunca hepsini
+    // gravity'den bloklar (yalnız origin değil) → footprint'in sağ/üst hücrelerine erken taş düşmez.
+    public event Action<int, IReadOnlyList<Vector2Int>> OnOverrideBatteryBoxDetonated;
+    // Wardrobe: kapı açılması ve item kırılması
+    public event Action<int> OnWardrobeOpened;
+    public event Action<int, int> OnWardrobeItemRemoved;  // (origin, itemsRemaining)
+
+    public readonly struct ObstacleHitResult
+    {
+        public readonly bool didHit;
+        public readonly bool consumedHit;
+        public readonly bool rejectedByRule;
+        public readonly ObstacleVisualChange visualChange;
+        public readonly ObstacleStageTransition stageTransition;
+        public readonly int[] affectedCellIndices;
+
+        public ObstacleHitResult(
+            bool didHit,
+            bool consumedHit,
+            bool rejectedByRule,
+            ObstacleVisualChange visualChange,
+            ObstacleStageTransition stageTransition,
+            int[] affectedCellIndices)
+        {
+            this.didHit = didHit;
+            this.consumedHit = consumedHit;
+            this.rejectedByRule = rejectedByRule;
+            this.visualChange = visualChange;
+            this.stageTransition = stageTransition;
+            this.affectedCellIndices = affectedCellIndices;
+        }
+    }
+
+    public ObstacleStateService()
+    {
+    }
+
+    public ObstacleStateService(LevelData level)
+    {
+        Initialize(level);
+    }
+
+    public void Initialize(LevelData level)
+    {
+        this.level = level;
+        library = level != null ? level.obstacleLibrary : null;
+
+        int size = (level != null) ? level.width * level.height : 0;
+        remainingHitsByOrigin = new int[size];
+        for (int i = 0; i < size; i++)
+            remainingHitsByOrigin[i] = -1;
+
+        InitializeFromLevel();
+    }
+
+    public void InitializeFromLevel()
+    {
+        if (level == null || level.obstacles == null || level.obstacleOrigins == null)
+            return;
+
+        int size = Mathf.Min(
+            remainingHitsByOrigin.Length,
+            Mathf.Min(level.obstacles.Length, level.obstacleOrigins.Length));
+
+        for (int i = 0; i < size; i++)
+            remainingHitsByOrigin[i] = -1;
+
+        _chestColorStates.Clear();
+        _batteryHitsByOrigin.Clear();
+        _overrideBatteryHitsByOrigin.Clear();
+        _overrideBatteryProgressByOrigin.Clear();
+        _wardrobeItemCounts.Clear();
+        _underTileBeneathMovable.Clear();
+        _stampedBeneathByCell.Clear();
+        _grassFlowerCells.Clear();
+        waterLilyCells.Clear();
+        wallRemainingHits.Clear();
+        _revealGraceUntil.Clear();
+
+        for (int idx = 0; idx < size; idx++)
+        {
+            var id = (ObstacleId)level.obstacles[idx];
+            if (id == ObstacleId.None) continue;
+
+            int origin = level.obstacleOrigins[idx];
+            if (origin != idx) continue;
+            if (origin < 0 || origin >= size) continue;
+
+            var def = library != null ? library.Get(id) : null;
+            int hits;
+            if (id == ObstacleId.EnergyContainer)
+            {
+                // hits = energyPerContainer (active) + 1 (exhausted/FullyDisabled stage).
+                int perContainer = level != null ? Mathf.Max(1, level.energyPerContainer) : 1;
+                hits = perContainer + 1;
+            }
+            else if (id == ObstacleId.BatteryBox)
+            {
+                // def.hits = hit sayısı (per battery). 4 renk × def.hits = toplam.
+                int hitsPerBattery = Mathf.Max(1, def != null ? def.hits : 1);
+                hits = hitsPerBattery * 4;
+                _batteryHitsByOrigin[origin] = new int[] { hitsPerBattery, hitsPerBattery, hitsPerBattery, hitsPerBattery };
+            }
+            else if (id == ObstacleId.OverrideBatteryBox)
+            {
+                // def.hits = renk başına bar/hit. 4 renk x def.hits = orta progress toplamı.
+                int hitsPerBattery = Mathf.Max(1, def != null ? def.hits : 3);
+                hits = hitsPerBattery * 4;
+                _overrideBatteryHitsByOrigin[origin] = new int[] { hitsPerBattery, hitsPerBattery, hitsPerBattery, hitsPerBattery };
+                _overrideBatteryProgressByOrigin[origin] = 0;
+            }
+            else if (id == ObstacleId.Wardrobe)
+            {
+                // Wardrobe her zaman 2 hit: stage 0 = kapalı, stage 1 = açık.
+                // İçindeki item'lar ayrı dictionary'de tutulur; tümü bitince obstacle yıkılır.
+                hits = 2;
+                int itemCount = def != null ? def.wardrobeItemSprites.Count : 0;
+                _wardrobeItemCounts[origin] = Mathf.Max(0, itemCount);
+            }
+            else
+            {
+                hits = Mathf.Max(1, def != null ? def.hits : 1);
+            }
+            remainingHitsByOrigin[origin] = hits;
+
+            if (id == ObstacleId.ColorChest)
+                _chestColorStates[origin] = ChestColorMask.All;
+        }
+    }
+
+    public bool TryDamageAt(int x, int y, out ObstacleVisualChange change)
+    {
+        var result = TryDamageAt(x, y, ObstacleHitContext.NormalMatch);
+        change = result.visualChange;
+        return result.didHit;
+    }
+
+    public ObstacleHitResult TryDamageAt(int x, int y)
+    {
+        return TryDamageAt(x, y, ObstacleHitContext.NormalMatch);
+    }
+
+    public ObstacleHitResult TryDamageAt(int x, int y, ObstacleHitContext context)
+    {
+        return TryDamageAt(x, y, context, null);
+    }
+
+    public ObstacleHitResult TryDamageAt(ObstacleDamageRequest request)
+    {
+        return TryDamageAt(
+            request.cell.x,
+            request.cell.y,
+            request.context,
+            request.normalMatchTileType);
+    }
+
+    public ObstacleHitResult TryDamageAt(int x, int y, ObstacleHitContext context, TileType? sourceTileType)
+    {
+        ObstacleVisualChange change = default;
+
+        if (level == null || level.obstacles == null || level.obstacleOrigins == null)
+            return new ObstacleHitResult(false, false, false, default, default, Array.Empty<int>());
+
+        if (!level.InBounds(x, y))
+            return new ObstacleHitResult(false, false, false, default, default, Array.Empty<int>());
+
+        int idx = level.Index(x, y);
+        if (idx < 0 || idx >= level.obstacles.Length || idx >= level.obstacleOrigins.Length)
+            return new ObstacleHitResult(false, false, false, default, default, Array.Empty<int>());
+
+        var id = (ObstacleId)level.obstacles[idx];
+        if (id == ObstacleId.None)
+            return new ObstacleHitResult(false, false, false, default, default, Array.Empty<int>());
+
+        int origin = level.obstacleOrigins[idx];
+        if (origin < 0 || origin >= remainingHitsByOrigin.Length)
+            return new ObstacleHitResult(false, false, false, default, default, Array.Empty<int>());
+
+        // YIĞIN KURALI (Docs/ObstacleStack_Plan.md): çok-hücreli bir engelin HERHANGİ bir hücresi hâlâ başka
+        // bir katmanın altındaysa (ör. 4x4 kasanın 4 hücresinde grass), engel yok hükmündedir — açıkta kalan
+        // hücrelerinden de vuruş ALMAZ. Üstündekiler bitince normal vurulur.
+        // Walls have independent cell stages: only the cover at the hit cell protects them.
+        if (IsHitLockedAt(x, y))
+            return new ObstacleHitResult(false, false, false, default, default, Array.Empty<int>());
+
+        // Az önce açığa çıkan katman: kırıcı etkinin kalan vuruşlarını almaz (bkz. RevealGraceSeconds).
+        if (IsInRevealGrace(idx))
+            return new ObstacleHitResult(false, false, false, default, default, Array.Empty<int>());
+
+        if (id == ObstacleId.Grass && waterLilyCells.Contains(idx))
+        {
+            bool? handled = WaterLilyHitInterceptor?.Invoke(idx, context);
+            if (handled.HasValue)
+                return new ObstacleHitResult(handled.Value, handled.Value, !handled.Value,
+                    new ObstacleVisualChange(-1, ObstacleId.GrassWaterLily, false, 0, null), default, Array.Empty<int>());
+        }
+
+        // Cargo (exitAtBottom): KIRILMAZ — hiçbir kaynak (match/special/booster) hasar veremez.
+        // Yalnızca en alta inip board'dan çıkınca toplanır (BoardController bottom-exit akışı).
+        // AMA üstündeki örtü (Grass/Oil — kargo hücreye girince beneath store'a iner, görsel olarak
+        // üstte durur) vuruşu alır: aşağıdaki STACK KURALI bu erken dönüşün arkasında kaldığı için
+        // kargo'nun geçtiği grass hiç kırılmıyordu (L61 Override+Override: dalga 1. satıra varmadan
+        // tepedeki kargolar grass hücrelerine indi, 3 grass sağ kaldı).
+        // Brandalı heykel: branda kalkana (renk toplaması bitene) dek hiçbir vuruş ilerletmez.
+        if (id == ObstacleId.TarpStatue && IsTarpStatueCoveredAt(x, y))
+            return new ObstacleHitResult(false, false, false, default, default, Array.Empty<int>());
+
+        // Bilardo topu da aynı kuralda (kırılmaz hareketli); cep sabit ve tamamen kırılmaz.
+        if (id == ObstacleId.BilliardPocket)
+            return new ObstacleHitResult(false, false, false, default, default, Array.Empty<int>());
+        if (IsUnbreakableMovableObstacle(id))
+        {
+            if (TryConsumeCoveringOverlayHit(idx, context, out var coverChange))
+                return new ObstacleHitResult(true, true, false, coverChange, default, Array.Empty<int>());
+            return new ObstacleHitResult(false, false, false, default, default, Array.Empty<int>());
+        }
+
+        // Tube cells are handled entirely by TubeObstacleService.
+        // originIndex=-1 so BoardBreakFxService skips the particle FX (TubeView owns its visuals).
+        if (id == ObstacleId.Tube)
+        {
+            TubeHitInterceptor?.Invoke(origin);
+            var tubeChange = new ObstacleVisualChange(-1, id, false, 0, null);
+            return new ObstacleHitResult(true, true, false, tubeChange, default, Array.Empty<int>());
+        }
+
+        // Magnet cells are handled entirely by MagnetObstacleService.
+        // Gerçek hit hücresini (idx) veririz; servis hangi ucun vurulduğunu belirler.
+        // Sadece GÜNCEL uçlar (A/B) hasar alır → endpoint ise didHit=true; orta yol hücresi
+        // inert → interceptor false döner ve burada GERÇEK no-op (didHit=false) döneriz. Böylece
+        // hangi hit kaynağı olursa olsun (match/beam/special combo) orta hücre hit'i tüketmez.
+        if (id == ObstacleId.Magnet)
+        {
+            bool magnetShrank = MagnetHitInterceptor != null && MagnetHitInterceptor.Invoke(idx);
+            if (!magnetShrank)
+                return new ObstacleHitResult(false, false, false, default, default, Array.Empty<int>());
+
+            var magnetChange = new ObstacleVisualChange(-1, id, false, 0, null);
+            return new ObstacleHitResult(true, true, false, magnetChange, default, Array.Empty<int>());
+        }
+
+        // HatLauncher: same interception pattern as EnergyContainer.
+        if (id == ObstacleId.HatLauncher)
+        {
+            if (HatLauncherHitInterceptor != null)
+            {
+                // Special-footprint hits STACK: each distinct special activation emits one orb
+                // (its footprint visits the cell once), so chaining pulses+override pays out more.
+                // Only normal-match / cascade adjacency hits are capped per move, which is what
+                // prevented a single cascade-heavy move from draining the whole goal.
+                if (!IsEmitStackingContext(context) && !emittedOriginsThisMove.Add(origin))
+                {
+                    var capped = new ObstacleVisualChange(origin, id, false, remainingHitsByOrigin[origin], null);
+                    return new ObstacleHitResult(true, true, false, capped, default, Array.Empty<int>());
+                }
+
+                HatLauncherHitInterceptor.Invoke(origin);
+                var hlChange = new ObstacleVisualChange(origin, id, false, remainingHitsByOrigin[origin], null);
+                return new ObstacleHitResult(true, true, false, hlChange, default, Array.Empty<int>());
+            }
+            return new ObstacleHitResult(false, false, true, default, default, Array.Empty<int>());
+        }
+
+        // KeyGenerator is a permanent static producer. Hits never decrement its own HP;
+        // the service creates matchable Key tiles until the level's Key goal is satisfied.
+        if (id == ObstacleId.KeyGenerator)
+        {
+            if (KeyGeneratorHitInterceptor != null && KeyGeneratorHitInterceptor.Invoke(origin))
+            {
+                var kgChange = new ObstacleVisualChange(origin, id, false, remainingHitsByOrigin[origin], null);
+                return new ObstacleHitResult(true, true, false, kgChange, default, Array.Empty<int>());
+            }
+
+            return new ObstacleHitResult(false, false, true, default, default, Array.Empty<int>());
+        }
+
+        // RocketBasket: color-keyed launcher fully managed by RocketBasketService via the interceptor.
+        // A hit only "counts" if the source is a normal-match color that matches a still-loaded rocket
+        // charge → interceptor launches that rocket and returns true (hit consumed). Wrong color / no
+        // charge / no color → no-op (basket stays, no break, no match credit). Never breaks via generic
+        // damage; the basket clears itself (ClearRocketBasket) once the last charge is spent.
+        if (id == ObstacleId.RocketBasket)
+        {
+            int[] rocketBasketAffectedCells = CollectCellsForOrigin(origin, id);
+
+            if (RocketBasketHitInterceptor != null && RocketBasketHitInterceptor.Invoke(origin, context, sourceTileType))
+            {
+                bool rocketBasketCleared = origin < 0
+                    || origin >= level.obstacles.Length
+                    || (ObstacleId)level.obstacles[origin] != ObstacleId.RocketBasket
+                    || level.obstacleOrigins[origin] != origin;
+
+                int rocketBasketRemaining = origin >= 0 && origin < remainingHitsByOrigin.Length
+                    ? remainingHitsByOrigin[origin]
+                    : -1;
+
+                var rbChange = new ObstacleVisualChange(origin, id, rocketBasketCleared, rocketBasketRemaining, null);
+                var rbTransition = rocketBasketCleared
+                    ? new ObstacleStageTransition(true, origin, id, 0, true, default, default)
+                    : default;
+                return new ObstacleHitResult(true, true, false, rbChange, rbTransition, rocketBasketAffectedCells);
+            }
+            return new ObstacleHitResult(false, false, true, default, default, Array.Empty<int>());
+        }
+
+        // EnergyContainer: hits are fully managed by EnergyContainerService via the interceptor.
+        // Active (interceptor set)   → fire interceptor, no decrement, container stays on board.
+        // Exhausted (interceptor null) → block all hits; container is permanent and invincible.
+        if (id == ObstacleId.EnergyContainer)
+        {
+            if (EnergyContainerHitInterceptor != null)
+            {
+                // See HatLauncher branch: special-footprint hits stack, normal/cascade hits cap per move.
+                if (!IsEmitStackingContext(context) && !emittedOriginsThisMove.Add(origin))
+                {
+                    var cappedEc = new ObstacleVisualChange(origin, id, false, remainingHitsByOrigin[origin], null);
+                    return new ObstacleHitResult(true, true, false, cappedEc, default, Array.Empty<int>());
+                }
+
+                EnergyContainerHitInterceptor.Invoke(origin);
+                var ecChange = new ObstacleVisualChange(origin, id, false, remainingHitsByOrigin[origin], null);
+                return new ObstacleHitResult(true, true, false, ecChange, default, Array.Empty<int>());
+            }
+            // Interceptor null = exhausted → invincible, block hit without clearing
+            return new ObstacleHitResult(false, false, true, default, default, Array.Empty<int>());
+        }
+
+        // Ancient Seal only advances through tile collection, including for boosters.
+        if (id == ObstacleId.AncientSeal)
+            return new ObstacleHitResult(false, false, true, default, default, Array.Empty<int>());
+
+        // Safe: hits are fully managed by SafeObstacleService via the interceptor (lock state,
+        // break + reveal). Hit is consumed; cells are NOT cleared here (safe stays until broken).
+        if (id == ObstacleId.Safe)
+        {
+            if (SafeHitInterceptor == null)
+                return new ObstacleHitResult(false, false, true, default, default, Array.Empty<int>());
+
+            int[] safeAffectedCells = CollectCellsForOrigin(origin, id);
+
+            if (!SafeHitInterceptor.Invoke(origin, context, sourceTileType))
+                return new ObstacleHitResult(false, false, true, default, default, Array.Empty<int>());
+
+            bool safeCleared = origin < 0
+                || origin >= level.obstacles.Length
+                || (ObstacleId)level.obstacles[origin] != ObstacleId.Safe
+                || level.obstacleOrigins[origin] != origin;
+
+            var safeChange = new ObstacleVisualChange(origin, id, safeCleared, 0, null);
+            var safeTransition = safeCleared
+                ? new ObstacleStageTransition(true, origin, id, 0, true, default, default)
+                : default;
+            return new ObstacleHitResult(true, true, false, safeChange, safeTransition, safeAffectedCells);
+        }
+
+        // Wall: parça = tek origin (çok-hücreli, serbest şekil); hücre aşamaları WallObstacleService'te.
+        // Advanced → yalnız vurulan hücrenin aşaması ilerledi, parça yerinde. Collapse → son aşamadaki (WallKind.CollapseStage)
+        // hücre tekrar vuruldu: parçanın TÜM hücreleri tek seferde temizlenir (OnObstacleDestroyed bir kez →
+        // hedef parça başına sayılır).
+        // Hamster: kırılmaz karakter. Her vuruş (bitişik eşleşme / special) bir lokma; hasar yok. Hedef
+        // tamamlanınca servis true döner → parça tek seferde temizlenir (OnObstacleDestroyed bir kez).
+        if (id == ObstacleId.Hamster)
+        {
+            if (HamsterHitInterceptor == null)
+                return new ObstacleHitResult(false, false, true, default, default, Array.Empty<int>());
+
+            int[] hamsterCells = CollectCellsForOrigin(origin, id);
+            if (HamsterHitInterceptor.Invoke(origin, idx, context))
+            {
+                ClearObstacleFromLevel(origin, id);
+                change = new ObstacleVisualChange(origin, id, true, 0, null, hitCellIndex: idx);
+                var leaveTransition = new ObstacleStageTransition(true, origin, id, 0, true, default, default);
+                return new ObstacleHitResult(true, true, false, change, leaveTransition, hamsterCells);
+            }
+
+            change = new ObstacleVisualChange(origin, id, false, remainingHitsByOrigin[origin], null, hitCellIndex: idx);
+            return new ObstacleHitResult(true, true, false, change, default, hamsterCells);
+        }
+
+        if (id == ObstacleId.Wall || id == ObstacleId.MetalWall)
+        {
+            if (WallHitInterceptor == null)
+                return new ObstacleHitResult(false, false, true, default, default, Array.Empty<int>());
+
+            int[] wallCells = CollectCellsForOrigin(origin, id, includeBuried: true);
+            var wallOutcome = WallHitInterceptor.Invoke(origin, idx, context);
+            if (wallOutcome == WallHitOutcome.Ignored)
+                return new ObstacleHitResult(false, false, true, default, default, Array.Empty<int>());
+
+            if (wallOutcome == WallHitOutcome.Collapse)
+            {
+                ClearObstacleFromLevel(origin, id);
+                change = new ObstacleVisualChange(origin, id, true, 0, null, hitCellIndex: idx);
+                var wallTransition = new ObstacleStageTransition(true, origin, id, 0, true, default, default);
+                return new ObstacleHitResult(true, true, false, change, wallTransition, wallCells);
+            }
+
+            change = new ObstacleVisualChange(origin, id, false, GetRemainingHitsAt(x, y), null, hitCellIndex: idx);
+            return new ObstacleHitResult(true, true, false, change, default, wallCells);
+        }
+
+        // STACK KURALI: bir CellAnchoredOverlay (Grass/Oil) bir movable'ın (Helmet) düştüğü hücrede
+        // GÖRSEL olarak taşın ÜSTÜNDE durur (overlay en üstte çizilir), ama veri modelinde movable
+        // primary olur ve overlay beneath store'a (_underTileBeneathMovable) iner. Bu ters dizilim
+        // yüzünden LineV/special hasarı movable'a gidip onu kırıyor, üstteki overlay sağ kalıyordu.
+        // "Stack'te üstteki önce kırılır" → hit önce overlay'e gitmeli, overlay temizlenene kadar
+        // movable KORUNMALI (bir sonraki hit onu kırar).
+        if (IsMovableObstacleAt(x, y) && TryConsumeCoveringOverlayHit(idx, context, out change))
+            return new ObstacleHitResult(true, true, false, change, default, Array.Empty<int>());
+
+        var def = library != null ? library.Get(id) : null;
+
+        int remaining = remainingHitsByOrigin[origin];
+        if (remaining < 0)
+            remaining = Mathf.Max(1, def != null ? def.hits : 1);
+
+        if (!CanConsumeHit(def, remaining, context, sourceTileType))
+            return new ObstacleHitResult(false, false, true, default, default, Array.Empty<int>());
+
+        // ColorChest renk validasyonu
+        ChestColorMask removedColor = ChestColorMask.None;
+        if (id == ObstacleId.ColorChest)
+        {
+            bool isOpen = def != null && remaining < def.hits;
+
+            if (context == ObstacleHitContext.NormalMatch)
+            {
+                // Kapalı ColorChest'te stage damage rule izin veriyorsa normal match kapıyı açar.
+                // Açıldıktan sonra normal match tekrar renk-validasyonuna tabidir.
+                if (!isOpen)
+                    removedColor = ChestColorMask.None;
+                else
+                {
+                    // Açık dolap: sadece içinde kalan renk hasar verir
+                    var colorFlag = sourceTileType.ToChestColor();
+                    if (colorFlag == ChestColorMask.None ||
+                        !_chestColorStates.TryGetValue(origin, out var chestMask) ||
+                        (chestMask & colorFlag) == 0)
+                        return new ObstacleHitResult(false, false, true, default, default, Array.Empty<int>());
+
+                    removedColor = colorFlag;
+                }
+            }
+            else if ((context == ObstacleHitContext.SpecialActivation || context == ObstacleHitContext.Booster) && isOpen)
+            {
+                // Açık dolap + special/booster: kalan renklerden rastgele biri kırılır
+                if (!_chestColorStates.TryGetValue(origin, out var chestMask) || chestMask == ChestColorMask.None)
+                    return new ObstacleHitResult(false, false, true, default, default, Array.Empty<int>());
+                removedColor = PickRandomChestColor(chestMask);
+            }
+            // isOpen=false + SpecialActivation/Booster: kapalı dolabı açma işlemi, removedColor = None
+        }
+
+        // BatteryBox / OverrideBatteryBox renk-pil validasyonu
+        ChestColorMask batteryHitColor = ChestColorMask.None;
+        int batteryColorIndex = -1;
+        int[] colorBatteryHits = null;
+        if (id == ObstacleId.BatteryBox || id == ObstacleId.OverrideBatteryBox)
+        {
+            bool hasBatteryState = id == ObstacleId.BatteryBox
+                ? _batteryHitsByOrigin.TryGetValue(origin, out colorBatteryHits)
+                : _overrideBatteryHitsByOrigin.TryGetValue(origin, out colorBatteryHits);
+
+            if (!hasBatteryState || colorBatteryHits == null)
+                return new ObstacleHitResult(false, false, true, default, default, Array.Empty<int>());
+
+            if (context == ObstacleHitContext.NormalMatch)
+            {
+                var colorFlag = sourceTileType.ToChestColor();
+                batteryColorIndex = BatteryColorToIndex(colorFlag);
+                if (batteryColorIndex < 0 || colorBatteryHits[batteryColorIndex] <= 0)
+                    return new ObstacleHitResult(false, false, true, default, default, Array.Empty<int>());
+                batteryHitColor = colorFlag;
+            }
+            else
+            {
+                // Special / Booster: kalan hit'i olan rastgele bir pili vur
+                batteryHitColor = PickRandomBatteryColor(colorBatteryHits);
+                batteryColorIndex = BatteryColorToIndex(batteryHitColor);
+                if (batteryColorIndex < 0)
+                    return new ObstacleHitResult(false, false, true, default, default, Array.Empty<int>());
+            }
+        }
+
+        int[] affectedCells = CollectCellsForOrigin(origin, id);
+        var previousStage = CreateSnapshot(def, id, remaining);
+        bool wasChestClosed = id == ObstacleId.ColorChest
+                              && (def == null || remaining == def.hits);
+
+        // Wardrobe açık durum (remaining==1): normal vuruş BİR, special vuruşu İKİ item
+        // kırar; remaining değişmez. Tüm itemler bittiğinde remaining-- çalışır →
+        // remaining=0 → obstacle yıkılır.
+        if (id == ObstacleId.Wardrobe && remaining == 1)
+        {
+            if (_wardrobeItemCounts.TryGetValue(origin, out int itemsLeft) && itemsLeft > 0)
+            {
+                int breakCount = context == ObstacleHitContext.SpecialActivation ? 2 : 1;
+                int newCount = Mathf.Max(0, itemsLeft - breakCount);
+                _wardrobeItemCounts[origin] = newCount;
+
+                // View her event'te bir item söker (RemoveFrontItem) — kırılan her item
+                // için ayrı bildir ki çift kırılma görselde de iki item düşürsün.
+                for (int itemIdx = itemsLeft - 1; itemIdx >= newCount; itemIdx--)
+                    OnWardrobeItemRemoved?.Invoke(origin, itemIdx);
+
+                if (newCount > 0)
+                {
+                    // Hâlâ item var: remaining sabit, erken dön
+                    change = new ObstacleVisualChange(origin, id, false, remaining, null, ChestColorMask.None, isRepeatHit: true, hitCellIndex: idx);
+                    return new ObstacleHitResult(true, true, false, change, default, affectedCells);
+                }
+                // newCount == 0: düş → remaining-- → obstacle yıkılır
+            }
+        }
+
+        // Boya kutusu piramidi: special vuruşu İKİ kutu düşürür (normal match bir).
+        int damage = id == ObstacleId.PaintCanBox && context == ObstacleHitContext.SpecialActivation ? 2 : 1;
+        remaining = Mathf.Max(0, remaining - damage);
+        remainingHitsByOrigin[origin] = remaining;
+
+        bool grassFlowerShed = id == ObstacleId.Grass && ShedGrassFlowerIfAny(origin);
+
+        // Renk maskesini güncelle ve bildirimi gönder
+        if (removedColor != ChestColorMask.None)
+        {
+            if (_chestColorStates.TryGetValue(origin, out var currentMask))
+                _chestColorStates[origin] = currentMask & ~removedColor;
+            OnChestColorRemoved?.Invoke(origin, removedColor);
+        }
+
+        // BatteryBox / OverrideBatteryBox renk hit'ini güncelle ve bildir
+        if (batteryHitColor != ChestColorMask.None && batteryColorIndex >= 0
+            && colorBatteryHits != null)
+        {
+            colorBatteryHits[batteryColorIndex]--;
+            if (id == ObstacleId.BatteryBox)
+            {
+                OnBatteryHit?.Invoke(origin, batteryHitColor, colorBatteryHits[batteryColorIndex]);
+            }
+            else if (id == ObstacleId.OverrideBatteryBox)
+            {
+                int progress = _overrideBatteryProgressByOrigin.TryGetValue(origin, out int oldProgress)
+                    ? oldProgress + 1
+                    : 1;
+                _overrideBatteryProgressByOrigin[origin] = progress;
+                // total = tüm renklerin başlangıç hit'i (sabit). progress + 4 rengin kalanı toplamı
+                // her zaman bu sabite eşittir; böylece gauge 0..12 üzerinden doğru ilerler.
+                int total = progress;
+                for (int c = 0; c < colorBatteryHits.Length; c++)
+                    total += Mathf.Max(0, colorBatteryHits[c]);
+                OnOverrideBatteryBoxHit?.Invoke(origin, batteryHitColor, colorBatteryHits[batteryColorIndex], progress, total);
+            }
+        }
+
+        if (remaining <= 0)
+        {
+            // Footprint'i temizlemeDEN ÖNCE topla — ClearObstacleFromLevel hücre→origin eşlemesini
+            // siler, sonra footprint'i öğrenemeyiz. OBB detonation handler'ı TÜM hücreleri bloklar.
+            List<Vector2Int> obbFootprint = id == ObstacleId.OverrideBatteryBox
+                ? CollectOriginFootprintCells(origin, id)
+                : null;
+
+            ClearObstacleFromLevel(origin, id);
+            if (id == ObstacleId.OverrideBatteryBox)
+                OnOverrideBatteryBoxDetonated?.Invoke(origin, obbFootprint);
+            change = new ObstacleVisualChange(origin, id, true, 0, null);
+            var transition = new ObstacleStageTransition(true, origin, id, 0, true, previousStage, default);
+            return new ObstacleHitResult(true, true, false, change, transition, affectedCells);
+        }
+
+        if (wasChestClosed)
+            OnChestOpened?.Invoke(origin);
+
+        // Wardrobe: kapı açıldı (remaining 2→1)
+        if (id == ObstacleId.Wardrobe && remaining == 1)
+            OnWardrobeOpened?.Invoke(origin);
+
+        var currentStage = CreateSnapshot(def, id, remaining);
+        var sprite = ResolveStageSprite(def, id, remaining);
+        change = new ObstacleVisualChange(origin, id, false, remaining, sprite, removedColor, hitCellIndex: idx,
+            isGrassFlowerShed: grassFlowerShed);
+
+        var stageTransition = new ObstacleStageTransition(
+            true,
+            origin,
+            id,
+            remaining,
+            false,
+            previousStage,
+            currentStage);
+
+        OnObstacleStageChanged?.Invoke(origin, currentStage);
+        return new ObstacleHitResult(true, true, false, change, stageTransition, affectedCells);
+    }
+
+    public bool HasObstacleAt(int x, int y)
+    {
+        if (!IsValidCell(x, y)) return false;
+        int idx = level.Index(x, y);
+        return (ObstacleId)level.obstacles[idx] != ObstacleId.None;
+    }
+
+    public int GetRemainingHitsAt(int x, int y)
+    {
+        if (!IsValidCell(x, y)) return 0;
+
+        int idx = level.Index(x, y);
+        var id = (ObstacleId)level.obstacles[idx];
+        if (id == ObstacleId.None) return 0;
+
+        int origin = level.obstacleOrigins[idx];
+        if (origin < 0 || origin >= remainingHitsByOrigin.Length) return 0;
+
+        if (wallRemainingHits.TryGetValue((id, origin), out int wallRemaining))
+            return wallRemaining;
+
+        int remaining = remainingHitsByOrigin[origin];
+        if (remaining >= 0)
+            return remaining;
+
+        var def = library != null ? library.Get(id) : null;
+        return Mathf.Max(1, def != null ? def.hits : 1);
+    }
+
+    // Mud can be rendered beneath another obstacle. Reading the primary cell's
+    // HP in that case returns the cover's HP, not the visible Mud layer's stage.
+    public bool TryGetMudRemainingHitsAt(int x, int y, out int remaining)
+    {
+        remaining = 0;
+        if (!IsValidCell(x, y)) return false;
+
+        int idx = level.Index(x, y);
+        if ((ObstacleId)level.obstacles[idx] == ObstacleId.Mud)
+        {
+            remaining = GetRemainingHitsAt(x, y);
+            return remaining > 0;
+        }
+
+        if (_underTileBeneathMovable.TryGetValue(idx, out var beneath)
+            && beneath.Id == ObstacleId.Mud)
+        {
+            remaining = beneath.Remaining;
+            return remaining > 0;
+        }
+
+        if (_stampedBeneathByCell.TryGetValue(idx, out var layers) && layers != null)
+        {
+            for (int i = layers.Count - 1; i >= 0; i--)
+            {
+                if (layers[i].Id != ObstacleId.Mud) continue;
+                remaining = layers[i].Remaining;
+                return remaining > 0;
+            }
+        }
+
+        return false;
+    }
+
+    /// Zemin katmanı mı (çamur, jel, su birikintisi — taşın altında çizilen UnderTileLayered)?
+    public bool IsGroundLayer(ObstacleId id)
+    {
+        if (id == ObstacleId.None) return false;
+        if (id == ObstacleId.Mud || id == ObstacleId.SpreadingGel) return true;
+        var def = library != null ? library.Get(id) : null;
+        return def != null && def.IsUnderTileBehavior;
+    }
+
+    /// Hücrenin en üst katmanının ALTINDA saklı duran ilk zemin katmanı (hareketli engelin altındaki ya da yığında
+    /// saklı). Örtü açılınca ortaya çıkan katmanın altındaki zeminin görünümünü kurmak için.
+    public bool TryGetGroundBeneathTopAt(int x, int y, out ObstacleId id, out int origin)
+    {
+        id = ObstacleId.None;
+        origin = -1;
+        if (!IsValidCell(x, y)) return false;
+        int idx = level.Index(x, y);
+        if (_underTileBeneathMovable.TryGetValue(idx, out var beneath) && IsGroundLayer(beneath.Id) && beneath.Remaining != 0)
+        {
+            id = beneath.Id;
+            origin = idx;
+            return true;
+        }
+        if (_stampedBeneathByCell.TryGetValue(idx, out var layers) && layers != null)
+            for (int i = layers.Count - 1; i >= 0; i--)
+                if (IsGroundLayer(layers[i].Id) && layers[i].Remaining != 0)
+                {
+                    id = layers[i].Id;
+                    origin = layers[i].Origin;
+                    return true;
+                }
+        return false;
+    }
+
+    public ObstacleId GetObstacleIdAt(int x, int y)
+    {
+        if (!IsValidCell(x, y)) return ObstacleId.None;
+        int idx = level.Index(x, y);
+        return (ObstacleId)level.obstacles[idx];
+    }
+
+    public int GetObstacleOriginAt(int x, int y)
+    {
+        if (!IsValidCell(x, y)) return -1;
+
+        int idx = level.Index(x, y);
+        var id = (ObstacleId)level.obstacles[idx];
+        if (id == ObstacleId.None) return -1;
+
+        int origin = level.obstacleOrigins[idx];
+        return (origin >= 0 && origin < remainingHitsByOrigin.Length) ? origin : -1;
+    }
+
+    public bool IsCellBlocked(int x, int y)
+    {
+        if (!IsValidCell(x, y)) return false;
+
+        int idx = level.Index(x, y);
+        var id = (ObstacleId)level.obstacles[idx];
+        if (IsObstacleLayerBlockingCell(id, ResolveRemainingForLiveLayer(idx, id)))
+            return true;
+
+        // Generic stack: üstteki overlay (örn. Grass) canlıyken taş akışı alt katmanın
+        // bloklama kuralını da görmeli. Hit/pull yolu yine canlı üst obstacle'a gider.
+        return TryGetStampedBeneathLayer(idx, out var stamped)
+            && IsObstacleLayerBlockingCell(stamped.Id, stamped.Remaining);
+    }
+
+    // Hücre Magnet ise ve GÜNCEL bir uç (A/B) ise true. Orta yol hücreleri inert → false.
+    /// Engelin her HÜCRESİ ayrı vuruş alır mı (origin-dedup muafiyeti)? Çok-hücreli engeller (sandık, kasa,
+    /// dolap...) bir etkiden origin başına TEK vuruş alır; şunlar hariç:
+    ///  - Magnet: tek origin altında iki bağımsız uç (A/B), her uç ayrı hedef.
+    ///  - Wall / MetalWall: parça tek origin ama her hücre kendi aşamasını taşır — eşleşme/special'ın
+    ///    değdiği her hücre ayrı ilerler.
+    /// Origin-dedup yapan her yer bu kuralı kullanmalı (tekrar "!= Magnet" yazma).
+    public bool TakesPerCellHits(int x, int y)
+    {
+        var id = GetObstacleIdAt(x, y);
+        return id == ObstacleId.Magnet || id == ObstacleId.Wall || id == ObstacleId.MetalWall
+            || id == ObstacleId.Hamster;
+    }
+
+    public bool IsMagnetEndpoint(int x, int y)
+    {
+        if (!IsValidCell(x, y)) return false;
+        int idx = level.Index(x, y);
+        if (!IsMagnetLayerPresentAt(idx)) return false;
+        return MagnetEndpointQuery != null && MagnetEndpointQuery(idx);
+    }
+
+    public bool IsOverTileBlockerAt(int x, int y)
+    {
+        if (!IsValidCell(x, y)) return false;
+
+        int idx = level.Index(x, y);
+        var id = (ObstacleId)level.obstacles[idx];
+        if (IsObstacleLayerOverTileBlocker(id, ResolveRemainingForLiveLayer(idx, id)))
+            return true;
+
+        return TryGetStampedBeneathLayer(idx, out var stamped)
+            && IsObstacleLayerOverTileBlocker(stamped.Id, stamped.Remaining);
+    }
+
+    // OverrideBatteryBox hücreyi bloklar (OverTileBlocker) AMA kendisi special ile vurulması
+    // gereken bir HEDEF'tir — altındaki taşı koruyan bir taş/emitter değil. Special hedeflemesi
+    // (CanAffectCell) bu hücreyi atlamamalı; yoksa line/pulse box'ı hiç vuramaz, box yalnız
+    // komşu renk-match ile ilerler, special ile ulaşılan renkler hiç bitmez → detone olmaz.
+    public bool IsSpecialTargetableBlockerAt(int x, int y)
+    {
+        if (!IsValidCell(x, y)) return false;
+
+        int idx = level.Index(x, y);
+        if ((ObstacleId)level.obstacles[idx] == ObstacleId.OverrideBatteryBox)
+            return true;
+
+        return TryGetStampedBeneathLayer(idx, out var stamped)
+            && stamped.Id == ObstacleId.OverrideBatteryBox;
+    }
+
+    public bool IsDiagonalAllowedAt(int x, int y)
+    {
+        if (!IsValidCell(x, y)) return false;
+
+        int idx = level.Index(x, y);
+        var id = (ObstacleId)level.obstacles[idx];
+        if (id == ObstacleId.None) return false;
+
+        var def = library != null ? library.Get(id) : null;
+        int remaining = ResolveRemainingHitsForCell(idx, def);
+        return def != null && def.GetAllowDiagonalForRemainingHits(remaining);
+    }
+
+    // CascadeLogic ile uyum için alias
+    public bool GetAllowDiagonalAt(int x, int y)
+    {
+        return IsDiagonalAllowedAt(x, y);
+    }
+
+    private int ResolveRemainingHitsForCell(int idx, ObstacleDef def)
+    {
+        if (level == null || level.obstacleOrigins == null || idx < 0 || idx >= level.obstacleOrigins.Length)
+            return Mathf.Max(1, def != null ? def.hits : 1);
+
+        int origin = level.obstacleOrigins[idx];
+        if (origin < 0 || origin >= remainingHitsByOrigin.Length)
+            return Mathf.Max(1, def != null ? def.hits : 1);
+
+        if (wallRemainingHits.TryGetValue(((ObstacleId)level.obstacles[idx], origin), out int wallRemaining))
+            return wallRemaining;
+
+        int remaining = remainingHitsByOrigin[origin];
+        if (remaining >= 0)
+            return remaining;
+
+        return Mathf.Max(1, def != null ? def.hits : 1);
+    }
+
+    private int ResolveRemainingForLiveLayer(int idx, ObstacleId id)
+    {
+        if (id == ObstacleId.None)
+            return 0;
+
+        var def = library != null ? library.Get(id) : null;
+        return ResolveRemainingHitsForCell(idx, def);
+    }
+
+    private bool TryGetStampedBeneathLayer(int idx, out StampedBeneath stamped)
+    {
+        stamped = default;
+        if (idx < 0)
+            return false;
+
+        if (!_stampedBeneathByCell.TryGetValue(idx, out var layers) || layers == null || layers.Count == 0)
+            return false;
+
+        stamped = layers[layers.Count - 1];
+        return stamped.Id != ObstacleId.None;
+    }
+
+    private bool TryPeekStampedBeneathLayer(int idx, out StampedBeneath stamped)
+    {
+        stamped = default;
+        if (idx < 0)
+            return false;
+
+        if (!_stampedBeneathByCell.TryGetValue(idx, out var layers) || layers == null || layers.Count == 0)
+            return false;
+
+        stamped = layers[layers.Count - 1];
+        return true;
+    }
+
+    private bool TryPopStampedBeneathLayer(int idx, out StampedBeneath stamped)
+    {
+        stamped = default;
+        if (idx < 0)
+            return false;
+
+        if (!_stampedBeneathByCell.TryGetValue(idx, out var layers) || layers == null || layers.Count == 0)
+            return false;
+
+        int last = layers.Count - 1;
+        stamped = layers[last];
+        layers.RemoveAt(last);
+
+        if (layers.Count == 0)
+            _stampedBeneathByCell.Remove(idx);
+
+        if (stamped.Id != ObstacleId.None)
+            _revealGraceUntil[idx] = Time.unscaledTime + RevealGraceSeconds;
+        return true;
+    }
+
+    // AÇILIŞ KORUMASI: üstteki katman kırılınca açığa çıkan katman kısa bir süre vuruş almaz.
+    // Kök sebep: kırıcı etki (roket süpürmesi, patlama dalgası, taş taş temizlenme) hasarını kareler boyunca
+    // dağıtır; ilk vuruş üstü kırar, AYNI etkinin sonraki karelerdeki vuruşları taze açılan katmana iniyordu
+    // (4x4 kasa kırılınca altındaki grass'ların 1. satır/1. sütunu silindi). Aynı-döngü koruması
+    // (visualChange.cleared → break / MarkClearedObstacleCells) kare-arası yayılımı kapsamıyordu.
+    // Süre kırıcı etkinin yayılımını kapsar; sonraki eşleşmeler normal kurallarla vurur.
+    private const float RevealGraceSeconds = 0.6f;
+    private readonly Dictionary<int, float> _revealGraceUntil = new();
+
+    /// Dinamik doğan katman (barrel'ın saçtığı mud) için aynı koruma: barrel'ı kıran etkinin (roket
+    /// süpürmesi, patlama dalgası) sonraki karelerdeki vuruşları taze mud'ı anında silmesin.
+    public void GrantRevealGrace(int x, int y)
+    {
+        if (!IsValidCell(x, y)) return;
+        _revealGraceUntil[level.Index(x, y)] = Time.unscaledTime + RevealGraceSeconds;
+    }
+
+    private bool IsInRevealGrace(int idx)
+    {
+        if (!_revealGraceUntil.TryGetValue(idx, out float until)) return false;
+        if (Time.unscaledTime < until) return true;
+        _revealGraceUntil.Remove(idx);
+        return false;
+    }
+
+    private bool IsMagnetLayerPresentAt(int idx)
+    {
+        if (level == null || level.obstacles == null) return false;
+        if (idx < 0 || idx >= level.obstacles.Length) return false;
+
+        if ((ObstacleId)level.obstacles[idx] == ObstacleId.Magnet)
+            return true;
+
+        return TryGetStampedBeneathLayer(idx, out var stamped)
+            && stamped.Id == ObstacleId.Magnet;
+    }
+
+    private bool IsObstacleLayerBlockingCell(ObstacleId id, int remaining)
+    {
+        if (id == ObstacleId.None) return false;
+        if (id == ObstacleId.Tube) return true;
+        if (id == ObstacleId.Safe || id == ObstacleId.AncientSeal) return true;
+        // Magnet path/uç hücreleri MagnetObstacleService ile yönetilir (normal hit-stage'i yok).
+        // Tüm magnet alanı işgal edilmiş sayılır → taş spawn olmaz. Uç hit alıp küçüldükçe
+        // FreeMagnetCell o hücreyi None yapar → hücre açılır ve gravity ile dolar (alan "kapanır").
+        if (id == ObstacleId.Magnet) return true;
+        // Emitter obstacles occupy the cell while their service-owned state is active.
+        if (id == ObstacleId.EnergyContainer) return true;
+        if (id == ObstacleId.HatLauncher) return true;
+        if (id == ObstacleId.RocketBasket) return true;
+        if (id == ObstacleId.OverrideBatteryBox) return true;
+
+        var def = library != null ? library.Get(id) : null;
+        return def != null && def.GetBlocksCellsForRemainingHits(remaining);
+    }
+
+    private bool IsObstacleLayerOverTileBlocker(ObstacleId id, int remaining)
+    {
+        if (id == ObstacleId.None) return false;
+        if (id == ObstacleId.Tube) return true;
+        if (id == ObstacleId.Magnet) return true;
+        // Emitter obstacles always block regardless of stage — interceptors handle active vs exhausted.
+        if (id == ObstacleId.EnergyContainer) return true;
+        if (id == ObstacleId.HatLauncher) return true;
+        if (id == ObstacleId.RocketBasket) return true;
+        if (id == ObstacleId.OverrideBatteryBox) return true;
+
+        var def = library != null ? library.Get(id) : null;
+        return def != null && def.IsOverTileDamageBehaviorForRemainingHits(remaining);
+    }
+
+    private bool IsValidCell(int x, int y)
+    {
+        return level != null
+            && level.obstacles != null
+            && level.obstacleOrigins != null
+            && level.InBounds(x, y);
+    }
+
+    public bool IsInteractionLockedAt(int x, int y)
+    {
+        if (!IsValidCell(x, y))
+            return false;
+
+        // Generic special cage: a locked special is interaction-locked (unbreakable + non-swappable).
+        if (specialLockQuery != null && specialLockQuery(x, y))
+            return true;
+
+        if (IsCoveredByLockingOverlay(level.Index(x, y)))
+            return true;
+
+        // Bilardo topu swap'lanamaz; yalnız kendi kuralıyla yuvarlanır (CascadeLogic.Billiard).
+        if (level.obstacles[level.Index(x, y)] == (int)ObstacleId.BilliardBall)
+            return true;
+
+        // Yalnızca sabit OverTileBlocker (Stone vb.) altındaki tile'ı kilitler.
+        // MovableObstacle (Plastic vb.) swap edilebilir — interaction kilitlenmez.
+        if (IsOverTileBlockerAt(x, y) && !IsMovableObstacleAt(x, y))
+            return true;
+
+        int idx = level.Index(x, y);
+        var obsId = (ObstacleId)level.obstacles[idx];
+        if (obsId == ObstacleId.None)
+            return false;
+
+        var def = library?.Get(obsId);
+        if (def == null)
+            return false;
+
+        int remaining = ResolveRemainingHitsForCell(idx, def);
+        var stage = def.GetStageRuleForRemainingHits(remaining);
+
+        return stage != null && stage.locksInteraction;
+    }
+    private bool CanConsumeHit(
+        ObstacleDef def,
+        int remainingHits,
+        ObstacleHitContext context,
+        TileType? sourceTileType)
+    {
+        if (def == null)
+            return true;
+
+        ObstacleDamageSourceRule rule = def.GetDamageRuleForRemainingHits(remainingHits);
+
+        if (!DoesContextMatchRule(context, rule))
+            return false;
+
+        if (context == ObstacleHitContext.NormalMatch && def.restrictNormalMatchTileType)
+        {
+            return sourceTileType.HasValue &&
+                   sourceTileType.Value == def.requiredNormalMatchTileType;
+        }
+
+        return true;
+    }
+
+    private bool DoesContextMatchRule(ObstacleHitContext context, ObstacleDamageSourceRule rule)
+    {
+        switch (rule)
+        {
+            case ObstacleDamageSourceRule.FullyDisabled:
+            case ObstacleDamageSourceRule.Disabled:
+                // Boosters (jokers) are direct tools that must always deal a hit to every
+                // obstacle type, including exhausted/fully-disabled stages.
+                return context == ObstacleHitContext.Booster;
+
+            case ObstacleDamageSourceRule.SpecialOnly:
+                return context == ObstacleHitContext.SpecialActivation;
+
+            case ObstacleDamageSourceRule.NormalOnly:
+                return context == ObstacleHitContext.NormalMatch;
+
+            case ObstacleDamageSourceRule.BoosterOnly:
+                return context == ObstacleHitContext.Booster;
+
+            case ObstacleDamageSourceRule.Any:
+            default:
+                return true;
+        }
+    }
+
+    private Sprite ResolveStageSprite(ObstacleDef def, ObstacleId id, int remainingHits)
+    {
+        def ??= library != null ? library.Get(id) : null;
+        if (def == null) return null;
+        return def.GetSpriteForRemainingHits(remainingHits);
+    }
+
+    private ObstacleStageSnapshot CreateSnapshot(ObstacleDef def, ObstacleId id, int remainingHits)
+    {
+        def ??= library != null ? library.Get(id) : null;
+        var stage = def != null ? def.GetStageRuleForRemainingHits(remainingHits) : null;
+        if (stage == null)
+            return default;
+
+        return new ObstacleStageSnapshot(
+            stage.behavior,
+            stage.blocksCells,
+            stage.allowDiagonal,
+            stage.damageRule,
+            stage.sprite);
+    }
+
+    private int[] CollectCellsForOrigin(int origin, ObstacleId originId, bool includeBuried = false)
+    {
+        if (level == null || level.obstacles == null || level.obstacleOrigins == null)
+            return Array.Empty<int>();
+
+        List<int> cells = null;
+        for (int i = 0; i < level.obstacles.Length; i++)
+        {
+            bool live = (ObstacleId)level.obstacles[i] == originId && level.obstacleOrigins[i] == origin;
+            if (!live && !(includeBuried && HasStampedObstacleAt(i, originId, origin))) continue;
+
+            cells ??= new List<int>(4);
+            cells.Add(i);
+        }
+
+        return cells != null ? cells.ToArray() : Array.Empty<int>();
+    }
+
+    // Verilen origin+id'ye ait TÜM hücreler (multi-cell obstacle footprint'i). ClearObstacleFromLevel
+    // ÇAĞRILMADAN ÖNCE kullanılmalı (o metod obstacleOrigins eşlemesini siler).
+    private List<Vector2Int> CollectOriginFootprintCells(int origin, ObstacleId id)
+    {
+        var cells = new List<Vector2Int>(4);
+        if (level == null || level.obstacles == null || level.obstacleOrigins == null)
+            return cells;
+
+        for (int i = 0; i < level.obstacles.Length; i++)
+        {
+            if ((ObstacleId)level.obstacles[i] != id) continue;
+            if (level.obstacleOrigins[i] != origin) continue;
+            cells.Add(new Vector2Int(i % level.width, i / level.width));
+        }
+
+        return cells;
+    }
+
+    private void ClearObstacleFromLevel(int origin, ObstacleId originId)
+    {
+        if (level == null || level.obstacles == null || level.obstacleOrigins == null)
+            return;
+
+        if (origin < 0 || origin >= level.obstacleOrigins.Length)
+            return;
+
+        HashSet<(int origin, ObstacleId id)> restoredBeneathOrigins = null;
+        Dictionary<int, int> restoredMudRemainingByOrigin = null;
+        // Partially covered walls may collapse through a different cell. The live
+        // obstacle at their origin owns this HP slot and must keep its current damage.
+        bool originCellRestored = (ObstacleId)level.obstacles[origin] != originId
+            || level.obstacleOrigins[origin] != origin;
+
+        if (originId == ObstacleId.Wall || originId == ObstacleId.MetalWall)
+        {
+            for (int i = 0; i < level.obstacles.Length; i++)
+                if (RemoveStampedObstacleBeneath(i, originId, origin))
+                    OnCellUnlocked?.Invoke(i);
+            wallRemainingHits.Remove((originId, origin));
+        }
+
+        for (int i = 0; i < level.obstacles.Length; i++)
+        {
+            if ((ObstacleId)level.obstacles[i] != originId) continue;
+            if (level.obstacleOrigins[i] != origin) continue;
+
+            // Bu cell bir movable obstacle'sa ve altında saklanan under-tile obstacle
+            // (Mud) varsa, cell'i boşaltmak yerine mud'ı geri yükle — movable kırılınca
+            // altındaki mud yok olmasın.
+            if (_underTileBeneathMovable.TryGetValue(i, out var beneath))
+            {
+                level.obstacles[i] = (int)beneath.Id;
+                level.obstacleOrigins[i] = i;
+                if (i < remainingHitsByOrigin.Length)
+                    remainingHitsByOrigin[i] = beneath.Remaining;
+                _underTileBeneathMovable.Remove(i);
+                if (i == origin)
+                    originCellRestored = true;
+                continue;
+            }
+
+            // Generic stacking: bu cell başka bir obstacle'ın (Chest, Wardrobe...) ÜSTÜNE
+            // stamp edilmişse, altındaki authored içeriği (Mud, Stone...) geri yükle.
+            if (TryPopStampedBeneathLayer(i, out var stamped))
+            {
+                RestoreCellObstacle(i, stamped.Id, stamped.Origin);
+                if (stamped.Id != ObstacleId.None)
+                {
+                    (restoredBeneathOrigins ??= new HashSet<(int, ObstacleId)>()).Add((stamped.Origin, stamped.Id));
+                    if (stamped.Id == ObstacleId.Mud && stamped.Remaining > 0)
+                        (restoredMudRemainingByOrigin ??= new Dictionary<int, int>())[stamped.Origin] = stamped.Remaining;
+                }
+                continue;
+            }
+
+            level.obstacles[i] = (int)ObstacleId.None;
+            level.obstacleOrigins[i] = -1;
+
+            OnCellUnlocked?.Invoke(i);
+        }
+
+        // Origin'de canlı bir örtü kaldıysa veya _underTileBeneathMovable'dan bir obstacle
+        // geri yüklendiyse onun remaining'ini koru. (Stamped-beneath restore'u etkilenmez: onun
+        // remaining'i aşağıda ReinitRestoredBeneathOrigin ile bu satırdan SONRA kurulur.)
+        if (!originCellRestored)
+            remainingHitsByOrigin[origin] = -1;
+
+        if (originId == ObstacleId.ColorChest)
+            _chestColorStates.Remove(origin);
+
+        if (originId == ObstacleId.BatteryBox)
+            _batteryHitsByOrigin.Remove(origin);
+
+        if (originId == ObstacleId.OverrideBatteryBox)
+        {
+            _overrideBatteryHitsByOrigin.Remove(origin);
+            _overrideBatteryProgressByOrigin.Remove(origin);
+        }
+
+        if (originId == ObstacleId.Wardrobe)
+            _wardrobeItemCounts.Remove(origin);
+
+        // Çim vuruş almadan tamamen silindiyse (ör. doğrudan temizleme) çiçekleri de dökülmüş say.
+        if (originId == ObstacleId.Grass)
+            ShedGrassFlowerIfAny(origin);
+
+        OnObstacleDestroyed?.Invoke(origin, originId);
+        if (originId == ObstacleId.Grass) CompleteWaterLily(origin);
+
+        // Cover view'ı OnObstacleDestroyed dinleyicilerinde temizlendikten sonra beneath view'ı
+        // oluştur. Aynı origin key'i hâlâ cover'a aitken dynamic create skip'leniyordu.
+        if (restoredBeneathOrigins != null)
+        {
+            foreach (var (beneathOrigin, beneathId) in restoredBeneathOrigins)
+            {
+                int remainingOverride = -1;
+                if (restoredMudRemainingByOrigin != null
+                    && restoredMudRemainingByOrigin.TryGetValue(beneathOrigin, out int restoredRemaining))
+                    remainingOverride = restoredRemaining;
+                ReinitRestoredBeneathOrigin(beneathOrigin, beneathId, remainingOverride);
+            }
+        }
+    }
+
+    // ── Generic stacked-obstacle beneath store ───────────────────────────────
+
+    /// <summary>
+    /// Bir over-tile obstacle'ın (Safe, Chest, Wardrobe...) <paramref name="cell"/> hücresinde
+    /// üstüne stamp edildiği authored içeriği saklar. Üstteki obstacle kırılınca geri yüklenir.
+    /// GridSpawner stamp aşamasında (SetLevelData SONRASI) çağırır.
+    /// </summary>
+    public void RegisterStampedBeneath(int cell, ObstacleId beneathId, int beneathOrigin, int overOrigin)
+    {
+        if (level == null || level.obstacles == null) return;
+        if (cell < 0 || cell >= level.obstacles.Length) return;
+
+        int remaining = 0;
+        if (beneathId != ObstacleId.None)
+        {
+            var def = library != null ? library.Get(beneathId) : null;
+            remaining = Mathf.Max(1, def != null ? def.hits : 1);
+        }
+
+        var stamped = new StampedBeneath(beneathId, beneathOrigin, overOrigin, remaining);
+        if (!_stampedBeneathByCell.TryGetValue(cell, out var layers) || layers == null)
+        {
+            layers = new List<StampedBeneath>();
+            _stampedBeneathByCell[cell] = layers;
+        }
+
+        if (layers.Count > 0)
+        {
+            int last = layers.Count - 1;
+            var top = layers[last];
+            if (top.OverOrigin == overOrigin && top.Id == ObstacleId.None && beneathId != ObstacleId.None)
+            {
+                layers[last] = stamped;
+                return;
+            }
+        }
+
+        layers.Add(stamped);
+    }
+
+    /// Bu engelin (id+origin) en az bir hücresi yığında başka bir katmanın ALTINDA mı?
+    public bool IsBuriedAnywhere(ObstacleId id, int origin)
+    {
+        if (id == ObstacleId.None || origin < 0) return false;
+        foreach (var kv in _stampedBeneathByCell)
+        {
+            var layers = kv.Value;
+            if (layers == null) continue;
+            for (int i = 0; i < layers.Count; i++)
+                if (layers[i].Id == id && layers[i].Origin == origin)
+                    return true;
+        }
+        return false;
+    }
+
+    /// Hücrenin EN ÜST engeli, başka bir hücresi hâlâ örtülü olduğu için vuruşa kapalı mı (Kural 4c)?
+    /// Wall / MetalWall hücre bazında ilerler; açık hücreleri bu parça kilidinden muaftır.
+    /// Hedef seçiciler (PatchBot, roket, EggBird) bu hücreleri aday listesine ALMAMALI — vuruş boşa gider.
+    public bool IsHitLockedAt(int x, int y)
+    {
+        if (!IsValidCell(x, y)) return false;
+        int idx = level.Index(x, y);
+        var id = (ObstacleId)level.obstacles[idx];
+        if (id == ObstacleId.Wall || id == ObstacleId.MetalWall) return false;
+        return id != ObstacleId.None && IsBuriedAnywhere(id, level.obstacleOrigins[idx]);
+    }
+
+    private bool HasStampedObstacleAt(int cell, ObstacleId id, int origin)
+    {
+        if (!_stampedBeneathByCell.TryGetValue(cell, out var layers) || layers == null) return false;
+        foreach (var layer in layers)
+            if (layer.Id == id && layer.Origin == origin) return true;
+        return false;
+    }
+
+    /// Saydam örtü: altındaki katman görünür kalır (Grass, GrassFlower, Oil). Opak katmanın altı gizlidir.
+    public static bool IsSeeThroughLayer(ObstacleId id) =>
+        id == ObstacleId.Grass || id == ObstacleId.GrassFlower || id == ObstacleId.GrassWaterLily || id == ObstacleId.Oil;
+
+    public void RegisterWaterLilyCell(int cell) => waterLilyCells.Add(cell);
+    public void CollectWaterLilyCells(ICollection<int> into)
+    {
+        if (into == null) return;
+        foreach (int cell in waterLilyCells) into.Add(cell);
+    }
+    private void CompleteWaterLily(int cell)
+    {
+        if (waterLilyCells.Remove(cell)) OnWaterLilyCleared?.Invoke(cell);
+    }
+
+    // ── Çiçekli çim (GrassFlower) ────────────────────────────────────────────
+
+    /// Level kurulumu (stamp + beneath/örtü kayıtları SONRASI): hücredeki çimi çiçekli işaretler ve
+    /// kalan vuruşuna +1 ekler. Çim birincil ya da movable üstü örtü olabilir; yığın altındaysa
+    /// bonus, çim açığa çıkınca InitObstacleStateAt'te eklenir.
+    public void RegisterGrassFlowerCell(int cell)
+    {
+        if (level == null || level.obstacles == null || cell < 0 || cell >= level.obstacles.Length) return;
+        if (cell >= remainingHitsByOrigin.Length) return;
+        if (!_grassFlowerCells.Add(cell)) return;
+
+        if ((ObstacleId)level.obstacles[cell] == ObstacleId.Grass && level.obstacleOrigins[cell] == cell)
+        {
+            var def = library != null ? library.Get(ObstacleId.Grass) : null;
+            int current = remainingHitsByOrigin[cell];
+            int baseHits = current > 0 ? current : Mathf.Max(1, def != null ? def.hits : 1);
+            remainingHitsByOrigin[cell] = baseHits + 1;
+            return;
+        }
+
+        if (_underTileBeneathMovable.TryGetValue(cell, out var cover) && cover.Id == ObstacleId.Grass)
+            _underTileBeneathMovable[cell] = (cover.Id, Mathf.Max(1, cover.Remaining) + 1);
+    }
+
+    public bool HasGrassFlowerAt(int cell) => _grassFlowerCells.Contains(cell);
+
+    public void CollectGrassFlowerCells(ICollection<int> into)
+    {
+        if (into == null) return;
+        foreach (int cell in _grassFlowerCells)
+            into.Add(cell);
+    }
+
+    /// Çiçekli hücrenin çimi şu an görünür mü (birincil katman ya da movable üstü örtü)?
+    /// Üstüne başka bir engel yığılmışsa çim de çiçekler de gizlidir.
+    public bool IsGrassVisibleAt(int cell)
+    {
+        if (level == null || level.obstacles == null || cell < 0 || cell >= level.obstacles.Length) return false;
+        if ((ObstacleId)level.obstacles[cell] == ObstacleId.Grass) return true;
+        return _underTileBeneathMovable.TryGetValue(cell, out var cover)
+            && cover.Id == ObstacleId.Grass && cover.Remaining != 0;
+    }
+
+    private int GetGrassFlowerBonusHits(int origin, ObstacleId id) =>
+        id == ObstacleId.Grass && _grassFlowerCells.Contains(origin) ? 1 : 0;
+
+    // Çimin bir vuruşu tüketildi (ya da çim silindi): hücre çiçekliyse çiçekler dökülür.
+    private bool ShedGrassFlowerIfAny(int cell)
+    {
+        if (!_grassFlowerCells.Remove(cell)) return false;
+        OnGrassFlowerShed?.Invoke(cell);
+        return true;
+    }
+
+    /// Hücrenin katmanları, en üstten alta doğru (id, origin). Görsel görünürlük kararı için.
+    public void GetLayersTopDown(int cell, List<(ObstacleId id, int origin)> result)
+    {
+        result.Clear();
+        if (level == null || level.obstacles == null || cell < 0 || cell >= level.obstacles.Length) return;
+        var top = (ObstacleId)level.obstacles[cell];
+        if (top != ObstacleId.None)
+            result.Add((top, level.obstacleOrigins[cell]));
+        if (_stampedBeneathByCell.TryGetValue(cell, out var layers) && layers != null)
+            for (int i = layers.Count - 1; i >= 0; i--)
+                if (layers[i].Id != ObstacleId.None)
+                    result.Add((layers[i].Id, layers[i].Origin));
+    }
+
+    public bool TryGetStampedBeneathObstacleIdAt(int x, int y, out ObstacleId obstacleId)
+    {
+        obstacleId = ObstacleId.None;
+        if (!IsValidCell(x, y))
+            return false;
+
+        int idx = level.Index(x, y);
+        if (!TryGetStampedBeneathLayer(idx, out var stamped))
+            return false;
+
+        obstacleId = stamped.Id;
+        return obstacleId != ObstacleId.None;
+    }
+
+    /// <summary>
+    /// Üst katmanın altında saklı duran TÜM obstacle id'lerini toplar (yığın katmanları + movable
+    /// altındaki under-tile). obstacles[] yalnız en üst katmanı tutar; 3+ katlı yığınlarda alttakiler
+    /// yalnız burada görünür (ör. obstacle hint taraması).
+    /// </summary>
+    public void CollectStampedBeneathIds(ICollection<ObstacleId> into)
+    {
+        if (into == null) return;
+        foreach (var kv in _stampedBeneathByCell)
+        {
+            if (kv.Value == null) continue;
+            for (int i = 0; i < kv.Value.Count; i++)
+                if (kv.Value[i].Id != ObstacleId.None)
+                    into.Add(kv.Value[i].Id);
+        }
+        foreach (var kv in _underTileBeneathMovable)
+            if (kv.Value.Id != ObstacleId.None)
+                into.Add(kv.Value.Id);
+    }
+
+    public int CountStampedBeneath(ObstacleId obstacleId)
+    {
+        if (obstacleId == ObstacleId.None)
+            return 0;
+
+        int count = 0;
+        foreach (var kv in _stampedBeneathByCell)
+        {
+            var layers = kv.Value;
+            if (layers == null)
+                continue;
+
+            for (int i = 0; i < layers.Count; i++)
+            {
+                var stamped = layers[i];
+                if (stamped.Id != obstacleId)
+                    continue;
+                if (stamped.Remaining <= 0)
+                    continue;
+                count++;
+            }
+        }
+        return count;
+    }
+
+    public int CountAliveOrStampedOrigins(ObstacleId obstacleId)
+    {
+        if (obstacleId == ObstacleId.None)
+            return 0;
+
+        int count = CountAliveOrigins(obstacleId);
+        HashSet<int> stampedOrigins = null;
+
+        foreach (var kv in _stampedBeneathByCell)
+        {
+            var layers = kv.Value;
+            if (layers == null)
+                continue;
+
+            for (int i = 0; i < layers.Count; i++)
+            {
+                var stamped = layers[i];
+                if (stamped.Id != obstacleId)
+                    continue;
+                if (stamped.Remaining <= 0)
+                    continue;
+
+                (stampedOrigins ??= new HashSet<int>()).Add(stamped.Origin);
+            }
+        }
+
+        return count + (stampedOrigins != null ? stampedOrigins.Count : 0);
+    }
+
+    /// <summary>
+    /// Board'da GERÇEKTEN yaşayan tüm örnekler: açıkta (origin), over-tile altında stamped ve
+    /// movable altında saklı. Dinamik hedeflerin (Mud) ground-truth sayımı buradan türetilir.
+    /// </summary>
+    public int CountAllLiveOrigins(ObstacleId obstacleId)
+    {
+        int count = CountAliveOrStampedOrigins(obstacleId);
+        foreach (var kv in _underTileBeneathMovable)
+            if (kv.Value.Id == obstacleId && kv.Value.Remaining > 0)
+                count++;
+        return count;
+    }
+
+    /// <summary>
+    /// Kırılması ClearObstacleFromLevel'dan GEÇMEYEN over-tile obstacle'lar (Safe) için: verilen
+    /// over-origin'e ait tüm stamped-beneath hücrelerini geri yükler. Normal damage ile kırılan
+    /// obstacle'lar bunu otomatik olarak ClearObstacleFromLevel içinde yapar; bu metod ekstra
+    /// tetikleme gerektirenler içindir.
+    /// </summary>
+    public void RevealStampedBeneathByOverOrigin(int overOrigin)
+    {
+        List<int> cells = null;
+        foreach (var kv in _stampedBeneathByCell)
+            if (TryPeekStampedBeneathLayer(kv.Key, out var top) && top.OverOrigin == overOrigin)
+                (cells ??= new List<int>()).Add(kv.Key);
+
+        if (cells == null) return;
+
+        HashSet<(int origin, ObstacleId id)> restoredBeneathOrigins = null;
+        Dictionary<int, int> restoredMudRemainingByOrigin = null;
+        foreach (var cell in cells)
+        {
+            if (!TryPopStampedBeneathLayer(cell, out var stamped)) continue;
+            RestoreCellObstacle(cell, stamped.Id, stamped.Origin);
+            if (stamped.Id != ObstacleId.None)
+            {
+                (restoredBeneathOrigins ??= new HashSet<(int, ObstacleId)>()).Add((stamped.Origin, stamped.Id));
+                if (stamped.Id == ObstacleId.Mud && stamped.Remaining > 0)
+                    (restoredMudRemainingByOrigin ??= new Dictionary<int, int>())[stamped.Origin] = stamped.Remaining;
+            }
+        }
+
+        if (restoredBeneathOrigins != null)
+        {
+            foreach (var (beneathOrigin, beneathId) in restoredBeneathOrigins)
+            {
+                int remainingOverride = -1;
+                if (restoredMudRemainingByOrigin != null
+                    && restoredMudRemainingByOrigin.TryGetValue(beneathOrigin, out int restoredRemaining))
+                    remainingOverride = restoredRemaining;
+                ReinitRestoredBeneathOrigin(beneathOrigin, beneathId, remainingOverride);
+            }
+        }
+    }
+
+    // Geri yüklenen beneath obstacle'ın hit-state'ini def'ten taze kurar + görselini oluşturur.
+    private void ReinitRestoredBeneathOrigin(int beneathOrigin, ObstacleId beneathId, int remainingOverride = -1)
+    {
+        // Revealing a non-origin cell must not reset the still-covered origin's HP.
+        if (level != null && beneathOrigin >= 0 && beneathOrigin < level.obstacles.Length
+            && (ObstacleId)level.obstacles[beneathOrigin] == beneathId
+            && level.obstacleOrigins[beneathOrigin] == beneathOrigin)
+            InitObstacleStateAt(beneathOrigin, remainingOverride);
+        if (level != null && level.width > 0)
+            RequestObstacleViewCreate?.Invoke(beneathOrigin % level.width, beneathOrigin / level.width);
+    }
+
+    private bool TryRestoreStampedBeneathCell(int cell, out int restoredOrigin, out ObstacleId restoredId, out int remainingOverride)
+    {
+        restoredOrigin = -1;
+        restoredId = ObstacleId.None;
+        remainingOverride = -1;
+
+        if (!TryPopStampedBeneathLayer(cell, out var stamped))
+            return false;
+
+        RestoreCellObstacle(cell, stamped.Id, stamped.Origin);
+
+        if (stamped.Id == ObstacleId.None)
+            return true;
+
+        restoredOrigin = stamped.Origin;
+        restoredId = stamped.Id;
+        if (stamped.Id == ObstacleId.Mud && stamped.Remaining > 0)
+            remainingOverride = stamped.Remaining;
+
+        return true;
+    }
+
+    public bool IsMovableObstacleAt(int x, int y)
+    {
+        if (!IsValidCell(x, y)) return false;
+
+        int idx = level.Index(x, y);
+        var id = (ObstacleId)level.obstacles[idx];
+        if (id == ObstacleId.None) return false;
+
+        var def = library != null ? library.Get(id) : null;
+        if (def == null) return false;
+
+        int remaining = ResolveRemainingHitsForCell(idx, def);
+        return def.IsMovableObstacleForRemainingHits(remaining);
+    }
+
+    public ObstacleSwapStateSnapshot CaptureObstacleSwapState()
+    {
+        if (level == null || level.obstacles == null || level.obstacleOrigins == null)
+            return null;
+
+        return new ObstacleSwapStateSnapshot(
+            (int[])level.obstacles.Clone(),
+            (int[])level.obstacleOrigins.Clone(),
+            (int[])remainingHitsByOrigin.Clone(),
+            new Dictionary<int, ChestColorMask>(_chestColorStates),
+            CloneIntArrayDictionary(_batteryHitsByOrigin),
+            CloneIntArrayDictionary(_overrideBatteryHitsByOrigin),
+            new Dictionary<int, int>(_overrideBatteryProgressByOrigin),
+            new Dictionary<int, int>(_wardrobeItemCounts),
+            new Dictionary<int, (ObstacleId Id, int Remaining)>(_underTileBeneathMovable),
+            CloneStampedBeneathDictionary(_stampedBeneathByCell));
+    }
+
+    public void RestoreObstacleSwapState(ObstacleSwapStateSnapshot snapshot)
+    {
+        if (snapshot == null || level == null || level.obstacles == null || level.obstacleOrigins == null)
+            return;
+
+        CopyArray(snapshot.Obstacles, level.obstacles);
+        CopyArray(snapshot.ObstacleOrigins, level.obstacleOrigins);
+        CopyArray(snapshot.RemainingHitsByOrigin, remainingHitsByOrigin);
+
+        _chestColorStates.Clear();
+        foreach (var kv in snapshot.ChestColorStates)
+            _chestColorStates[kv.Key] = kv.Value;
+
+        RestoreIntArrayDictionary(_batteryHitsByOrigin, snapshot.BatteryHitsByOrigin);
+        RestoreIntArrayDictionary(_overrideBatteryHitsByOrigin, snapshot.OverrideBatteryHitsByOrigin);
+
+        _overrideBatteryProgressByOrigin.Clear();
+        foreach (var kv in snapshot.OverrideBatteryProgressByOrigin)
+            _overrideBatteryProgressByOrigin[kv.Key] = kv.Value;
+
+        _wardrobeItemCounts.Clear();
+        foreach (var kv in snapshot.WardrobeItemCounts)
+            _wardrobeItemCounts[kv.Key] = kv.Value;
+
+        _underTileBeneathMovable.Clear();
+        foreach (var kv in snapshot.UnderTileBeneathMovable)
+            _underTileBeneathMovable[kv.Key] = kv.Value;
+
+        _stampedBeneathByCell.Clear();
+        foreach (var kv in snapshot.StampedBeneathByCell)
+            _stampedBeneathByCell[kv.Key] = kv.Value != null ? new List<StampedBeneath>(kv.Value) : null;
+    }
+
+    private static void CopyArray(int[] source, int[] target)
+    {
+        if (source == null || target == null) return;
+        int count = Mathf.Min(source.Length, target.Length);
+        Array.Copy(source, target, count);
+    }
+
+    private static Dictionary<int, int[]> CloneIntArrayDictionary(Dictionary<int, int[]> source)
+    {
+        var clone = new Dictionary<int, int[]>();
+        foreach (var kv in source)
+            clone[kv.Key] = kv.Value != null ? (int[])kv.Value.Clone() : null;
+        return clone;
+    }
+
+    private static Dictionary<int, List<StampedBeneath>> CloneStampedBeneathDictionary(Dictionary<int, List<StampedBeneath>> source)
+    {
+        var clone = new Dictionary<int, List<StampedBeneath>>();
+        foreach (var kv in source)
+            clone[kv.Key] = kv.Value != null ? new List<StampedBeneath>(kv.Value) : null;
+        return clone;
+    }
+
+    private static void RestoreIntArrayDictionary(Dictionary<int, int[]> target, Dictionary<int, int[]> snapshot)
+    {
+        target.Clear();
+        foreach (var kv in snapshot)
+            target[kv.Key] = kv.Value != null ? (int[])kv.Value.Clone() : null;
+    }
+
+    // Cargo türü: KIRILMAZ + sadece düz düşer + en altta toplanır.
+    private bool IsExitAtBottomObstacle(ObstacleId id)
+    {
+        if (id == ObstacleId.None) return false;
+        var def = library != null ? library.Get(id) : null;
+        return def != null && def.exitAtBottom;
+    }
+
+    // Kırılmaz HAREKETLİ engel: kargo (exitAtBottom) + bilardo topu. Hiçbir match/special/booster/kombo onu
+    // temizleyemez ya da hasar veremez; yalnız kendi çıkış yolu (taban / cep) toplar. Kırılmazlık kontrolü
+    // yapan her yer bunu kullanmalı (tekrar "IsExitAtBottomAt" yazma — o yalnız kargoya özgü davranış içindir).
+    private bool IsUnbreakableMovableObstacle(ObstacleId id)
+        => id == ObstacleId.BilliardBall || IsExitAtBottomObstacle(id);
+
+    public bool IsUnbreakableMovableAt(int x, int y)
+    {
+        if (!IsValidCell(x, y)) return false;
+        return IsUnbreakableMovableObstacle((ObstacleId)level.obstacles[level.Index(x, y)]);
+    }
+
+    /// Hücredeki engel hiçbir vuruşla ilerlemez mi (kırılmaz hareketli engel ya da bilardo cebi)?
+    /// Hedefleyiciler (PatchBot, kuş vb.) bu hücreyi engel hedefi saymamalı.
+    public bool IsUnbreakableObstacleAt(int x, int y)
+        => IsUnbreakableMovableAt(x, y) || GetObstacleIdAt(x, y) == ObstacleId.BilliardPocket;
+
+    /// Brandalı heykel origin'i hâlâ brandalı mı (TarpStatueService bağlar). Bağlı değilse brandasız sayılır.
+    public Func<int, bool> TarpStatueCoveredQuery;
+
+    public bool IsTarpStatueCoveredAt(int x, int y)
+    {
+        if (!IsValidCell(x, y) || TarpStatueCoveredQuery == null) return false;
+        int idx = level.Index(x, y);
+        return level.obstacles[idx] == (int)ObstacleId.TarpStatue && TarpStatueCoveredQuery(level.obstacleOrigins[idx]);
+    }
+
+    public bool IsBilliardBallAt(int x, int y)
+        => IsValidCell(x, y) && level.obstacles[level.Index(x, y)] == (int)ObstacleId.BilliardBall;
+
+    public bool IsBilliardPocketAt(int x, int y)
+        => IsValidCell(x, y) && level.obstacles[level.Index(x, y)] == (int)ObstacleId.BilliardPocket;
+
+    /// Kırılmaz hareketli engel (kargo/top) bir Grass/Oil hücresine girmiş ve örtü onun altında saklanıyor mu?
+    /// Special'lar o hücreyi etkileyemez sayar (CanAffectCell), ama örtü vuruş almalı.
+    public bool HasCoveringOverlayOnUnbreakableMovableAt(int x, int y)
+    {
+        if (!IsValidCell(x, y) || !IsUnbreakableMovableAt(x, y)) return false;
+        return _underTileBeneathMovable.TryGetValue(level.Index(x, y), out var beneath)
+            && (beneath.Id == ObstacleId.Grass || beneath.Id == ObstacleId.Oil)
+            && beneath.Remaining != 0;
+    }
+
+    public bool IsExitAtBottomAt(int x, int y)
+    {
+        if (!IsValidCell(x, y)) return false;
+        int idx = level.Index(x, y);
+        return IsExitAtBottomObstacle((ObstacleId)level.obstacles[idx]);
+    }
+
+    // Cargo en alta inip board'dan çıktığında çağrılır: hücreyi temizler ve OnObstacleDestroyed
+    // tetikler (goal +1). Tile görseli BoardController tarafında ayrıca animasyonla çıkarılır.
+    // Toplanan cargo'nun id'sini döner (yoksa None).
+    public ObstacleId CollectExitObstacleAt(int x, int y)
+    {
+        if (!IsValidCell(x, y)) return ObstacleId.None;
+        int idx = level.Index(x, y);
+        var id = (ObstacleId)level.obstacles[idx];
+        if (!IsExitAtBottomObstacle(id)) return ObstacleId.None;
+
+        int origin = level.obstacleOrigins[idx];
+        if (origin < 0 || origin >= remainingHitsByOrigin.Length) return ObstacleId.None;
+
+        ClearObstacleFromLevel(origin, id);
+        return id;
+    }
+
+    // Bilardo topu cebe girdi: hücre verisini temizler (altındaki örtü geri açılır) ve OnObstacleDestroyed
+    // tetikler (hedef +1). Tile görseli BilliardBallService'te ayrıca animasyonla çıkarılır.
+    public bool CollectBilliardBallAt(int x, int y)
+    {
+        if (!IsBilliardBallAt(x, y)) return false;
+        int origin = level.obstacleOrigins[level.Index(x, y)];
+        if (origin < 0 || origin >= remainingHitsByOrigin.Length) return false;
+
+        ClearObstacleFromLevel(origin, ObstacleId.BilliardBall);
+        return true;
+    }
+
+    public void MoveObstacle(int fromX, int fromY, int toX, int toY)
+    {
+        if (level == null || level.obstacles == null || level.obstacleOrigins == null)
+            return;
+
+        if (!level.InBounds(fromX, fromY) || !level.InBounds(toX, toY))
+            return;
+
+        int fromIdx = level.Index(fromX, fromY);
+        int toIdx = level.Index(toX, toY);
+
+        if (fromIdx < 0 || fromIdx >= level.obstacles.Length) return;
+        if (toIdx < 0 || toIdx >= level.obstacles.Length) return;
+        if (fromIdx == toIdx) return;
+        if (IsMovableObstacleAt(toX, toY)) return;
+
+        var id = (ObstacleId)level.obstacles[fromIdx];
+        if (id == ObstacleId.None) return;
+
+        int origin = level.obstacleOrigins[fromIdx];
+
+        // Hareket eden obstacle'ın kalan hit'ini önceden yakala.
+        int movingRemaining = (origin >= 0 && origin < remainingHitsByOrigin.Length)
+            ? remainingHitsByOrigin[origin]
+            : -1;
+
+        RestoreCellAfterMovableLeft(fromIdx);
+        PlaceMovableAt(toIdx, id, movingRemaining);
+    }
+
+    /// <summary>
+    /// CalculateCascades'in TÜM movable hareketlerini sıra-bağımsız uygular. Tek tek
+    /// MoveObstacle çağrısı sıraya duyarlıydı: bir movable'ın HEDEFİ, henüz taşınmamış
+    /// başka bir movable'ın KAYNAĞI ise (çapraz kayışlarda kolon işleme sırası bunu
+    /// garanti edemez) canlı veri eziliyor, ardından kaynak boşaltılırken beneath'teki
+    /// içerik (Mud) yeni gelenin ÜSTÜNE geri yükleniyordu → veri/görsel kopması,
+    /// "yoktan mud" ve kırılamayan hayalet movable. İki faz sırayı önemsiz kılar:
+    /// önce tüm kaynaklar boşaltılır (beneath restore), sonra tüm movable'lar hedefe
+    /// yerleştirilir (hedefteki under-tile içerik beneath'e alınır).
+    /// </summary>
+    public void MoveMovablesBatch(List<(Vector2Int from, Vector2Int to)> moves)
+    {
+        if (moves == null || moves.Count == 0) return;
+        if (level == null || level.obstacles == null || level.obstacleOrigins == null) return;
+
+        var candidates = new List<(int fromIdx, int toIdx, ObstacleId id, int remaining)>(moves.Count);
+        var candidateSources = new HashSet<int>();
+        var candidateTargets = new HashSet<int>();
+
+        for (int i = 0; i < moves.Count; i++)
+        {
+            var (from, to) = moves[i];
+            if (!level.InBounds(from.x, from.y) || !level.InBounds(to.x, to.y)) continue;
+
+            int fromIdx = level.Index(from.x, from.y);
+            int toIdx = level.Index(to.x, to.y);
+            if (fromIdx == toIdx) continue;
+            if (fromIdx < 0 || fromIdx >= level.obstacles.Length) continue;
+            if (toIdx < 0 || toIdx >= level.obstacles.Length) continue;
+            if (candidateSources.Contains(fromIdx)) continue;
+
+            if (candidateTargets.Contains(toIdx))
+            {
+                if (GameDiagnostics.CriticalErrors)
+                    Debug.LogWarning($"[Obstacle] Movable batch hedef çakışması ({to.x},{to.y}) — sonraki hareket korunup atlandı.");
+                continue;
+            }
+
+            var id = (ObstacleId)level.obstacles[fromIdx];
+            if (id == ObstacleId.None) continue;
+
+            int origin = level.obstacleOrigins[fromIdx];
+            int remaining = (origin >= 0 && origin < remainingHitsByOrigin.Length)
+                ? remainingHitsByOrigin[origin]
+                : -1;
+
+            candidates.Add((fromIdx, toIdx, id, remaining));
+            candidateSources.Add(fromIdx);
+            candidateTargets.Add(toIdx);
+        }
+
+        bool pruned;
+        do
+        {
+            pruned = false;
+            for (int i = candidates.Count - 1; i >= 0; i--)
+            {
+                int toIdx = candidates[i].toIdx;
+                int tx = toIdx % level.width;
+                int ty = toIdx / level.width;
+                if (!IsMovableObstacleAt(tx, ty) || candidateSources.Contains(toIdx))
+                    continue;
+
+                if (GameDiagnostics.CriticalErrors)
+                    Debug.LogWarning($"[Obstacle] Movable batch hedefi ({tx},{ty}) canlı movable ile dolu — hareket korunup atlandı.");
+                candidateSources.Remove(candidates[i].fromIdx);
+                candidateTargets.Remove(toIdx);
+                candidates.RemoveAt(i);
+                pruned = true;
+            }
+        }
+        while (pruned);
+
+        if (candidates.Count == 0)
+            return;
+
+        // Faz 1: kimlikleri yakala + kaynak hücreleri boşalt. (Kaynak hücreler birbirinden
+        // farklıdır; boşaltma yalnızca kendi hücresine yazar → bu faz kendi içinde güvenli.)
+        for (int i = 0; i < candidates.Count; i++)
+            RestoreCellAfterMovableLeft(candidates[i].fromIdx);
+
+        var placements = new List<(int toIdx, ObstacleId id, int remaining)>(candidates.Count);
+        for (int i = 0; i < candidates.Count; i++)
+        {
+            var candidate = candidates[i];
+            placements.Add((candidate.toIdx, candidate.id, candidate.remaining));
+        }
+
+        // Faz 2: hedeflere yerleştir. Artık hiçbir hedef "taşınmayı bekleyen" movable
+        // verisi içeremez — tümü Faz 1'de boşaltıldı.
+        for (int i = 0; i < placements.Count; i++)
+            PlaceMovableAt(placements[i].toIdx, placements[i].id, placements[i].remaining);
+    }
+
+    // Movable bir hücreye girerken oradaki non-movable içeriği (açığa çıkmış Mud gibi
+    // under-tile obstacle) beneath store'a alır ve movable'ı hücreye yazar. Movable
+    // hücreyi terk edince/kırılınca içerik geri açılır (RestoreCellAfterMovableLeft /
+    // ClearObstacleFromLevel).
+    private void PlaceMovableAt(int toIdx, ObstacleId id, int remaining)
+    {
+        var destId = (ObstacleId)level.obstacles[toIdx];
+        if (destId != ObstacleId.None)
+        {
+            int tx = toIdx % level.width;
+            int ty = toIdx / level.width;
+            if (IsMovableObstacleAt(tx, ty))
+            {
+                if (GameDiagnostics.CriticalErrors)
+                    Debug.LogWarning($"[Obstacle] Movable {id} hedefi ({tx},{ty}) başka bir movable ({destId}) tarafından dolu — yerleştirme atlandı.");
+                return;
+            }
+            else
+            {
+                int destOrigin = level.obstacleOrigins[toIdx];
+                int destRemaining = (destOrigin >= 0 && destOrigin < remainingHitsByOrigin.Length)
+                    ? remainingHitsByOrigin[destOrigin]
+                    : -1;
+                _underTileBeneathMovable[toIdx] = (destId, destRemaining);
+            }
+        }
+
+        level.obstacles[toIdx] = (int)id;
+        level.obstacleOrigins[toIdx] = toIdx; // yeni pozisyon yeni origin
+        if (toIdx < remainingHitsByOrigin.Length)
+            remainingHitsByOrigin[toIdx] = remaining;
+    }
+
+    // Movable'ın terk ettiği hücreyi boşaltır: altında saklanan under-tile obstacle (Mud)
+    // varsa geri yükle, authored stamped-beneath varsa onu aç, yoksa None yap.
+    private void RestoreCellAfterMovableLeft(int fromIdx)
+    {
+        if (_underTileBeneathMovable.TryGetValue(fromIdx, out var beneath))
+        {
+            level.obstacles[fromIdx] = (int)beneath.Id;
+            level.obstacleOrigins[fromIdx] = fromIdx;
+            if (fromIdx < remainingHitsByOrigin.Length)
+                remainingHitsByOrigin[fromIdx] = beneath.Remaining;
+            _underTileBeneathMovable.Remove(fromIdx);
+        }
+        else if (TryRestoreStampedBeneathCell(fromIdx, out int restoredOrigin, out var restoredId, out int remainingOverride))
+        {
+            if (restoredOrigin >= 0)
+                ReinitRestoredBeneathOrigin(restoredOrigin, restoredId, remainingOverride);
+        }
+        else
+        {
+            level.obstacles[fromIdx] = (int)ObstacleId.None;
+            level.obstacleOrigins[fromIdx] = -1;
+            if (fromIdx < remainingHitsByOrigin.Length)
+                remainingHitsByOrigin[fromIdx] = -1;
+        }
+    }
+
+    /// <summary>
+    /// Level kurulumu: editörde movable'ın ÜSTÜNE yığılan örtüyü (Grass) oyun içi modelle aynı yere
+    /// koyar — movable birincil, örtü _underTileBeneathMovable'da (vuruşu önce o alır). Hücrede
+    /// birincil movable yoksa false.
+    /// </summary>
+    public bool RegisterCoveringOverlayOnMovable(int cell, ObstacleId overlayId)
+    {
+        if (level == null || level.obstacles == null || cell < 0 || cell >= level.obstacles.Length)
+            return false;
+        if (overlayId != ObstacleId.Grass && overlayId != ObstacleId.Oil)
+            return false;
+        if (!IsMovableObstacleAt(cell % level.width, cell / level.width))
+            return false;
+
+        var def = library != null ? library.Get(overlayId) : null;
+        _underTileBeneathMovable[cell] = (overlayId, Mathf.Max(1, def != null ? def.hits : 1));
+        return true;
+    }
+
+    // Movable üstünde etkileşimi kilitleyen örtü (Grass) var mı? Örtü kendi hücresinde birincilken
+    // taşı kilitler; movable altına girince de kilitlemeye devam etmeli (yoksa çimle örtülü plastik
+    // swap edilebiliyordu).
+    private bool IsCoveredByLockingOverlay(int idx)
+    {
+        if (!_underTileBeneathMovable.TryGetValue(idx, out var cover)) return false;
+        if (cover.Id != ObstacleId.Grass && cover.Id != ObstacleId.Oil) return false;
+        var def = library != null ? library.Get(cover.Id) : null;
+        if (def == null) return false;
+        int remaining = cover.Remaining > 0 ? cover.Remaining : Mathf.Max(1, def.hits);
+        var stage = def.GetStageRuleForRemainingHits(remaining);
+        return stage != null && stage.locksInteraction;
+    }
+
+    // Movable'ın (Helmet vb.) altındaki beneath store'da GÖRSEL olarak ÜSTTE duran bir overlay
+    // (Grass/Oil) varsa, gelen hit'i o overlay'e uygular ve movable'ı korur. Overlay tükenince
+    // (remaining<=0) beneath store'dan silinir ve normal overlay-clear sinyalleri (goal + view
+    // temizliği) üretilir; movable primary olarak yerinde kalır. true dönerse hit tüketildi.
+    private bool TryConsumeCoveringOverlayHit(int idx, ObstacleHitContext context, out ObstacleVisualChange change)
+    {
+        change = default;
+
+        if (!_underTileBeneathMovable.TryGetValue(idx, out var beneath))
+            return false;
+
+        // Yalnızca görsel olarak taşın ÜSTÜNDE çizilen CellAnchoredOverlay'ler (Grass, Oil) shield
+        // yapar. Mud gibi gerçekten altta kalan under-tile içerik movable kırılınca açığa çıkmalı →
+        // ona dokunma. (Oil clear'ı OnObstacleDestroyed(Oil) ile RefreshOilOverlays'e akar.)
+        if (beneath.Id != ObstacleId.Grass && beneath.Id != ObstacleId.Oil)
+            return false;
+
+        if (beneath.Id == ObstacleId.Grass && waterLilyCells.Contains(idx))
+        {
+            bool? handled = WaterLilyHitInterceptor?.Invoke(idx, context);
+            if (handled.HasValue)
+            {
+                change = new ObstacleVisualChange(-1, ObstacleId.GrassWaterLily, false, 0, null);
+                // A rejected hit must still protect the movable beneath this flower.
+                return true;
+            }
+        }
+
+        var overlayDef = library != null ? library.Get(beneath.Id) : null;
+        int remaining = beneath.Remaining;
+        if (remaining < 0)
+            remaining = Mathf.Max(1, overlayDef != null ? overlayDef.hits : 1);
+
+        // Overlay'in damage-source kuralına uymayan bir hit ise (grass=Any olduğu için pratikte
+        // gelmez) movable'a GEÇİRME — üst katman canlıyken alt korunur; hit sessizce yutulur.
+        if (!CanConsumeHit(overlayDef, remaining, context, null))
+            return false;
+
+        remaining--;
+
+        bool grassFlowerShed = beneath.Id == ObstacleId.Grass && ShedGrassFlowerIfAny(idx);
+
+        if (remaining <= 0)
+        {
+            _underTileBeneathMovable.Remove(idx);
+            // Normal grass-clear ile aynı olay: goal sayımı + GrassOverlayService/obstacle view temizliği.
+            OnObstacleDestroyed?.Invoke(idx, beneath.Id);
+            if (beneath.Id == ObstacleId.Grass) CompleteWaterLily(idx);
+            change = new ObstacleVisualChange(idx, beneath.Id, cleared: true, remainingHits: 0, sprite: null);
+        }
+        else
+        {
+            _underTileBeneathMovable[idx] = (beneath.Id, remaining);
+            change = new ObstacleVisualChange(idx, beneath.Id, cleared: false, remainingHits: remaining, sprite: null,
+                isGrassFlowerShed: grassFlowerShed);
+        }
+
+        return true;
+    }
+
+    public int CountAliveOrigins(ObstacleId obstacleId)
+    {
+        if (obstacleId == ObstacleId.GrassWaterLily) return waterLilyCells.Count;
+        if (level == null || level.obstacles == null || level.obstacleOrigins == null)
+            return 0;
+
+        int count = 0;
+        int size = Mathf.Min(level.obstacles.Length, level.obstacleOrigins.Length);
+
+        for (int i = 0; i < size; i++)
+        {
+            if ((ObstacleId)level.obstacles[i] != obstacleId) continue;
+            if (level.obstacleOrigins[i] != i) continue;
+            count++;
+        }
+
+        return count;
+    }
+
+    public bool TrySpawnSingleCellObstacleAt(int x, int y, ObstacleId obstacleId)
+    {
+        if (level == null || level.obstacles == null || level.obstacleOrigins == null)
+            return false;
+        if (!level.InBounds(x, y))
+            return false;
+
+        var def = library != null ? library.Get(obstacleId) : null;
+        if (def == null)
+            return false;
+
+        if (def.size.x != 1 || def.size.y != 1)
+            return false;
+
+        int idx = level.Index(x, y);
+        int initialHits = Mathf.Max(1, def.hits);
+
+        if ((ObstacleId)level.obstacles[idx] != ObstacleId.None)
+        {
+            // Dolu hücreye yalnızca MOVABLE spawn inebilir ve yalnızca altta kalabilen
+            // (non-blocking, non-movable) içeriğin — örn. movable kırılınca açığa çıkmış
+            // Mud — üstüne. İçerik beneath'e alınır, movable ayrılınca/kırılınca geri
+            // açılır (MoveObstacle ile aynı kural). Eskiden burada reddediliyordu:
+            // goal-movable spawn'ı mud hücresine denk gelince view'sız kalıyor, hücre
+            // sonsuza dek boş görünüyordu (komşu taşlar da akmıyordu).
+            if (!def.IsMovableObstacleForRemainingHits(initialHits)) return false;
+            if (IsMovableObstacleAt(x, y)) return false;
+            if (IsCellBlocked(x, y)) return false;
+
+            PlaceMovableAt(idx, obstacleId, initialHits);
+            return true;
+        }
+
+        level.obstacles[idx] = (int)obstacleId;
+        level.obstacleOrigins[idx] = idx;
+
+        if (idx >= 0 && idx < remainingHitsByOrigin.Length)
+            remainingHitsByOrigin[idx] = initialHits;
+
+        return true;
+    }
+
+    // ── Oil helpers ──────────────────────────────────────────────────────────
+
+    public ChestColorMask GetChestColorsAt(int x, int y)
+    {
+        if (!IsValidCell(x, y)) return ChestColorMask.None;
+        int idx = level.Index(x, y);
+        if ((ObstacleId)level.obstacles[idx] != ObstacleId.ColorChest) return ChestColorMask.None;
+        int origin = level.obstacleOrigins[idx];
+        if (origin < 0 || !_chestColorStates.TryGetValue(origin, out var mask)) return ChestColorMask.None;
+        return mask;
+    }
+
+    private static ChestColorMask PickRandomChestColor(ChestColorMask mask)
+    {
+        ChestColorMask[] all = { ChestColorMask.Gear, ChestColorMask.Core, ChestColorMask.Bolt, ChestColorMask.Plate };
+        int start = UnityEngine.Random.Range(0, all.Length);
+        for (int i = 0; i < all.Length; i++)
+        {
+            var candidate = all[(start + i) % all.Length];
+            if ((mask & candidate) != 0)
+                return candidate;
+        }
+        return ChestColorMask.None;
+    }
+
+    // int[4] → [Gear, Core, Bolt, Plate] index mapping
+    private static int BatteryColorToIndex(ChestColorMask color) => color switch
+    {
+        ChestColorMask.Gear  => 0,
+        ChestColorMask.Core  => 1,
+        ChestColorMask.Bolt  => 2,
+        ChestColorMask.Plate => 3,
+        _                    => -1
+    };
+
+    private static ChestColorMask PickRandomBatteryColor(int[] batteryHits)
+    {
+        ChestColorMask[] all = { ChestColorMask.Gear, ChestColorMask.Core, ChestColorMask.Bolt, ChestColorMask.Plate };
+        int start = UnityEngine.Random.Range(0, all.Length);
+        for (int i = 0; i < all.Length; i++)
+        {
+            int idx = (start + i) % all.Length;
+            if (batteryHits[idx] > 0)
+                return all[idx];
+        }
+        return ChestColorMask.None;
+    }
+
+    public bool IsFullyDisabledAt(int x, int y)
+    {
+        if (!IsValidCell(x, y)) return false;
+        int idx = level.Index(x, y);
+        var id = (ObstacleId)level.obstacles[idx];
+        if (id == ObstacleId.None) return false;
+        var def = library?.Get(id);
+        if (def == null) return false;
+        int remaining = ResolveRemainingHitsForCell(idx, def);
+        return def.GetDamageRuleForRemainingHits(remaining) == ObstacleDamageSourceRule.FullyDisabled;
+    }
+
+    /// <summary>
+    /// Kaç kez daha anlamlı hit alabilir? FullyDisabled stage'ler sayılmaz.
+    /// PatchBot koordinatörü bu değeri kullanarak birden fazla botu boşa yollamaz.
+    /// </summary>
+    /// Kasanın gerçek kalan vuruşu (açık kilitlerin toplamı) — SafeObstacleService bağlar. Kasa hit-state'i
+    /// remainingHitsByOrigin'de değil kilitlerde tutulur; bu olmadan hedefleme kasayı "1 vuruşluk" sanıp
+    /// ilk PatchBot'tan sonra kasayı hedef listesinden düşürüyordu.
+    public Func<int, int> SafeRemainingHitsQuery;
+
+    /// KeyGenerator: KeyGeneratorService set eder. Makine bir vuruşla HÂLÂ anahtar üretebilir mi?
+    /// Kota tükenince (üretilen+uçan = hedef) false → engel vuruş tüketmez (aşaması hiç düşmediği için
+    /// stage kuralına bakmak "1 vuruş var" der ve PatchBot'lar bitmiş makineye gider).
+    public Func<bool> KeyGeneratorCanProduceQuery;
+
+    // Producer quota/HUD eligibility is independent of the permanent obstacle stage.
+    public Func<bool> HatLauncherCanProduceQuery;
+
+    public int GetActiveMeaningfulHitsAt(int x, int y)
+    {
+        if (!IsValidCell(x, y)) return 0;
+
+        int idx = level.Index(x, y);
+        var id = (ObstacleId)level.obstacles[idx];
+        if (id == ObstacleId.None) return 0;
+
+        if (id == ObstacleId.AncientSeal) return 0;
+        if (id == ObstacleId.Tube) return 1;
+
+        if (id == ObstacleId.HatLauncher)
+            return HatLauncherHitInterceptor != null && HatLauncherCanProduceQuery != null
+                   && HatLauncherCanProduceQuery() ? 1 : 0;
+
+        if (id == ObstacleId.KeyGenerator)
+            return KeyGeneratorCanProduceQuery != null && KeyGeneratorCanProduceQuery() ? 1 : 0;
+
+        if (id == ObstacleId.Safe)
+        {
+            int safeOrigin = level.obstacleOrigins[idx];
+            return SafeRemainingHitsQuery != null ? Mathf.Max(0, SafeRemainingHitsQuery(safeOrigin)) : 1;
+        }
+
+        var def = library?.Get(id);
+        if (def == null) return 0;
+
+        int current = ResolveRemainingHitsForCell(idx, def);
+        int count = waterLilyCells.Contains(idx) ? Mathf.Max(0, WaterLilyRemainingHitsQuery?.Invoke(idx) ?? 4) : 0;
+
+        for (int r = current; r > 0; r--)
+        {
+            var stage = def.GetStageRuleForRemainingHits(r);
+            if (stage == null || stage.damageRule == ObstacleDamageSourceRule.FullyDisabled)
+                break;
+            count++;
+        }
+
+        // Dolabın gerçek dayanıklılığı item'larda: remainingHits hep 2 (kapalı/açık) kalırken açık dolap
+        // special vuruşu başına 2 item kırar, son item'la yıkılır. Bu olmadan hedefleme 8 item'lı dolabı
+        // "1-2 vuruşluk" sanıp ilk bottan sonra listeden düşürüyordu (Override+PatchBot'ta tek bot gidiyordu).
+        // Boya kutusu piramidi: special vuruşu başına 2 kutu düşer.
+        if (id == ObstacleId.PaintCanBox)
+            return (count + 1) / 2;
+
+        if (id == ObstacleId.Wardrobe && count > 0)
+        {
+            int origin = level.obstacleOrigins[idx];
+            int itemsLeft = _wardrobeItemCounts.TryGetValue(origin, out int items) ? items : 0;
+            int itemHits = Mathf.Max(1, (itemsLeft + 1) / 2);
+            return current >= 2 ? 1 + itemHits : itemHits;
+        }
+
+        return count;
+    }
+
+    public bool IsUnderTileObstacleAt(int x, int y)
+    {
+        if (!IsValidCell(x, y)) return false;
+        int idx = level.Index(x, y);
+        var id = (ObstacleId)level.obstacles[idx];
+        if (id == ObstacleId.None) return false;
+        var def = library?.Get(id);
+        if (def == null) return false;
+        int remaining = ResolveRemainingHitsForCell(idx, def);
+        var stage = def.GetStageRuleForRemainingHits(remaining);
+        return stage != null && stage.behavior == ObstacleBehaviorType.UnderTileLayered;
+    }
+
+    /// Fires OnObstacleDestroyed for a fully-destroyed tube. Called by TubeObstacleService
+    /// when the last cell of a tube is freed. Triggers goal counters etc.
+    public void NotifyTubeFullyDestroyed(int originIndex)
+    {
+        OnObstacleDestroyed?.Invoke(originIndex, ObstacleId.Tube);
+    }
+
+    /// Fires OnObstacleDestroyed for a fully-destroyed magnet pair. Called by MagnetObstacleService
+    /// when the two magnets meet and the pair is cleared.
+    public void NotifyMagnetFullyDestroyed(int originIndex)
+    {
+        OnObstacleDestroyed?.Invoke(originIndex, ObstacleId.Magnet);
+    }
+
+    /// Frees a single magnet cell from the obstacle layer and fires OnCellUnlocked.
+    /// Called by MagnetObstacleService as magnets step toward each other.
+    public void FreeMagnetCell(int cellIndex)
+    {
+        if (level == null || level.obstacles == null || level.obstacleOrigins == null) return;
+        if (cellIndex < 0 || cellIndex >= level.obstacles.Length) return;
+
+        // The meeting cell may still be covered by Grass. Preserve the live cover,
+        // but remove the retired Magnet from its beneath stack: otherwise breaking
+        // the cover later restores an invisible, permanently blocked Magnet cell.
+        if ((ObstacleId)level.obstacles[cellIndex] != ObstacleId.Magnet)
+        {
+            if (RemoveStampedObstacleBeneath(cellIndex, ObstacleId.Magnet))
+                OnCellUnlocked?.Invoke(cellIndex);
+            return;
+        }
+
+        // An exposed Magnet can itself cover authored content. Reveal that content
+        // instead of erasing it when the endpoint leaves this cell.
+        if (TryRestoreStampedBeneathCell(cellIndex, out int restoredOrigin, out var restoredId, out int remainingOverride))
+        {
+            if (restoredOrigin >= 0)
+                ReinitRestoredBeneathOrigin(restoredOrigin, restoredId, remainingOverride);
+            OnCellUnlocked?.Invoke(cellIndex);
+            return;
+        }
+
+        level.obstacles[cellIndex]       = (int)ObstacleId.None;
+        level.obstacleOrigins[cellIndex] = -1;
+
+        OnCellUnlocked?.Invoke(cellIndex);
+    }
+
+    private bool RemoveStampedObstacleBeneath(int cellIndex, ObstacleId id, int origin = -1)
+    {
+        if (!_stampedBeneathByCell.TryGetValue(cellIndex, out var layers) || layers == null)
+            return false;
+
+        bool removed = false;
+        for (int i = layers.Count - 1; i >= 0; i--)
+        {
+            var retired = layers[i];
+            if (retired.Id != id || (origin >= 0 && retired.Origin != origin)) continue;
+
+            // Reconnect lower layers to the surviving cover. Removing a wall from
+            // Mud -> Wall -> Grass -> Safe must preserve every other layer.
+            if (i > 0)
+            {
+                var beneath = layers[i - 1];
+                layers[i - 1] = new StampedBeneath(
+                    beneath.Id, beneath.Origin, retired.OverOrigin, beneath.Remaining);
+            }
+            layers.RemoveAt(i);
+            removed = true;
+        }
+
+        if (layers.Count == 0)
+            _stampedBeneathByCell.Remove(cellIndex);
+        return removed;
+    }
+
+    /// Removes all EnergyContainer cells from the obstacle layer and fires OnCellUnlocked
+    /// for each, triggering gravity. Called only when a booster directly destroys an
+    /// exhausted container (remaining goes to 0 via normal TryDamageAt flow).
+    public void ForceRemoveAllEnergyContainers()
+    {
+        if (level == null || level.obstacles == null || level.obstacleOrigins == null)
+            return;
+
+        int size = Mathf.Min(level.obstacles.Length, level.obstacleOrigins.Length);
+        var origins = new List<int>();
+
+        for (int i = 0; i < size; i++)
+        {
+            if ((ObstacleId)level.obstacles[i] != ObstacleId.EnergyContainer) continue;
+            if (level.obstacleOrigins[i] != i) continue;
+            origins.Add(i);
+        }
+
+        foreach (int origin in origins)
+            ClearObstacleFromLevel(origin, ObstacleId.EnergyContainer);
+    }
+
+    /// Sets all alive EnergyContainers to remaining=1 (FullyDisabled stage) WITHOUT
+    /// removing them from the obstacle layer. The cell stays blocked; only a booster
+    /// can clear the container. Called by EnergyContainerService when the group energy
+    /// quota is depleted.
+    public void SetAllEnergyContainersExhausted()
+    {
+        if (level == null || level.obstacles == null || level.obstacleOrigins == null)
+            return;
+
+        int size = Mathf.Min(level.obstacles.Length, level.obstacleOrigins.Length);
+        for (int i = 0; i < size; i++)
+        {
+            if ((ObstacleId)level.obstacles[i] != ObstacleId.EnergyContainer) continue;
+            if (level.obstacleOrigins[i] != i) continue;
+            if (remainingHitsByOrigin[i] > 1)
+                remainingHitsByOrigin[i] = 1; // FullyDisabled stage — cell stays blocked
+        }
+    }
+
+    /// Tüp küçülünce hücreyi bırakır: altında saklanan authored içerik (Grass, Mud...) varsa onu açar,
+    /// yoksa hücreyi boşaltır. TubeObstacleService bunu çağırır.
+    public void ReleaseTubeCell(int cellIndex)
+    {
+        if (level == null || level.obstacles == null || level.obstacleOrigins == null) return;
+        if (cellIndex < 0 || cellIndex >= level.obstacles.Length) return;
+
+        // RestoreCellObstacle hücre açılma olayını (OnCellUnlocked) kendisi gönderir.
+        if (TryRestoreStampedBeneathCell(cellIndex, out int restoredOrigin, out var restoredId, out int remainingOverride))
+        {
+            if (restoredOrigin >= 0)
+                ReinitRestoredBeneathOrigin(restoredOrigin, restoredId, remainingOverride);
+            return;
+        }
+
+        FreeTubeCell(cellIndex);
+    }
+
+    /// Frees a single tube cell from the obstacle layer and fires OnCellUnlocked.
+    /// Called by TubeObstacleService when the tube shrinks.
+    public void FreeTubeCell(int cellIndex)
+    {
+        if (level == null || level.obstacles == null || level.obstacleOrigins == null) return;
+        if (cellIndex < 0 || cellIndex >= level.obstacles.Length) return;
+
+        int origin = level.obstacleOrigins[cellIndex];
+        level.obstacles[cellIndex]      = (int)ObstacleId.None;
+        level.obstacleOrigins[cellIndex] = -1;
+
+        if (origin >= 0 && origin < remainingHitsByOrigin.Length)
+            remainingHitsByOrigin[origin] = -1;
+
+        OnCellUnlocked?.Invoke(cellIndex);
+    }
+
+    // ── Safe reveal primitives ───────────────────────────────────────────────
+
+    /// Bir hücreyi belirtilen obstacle'a geri yükler (Safe reveal — beneath restore).
+    /// id==None ise hücre açılır (FreeTubeCell gibi: boşalt + OnCellUnlocked → board refill eder).
+    public void RestoreCellObstacle(int cell, ObstacleId id, int origin)
+    {
+        if (level == null || level.obstacles == null || level.obstacleOrigins == null) return;
+        if (cell < 0 || cell >= level.obstacles.Length) return;
+
+        if (id == ObstacleId.None)
+        {
+            FreeTubeCell(cell);   // None'a çevir + OnCellUnlocked
+            return;
+        }
+
+        level.obstacles[cell]       = (int)id;
+        level.obstacleOrigins[cell] = origin;
+
+        var def = library != null ? library.Get(id) : null;
+        int remaining = Mathf.Max(1, def != null ? def.hits : 1);
+        if (def == null || !def.GetBlocksCellsForRemainingHits(remaining))
+            OnCellUnlocked?.Invoke(cell);
+    }
+
+    /// Tek bir origin için obstacle hit-state'ini def'ten yeniden kurar (Safe altından çıkan
+    /// beneath obstacle'lar için). InitializeFromLevel loop gövdesinin tek-origin versiyonu.
+    public void InitObstacleStateAt(int origin, int remainingOverride = -1)
+    {
+        if (level == null || origin < 0 || origin >= remainingHitsByOrigin.Length) return;
+        if (level.obstacles == null || origin >= level.obstacles.Length) return;
+
+        var id = (ObstacleId)level.obstacles[origin];
+        if (id == ObstacleId.None) { remainingHitsByOrigin[origin] = -1; return; }
+
+        var def = library != null ? library.Get(id) : null;
+        int hits;
+        if (id == ObstacleId.EnergyContainer)
+        {
+            hits = Mathf.Max(1, level.energyPerContainer) + 1;
+        }
+        else if (id == ObstacleId.BatteryBox)
+        {
+            int hitsPerBattery = Mathf.Max(1, def != null ? def.hits : 1);
+            hits = hitsPerBattery * 4;
+            _batteryHitsByOrigin[origin] = new int[] { hitsPerBattery, hitsPerBattery, hitsPerBattery, hitsPerBattery };
+        }
+        else if (id == ObstacleId.OverrideBatteryBox)
+        {
+            int hitsPerBattery = Mathf.Max(1, def != null ? def.hits : 3);
+            hits = hitsPerBattery * 4;
+            _overrideBatteryHitsByOrigin[origin] = new int[] { hitsPerBattery, hitsPerBattery, hitsPerBattery, hitsPerBattery };
+            _overrideBatteryProgressByOrigin[origin] = 0;
+        }
+        else if (id == ObstacleId.Wardrobe)
+        {
+            hits = 2;
+            int itemCount = def != null ? def.wardrobeItemSprites.Count : 0;
+            _wardrobeItemCounts[origin] = Mathf.Max(0, itemCount);
+        }
+        else
+        {
+            // Yığın altından açığa çıkan çiçekli çim: çiçek katmanının vuruşu da geri gelir.
+            hits = Mathf.Max(1, def != null ? def.hits : 1) + GetGrassFlowerBonusHits(origin, id);
+        }
+        remainingHitsByOrigin[origin] = remainingOverride > 0 ? remainingOverride : hits;
+
+        if (id == ObstacleId.ColorChest)
+            _chestColorStates[origin] = ChestColorMask.All;
+    }
+
+    /// Wall: parçanın kalan "anlamlı" vuruşu = en ilerlemiş hücresinin parçayı yıkmasına kalan vuruş.
+    /// WallObstacleService her aşama değişiminde yazar (PatchBot kapasitesi / stage sorguları bunu okur).
+    public void SetWallRemainingHits(int origin, ObstacleId id, int remaining)
+    {
+        if (origin < 0 || origin >= remainingHitsByOrigin.Length) return;
+        if (id != ObstacleId.Wall && id != ObstacleId.MetalWall) return;
+        wallRemainingHits[(id, origin)] = Mathf.Max(1, remaining);
+    }
+
+    /// All collection stages completed: count one Ancient Seal goal.
+    public void NotifyAncientSealBroken(int origin)
+    {
+        OnObstacleDestroyed?.Invoke(origin, ObstacleId.AncientSeal);
+    }
+
+    /// Safe kırıldı → goal (Obstacle/Safe) ilerlesin. NotifyTubeFullyDestroyed analoğu.
+    public void NotifySafeBroken(int origin)
+    {
+        OnObstacleDestroyed?.Invoke(origin, ObstacleId.Safe);
+    }
+
+    public bool IsOilAt(int x, int y)
+    {
+        if (!IsValidCell(x, y)) return false;
+        int idx = level.Index(x, y);
+        return (ObstacleId)level.obstacles[idx] == ObstacleId.Oil;
+    }
+
+    // Grass: Oil gibi CellAnchoredOverlay (locksInteraction). Komşu-match hasarı için Oil ile
+    // aynı yola dahil edilir (CollectAdjacentOverTileBlockers). Match/swap kilidi genel
+    // IsInteractionLockedAt üzerinden zaten çalışır (def locksInteraction=1).
+    public bool IsGrassAt(int x, int y)
+    {
+        if (!IsValidCell(x, y)) return false;
+        int idx = level.Index(x, y);
+        return (ObstacleId)level.obstacles[idx] == ObstacleId.Grass;
+    }
+
+    // Mud sadece görsel overlay; swap/interaction'ı bloklamaz.
+    // BoardController IsUnderTileObstacleAt check'inde Mud'u istisna yapmak için kullanılır.
+    public bool IsMudAt(int x, int y)
+    {
+        if (!IsValidCell(x, y)) return false;
+        int idx = level.Index(x, y);
+        return (ObstacleId)level.obstacles[idx] == ObstacleId.Mud;
+    }
+
+    // SpreadingGel de mud gibi under-tile ama taş üstünde normal oynanır (swap/match serbest).
+    public bool IsSpreadingGelAt(int x, int y)
+    {
+        if (!IsValidCell(x, y)) return false;
+        int idx = level.Index(x, y);
+        return (ObstacleId)level.obstacles[idx] == ObstacleId.SpreadingGel;
+    }
+
+    // Su birikintisi (WaterTank'tan saçılır): mud gibi pasif under-tile, taş üstünde oynanır.
+    public bool IsWaterPuddleAt(int x, int y)
+    {
+        if (!IsValidCell(x, y)) return false;
+        int idx = level.Index(x, y);
+        return (ObstacleId)level.obstacles[idx] == ObstacleId.WaterPuddle;
+    }
+
+    // Mud + SpreadingGel + WaterPuddle: interaction'ı KİLİTLEMEYEN pasif under-tile overlay'ler.
+    // Diğer under-tile obstacle'lar swap/select'i bloklar; bunlar istisna (taş üstünde normal
+    // oynanır + hareket eder).
+    public bool IsInteractiveUnderTileOverlayAt(int x, int y)
+        => IsMudAt(x, y) || IsSpreadingGelAt(x, y) || IsWaterPuddleAt(x, y) || IsWaterChannelAt(x, y);
+
+    // Kapalı su kanalı: su birikintisi gibi pasif taş altı katman; üstündeki taş normal oynanır.
+    public bool IsWaterChannelAt(int x, int y)
+    {
+        if (!IsValidCell(x, y)) return false;
+        return (ObstacleId)level.obstacles[level.Index(x, y)] == ObstacleId.WaterChannel;
+    }
+
+    // Oil (veya herhangi bir holdsTile=true obstacle) bu hücredeki taşı tutuyorsa true.
+    // allowDiagonal=true ise çapraz akış yine izinli — bu method sadece dikey blok için.
+    public bool HoldsTileAt(int x, int y)
+    {
+        if (!IsValidCell(x, y)) return false;
+        int idx = level.Index(x, y);
+        var obsId = (ObstacleId)level.obstacles[idx];
+        if (obsId == ObstacleId.None) return false;
+        var def = library?.Get(obsId);
+        if (def == null) return false;
+        var stage = def.GetStageRuleForRemainingHits(ResolveRemainingHitsForCell(idx, def));
+        return stage != null && stage.holdsTile;
+    }
+
+    // HoldsTile + allowDiagonal => çapraz akış hâlâ izinli mi?
+    public bool AllowsDiagonalAt(int x, int y)
+    {
+        if (!IsValidCell(x, y)) return false;
+        int idx = level.Index(x, y);
+        var obsId = (ObstacleId)level.obstacles[idx];
+        if (obsId == ObstacleId.None) return false;
+        var def = library?.Get(obsId);
+        if (def == null) return false;
+        var stage = def.GetStageRuleForRemainingHits(ResolveRemainingHitsForCell(idx, def));
+        return stage != null && stage.allowDiagonal;
+    }
+
+
+    public bool TryAddOilAt(int x, int y)
+    {
+        bool added = TrySpawnSingleCellObstacleAt(x, y, ObstacleId.Oil);
+        if (added)
+            {}
+        return added;
+    }
+
+    public bool TryAddOilAtOrBeneathOverTile(int x, int y)
+    {
+        return TrySpawnSingleCellObstacleAtOrBeneathOverTile(x, y, ObstacleId.Oil);
+    }
+
+    // Zemin örtüsü (Mud, su birikintisi, jel…): taşın ALTINDA kalan katman; yığının en altında durur.
+    private bool IsGroundLayer(ObstacleId id, int remaining)
+    {
+        if (id == ObstacleId.SpreadingGel) return true;
+        var def = library != null ? library.Get(id) : null;
+        if (def == null) return false;
+        var stage = def.GetStageRuleForRemainingHits(Mathf.Max(1, remaining));
+        return stage != null && stage.behavior == ObstacleBehaviorType.UnderTileLayered;
+    }
+
+    public bool TrySpawnSingleCellObstacleAtOrBeneathOverTile(int x, int y, ObstacleId obstacleId)
+    {
+        if (obstacleId == ObstacleId.Oil && TryAddOilAt(x, y))
+            return true;
+
+        if (obstacleId != ObstacleId.Oil && TrySpawnSingleCellObstacleAt(x, y, obstacleId))
+            return true;
+
+        if (!IsValidCell(x, y))
+            return false;
+
+        var def = library != null ? library.Get(obstacleId) : null;
+        if (def == null || def.size.x != 1 || def.size.y != 1)
+            return false;
+
+        int idx = level.Index(x, y);
+        if ((ObstacleId)level.obstacles[idx] == ObstacleId.None)
+            return false;
+
+        if (!IsOverTileBlockerAt(x, y) || IsMovableObstacleAt(x, y))
+            return false;
+
+        // Yığın varsa (kaç katman olursa olsun) mud EN ALTA girer — Mud/Jel daima en alttadır.
+        // Liste sonu = üst katman (önce açılır), başı = en alt.
+        if (_stampedBeneathByCell.TryGetValue(idx, out var layers) && layers != null && layers.Count > 0)
+        {
+            var bottom = layers[0];
+            int hits = Mathf.Max(1, def.hits);
+            if (bottom.Id == ObstacleId.None)
+            {
+                // "Boş zemin" işareti: mud o zeminin yerine geçer (üstündeki engel aynı kalır).
+                layers[0] = new StampedBeneath(obstacleId, idx, bottom.OverOrigin, hits);
+            }
+            else
+            {
+                if (IsGroundLayer(bottom.Id, bottom.Remaining)) return false;   // zemin zaten örtülü
+                layers.Insert(0, new StampedBeneath(obstacleId, idx, bottom.Origin, hits));
+            }
+            return true;
+        }
+
+        int overOrigin = GetObstacleOriginAt(x, y);
+        if (overOrigin < 0)
+            return false;
+
+        RegisterStampedBeneath(idx, obstacleId, idx, overOrigin);
+        return true;
+    }
+
+    /// <summary>
+    /// RocketBasketService son roket fırlayınca çağırır: sepeti board verisinden temizler
+    /// (OnObstacleDestroyed → hücre serbest, cascade akar). Görsel teardown view'da.
+    /// </summary>
+    public void ClearRocketBasket(int origin)
+    {
+        if (level == null || level.obstacles == null || level.obstacleOrigins == null)
+            return;
+        if (origin < 0 || origin >= level.obstacles.Length)
+            return;
+        if ((ObstacleId)level.obstacles[origin] != ObstacleId.RocketBasket)
+            return;
+
+        ClearObstacleFromLevel(origin, ObstacleId.RocketBasket);
+    }
+
+    public bool TryRemoveOilAt(int x, int y)
+    {
+        if (!IsOilAt(x, y)) return false;
+        int idx = level.Index(x, y);
+        ClearObstacleFromLevel(idx, ObstacleId.Oil);
+        return true;
+    }
+
+    public List<Vector2Int> GetAllOilCells()
+    {
+        var result = new List<Vector2Int>();
+        if (level == null || level.obstacles == null) return result;
+
+        for (int i = 0; i < level.obstacles.Length; i++)
+        {
+            if ((ObstacleId)level.obstacles[i] != ObstacleId.Oil) continue;
+            int x = i % level.width;
+            int y = i / level.width;
+            result.Add(new Vector2Int(x, y));
+        }
+        return result;
+    }
+
+    public bool CanOilSpreadTo(int x, int y)
+    {
+        if (!IsValidCell(x, y)) return false;
+        int idx = level.Index(x, y);
+        return (ObstacleId)level.obstacles[idx] == ObstacleId.None;
+    }
+}

@@ -1,0 +1,27 @@
+{
+  "level": 179,
+  "passed": true,
+  "userAssetPreservedExceptInitialHits": true,
+  "moves": 31,
+  "specialPins": {
+    "20": 4,
+    "21": 2
+  },
+  "stageRows": [
+    3,
+    2,
+    1,
+    1
+  ],
+  "crateInstances": 24,
+  "crateHitBudgetBefore": 72,
+  "crateHitBudgetAfter": 42,
+  "openingOpenTileCells": 18,
+  "coveredHeldTileCells": 12,
+  "protectedSettingsScriptsResourcesUnchanged": 2390,
+  "sharedLibraryUnchanged": true,
+  "unityBuildRun": false,
+  "unityPlayOrGameplaySimulationRun": false,
+  "csharpCompileRun": false,
+  "winRateMeasured": false
+}

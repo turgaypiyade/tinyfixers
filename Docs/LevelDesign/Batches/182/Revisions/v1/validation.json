@@ -1,0 +1,21 @@
+{
+  "level": 182,
+  "passed": true,
+  "active": 81,
+  "holes": 18,
+  "openingTileCells": 30,
+  "directRefillReachable": 30,
+  "normalAdjacencyComponents": 1,
+  "diagonalCornerOnlyNodes": 0,
+  "obstacleInstances": {
+    "75": 30,
+    "30": 21
+  },
+  "moves": 28,
+  "goalDemandAboveInitial": 0,
+  "previousSettingsAndScriptsUnchanged": 1861,
+  "firstLanternProductionLevel": true,
+  "unityBuildRun": false,
+  "gameplaySimulationRun": false,
+  "winRateMeasured": false
+}

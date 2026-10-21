@@ -48,6 +48,7 @@ MonoBehaviour:
   bossWaveCount: 0
   oilSpreadMaxCells: 0
   randomPool: 
+  refillSpecialGuard: -1
   energyPerContainer: 1
   rocketBasketFireAllOnHit: 0
   comboTutorial: 0
@@ -60,6 +61,8 @@ MonoBehaviour:
   obstacleOrigins: ffffffffffffffff02000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0b000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff14000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff1d000000ffffffffffffffffffffffffffffffff2200000022000000ffffffffffffffff26000000ffffffffffffffffffffffffffffffff2200000022000000ffffffffffffffff2f000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff3f0000003f0000003f000000ffffffffffffffffffffffff4500000045000000450000003f0000003f0000003f000000ffffffffffffffffffffffff4500000045000000450000003f0000003f0000003f000000ffffffffffffffffffffffff450000004500000045000000
   tubes: []
   magnets: []
+  waterChannels:
+  - pathCellIndices: 030000000c000000150000001e000000270000002800000029000000320000003b000000440000004d00000056000000
   safes: []
   ancientSeals: []
   stackedObstacles: []

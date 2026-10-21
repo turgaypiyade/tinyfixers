@@ -1,0 +1,169 @@
+{
+  "previousLevelsScanned": 181,
+  "shortlist": [
+    {
+      "level": 123,
+      "name": "Mor Boyahane",
+      "blockerOverlap": 0.8095,
+      "maskOverlap": 0.8182,
+      "orientation": "aynı yön",
+      "sameDirectionOverlap": 0.8095,
+      "croppedShapeOverlap": 0.8081,
+      "croppedShapeOrientation": "yatay ayna",
+      "sharedFamilies": [],
+      "familyOverlap": 0.0
+    },
+    {
+      "level": 32,
+      "name": "Sandıklı Tesisat",
+      "blockerOverlap": 0.7816,
+      "maskOverlap": 0.8182,
+      "orientation": "aynı yön",
+      "sameDirectionOverlap": 0.7816,
+      "croppedShapeOverlap": 0.8081,
+      "croppedShapeOrientation": "yatay ayna",
+      "sharedFamilies": [],
+      "familyOverlap": 0.0
+    },
+    {
+      "level": 86,
+      "name": "Mor İzler",
+      "blockerOverlap": 0.7426,
+      "maskOverlap": 0.8895,
+      "orientation": "aynı yön",
+      "sameDirectionOverlap": 0.7426,
+      "croppedShapeOverlap": 0.7779,
+      "croppedShapeOrientation": "yatay ayna",
+      "sharedFamilies": [],
+      "familyOverlap": 0.0
+    },
+    {
+      "level": 80,
+      "name": "Onarım Düellosu",
+      "blockerOverlap": 0.7346,
+      "maskOverlap": 0.7449,
+      "orientation": "aynı yön",
+      "sameDirectionOverlap": 0.7346,
+      "croppedShapeOverlap": 0.7525,
+      "croppedShapeOrientation": "yatay ayna",
+      "sharedFamilies": [],
+      "familyOverlap": 0.0
+    },
+    {
+      "level": 172,
+      "name": "Boya İskelesi",
+      "blockerOverlap": 0.7213,
+      "maskOverlap": 0.8462,
+      "orientation": "aynı yön",
+      "sameDirectionOverlap": 0.7213,
+      "croppedShapeOverlap": 0.685,
+      "croppedShapeOrientation": "yatay ayna",
+      "sharedFamilies": [
+        30
+      ],
+      "familyOverlap": 0.1667
+    },
+    {
+      "level": 84,
+      "name": "Porselen Dolaplar",
+      "blockerOverlap": 0.7083,
+      "maskOverlap": 0.8182,
+      "orientation": "aynı yön",
+      "sameDirectionOverlap": 0.7083,
+      "croppedShapeOverlap": 0.8081,
+      "croppedShapeOrientation": "yatay ayna",
+      "sharedFamilies": [
+        30
+      ],
+      "familyOverlap": 0.3333
+    },
+    {
+      "level": 142,
+      "name": "Örtülü Surlar",
+      "blockerOverlap": 0.7083,
+      "maskOverlap": 0.7879,
+      "orientation": "aynı yön",
+      "sameDirectionOverlap": 0.7083,
+      "croppedShapeOverlap": 0.8081,
+      "croppedShapeOrientation": "yatay ayna",
+      "sharedFamilies": [],
+      "familyOverlap": 0.0
+    },
+    {
+      "level": 54,
+      "name": "Turuncu Avlular",
+      "blockerOverlap": 0.7037,
+      "maskOverlap": 0.9048,
+      "orientation": "aynı yön",
+      "sameDirectionOverlap": 0.7037,
+      "croppedShapeOverlap": 0.8924,
+      "croppedShapeOrientation": "yatay ayna",
+      "sharedFamilies": [],
+      "familyOverlap": 0.0
+    },
+    {
+      "level": 19,
+      "name": "Dört Renkli Depo",
+      "blockerOverlap": 0.6667,
+      "maskOverlap": 0.8182,
+      "orientation": "aynı yön",
+      "sameDirectionOverlap": 0.6667,
+      "croppedShapeOverlap": 0.8081,
+      "croppedShapeOrientation": "yatay ayna",
+      "sharedFamilies": [],
+      "familyOverlap": 0.0
+    },
+    {
+      "level": 152,
+      "name": "Basamaklı Atölye",
+      "blockerOverlap": 0.6667,
+      "maskOverlap": 0.8172,
+      "orientation": "aynı yön",
+      "sameDirectionOverlap": 0.6667,
+      "croppedShapeOverlap": 0.5695,
+      "croppedShapeOrientation": "dikey ayna",
+      "sharedFamilies": [],
+      "familyOverlap": 0.0
+    },
+    {
+      "level": 82,
+      "name": "Çift Çekim",
+      "blockerOverlap": 0.6479,
+      "maskOverlap": 0.8351,
+      "orientation": "aynı yön",
+      "sameDirectionOverlap": 0.6479,
+      "croppedShapeOverlap": 0.7883,
+      "croppedShapeOrientation": "dikey ayna",
+      "sharedFamilies": [],
+      "familyOverlap": 0.0
+    },
+    {
+      "level": 143,
+      "name": "Lazerli Hazine",
+      "blockerOverlap": 0.6475,
+      "maskOverlap": 0.6469,
+      "orientation": "aynı yön",
+      "sameDirectionOverlap": 0.6475,
+      "croppedShapeOverlap": 0.6478,
+      "croppedShapeOrientation": "yatay ayna",
+      "sharedFamilies": [
+        30
+      ],
+      "familyOverlap": 0.2
+    }
+  ],
+  "candidateRows": [
+    "..ooooo..",
+    ".ooooooo.",
+    "ooooooooo",
+    "ooooooooo",
+    "LLLLLLLLL",
+    "LHLHLHLHL",
+    "HLHLHLHLH",
+    ".LHLHLHL.",
+    ".HLHLHLH.",
+    "..LHLHL..",
+    "..HLHLH.."
+  ],
+  "decision": "Lower checkerboard is deliberate visual grammar from user reference 03. Distinct from 115: no metal side towers/mud; unlike 123 rectangular field, board narrows 9→7→5 with wide bottom. New Lantern introduction, not a claim of new mechanics."
+}

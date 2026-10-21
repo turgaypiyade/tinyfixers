@@ -1,0 +1,15 @@
+{
+  "protectedFileCount": 2406,
+  "protectedChanged": [],
+  "lexicalDelimiters": {
+    "Assets/_Project/Scripts/Core/LevelData.cs": true,
+    "Assets/_Project/Scripts/Editor/LevelDataEditor.cs": true,
+    "Assets/_Project/Scripts/Grid/Board/Obstacles/ObstacleStateService.cs": true
+  },
+  "sourceSha256": {
+    "Assets/_Project/Scripts/Core/LevelData.cs": "98d5988fcd1dd79fd7116f0027d464114c08c50e00603a31094c75742da598ee",
+    "Assets/_Project/Scripts/Editor/LevelDataEditor.cs": "d017d6fc16cb0ea350a8ffb8bbef0e84bdea3766e2ebd1d3af6213e96d261b12",
+    "Assets/_Project/Scripts/Grid/Board/Obstacles/ObstacleStateService.cs": "002e56119d222471aa688f4cc48ac420fd4b503969eaf2ce4c79ed96f1546df6"
+  },
+  "validation": "Static source review and preservation hashes only. No Unity compilation, Play, build, or simulation."
+}

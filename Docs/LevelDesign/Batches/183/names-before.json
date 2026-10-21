@@ -1,0 +1,916 @@
+{
+  "schemaVersion": 1,
+  "language": "tr",
+  "entries": [
+    {
+      "level": 1,
+      "levelKey": "LevelCL_001",
+      "name": "İlk Tamir"
+    },
+    {
+      "level": 2,
+      "levelKey": "LevelCL_002",
+      "name": "Renkli Başlangıç"
+    },
+    {
+      "level": 3,
+      "levelKey": "LevelCL_003",
+      "name": "İki Katlı İş"
+    },
+    {
+      "level": 4,
+      "levelKey": "LevelCL_004",
+      "name": "Çamurlu Avlu"
+    },
+    {
+      "level": 5,
+      "levelKey": "LevelCL_005",
+      "name": "Ahşap Basamaklar"
+    },
+    {
+      "level": 6,
+      "levelKey": "LevelCL_006",
+      "name": "Yağlı Rampa"
+    },
+    {
+      "level": 7,
+      "levelKey": "LevelCL_007",
+      "name": "Sandık Koridoru"
+    },
+    {
+      "level": 8,
+      "levelKey": "LevelCL_008",
+      "name": "Turuncu Şeritler"
+    },
+    {
+      "level": 9,
+      "levelKey": "LevelCL_009",
+      "name": "İlk Sevkiyat"
+    },
+    {
+      "level": 10,
+      "levelKey": "LevelCL_010",
+      "name": "Atölye Düellosu"
+    },
+    {
+      "level": 11,
+      "levelKey": "LevelCL_011",
+      "name": "Kargo Köprüsü"
+    },
+    {
+      "level": 12,
+      "levelKey": "LevelCL_012",
+      "name": "Mor ve Turuncu"
+    },
+    {
+      "level": 13,
+      "levelKey": "LevelCL_013",
+      "name": "İki Renkli Onarım"
+    },
+    {
+      "level": 14,
+      "levelKey": "LevelCL_014",
+      "name": "Mavi Sandıklar"
+    },
+    {
+      "level": 15,
+      "levelKey": "LevelCL_015",
+      "name": "Kızıl Hat"
+    },
+    {
+      "level": 16,
+      "levelKey": "LevelCL_016",
+      "name": "Çamurlu Sevkiyat"
+    },
+    {
+      "level": 17,
+      "levelKey": "LevelCL_017",
+      "name": "Saklı Zemin"
+    },
+    {
+      "level": 18,
+      "levelKey": "LevelCL_018",
+      "name": "Renkli Kilitler"
+    },
+    {
+      "level": 19,
+      "levelKey": "LevelCL_019",
+      "name": "Dört Renkli Depo"
+    },
+    {
+      "level": 20,
+      "levelKey": "LevelCL_020",
+      "name": "Ustanın Sınavı"
+    },
+    {
+      "level": 21,
+      "levelKey": "LevelCL_021",
+      "name": "Kaygan Depo"
+    },
+    {
+      "level": 22,
+      "levelKey": "LevelCL_022",
+      "name": "Şapkalı Atölye"
+    },
+    {
+      "level": 23,
+      "levelKey": "LevelCL_023",
+      "name": "Enerji Şöleni"
+    },
+    {
+      "level": 24,
+      "levelKey": "LevelCL_024",
+      "name": "Sandık Meydanı"
+    },
+    {
+      "level": 25,
+      "levelKey": "LevelCL_025",
+      "name": "Kargo Adaları"
+    },
+    {
+      "level": 26,
+      "levelKey": "LevelCL_026",
+      "name": "Çamurlu Enerji"
+    },
+    {
+      "level": 27,
+      "levelKey": "LevelCL_027",
+      "name": "Depo Temizliği"
+    },
+    {
+      "level": 28,
+      "levelKey": "LevelCL_028",
+      "name": "Kat Kat Onarım"
+    },
+    {
+      "level": 29,
+      "levelKey": "LevelCL_029",
+      "name": "Eşya Pazarı"
+    },
+    {
+      "level": 30,
+      "levelKey": "LevelCL_030",
+      "name": "İkinci Vardiya"
+    },
+    {
+      "level": 31,
+      "levelKey": "LevelCL_031",
+      "name": "Boru Hattı"
+    },
+    {
+      "level": 32,
+      "levelKey": "LevelCL_032",
+      "name": "Sandıklı Tesisat"
+    },
+    {
+      "level": 33,
+      "levelKey": "LevelCL_033",
+      "name": "Kargo Tüneli"
+    },
+    {
+      "level": 34,
+      "levelKey": "LevelCL_034",
+      "name": "Mavi Geçiş"
+    },
+    {
+      "level": 35,
+      "levelKey": "LevelCL_035",
+      "name": "Boru Atölyesi"
+    },
+    {
+      "level": 36,
+      "levelKey": "LevelCL_036",
+      "name": "On Dolaplı Salon"
+    },
+    {
+      "level": 37,
+      "levelKey": "LevelCL_037",
+      "name": "Porselen Kanal"
+    },
+    {
+      "level": 38,
+      "levelKey": "LevelCL_038",
+      "name": "Heykeltıraşın Işığı"
+    },
+    {
+      "level": 39,
+      "levelKey": "LevelCL_039",
+      "name": "Porselen Vitrin"
+    },
+    {
+      "level": 40,
+      "levelKey": "LevelCL_040",
+      "name": "Enerji Düellosu"
+    },
+    {
+      "level": 41,
+      "levelKey": "LevelCL_041",
+      "name": "Taş Ustası"
+    },
+    {
+      "level": 42,
+      "levelKey": "LevelCL_042",
+      "name": "Yüklü Tesisat"
+    },
+    {
+      "level": 43,
+      "levelKey": "LevelCL_043",
+      "name": "Kırılgan Kargo"
+    },
+    {
+      "level": 44,
+      "levelKey": "LevelCL_044",
+      "name": "Beyaz Salon"
+    },
+    {
+      "level": 45,
+      "levelKey": "LevelCL_045",
+      "name": "Pusula Meydanı"
+    },
+    {
+      "level": 46,
+      "levelKey": "LevelCL_046",
+      "name": "İkiz Malzeme"
+    },
+    {
+      "level": 47,
+      "levelKey": "LevelCL_047",
+      "name": "Fenerli Vitrin"
+    },
+    {
+      "level": 48,
+      "levelKey": "LevelCL_048",
+      "name": "Çamurlu Fenerler"
+    },
+    {
+      "level": 49,
+      "levelKey": "LevelCL_049",
+      "name": "Üç Renkli Cephe"
+    },
+    {
+      "level": 50,
+      "levelKey": "LevelCL_050",
+      "name": "Tamirci Arenası"
+    },
+    {
+      "level": 51,
+      "levelKey": "LevelCL_051",
+      "name": "Pusulanın Işığı"
+    },
+    {
+      "level": 52,
+      "levelKey": "LevelCL_052",
+      "name": "Dolaplı Fenerlik"
+    },
+    {
+      "level": 53,
+      "levelKey": "LevelCL_053",
+      "name": "Sandık Sırtı"
+    },
+    {
+      "level": 54,
+      "levelKey": "LevelCL_054",
+      "name": "Turuncu Avlular"
+    },
+    {
+      "level": 55,
+      "levelKey": "LevelCL_055",
+      "name": "Gizli Eşya Odası"
+    },
+    {
+      "level": 56,
+      "levelKey": "LevelCL_056",
+      "name": "Yüklü Boru Hattı"
+    },
+    {
+      "level": 57,
+      "levelKey": "LevelCL_057",
+      "name": "Katmanlı Depo"
+    },
+    {
+      "level": 58,
+      "levelKey": "LevelCL_058",
+      "name": "Yeşil Halı"
+    },
+    {
+      "level": 59,
+      "levelKey": "LevelCL_059",
+      "name": "Porselen Bahçesi"
+    },
+    {
+      "level": 60,
+      "levelKey": "LevelCL_060",
+      "name": "Yeşil Düello"
+    },
+    {
+      "level": 61,
+      "levelKey": "LevelCL_061",
+      "name": "Bahçe Sevkiyatı"
+    },
+    {
+      "level": 62,
+      "levelKey": "LevelCL_062",
+      "name": "Renkli Ambar"
+    },
+    {
+      "level": 63,
+      "levelKey": "LevelCL_063",
+      "name": "İlk Hazine"
+    },
+    {
+      "level": 64,
+      "levelKey": "LevelCL_064",
+      "name": "Turuncu Kilit"
+    },
+    {
+      "level": 65,
+      "levelKey": "LevelCL_065",
+      "name": "Işıklı Sandıklar"
+    },
+    {
+      "level": 66,
+      "levelKey": "LevelCL_066",
+      "name": "Saklı Kasa"
+    },
+    {
+      "level": 67,
+      "levelKey": "LevelCL_067",
+      "name": "Hassas Sevkiyat"
+    },
+    {
+      "level": 68,
+      "levelKey": "LevelCL_068",
+      "name": "Fenerli Rıhtım"
+    },
+    {
+      "level": 69,
+      "levelKey": "LevelCL_069",
+      "name": "Kargo Şenliği"
+    },
+    {
+      "level": 70,
+      "levelKey": "LevelCL_070",
+      "name": "Usta Meydanı"
+    },
+    {
+      "level": 71,
+      "levelKey": "LevelCL_071",
+      "name": "Kilitli Atölye"
+    },
+    {
+      "level": 72,
+      "levelKey": "LevelCL_072",
+      "name": "Çamur Fıçıları"
+    },
+    {
+      "level": 73,
+      "levelKey": "LevelCL_073",
+      "name": "Bahçedeki Fıçılar"
+    },
+    {
+      "level": 74,
+      "levelKey": "LevelCL_074",
+      "name": "Çekim Bahçesi"
+    },
+    {
+      "level": 75,
+      "levelKey": "LevelCL_075",
+      "name": "Taş Kasası"
+    },
+    {
+      "level": 76,
+      "levelKey": "LevelCL_076",
+      "name": "Anahtar Atölyesi"
+    },
+    {
+      "level": 77,
+      "levelKey": "LevelCL_077",
+      "name": "Manyetik Bahçe"
+    },
+    {
+      "level": 78,
+      "levelKey": "LevelCL_078",
+      "name": "Bahçe Vitrini"
+    },
+    {
+      "level": 79,
+      "levelKey": "LevelCL_079",
+      "name": "Çekim Merkezi"
+    },
+    {
+      "level": 80,
+      "levelKey": "LevelCL_080",
+      "name": "Onarım Düellosu"
+    },
+    {
+      "level": 81,
+      "levelKey": "LevelCL_081",
+      "name": "Anahtar Yağmuru"
+    },
+    {
+      "level": 82,
+      "levelKey": "LevelCL_082",
+      "name": "Çift Çekim"
+    },
+    {
+      "level": 83,
+      "levelKey": "LevelCL_083",
+      "name": "Bahçe Dolabı"
+    },
+    {
+      "level": 84,
+      "levelKey": "LevelCL_084",
+      "name": "Porselen Dolaplar"
+    },
+    {
+      "level": 85,
+      "levelKey": "LevelCL_085",
+      "name": "Kızıl Kasa"
+    },
+    {
+      "level": 86,
+      "levelKey": "LevelCL_086",
+      "name": "Mor İzler"
+    },
+    {
+      "level": 87,
+      "levelKey": "LevelCL_087",
+      "name": "Enerji Kanatları"
+    },
+    {
+      "level": 88,
+      "levelKey": "LevelCL_088",
+      "name": "Jel Kanalları"
+    },
+    {
+      "level": 89,
+      "levelKey": "LevelCL_089",
+      "name": "Gizli Jel Bahçesi"
+    },
+    {
+      "level": 90,
+      "levelKey": "LevelCL_090",
+      "name": "Mor Düello"
+    },
+    {
+      "level": 91,
+      "levelKey": "LevelCL_091",
+      "name": "Jelli Restorasyon"
+    },
+    {
+      "level": 92,
+      "levelKey": "LevelCL_092",
+      "name": "Pusulalı Kasa"
+    },
+    {
+      "level": 93,
+      "levelKey": "LevelCL_093",
+      "name": "İlk Yağmur"
+    },
+    {
+      "level": 94,
+      "levelKey": "LevelCL_094",
+      "name": "Yağmurlu Atölye"
+    },
+    {
+      "level": 95,
+      "levelKey": "LevelCL_095",
+      "name": "Mor Bahçe"
+    },
+    {
+      "level": 96,
+      "levelKey": "LevelCL_096",
+      "name": "Su Ambarı"
+    },
+    {
+      "level": 97,
+      "levelKey": "LevelCL_097",
+      "name": "Fıçı İskelesi"
+    },
+    {
+      "level": 98,
+      "levelKey": "LevelCL_098",
+      "name": "Çim Avlusu"
+    },
+    {
+      "level": 99,
+      "levelKey": "LevelCL_099",
+      "name": "Fenerlerin Işığı"
+    },
+    {
+      "level": 100,
+      "levelKey": "LevelCL_0100",
+      "name": "Fırtına Düellosu"
+    },
+    {
+      "level": 101,
+      "levelKey": "LevelCL_0101",
+      "name": "İlk Duvar"
+    },
+    {
+      "level": 102,
+      "levelKey": "LevelCL_0102",
+      "name": "Tuğla Odaları"
+    },
+    {
+      "level": 103,
+      "levelKey": "LevelCL_0103",
+      "name": "Mor Surlar"
+    },
+    {
+      "level": 104,
+      "levelKey": "LevelCL_0104",
+      "name": "Fenerli Sur"
+    },
+    {
+      "level": 105,
+      "levelKey": "LevelCL_0105",
+      "name": "Çiçekli Surlar"
+    },
+    {
+      "level": 106,
+      "levelKey": "LevelCL_0106",
+      "name": "Çiçekli Kelebek"
+    },
+    {
+      "level": 107,
+      "levelKey": "LevelCL_0107",
+      "name": "Çiçekli Madalyon"
+    },
+    {
+      "level": 108,
+      "levelKey": "LevelCL_0108",
+      "name": "Jel Kristali"
+    },
+    {
+      "level": 109,
+      "levelKey": "LevelCL_0109",
+      "name": "İkiz Teras"
+    },
+    {
+      "level": 110,
+      "levelKey": "LevelCL_0110",
+      "name": "Çiçekli Kemer"
+    },
+    {
+      "level": 111,
+      "levelKey": "LevelCL_0111",
+      "name": "Mühürlü Kale"
+    },
+    {
+      "level": 112,
+      "levelKey": "LevelCL_0112",
+      "name": "Çelik Bahçe"
+    },
+    {
+      "level": 113,
+      "levelKey": "LevelCL_0113",
+      "name": "Arlekin Uçurtma"
+    },
+    {
+      "level": 114,
+      "levelKey": "LevelCL_0114",
+      "name": "Altıgen Petek"
+    },
+    {
+      "level": 115,
+      "levelKey": "LevelCL_0115",
+      "name": "Damalı Kale"
+    },
+    {
+      "level": 116,
+      "levelKey": "LevelCL_0116",
+      "name": "Kristal Kalp"
+    },
+    {
+      "level": 117,
+      "levelKey": "LevelCL_0117",
+      "name": "Hamster'ın Kalesi"
+    },
+    {
+      "level": 118,
+      "levelKey": "LevelCL_0118",
+      "name": "Su Kuleleri"
+    },
+    {
+      "level": 119,
+      "levelKey": "LevelCL_0119",
+      "name": "Jelli Çelik"
+    },
+    {
+      "level": 120,
+      "levelKey": "LevelCL_0120",
+      "name": "Porsuğun Tacı"
+    },
+    {
+      "level": 121,
+      "levelKey": "LevelCL_0121",
+      "name": "Jel Kartuşları"
+    },
+    {
+      "level": 122,
+      "levelKey": "LevelCL_0122",
+      "name": "Boya Piramidi"
+    },
+    {
+      "level": 123,
+      "levelKey": "LevelCL_0123",
+      "name": "Mor Boyahane"
+    },
+    {
+      "level": 124,
+      "levelKey": "LevelCL_0124",
+      "name": "Renkli Palet"
+    },
+    {
+      "level": 125,
+      "levelKey": "LevelCL_0125",
+      "name": "Şapka Şeritleri"
+    },
+    {
+      "level": 126,
+      "levelKey": "LevelCL_0126",
+      "name": "Antik Mühür"
+    },
+    {
+      "level": 127,
+      "levelKey": "LevelCL_0127",
+      "name": "Piramit Mührü"
+    },
+    {
+      "level": 128,
+      "levelKey": "LevelCL_0128",
+      "name": "Elma Ağacı"
+    },
+    {
+      "level": 129,
+      "levelKey": "LevelCL_0129",
+      "name": "Altın Kupa"
+    },
+    {
+      "level": 130,
+      "levelKey": "LevelCL_0130",
+      "name": "Kalkan"
+    },
+    {
+      "level": 131,
+      "levelKey": "LevelCL_0131",
+      "name": "Gözcü Adaları"
+    },
+    {
+      "level": 132,
+      "levelKey": "LevelCL_0132",
+      "name": "Deney Tüpü Rafı"
+    },
+    {
+      "level": 133,
+      "levelKey": "LevelCL_0133",
+      "name": "Roma Tapınağı"
+    },
+    {
+      "level": 134,
+      "levelKey": "LevelCL_0134",
+      "name": "Roma Tapınağı II"
+    },
+    {
+      "level": 135,
+      "levelKey": "LevelCL_0135",
+      "name": "Bölmeli Pencere"
+    },
+    {
+      "level": 136,
+      "levelKey": "LevelCL_0136",
+      "name": "Gözcü Kulesi"
+    },
+    {
+      "level": 137,
+      "levelKey": "LevelCL_0137",
+      "name": "Anahtarlı Boyahane"
+    },
+    {
+      "level": 138,
+      "levelKey": "LevelCL_0138",
+      "name": "Tuğla Geçidi"
+    },
+    {
+      "level": 139,
+      "levelKey": "LevelCL_0139",
+      "name": "Üç Renkli Oyma"
+    },
+    {
+      "level": 140,
+      "levelKey": "LevelCL_0140",
+      "name": "Kum Saati"
+    },
+    {
+      "level": 141,
+      "levelKey": "LevelCL_0141",
+      "name": "Brandalı Atölye"
+    },
+    {
+      "level": 142,
+      "levelKey": "LevelCL_0142",
+      "name": "Örtülü Surlar"
+    },
+    {
+      "level": 143,
+      "levelKey": "LevelCL_0143",
+      "name": "Lazerli Hazine"
+    },
+    {
+      "level": 144,
+      "levelKey": "LevelCL_0144",
+      "name": "Mor Tesisat"
+    },
+    {
+      "level": 145,
+      "levelKey": "LevelCL_0145",
+      "name": "Kanal Adaları"
+    },
+    {
+      "level": 146,
+      "levelKey": "LevelCL_0146",
+      "name": "Yağlı Anahtar"
+    },
+    {
+      "level": 147,
+      "levelKey": "LevelCL_0147",
+      "name": "Su Feneri"
+    },
+    {
+      "level": 148,
+      "levelKey": "LevelCL_0148",
+      "name": "Çiçekli Yonca"
+    },
+    {
+      "level": 149,
+      "levelKey": "LevelCL_0149",
+      "name": "Mühürlü Dört Kule"
+    },
+    {
+      "level": 150,
+      "levelKey": "LevelCL_0150",
+      "name": "Onarım Kapısı"
+    },
+    {
+      "level": 151,
+      "levelKey": "LevelCL_0151",
+      "name": "Nilüfer Göleti"
+    },
+    {
+      "level": 152,
+      "levelKey": "LevelCL_0152",
+      "name": "Basamaklı Atölye"
+    },
+    {
+      "level": 153,
+      "levelKey": "LevelCL_0153",
+      "name": "İki Avlu"
+    },
+    {
+      "level": 154,
+      "levelKey": "LevelCL_0154",
+      "name": "Renkli Sandıklar"
+    },
+    {
+      "level": 155,
+      "levelKey": "LevelCL_0155",
+      "name": "Nilüfer Tacı"
+    },
+    {
+      "level": 156,
+      "levelKey": "LevelCL_0156",
+      "name": "Kargo Kemerleri"
+    },
+    {
+      "level": 157,
+      "levelKey": "LevelCL_0157",
+      "name": "Üç Atölye"
+    },
+    {
+      "level": 158,
+      "levelKey": "LevelCL_0158",
+      "name": "Kilitli Alet Çantası"
+    },
+    {
+      "level": 159,
+      "levelKey": "LevelCL_0159",
+      "name": "Mor Mozaik"
+    },
+    {
+      "level": 160,
+      "levelKey": "LevelCL_0160",
+      "name": "Kızıl Köprü"
+    },
+    {
+      "level": 161,
+      "levelKey": "LevelCL_0161",
+      "name": "Rodos Atölyesi"
+    },
+    {
+      "level": 162,
+      "levelKey": "LevelCL_0162",
+      "name": "Büyük Restorasyon"
+    },
+    {
+      "level": 163,
+      "levelKey": "LevelCL_0163",
+      "name": "Renkli Onarım"
+    },
+    {
+      "level": 164,
+      "levelKey": "LevelCL_0164",
+      "name": "Mor Akıntı"
+    },
+    {
+      "level": 165,
+      "levelKey": "LevelCL_0165",
+      "name": "Çifte Hazine"
+    },
+    {
+      "level": 166,
+      "levelKey": "LevelCL_0166",
+      "name": "Usta Restoratör"
+    },
+    {
+      "level": 167,
+      "levelKey": "LevelCL_0167",
+      "name": "Lazerli Restorasyon"
+    },
+    {
+      "level": 168,
+      "levelKey": "LevelCL_0168",
+      "name": "Zincir Atölyesi"
+    },
+    {
+      "level": 169,
+      "levelKey": "LevelCL_0169",
+      "name": "Kızıl ve Yeşil"
+    },
+    {
+      "level": 170,
+      "levelKey": "LevelCL_0170",
+      "name": "Kanyon Düellosu"
+    },
+    {
+      "level": 171,
+      "levelKey": "LevelCL_0171",
+      "name": "Renkli Çerçeve"
+    },
+    {
+      "level": 172,
+      "levelKey": "LevelCL_0172",
+      "name": "Boya İskelesi"
+    },
+    {
+      "level": 173,
+      "levelKey": "LevelCL_0173",
+      "name": "Kargo Rıhtımı"
+    },
+    {
+      "level": 174,
+      "levelKey": "LevelCL_0174",
+      "name": "Mor Mercek"
+    },
+    {
+      "level": 175,
+      "levelKey": "LevelCL_0175",
+      "name": "Mühürlü Vitray"
+    },
+    {
+      "level": 176,
+      "levelKey": "LevelCL_0176",
+      "name": "Dolaplı Geçit"
+    },
+    {
+      "level": 177,
+      "levelKey": "LevelCL_0177",
+      "name": "Boru Orgu"
+    },
+    {
+      "level": 178,
+      "levelKey": "LevelCL_0178",
+      "name": "Çiçekli Pusula"
+    },
+    {
+      "level": 179,
+      "levelKey": "LevelCL_0179",
+      "name": "Çelik Kilit"
+    },
+    {
+      "level": 180,
+      "levelKey": "LevelCL_0180",
+      "name": "Kanyon Köprüsü"
+    },
+    {
+      "level": 181,
+      "levelKey": "LevelCL_0181",
+      "name": "Basamaklı Arşiv"
+    },
+    {
+      "level": 182,
+      "levelKey": "LevelCL_0182",
+      "name": "Fener Şenliği"
+    }
+  ]
+}

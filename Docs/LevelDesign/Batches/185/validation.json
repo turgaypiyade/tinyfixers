@@ -1,0 +1,31 @@
+{
+  "level": 185,
+  "passed": true,
+  "horizontalMirrorVerified": true,
+  "active": 78,
+  "holes": 21,
+  "openingTileCells": 12,
+  "directRefillReachable": 12,
+  "obstacleInstances": {
+    "75": 24,
+    "40": 21,
+    "28": 9,
+    "39": 12
+  },
+  "activeComponents": [
+    66,
+    6,
+    6
+  ],
+  "referenceCornerOnlyNodes": 2,
+  "moves": 32,
+  "difficulty": "Hard",
+  "initialSpecial": {
+    "20": 4
+  },
+  "additionalMovableQuota": 0,
+  "previousSettingsScriptsResourcesUnchanged": 2403,
+  "unityBuildRun": false,
+  "gameplaySimulationRun": false,
+  "winRateMeasured": false
+}

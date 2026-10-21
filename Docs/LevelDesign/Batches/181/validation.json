@@ -1,0 +1,57 @@
+{
+  "level": 181,
+  "revision": 4,
+  "passed": true,
+  "yamlParsed": true,
+  "active": 82,
+  "holes": 17,
+  "holeComponents": 1,
+  "diagonalCornerOnlyJoins": 0,
+  "borderNodeMasks": {
+    "0": 3,
+    "4": 2,
+    "12": 6,
+    "8": 10,
+    "2": 8,
+    "7": 6,
+    "15": 51,
+    "9": 7,
+    "6": 9,
+    "13": 8,
+    "1": 2,
+    "3": 8
+  },
+  "normalAdjacencyComponents": [
+    {
+      "active": 28,
+      "openingTileCells": 28,
+      "obstacleFootprintCells": 0
+    },
+    {
+      "active": 54,
+      "openingTileCells": 14,
+      "obstacleFootprintCells": 40
+    }
+  ],
+  "openingTileCells": 42,
+  "directRefillReachable": 42,
+  "obstacleInstances": {
+    "25": 40,
+    "28": 16,
+    "21": 6,
+    "27": 4
+  },
+  "maxLayerDepth": 3,
+  "stackedEntries": 26,
+  "previousUse": {
+    "25": 179,
+    "21": 154,
+    "27": 176,
+    "28": 172
+  },
+  "protectedFilesUnchanged": 1859,
+  "borderInputsUnchanged": 683,
+  "unityBuildRun": false,
+  "gameplaySimulationRun": false,
+  "winRateMeasured": false
+}

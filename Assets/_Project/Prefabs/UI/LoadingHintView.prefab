@@ -489,8 +489,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: "G\xFC\xE7lendirici Se\xE7:"
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: c75d24c5d517942c99a0981c7d30fafb, type: 2}
-  m_sharedMaterial: {fileID: 2100000, guid: 10ed6c0276a5c44e0b4e173d5705b4c0, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 5744a8aefd63d471b8967c121098f41d, type: 2}
+  m_sharedMaterial: {fileID: 2100000, guid: 950cc96dd60864e898789478608f19b9, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []

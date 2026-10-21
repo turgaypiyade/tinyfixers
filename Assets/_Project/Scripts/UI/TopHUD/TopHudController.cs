@@ -78,6 +78,7 @@ public class TopHudController : MonoBehaviour
         board.OnMovesChanged -= HandleMovesChanged;
         board.OnTilesCleared -= HandleTilesCleared;
         board.OnObstacleDestroyed -= HandleObstacleDestroyed;
+        board.OnWaterChannelCompleted -= HandleWaterChannelCompleted;
         board.OnBatteryHit -= HandleBatteryHit;
         board.OnObstacleCreatedDynamic -= HandleObstacleCreatedDynamic;
         board.OnSplatSpreadResolved -= HandleSplatSpreadResolved;
@@ -110,6 +111,7 @@ public class TopHudController : MonoBehaviour
         board.OnMovesChanged -= HandleMovesChanged;
         board.OnTilesCleared -= HandleTilesCleared;
         board.OnObstacleDestroyed -= HandleObstacleDestroyed;
+        board.OnWaterChannelCompleted -= HandleWaterChannelCompleted;
         board.OnBatteryHit -= HandleBatteryHit;
         board.OnObstacleCreatedDynamic -= HandleObstacleCreatedDynamic;
         board.OnSplatSpreadResolved -= HandleSplatSpreadResolved;
@@ -117,6 +119,7 @@ public class TopHudController : MonoBehaviour
         board.OnMovesChanged += HandleMovesChanged;
         board.OnTilesCleared += HandleTilesCleared;
         board.OnObstacleDestroyed += HandleObstacleDestroyed;
+        board.OnWaterChannelCompleted += HandleWaterChannelCompleted;
         board.OnBatteryHit += HandleBatteryHit;
         board.OnObstacleCreatedDynamic += HandleObstacleCreatedDynamic;
         board.OnSplatSpreadResolved += HandleSplatSpreadResolved;
@@ -498,6 +501,9 @@ public class TopHudController : MonoBehaviour
         // Hamster hedefi doyum sayısıyla yürür (SetHamsterFeedsCompleted); ayrılış ayrıca sayılmaz.
         if (obstacleId == ObstacleId.Hamster)
             return;
+        // Su kanalı hücre hücre açılır ama hedef KANAL sayısıdır: HandleWaterChannelCompleted sayar.
+        if (obstacleId == ObstacleId.WaterChannel)
+            return;
 
         bool anyGoalUpdated = false;
 
@@ -525,6 +531,24 @@ public class TopHudController : MonoBehaviour
             anyGoalUpdated |= goal.remaining != previous;
         }
 
+        if (anyGoalUpdated)
+            UpdateGoalsCompletionState();
+    }
+
+    // Bir su kanalının tamamı açılıp su alttan çıktı → WaterChannel hedefi 1 azalır.
+    private void HandleWaterChannelCompleted()
+    {
+        bool anyGoalUpdated = false;
+        for (int i = 0; i < runtimeGoals.Count; i++)
+        {
+            var goal = runtimeGoals[i];
+            if (goal.definition.targetType != LevelGoalTargetType.Obstacle || goal.definition.obstacleId != ObstacleId.WaterChannel)
+                continue;
+            int previous = goal.remaining;
+            goal.remaining = Mathf.Max(0, goal.remaining - 1);
+            goal.slot?.SetRemaining(goal.remaining);
+            anyGoalUpdated |= goal.remaining != previous;
+        }
         if (anyGoalUpdated)
             UpdateGoalsCompletionState();
     }

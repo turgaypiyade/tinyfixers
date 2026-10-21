@@ -4099,6 +4099,9 @@ public class BoardController : MonoBehaviour
 
                             if (creation.winner.GetSpecial() != TileSpecial.None)
                                 continue;
+                            // Başka bir temizlikte silinmekte olan taşa special yazılmaz (special'ıyla kaybolurdu).
+                            if (creation.winner.RuntimeState == TileRuntimeState.Clearing)
+                                continue;
 
                             if (obstacleStateService != null
                                 && obstacleStateService.IsMovableObstacleAt(creation.winner.X, creation.winner.Y))
@@ -4835,6 +4838,10 @@ public class BoardController : MonoBehaviour
 
                 bool winnerAlreadySpecial = creation.winner.GetSpecial() != TileSpecial.None;
                 if (winnerAlreadySpecial)
+                    continue;
+                // Dinamik girdi: kazanan başka bir temizlikte silinmekteyse special yazılmaz (special'ıyla
+                // birlikte kaybolur, havuzdan dönen taşta fitil animasyonu kalırdı).
+                if (creation.winner.RuntimeState == TileRuntimeState.Clearing)
                     continue;
 
                 // MovableObstacle tile'ına special atanamaz
@@ -5723,6 +5730,20 @@ public class BoardController : MonoBehaviour
     internal bool IsMaskHoleCell(int x, int y) => IsMaskHole(x, y);
     internal bool IsObstacleBlockedCell(int x, int y) => x >= 0 && x < width && y >= 0 && y < height && obstacleResolutionService != null && obstacleResolutionService.IsBlockedCell(x, y);
     internal bool IsSpawnPassThroughCell(int x, int y) => IsMaskHoleCell(x, y) && !IsObstacleBlockedCell(x, y);
+
+    /// Su kanalı deposu oyun sırasında tahta deliği gibi GEÇİRGEN olur: taş tutmaz, düşen taş içinden geçer
+    /// (yerçekimi/çapraz kayma/spawn kararlarının tamamı BoardCellStateQuery → IsMaskHoleCell'den beslenir).
+    /// Delik haritası yalnız SetLevelData'da kurulur; bu işaret level boyunca kalır. (Kanal hücreleri delik DEĞİL.)
+    internal void MarkRuntimePassThroughHole(int x, int y)
+    {
+        if (maskHoles == null || x < 0 || x >= width || y < 0 || y >= height) return;
+        maskHoles[x, y] = true;
+        SetHoleStateFromObstacle(x, y);
+    }
+
+    /// Bir su kanalının tamamı açılıp su alt kenardan çıktı (hedef sayımı: TopHudController).
+    public event Action OnWaterChannelCompleted;
+    internal void NotifyWaterChannelCompleted() => OnWaterChannelCompleted?.Invoke();
     public bool TryGetCellState(int x, int y, out BoardCellStateSnapshot state) => BoardCellStateQuery.TryGet(this, x, y, out state);
     public bool HasAnyEmptyPlayableCell() { for (int y = 0; y < height; y++) for (int x = 0; x < width; x++) { if (holes[x, y]) continue; if (tiles[x, y] == null) return true; } return false; }
 

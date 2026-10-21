@@ -6,6 +6,10 @@ public class MatchClearAction : BoardAction
 {
     private HashSet<TileView> matches;
     private readonly Dictionary<TileView, int> matchLifetimes = new Dictionary<TileView, int>();
+    // Kurulumda special OLMAYAN taşlar. Dinamik girdide iki temizlik geçişi örtüşebilir: bu eylem taşı normal
+    // olarak listeler, başka bir geçiş onu special'a çevirir (kazanılmış hak). Normal temizlik onu silerse
+    // special patlamadan kaybolur (+ havuzdan dönen taşta kalan fitil animasyonu). Bkz. ExecuteFrom.
+    private readonly HashSet<TileView> capturedNonSpecial = new HashSet<TileView>();
     private bool doShake;
     private ClearAnimationMode animationMode;
     private HashSet<Vector2Int> affectedCells;
@@ -64,7 +68,10 @@ public class MatchClearAction : BoardAction
         this.matches = matches != null ? new HashSet<TileView>(matches) : new HashSet<TileView>();
         foreach (var tile in this.matches)
             if (tile != null)
+            {
                 matchLifetimes[tile] = tile.LifetimeVersion;
+                if (tile.GetSpecial() == TileSpecial.None) capturedNonSpecial.Add(tile);
+            }
         this.doShake = doShake;
         this.animationMode = animationMode;
         this.affectedCells = affectedCells;
@@ -104,6 +111,11 @@ public class MatchClearAction : BoardAction
         // clear bitince akış kendiliğinden ilerler. SpecialSweep kaydı finally ile kapanır;
         // pass'ın special/normal bağlamı animator'a doğrudan aktarılır, ortak bayrak yazılmaz.
         matches.RemoveWhere(tile => !IsOriginalMatch(tile));
+        // Normal eşleşme temizliği, listelendikten SONRA special'a dönüşmüş taşı silmez (kazanılmış hak korunur).
+        // Special etkinleştirme aşaması (implant/patlama) taşları bilerek dönüştürüp temizler → orada uygulanmaz.
+        if (!isSpecialActivationPhase)
+            matches.RemoveWhere(tile => tile != null && capturedNonSpecial.Contains(tile)
+                                        && tile.GetSpecial() != TileSpecial.None);
         bool useFlow = board != null && board.UseFlowActivities;
         System.IDisposable clearActivity = useFlow
             ? (allowLocalizedDynamicInput && isBlocking && !isSpecialActivationPhase && PresentationPlan == null

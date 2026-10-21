@@ -2929,6 +2929,12 @@ public class TileView : MonoBehaviour,
         // olabildiği bir yol (ClearAndDestroyTile MissingReferenceException yakalıyor) → burada koru.
         if (model != null)
             model.SetSpecial(TileSpecial.None);
+        // Special'a özel çocuk görseller yalnız RefreshIcon'da açılıp kapanıyor; havuzdan alınan taşa ise
+        // yalnız SetType (sprite) uygulanıyor. Kapatılmazsa eski PulseCore'un fitil kıvılcımı / PatchBot
+        // pervanesi, yukarıdan gelen NORMAL taşta oynamaya devam ediyordu (OnEnable animasyonu yeniden başlatır).
+        if (fuseSparkleView != null) fuseSparkleView.gameObject.SetActive(false);
+        if (propellerView != null) propellerView.gameObject.SetActive(false);
+        StopLineIdleSpin();
 
         IsPlannedToMoveThisFallPass = false;
         lastFallGeneration = -1;

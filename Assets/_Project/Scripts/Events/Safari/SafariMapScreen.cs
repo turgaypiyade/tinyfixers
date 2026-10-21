@@ -428,6 +428,7 @@ public sealed class SafariMapScreen : SafariMapScreenBase
         shareText.text = GameLocalization.GetFormat("safari_share_prize", prizePool, winners);
 
         var amountText = NewText("RewardAmount", overlay, 72, new Vector2(0f, -100f), new Vector2(720f, 120f));
+        RewardTextStyle.Apply(amountText, 72f);
         amountText.text = "+0";
 
         var tapText = NewText("TapText", overlay, 30, new Vector2(0f, -240f), new Vector2(720f, 80f));
@@ -760,7 +761,11 @@ public sealed class SafariMapScreen : SafariMapScreenBase
         var text = rt.gameObject.AddComponent<TextMeshProUGUI>();
         text.raycastTarget = false;
         text.alignment = TextAlignmentOptions.Center;
-        text.fontStyle = FontStyles.Bold;
+        // Font verilmezse TMP varsayılanına (LiberationSans) düşer; oyunun ödül yazısı fontunu kullan.
+        // Font zaten ExtraBold → Bold stili yalnız font yoksa (faux-bold harf aralığını açar).
+        var style = RewardTextStyle.Shared;
+        if (style != null && style.font != null) text.font = style.font;
+        text.fontStyle = text.font != null && style != null && text.font == style.font ? FontStyles.Normal : FontStyles.Bold;
         text.textWrappingMode = TextWrappingModes.Normal;
         text.color = promptTextColor;
         text.fontSize = fontSize;

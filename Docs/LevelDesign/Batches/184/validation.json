@@ -1,0 +1,21 @@
+{
+  "level": 184,
+  "passed": true,
+  "active": 73,
+  "holes": 26,
+  "runtimeSourceHoles": 2,
+  "openingTileCells": 47,
+  "directRefillReachable": 47,
+  "paintBoxes": 4,
+  "paintCans": 36,
+  "specialOnlyTargets": 8,
+  "channels": 2,
+  "channelCellsToOpen": 23,
+  "moves": 28,
+  "activeMaskComponents": 1,
+  "diagonalCornerOnlyNodes": 0,
+  "previousSettingsScriptsResourcesUnchanged": 2401,
+  "unityBuildRun": false,
+  "gameplaySimulationRun": false,
+  "winRateMeasured": false
+}

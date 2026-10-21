@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using UnityEngine;
 #if TF_IAP
 using UnityEngine.Purchasing;
@@ -16,6 +17,9 @@ using UnityEngine.Purchasing;
 /// ülkesi/para birimiyle gelir) → satın al → OnPurchasePending: içerik verilir (ShopPurchaseService.FulfillStorePurchase)
 /// SONRA ConfirmPurchase. Aynı işlem (transactionId) ikinci kez gelirse içerik tekrar verilmez, yalnız onaylanır
 /// (uygulama onaydan önce kapanırsa mağaza siparişi yeniden gönderir).
+/// Bağlantı/ürün listesi başarısız olur ya da bağlantı koparsa artan aralıkla (5 sn → 60 sn) yeniden denenir.
+/// Mağaza hazır değilken satın almaya basılırsa oyuncuya mesaj gösterilir (sessiz kalmaz). [IAP] uyarıları
+/// her sürümde loglanır (cihaz logunda sebep görünsün; seyrek olaylar).
 /// NOT: Sunucu tarafı makbuz doğrulaması henüz yok (canlıdan önce eklenecek — ProductionPlan).
 /// </summary>
 public static class StoreIap
@@ -33,6 +37,10 @@ public static class StoreIap
     private static bool productsReady;
     private static ShopOffer purchasingOffer;
     private static readonly Dictionary<string, ShopOffer> offersByProductId = new();
+    private static bool connected;
+    private static bool connecting;
+    private static bool retryScheduled;
+    private static int retryAttempt;
 
     public static bool IsAvailable => store != null && productsReady;
     public static bool IsPurchasing => purchasingOffer != null;
@@ -41,51 +49,86 @@ public static class StoreIap
     private static void Bootstrap()
     {
         if (RuntimeSimulationSession.IsActive || store != null) return;
+        CreateStore();
         Connect();
+    }
+
+    // Olay abonelikleri tek sefer; Connect yeniden denemelerde tekrar çağrılır.
+    private static void CreateStore()
+    {
+        store = UnityIAPServices.StoreController();
+        // IAP requires this subscription before Connect; it also owns catalog loading.
+        store.OnStoreConnected += HandleStoreConnected;
+        store.OnProductsFetched += HandleProductsFetched;
+        store.OnProductsFetchFailed += f =>
+        {
+            Debug.LogWarning($"[IAP] Ürünler alınamadı: {f.FailureReason}");
+            ScheduleRetry();
+        };
+        store.OnPurchasePending += HandlePurchasePending;
+        store.OnPurchaseConfirmed += HandlePurchaseConfirmed;
+        store.OnPurchaseFailed += HandlePurchaseFailed;
+        store.OnPurchaseDeferred += _ => { purchasingOffer = null; };
+        store.OnStoreDisconnected += d =>
+        {
+            connected = false;
+            productsReady = false;
+            Debug.LogWarning($"[IAP] Mağaza bağlantısı koptu: {d.Message}");
+            ScheduleRetry();
+        };
+        // Geçmiş alımlar: onaylanmamış olanlar OnPurchasePending ile gelir; burada yalnız kayıt.
+        store.OnPurchasesFetched += _ => { };
+        store.OnPurchasesFetchFailed += f => Debug.LogWarning($"[IAP] Geçmiş alımlar alınamadı: {f.message}");
     }
 
     private static async void Connect()
     {
+        if (connecting) return;
+        connecting = true;
         try
         {
-            store = UnityIAPServices.StoreController();
-            // IAP requires this subscription before Connect; it also owns catalog loading.
-            store.OnStoreConnected += HandleStoreConnected;
-            store.OnProductsFetched += HandleProductsFetched;
-            store.OnProductsFetchFailed += f =>
-            {
-                if (GameDiagnostics.Backend)
-                    Debug.LogWarning($"[IAP] Ürünler alınamadı: {f.FailureReason}");
-            };
-            store.OnPurchasePending += HandlePurchasePending;
-            store.OnPurchaseConfirmed += HandlePurchaseConfirmed;
-            store.OnPurchaseFailed += HandlePurchaseFailed;
-            store.OnPurchaseDeferred += _ => { purchasingOffer = null; };
-            store.OnStoreDisconnected += d =>
-            {
-                productsReady = false;
-                if (GameDiagnostics.Backend)
-                    Debug.LogWarning($"[IAP] Mağaza bağlantısı koptu: {d.Message}");
-            };
-            // Geçmiş alımlar: onaylanmamış olanlar OnPurchasePending ile gelir; burada yalnız kayıt.
-            store.OnPurchasesFetched += _ => { };
-            store.OnPurchasesFetchFailed += f =>
-            {
-                if (GameDiagnostics.Backend)
-                    Debug.LogWarning($"[IAP] Geçmiş alımlar alınamadı: {f.message}");
-            };
-
             await store.Connect();
         }
         catch (Exception e)
         {
-            if (GameDiagnostics.Backend)
-                Debug.LogWarning($"[IAP] Mağazaya bağlanılamadı: {e.Message}");
+            Debug.LogWarning($"[IAP] Mağazaya bağlanılamadı: {e.Message}");
+            ScheduleRetry();
+        }
+        finally
+        {
+            connecting = false;
+        }
+    }
+
+    // Bağlı değilse yeniden bağlan, bağlıysa ürünleri yeniden iste. Aynı anda tek bekleyen deneme olur.
+    private static async void ScheduleRetry()
+    {
+        if (retryScheduled || store == null) return;
+        retryScheduled = true;
+        int delaySeconds = Mathf.Min(60, 5 << Mathf.Min(retryAttempt, 4));
+        retryAttempt++;
+        await Task.Delay(delaySeconds * 1000);
+        retryScheduled = false;
+        if (!Application.isPlaying || IsAvailable) return;
+        if (connected) HandleStoreConnected();
+        else Connect();
+    }
+
+    /// Mağaza hazır değilken satın alma istendi: oyuncuya söyle, beklemede değilse hemen yeniden dene.
+    public static void ShowUnavailable()
+    {
+        RuntimeChoicePopup.Show(GameLocalization.Get("store_unavailable_title"), GameLocalization.Get("store_unavailable_body"));
+        if (store != null && !retryScheduled)
+        {
+            retryAttempt = 0;
+            if (connected) HandleStoreConnected();
+            else Connect();
         }
     }
 
     private static void HandleStoreConnected()
     {
+        connected = true;
         productsReady = false;
         var catalog = ShopCatalog.Shared;
         var defs = new List<ProductDefinition>();
@@ -100,13 +143,16 @@ public static class StoreIap
                 defs.Add(new ProductDefinition(pid, ProductType.Consumable));
             }
         if (defs.Count > 0) store.FetchProducts(defs);
-        else if (GameDiagnostics.Backend)
-            Debug.LogWarning("[IAP] Katalogda gerçek para teklifi yok.");
+        else Debug.LogWarning("[IAP] Katalogda gerçek para teklifi yok.");
     }
 
     private static void HandleProductsFetched(List<Product> products)
     {
         productsReady = true;
+        retryAttempt = 0;
+        int available = 0;
+        foreach (var p in products) if (p != null && p.availableToPurchase) available++;
+        Debug.Log($"[IAP] Mağaza hazır: {available}/{offersByProductId.Count} ürün satın alınabilir.");
         OnPricesUpdated?.Invoke();
         // Önceki oturumda onaylanmamış alımlar (ör. uygulama kapandı) OnPurchasePending ile yeniden gelir.
         store.FetchPurchases();
@@ -115,10 +161,16 @@ public static class StoreIap
     public static bool TryGetPrice(ShopOffer offer, out string label)
     {
         label = null;
+#if UNITY_EDITOR
+        // Editörde Unity IAP sahte mağazası her ürüne "$0.01" döndürür → katalogdaki yedek etiket gösterilsin.
+        // Cihazda fiyat gerçek mağazadan (oyuncunun ülkesi/para birimi) gelir.
+        return false;
+#else
         if (store == null || offer == null) return false;
         var product = store.GetProductById(offer.StoreProductId);
         label = product?.metadata?.localizedPriceString;
         return !string.IsNullOrEmpty(label);
+#endif
     }
 
     /// Satın almayı başlatır. true → mağaza penceresi açılıyor; sonuç olaylarla gelir (OnPurchased / OnPurchaseFailed).
@@ -128,8 +180,8 @@ public static class StoreIap
         var product = store.GetProductById(offer.StoreProductId);
         if (product == null || !product.availableToPurchase)
         {
-            if (GameDiagnostics.Backend)
-                Debug.LogWarning($"[IAP] Ürün mağazada yok: {offer.StoreProductId}");
+            Debug.LogWarning($"[IAP] Ürün mağazada yok: {offer.StoreProductId}");
+            ShowUnavailable();
             return false;
         }
         purchasingOffer = offer;
@@ -147,8 +199,7 @@ public static class StoreIap
             string pid = item.Product?.definition?.id;
             if (pid == null || !offersByProductId.TryGetValue(pid, out var offer))
             {
-                if (GameDiagnostics.Backend)
-                    Debug.LogWarning($"[IAP] Bilinmeyen ürün onaylanıyor: {pid}");
+                Debug.LogWarning($"[IAP] Bilinmeyen ürün onaylanıyor: {pid}");
                 continue;
             }
             if (alreadyProcessed) continue;
@@ -163,10 +214,7 @@ public static class StoreIap
     private static void HandlePurchaseConfirmed(Order order)
     {
         if (order is FailedOrder failed)
-        {
-            if (GameDiagnostics.Backend)
-                Debug.LogWarning($"[IAP] Onay başarısız: {failed.FailureReason} {failed.Details}");
-        }
+            Debug.LogWarning($"[IAP] Onay başarısız: {failed.FailureReason} {failed.Details}");
     }
 
     private static void HandlePurchaseFailed(FailedOrder order)
@@ -174,9 +222,10 @@ public static class StoreIap
         var offer = purchasingOffer;
         purchasingOffer = null;
         bool cancelled = order.FailureReason == PurchaseFailureReason.UserCancelled;
-        if (!cancelled) {
-            if (GameDiagnostics.Backend)
-                Debug.LogWarning($"[IAP] Satın alma başarısız: {order.FailureReason} {order.Details}");
+        if (!cancelled)
+        {
+            Debug.LogWarning($"[IAP] Satın alma başarısız: {order.FailureReason} {order.Details}");
+            RuntimeChoicePopup.Show(GameLocalization.Get("store_unavailable_title"), GameLocalization.Get("store_purchase_failed_body"));
         }
         OnPurchaseFailed?.Invoke(offer, cancelled);
     }
@@ -185,6 +234,8 @@ public static class StoreIap
     public static bool IsPurchasing => false;
     public static bool TryGetPrice(ShopOffer offer, out string label) { label = null; return false; }
     public static bool BeginPurchase(ShopOffer offer) => false;
+    public static void ShowUnavailable() =>
+        RuntimeChoicePopup.Show(GameLocalization.Get("store_unavailable_title"), GameLocalization.Get("store_unavailable_body"));
     // Taslakta olaylar hiç tetiklenmez; derleyici uyarısı olmasın diye boş erişim.
     private static void Unused() { OnPricesUpdated?.Invoke(); OnPurchaseFailed?.Invoke(null, false); }
 #endif

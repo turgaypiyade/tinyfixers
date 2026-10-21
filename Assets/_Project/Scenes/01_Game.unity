@@ -2143,6 +2143,12 @@ MonoBehaviour:
   hitVolume: 0.6
   pitchJitter: 0.08
   sfxSource: {fileID: 0}
+  fullHitHpFraction: 0.25
+  smallHitVolumeScale: 0.45
+  swingMinStrength: 0.3
+  repeatFatigueStep: 0.12
+  repeatFatigueFloor: 0.55
+  repeatRecoverSeconds: 4
   robotHitKnockDuration: 0.18
   robotHitKnockback: 22
   shieldBubbleScale: 1.25
@@ -2763,9 +2769,9 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 0, y: 6}
-  m_SizeDelta: {x: 90, y: 90}
-  m_Pivot: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 193.99997, y: -50.00007}
+  m_SizeDelta: {x: 110, y: 110}
+  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &397887099
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3977,8 +3983,8 @@ RectTransform:
   - {fileID: 131633427}
   m_Father: {fileID: 664581181}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0.05151515}
-  m_AnchorMax: {x: 1.3541666, y: 1.2075758}
+  m_AnchorMin: {x: 0, y: 0.32903227}
+  m_AnchorMax: {x: 0.5115872, y: 7.712903}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -6039,8 +6045,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: 
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: e46875cde48404fd285b820569c5c432, type: 2}
+  m_sharedMaterial: {fileID: -3114053460141687967, guid: e46875cde48404fd285b820569c5c432, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -6064,12 +6070,12 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 24
-  m_fontSizeBase: 24
+  m_fontSize: 22.797855
+  m_fontSizeBase: 22.797855
   m_fontWeight: 400
   m_enableAutoSizing: 0
-  m_fontSizeMin: 18
-  m_fontSizeMax: 72
+  m_fontSizeMin: 17.098392
+  m_fontSizeMax: 68.39357
   m_fontStyle: 0
   m_HorizontalAlignment: 2
   m_VerticalAlignment: 512
@@ -7222,8 +7228,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: 
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: e46875cde48404fd285b820569c5c432, type: 2}
+  m_sharedMaterial: {fileID: -3114053460141687967, guid: e46875cde48404fd285b820569c5c432, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -7247,12 +7253,12 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 24
-  m_fontSizeBase: 24
+  m_fontSize: 22.797855
+  m_fontSizeBase: 22.797855
   m_fontWeight: 400
   m_enableAutoSizing: 0
-  m_fontSizeMin: 18
-  m_fontSizeMax: 72
+  m_fontSizeMin: 17.098392
+  m_fontSizeMax: 68.39357
   m_fontStyle: 0
   m_HorizontalAlignment: 2
   m_VerticalAlignment: 512
@@ -10009,6 +10015,9 @@ MonoBehaviour:
   runtimeNormalCell: {r: 1, g: 1, b: 1, a: 1}
   gridLinesRoot: {fileID: 0}
   runtimeGridLineColor: {r: 0.5764706, g: 0.57254905, b: 0.7647059, a: 1}
+  lightCellBgColor: {r: 0.6627451, g: 0.654902, b: 0.8509804, a: 1}
+  lightGridLineColor: {r: 0.72156864, g: 0.7058824, b: 0.8666667, a: 1}
+  lightUnderTileCellBgTint: {r: 0.6627451, g: 0.654902, b: 0.8509804, a: 1}
   runtimeGridLineThickness: 3
   gridJunctionEnabled: 1
   gridJunctionSize: 4
@@ -10139,7 +10148,6 @@ MonoBehaviour:
   fallStretchAmount: 0
   fallStretchRecover: 0.327
   useReferenceFallMotion: 0
-  debugReferenceFallMotionLogs: 0
   applyReferenceTileVisualFillRatio: 1
   referenceFallMotion:
     referenceFps: 60
@@ -10290,13 +10298,10 @@ MonoBehaviour:
   useFlowPump: 1
   useDynamicBoardInputTestSlowMo: 0
   dynamicBoardInputTestFallDurationMultiplier: 2.5
-  enableTileSyncValidation: 0
-  enableSpecialChainTrace: 0
-  enableBoardFlowTrace: 0
-  enablePerfMonitor: 0
   perfSpikeMs: 28
   perfGcSpikeKB: 64
   useTilePool: 1
+  tilePoolWarmCount: 24
   useFlowActivities: 1
   useOilTileSet: 1
   oilEdgeSprite: {fileID: 0}
@@ -10357,7 +10362,6 @@ MonoBehaviour:
   junctionSize: 10
   debugMasks: 0
   debugCornerNames: 0
-  debugBorderLogs: 0
   debugDrawOutlines: 0
   debugFont: {fileID: 0}
   tileSize: 105
@@ -11014,8 +11018,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: 
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: e46875cde48404fd285b820569c5c432, type: 2}
+  m_sharedMaterial: {fileID: -3114053460141687967, guid: e46875cde48404fd285b820569c5c432, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -11039,12 +11043,12 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 24
-  m_fontSizeBase: 24
+  m_fontSize: 22.797855
+  m_fontSizeBase: 22.797855
   m_fontWeight: 400
   m_enableAutoSizing: 0
-  m_fontSizeMin: 18
-  m_fontSizeMax: 72
+  m_fontSizeMin: 17.098392
+  m_fontSizeMax: 68.39357
   m_fontStyle: 0
   m_HorizontalAlignment: 2
   m_VerticalAlignment: 512
@@ -12623,15 +12627,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0b129aedd47ae40e29fee6ac10368c8d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  verboseDebugLogs: 1
   singleTargetKey: joker_hint_single
   rowTargetKey: joker_hint_row
   columnTargetKey: joker_hint_column
   shuffleKey: joker_hint_shuffle
+  paintKey: joker_hint_paint
   singleTitleKey: joker_title_single
   rowTitleKey: joker_title_row
   columnTitleKey: joker_title_column
   shuffleTitleKey: joker_title_shuffle
+  paintTitleKey: joker_title_paint
   titleColor: {r: 1, g: 0.85, b: 0.2, a: 1}
   titleFont: {fileID: 11400000, guid: ac4355f13452b44afb3bcab168126b78, type: 2}
   titleMaterial: {fileID: 2100000, guid: 8d3588b6256b54c48b06f9364fdcac49, type: 2}
@@ -12925,8 +12930,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: 
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: e46875cde48404fd285b820569c5c432, type: 2}
+  m_sharedMaterial: {fileID: -3114053460141687967, guid: e46875cde48404fd285b820569c5c432, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -12950,12 +12955,12 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 24
-  m_fontSizeBase: 24
+  m_fontSize: 22.797855
+  m_fontSizeBase: 22.797855
   m_fontWeight: 400
   m_enableAutoSizing: 0
-  m_fontSizeMin: 18
-  m_fontSizeMax: 72
+  m_fontSizeMin: 17.098392
+  m_fontSizeMax: 68.39357
   m_fontStyle: 0
   m_HorizontalAlignment: 2
   m_VerticalAlignment: 512
@@ -15619,8 +15624,8 @@ MonoBehaviour:
   m_text: "Vazge\xE7ersen <color=#DB2929>Alt\u0131n</color> ve <color=#DB2929>TIRMANI\u015E</color>
     elinden gidecek!"
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: c75d24c5d517942c99a0981c7d30fafb, type: 2}
-  m_sharedMaterial: {fileID: 2100000, guid: 10ed6c0276a5c44e0b4e173d5705b4c0, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 5744a8aefd63d471b8967c121098f41d, type: 2}
+  m_sharedMaterial: {fileID: 2100000, guid: 950cc96dd60864e898789478608f19b9, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -17606,6 +17611,7 @@ MonoBehaviour:
   lossMessageText: {fileID: 9922000024}
   lossNameColor: {r: 0.86, g: 0.16, b: 0.16, a: 1}
   maxEventLossesWithCoin: 2
+  lossItemsPerPage: 3
   starImages:
   - {fileID: 746241060750673125}
   - {fileID: 6297474622154968428}
@@ -17688,7 +17694,7 @@ MonoBehaviour:
   m_text: 167000
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: af5dedf535e914a95b9338f201a87125, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_sharedMaterial: {fileID: 3959975710503819313, guid: af5dedf535e914a95b9338f201a87125, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []

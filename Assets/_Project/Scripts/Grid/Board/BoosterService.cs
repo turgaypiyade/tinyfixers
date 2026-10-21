@@ -675,6 +675,9 @@ public class BoosterService
     // Hammer joker slotunun (index 0) ikon konumu + boyutunu FX parent uzayına çevirir.
     // Slot farklı bir canvas'ta olabileceği için dönüşüm SCREEN SPACE üzerinden yapılır (cross-canvas güvenli).
     private bool TryGetHammerSlotStart(RectTransform parent, out Vector2 startPos, out Vector2 sizeLocal)
+        => TryGetBoosterSlotStart(parent, 0, out startPos, out sizeLocal);
+
+    private bool TryGetBoosterSlotStart(RectTransform parent, int boosterIndex, out Vector2 startPos, out Vector2 sizeLocal)
     {
         startPos = default;
         sizeLocal = default;
@@ -684,7 +687,7 @@ public class BoosterService
 
         BoosterSlotView hammerSlot = null;
         for (int i = 0; i < slots.Length; i++)
-            if (slots[i] != null && slots[i].ResolvedIndex == 0) { hammerSlot = slots[i]; break; }
+            if (slots[i] != null && slots[i].ResolvedIndex == boosterIndex) { hammerSlot = slots[i]; break; }
 
         RectTransform iconRt = hammerSlot != null ? hammerSlot.IconRect : null;
         if (iconRt == null || !iconRt)
@@ -1184,15 +1187,47 @@ public class BoosterService
         return new Vector2(x, y);
     }
 
+    // Karıştırma jokeri: Pati Asası slottan tahtaya uçar, ucunun etrafında dönerek taşları sarmal karıştırır
+    // (ShuffleWandFx). Otomatik karıştırma (hamle kalmadı) asasız, düz kaydırmayla devam eder.
+    private const float ShuffleSwirlSeconds = 1.1f;
+    private ShuffleWandFx shuffleWandFx;
+
     public IEnumerator ShuffleBoardRoutine(ActionSequencer actionSequencer)
     {
         PlayJokerSfx("shuffle1");
-        yield return SafeShuffleBoardRoutine(board.BoardInitService);
+        var wandFx = BeginShuffleWand();
+        yield return SafeShuffleBoardRoutine(board.BoardInitService, wandFx);
+        if (wandFx != null) board.StartCoroutine(wandFx.Exit(0.3f));
+    }
+
+    private ShuffleWandFx BeginShuffleWand()
+    {
+        RectTransform parent = GetBoosterFxParent();
+        if (parent == null || board.Width <= 0 || board.Height <= 0) return null;
+        Canvas.ForceUpdateCanvases();
+
+        Vector2 c0 = GetCellAnchoredCenter(new Vector2Int(0, 0), parent);
+        Vector2 c1 = GetCellAnchoredCenter(new Vector2Int(board.Width - 1, board.Height - 1), parent);
+        Vector2 boardCenter = (c0 + c1) * 0.5f;
+        float minSide = Mathf.Min(Mathf.Abs(c1.x - c0.x), Mathf.Abs(c1.y - c0.y)) + board.TileSize;
+
+        if (!TryGetBoosterSlotStart(parent, BoosterAccessService.ToIndex(BoardController.BoosterMode.Shuffle),
+                out Vector2 slotPos, out Vector2 slotSize))
+        {
+            slotPos = boardCenter + new Vector2(0f, -minSide);
+            slotSize = new Vector2(board.TileSize, board.TileSize);
+        }
+
+        shuffleWandFx ??= new ShuffleWandFx(board);
+        if (!shuffleWandFx.Prepare(parent, slotPos, Mathf.Max(slotSize.x, slotSize.y), boardCenter, board.TileSize, minSide))
+            return null;
+        board.StartCoroutine(shuffleWandFx.FlyIn(0.45f));
+        return shuffleWandFx;
     }
 
     // BoosterService.cs
 
-    public IEnumerator SafeShuffleBoardRoutine(BoardInitService boardInitService)
+    public IEnumerator SafeShuffleBoardRoutine(BoardInitService boardInitService, ShuffleWandFx wandFx = null)
     {
         board.BeginBusy();
         // Shuffle tahtayı toptan yeniden yazar: bitene dek akış pompası yeni iş başlatmasın.
@@ -1268,7 +1303,7 @@ public class BoosterService
                     for (int x = 0; x < board.Width; x++)
                         mappedTiles[x, y] = board.Tiles[x, y];
 
-                yield return AnimateShufflePreview(sourceForDest, lockedMask);
+                yield return AnimateShufflePreview(sourceForDest, lockedMask, wandFx);
 
                 if (IsShuffleMapStale(mappedTiles))
                 {
@@ -1470,8 +1505,11 @@ public class BoosterService
         return false;
     }
 
-    private IEnumerator AnimateShufflePreview(Vector2Int[,] sourceForDest, bool[,] lockedMask)
+    // wandFx verildiyse (joker) taşlar düz kaymaz: tahta merkezi etrafında TAM bir tur sarmal döner, ortaya doğru
+    // sıkışıp yerlerine açılır; yerinde kalan taşlar da tura katılır. Tam tur → k=1'de dönüş birim, taş tam hedefinde.
+    private IEnumerator AnimateShufflePreview(Vector2Int[,] sourceForDest, bool[,] lockedMask, ShuffleWandFx wandFx = null)
     {
+        bool swirl = wandFx != null;
         var movingTiles = new List<TileView>();
         var starts = new List<Vector2>();
         var ends = new List<Vector2>();
@@ -1484,7 +1522,7 @@ public class BoosterService
                     continue;
 
                 var src = sourceForDest[x, y];
-                if (src.x == x && src.y == y)
+                if (src.x == x && src.y == y && !swirl)
                     continue;
 
                 var tile = board.Tiles[src.x, src.y];
@@ -1505,8 +1543,10 @@ public class BoosterService
 
         // Shuffle taşları yavaş taşınsın ki kullanıcı neyin nereye gittiğini görebilsin
         // (eski: SwapDuration*0.85 ≈ 0.17s, çok hızlıydı).
-        float duration = Mathf.Max(0.35f, board.SwapDurationWithMultiplier * 2.6f);
+        float duration = swirl ? ShuffleSwirlSeconds : Mathf.Max(0.35f, board.SwapDurationWithMultiplier * 2.6f);
         var curve = board.SwapMoveCurve;
+        Vector2 swirlCenter = new Vector2((board.Width - 1) * 0.5f * board.TileSize, -(board.Height - 1) * 0.5f * board.TileSize);
+        if (swirl) board.StartCoroutine(wandFx.Mix(duration));
 
         float t = 0f;
         while (t < 1f)
@@ -1523,7 +1563,17 @@ public class BoosterService
                 if (tile == null)
                     continue;
 
-                tile.RectTransform.anchoredPosition = Vector2.LerpUnclamped(starts[i], ends[i], s);
+                if (!swirl)
+                {
+                    tile.RectTransform.anchoredPosition = Vector2.LerpUnclamped(starts[i], ends[i], s);
+                    continue;
+                }
+                float sm = k * k * (3f - 2f * k);
+                float squeeze = 1f - 0.4f * Mathf.Sin(Mathf.PI * k);
+                float ang = -2f * Mathf.PI * sm;   // saat yönünde tam tur
+                Vector2 rel = Vector2.LerpUnclamped(starts[i] - swirlCenter, ends[i] - swirlCenter, s) * squeeze;
+                float cs = Mathf.Cos(ang), sn = Mathf.Sin(ang);
+                tile.RectTransform.anchoredPosition = swirlCenter + new Vector2(rel.x * cs - rel.y * sn, rel.x * sn + rel.y * cs);
             }
 
             yield return null;

@@ -23,6 +23,7 @@ MonoBehaviour:
   menuRepairBtn: {fileID: 21300000, guid: 618b39e0230a1406ebfba99542c755c5, type: 3}
   borderColorId: 5
   borderSpriteLibrary: {fileID: 11400000, guid: b2b1fa88677e243bbbda0302c5efb9e1, type: 2}
+  lightBoardCells: 0
   successAnimationBackground: {fileID: 0}
   preLevelPopupBackground: {fileID: 21300000, guid: c2cee371b18654473a7cf9bc0848606c, type: 3}
   preLevelContinueButton: {fileID: 21300000, guid: 31a3eec15ec7e4edebed2e4bd6c22218, type: 3}

@@ -4,10 +4,12 @@ using UnityEngine;
 [CustomEditor(typeof(LevelData))]
 public class LevelDataEditor : Editor
 {
-    private enum PaintMode { Mask, Obstacle, Tube, Magnet, Tiles, Safe, Overlay, Erase, AncientSeal }
+    private enum PaintMode { Mask, Obstacle, Tube, Magnet, Tiles, Safe, Overlay, Erase, AncientSeal, Channel }
 
     private PaintMode mode = PaintMode.Obstacle;
     private ObstacleId selectedObstacle = ObstacleId.Stone;
+    private int selectedInitialCrateHits = 3;
+    private bool showSharedCrateStageRules;
     private int selectedHamsterSatiety = 7;   // yerleştirilecek hamsterin lokma sayısı
     private TarpStatueColor selectedTarpColor = TarpStatueColor.Red;          // yerleştirilecek heykelin etiket rengi
     private int selectedTarpCount = LevelData.TarpStatueDefaultCount;         // brandanın kalkması için toplanacak taş
@@ -46,6 +48,13 @@ public class LevelDataEditor : Editor
     private static readonly Color magnetEndpointColor = new Color(0.15f, 0.45f, 1f, 0.90f);
     private static readonly Color magnetPathColor     = new Color(0.30f, 0.65f, 1f, 0.55f);
     private static readonly Color magnetBuildingColor = new Color(0.80f, 0.95f, 0.40f, 0.75f);
+
+    // Su kanalı (yol: depo üst kenarda → çıkış alt kenarda)
+    private readonly System.Collections.Generic.List<int> channelPathBuilding = new();
+    private string channelStatus;
+    private static readonly Color channelPathColor     = new Color(0.20f, 0.78f, 0.86f, 0.55f);
+    private static readonly Color channelEndColor      = new Color(0.05f, 0.55f, 0.70f, 0.90f);
+    private static readonly Color channelBuildingColor = new Color(0.55f, 0.95f, 1.00f, 0.80f);
 
     // Tile pin settings  (-1 = rastgele, tile tipi pinlenmez)
     private int selectedPinTileType = -1;
@@ -91,7 +100,7 @@ public class LevelDataEditor : Editor
 
         EditorGUILayout.Space(6);
 
-        mode = (PaintMode)GUILayout.Toolbar((int)mode, new[] { "Mask", "Obstacle", "Tube", "Magnet", "Tiles", "Safe", "Overlay", "Erase", "Ancient Seal" });
+        mode = (PaintMode)GUILayout.Toolbar((int)mode, new[] { "Mask", "Obstacle", "Tube", "Magnet", "Tiles", "Safe", "Overlay", "Erase", "Ancient Seal", "Kanal" });
 
         if (mode == PaintMode.Obstacle)
             DrawPalette(level);
@@ -99,6 +108,8 @@ public class LevelDataEditor : Editor
             DrawTubePalette(level);
         else if (mode == PaintMode.Magnet)
             DrawMagnetPalette(level);
+        else if (mode == PaintMode.Channel)
+            DrawChannelPalette(level);
         else if (mode == PaintMode.Tiles)
             DrawTilePinPalette(level);
         else if (mode == PaintMode.Safe)
@@ -728,6 +739,7 @@ public class LevelDataEditor : Editor
         if (level.obstacles == null || level.obstacles.Length != size)
         {
             level.obstacles = new int[size];
+            level.colorCrateInitialHits = System.Array.Empty<ColorCrateInitialHitsEntry>();
             for (int i = 0; i < size; i++) level.obstacles[i] = (int)ObstacleId.None;
         }
         if (level.obstacleOrigins == null || level.obstacleOrigins.Length != size)
@@ -746,6 +758,9 @@ public class LevelDataEditor : Editor
 
         if (level.magnets == null)
             level.magnets = System.Array.Empty<MagnetEntry>();
+
+        if (level.waterChannels == null)
+            level.waterChannels = System.Array.Empty<WaterChannelEntry>();
 
         if (level.safes == null)
             level.safes = System.Array.Empty<SafeEntry>();
@@ -848,12 +863,25 @@ public class LevelDataEditor : Editor
         var selDef = library.Get(selectedObstacle);
         if (selDef != null)
         {
+            bool isColorCrate = StackedObstacleEntry.SupportsInitialHits(selectedObstacle);
+            if (isColorCrate)
+            {
+                selectedInitialCrateHits = EditorGUILayout.IntSlider(
+                    new GUIContent("Başlangıç kalan vuruş", "Bu sandığın başlangıç aşaması. Aynı sandığa yeniden tıklayarak güncelle."),
+                    selectedInitialCrateHits, 1, Mathf.Max(1, selDef.hits));
+                Rect stagePreview = GUILayoutUtility.GetRect(paletteIcon, paletteIcon, GUILayout.ExpandWidth(false));
+                DrawObstaclePreview(library, selDef, stagePreview, 2, selectedInitialCrateHits);
+                EditorGUILayout.HelpBox("Seçtiğin vuruş sayısıyla yerleştir. Mevcut aynı renk sandığa tıklamak aşamasını günceller.", MessageType.None);
+            }
             var stage0 = selDef.GetStageRuleForRemainingHits(selDef.hits);
             string stageInfo = stage0 == null ? "-" : $"BlocksCells: {stage0.blocksCells}  |  Behavior: {stage0.behavior}  |  AllowDiagonal: {stage0.allowDiagonal}";
-            EditorGUILayout.HelpBox($"Selected: {selectedObstacle}  |  Size: {selDef.size.x}x{selDef.size.y}  |  Hits: {Mathf.Max(1, selDef.hits)}  |  {stageInfo}", MessageType.None);
+            EditorGUILayout.HelpBox($"Selected: {selectedObstacle}  |  Size: {selDef.size.x}x{selDef.size.y}  |  Library Max Hits: {Mathf.Max(1, selDef.hits)}  |  {stageInfo}", MessageType.None);
             if (IsWallId(selectedObstacle))
                 DrawWallPieceBrush(level);
-            DrawSelectedObstacleStageEditor(library, selDef);
+            if (isColorCrate)
+                showSharedCrateStageRules = EditorGUILayout.Foldout(showSharedCrateStageRules, "Ortak kütüphane kuralları (tüm levellar)", true);
+            if (!isColorCrate || showSharedCrateStageRules)
+                DrawSelectedObstacleStageEditor(library, selDef);
         }
     }
 
@@ -979,7 +1007,7 @@ public class LevelDataEditor : Editor
             var foot = level.GetObstacleFootprint(obs, idx, def);
             int w = foot.x, h = foot.y;
             Rect big = new Rect(ox + x * cellPx, oy + y * cellPx, w * cellPx - 1, h * cellPx - 1);
-            DrawObstaclePreview(library, def, big, 2);
+            DrawObstaclePreview(library, def, big, 2, level.GetColorCrateInitialHits(idx, obs));
             if (obs == ObstacleId.TarpStatue)
             {
                 var tarp = level.GetTarpStatue(idx);
@@ -1081,6 +1109,39 @@ public class LevelDataEditor : Editor
                             { alignment = TextAnchor.MiddleCenter, fontSize = 9, normal = { textColor = Color.white } });
                 }
             }
+        }
+
+        // Su kanalları: yol turkuaz, depo hücresi "D", çıkış suyun çıktığı yönde ok
+        if (level.waterChannels != null)
+        {
+            var endStyle = new GUIStyle(EditorStyles.boldLabel) { alignment = TextAnchor.MiddleCenter, fontSize = 10, normal = { textColor = Color.white } };
+            foreach (var entry in level.waterChannels)
+            {
+                if (entry.pathCellIndices == null) continue;
+                for (int ki = 0; ki < entry.pathCellIndices.Length; ki++)
+                {
+                    int ci = entry.pathCellIndices[ki];
+                    if (ci < 0 || ci >= level.obstacles.Length) continue;
+                    Rect kr = new Rect(ox + (ci % level.width) * cellPx, oy + (ci / level.width) * cellPx, cellPx - 1, cellPx - 1);
+                    bool first = ki == 0, last = ki == entry.pathCellIndices.Length - 1;
+                    EditorGUI.DrawRect(kr, first || last ? channelEndColor : channelPathColor);
+                    if (first) GUI.Label(kr, "D", endStyle);   // depo
+                    else if (last)
+                    {
+                        char exit = WaterChannelEntry.ExitSide(level, entry.pathCellIndices);
+                        GUI.Label(kr, exit == 'L' ? "←" : exit == 'R' ? "→" : "↓", endStyle);
+                    }
+                }
+            }
+        }
+        for (int bi = 0; bi < channelPathBuilding.Count; bi++)
+        {
+            int ci = channelPathBuilding[bi];
+            if (ci < 0 || ci >= level.obstacles.Length) continue;
+            Rect kr = new Rect(ox + (ci % level.width) * cellPx, oy + (ci / level.width) * cellPx, cellPx - 1, cellPx - 1);
+            EditorGUI.DrawRect(kr, channelBuildingColor);
+            GUI.Label(kr, (bi + 1).ToString(), new GUIStyle(EditorStyles.boldLabel)
+                { alignment = TextAnchor.MiddleCenter, fontSize = 9, normal = { textColor = Color.black } });
         }
 
         // Draw building magnet path
@@ -1245,7 +1306,12 @@ public class LevelDataEditor : Editor
 
                 // Origin'in üst-sol köşesine üstteki obstacle'ın mini ikonu.
                 Rect lr = new Rect(ox + sox * cellPx, oy + soy * cellPx, cellPx * 0.55f, cellPx * 0.55f);
-                if (def != null) DrawObstaclePreview(lib, def, lr, 1);
+                if (def != null)
+                {
+                    int remaining = e.initialRemainingHits > 0 && StackedObstacleEntry.SupportsInitialHits(e.obstacleId)
+                        ? e.ResolveInitialRemainingHits(def) : 0;
+                    DrawObstaclePreview(lib, def, lr, 1, remaining);
+                }
             }
         }
 
@@ -1373,6 +1439,7 @@ public class LevelDataEditor : Editor
                 ClearCell(level, idx);
                 RemoveTubeAtCell(level, idx);
                 RemoveMagnetAtCell(level, idx);
+                RemoveChannelAtCell(level, idx);
                 RemoveSafeAtCell(level, idx);
                 RemoveAncientSealAtCell(level, idx);
                 RemoveStackedAtCell(level, idx);
@@ -1388,6 +1455,9 @@ public class LevelDataEditor : Editor
                 break;
             case PaintMode.Magnet:
                 AddMagnetPathCell(level, idx);
+                break;
+            case PaintMode.Channel:
+                AddChannelPathCell(level, idx);
                 break;
             case PaintMode.Tiles:
                 PaintPinnedTile(level, idx);
@@ -1713,8 +1783,24 @@ public class LevelDataEditor : Editor
         // Yığın: aynı köşeye AYNI engel tekrar konursa yinelenmez; farklı engel mevcutların ÜSTÜNE eklenir
         // (eskiden hücreyi kaplayan tüm üst katmanlar silinip tek katmana düşülüyordu).
         var current = level.stackedObstacles ?? System.Array.Empty<StackedObstacleEntry>();
-        if (System.Array.Exists(current, e => e.originCellIndex == originIdx && e.obstacleId == selectedObstacle))
+        for (int i = 0; i < current.Length; i++)
+            if (current[i].originCellIndex == originIdx && current[i].obstacleId == selectedObstacle)
+            {
+                if (StackedObstacleEntry.SupportsInitialHits(selectedObstacle))
+                {
+                    var existing = current[i];
+                    existing.initialRemainingHits = selectedInitialCrateHits;
+                    current[i] = existing;
+                }
+                return;
+            }
+        // Aynı normal sandığın aşamasını değiştirmek ikinci bir sandık katmanı oluşturmaz.
+        if (StackedObstacleEntry.SupportsInitialHits(selectedObstacle)
+            && level.obstacles[originIdx] == (int)selectedObstacle)
+        {
+            level.SetColorCrateInitialHits(originIdx, selectedObstacle, selectedInitialCrateHits);
             return;
+        }
         if (!ValidateFullCover(level, RectCells(level, originIdx, w, h), selectedObstacle, -1))
             return;
 
@@ -1722,7 +1808,8 @@ public class LevelDataEditor : Editor
         {
             originCellIndex = originIdx,
             obstacleId      = selectedObstacle,
-            stackOrder      = NextStackOrder(level)
+            stackOrder      = NextStackOrder(level),
+            initialRemainingHits = StackedObstacleEntry.SupportsInitialHits(selectedObstacle) ? selectedInitialCrateHits : 0
         };
 
         var list = new System.Collections.Generic.List<StackedObstacleEntry>(
@@ -1863,6 +1950,7 @@ public class LevelDataEditor : Editor
 
     private void ClearCell(LevelData level, int idx)
     {
+        level.ClearColorCrateInitialHitsAt(idx);
         if (level.hamsterSatietyByCell != null && idx < level.hamsterSatietyByCell.Length)
             level.hamsterSatietyByCell[idx] = 0;
         bool wasWall = IsWallId((ObstacleId)level.obstacles[idx]);
@@ -1875,7 +1963,8 @@ public class LevelDataEditor : Editor
     {
         // Tube/Magnet/Safe ham obstacle olarak basılamaz: runtime yalnız LevelData.tubes/magnets/safes
         // girişlerinden kurar (GridSpawner generic görsel de çizmez) → görünmez, bozuk hücre olur.
-        if (id == ObstacleId.Tube || id == ObstacleId.Magnet || id == ObstacleId.Safe || id == ObstacleId.AncientSeal)
+        if (id == ObstacleId.Tube || id == ObstacleId.Magnet || id == ObstacleId.Safe || id == ObstacleId.AncientSeal
+            || id == ObstacleId.WaterChannel)
         {
             if (GameDiagnostics.EditorTools)
                 Debug.LogWarning($"[LevelEditor] {id} Obstacle modunda yerleştirilemez — kendi sekmesini ({id}) kullan.");
@@ -1887,6 +1976,7 @@ public class LevelDataEditor : Editor
             if (!level.InBounds(ax, ay)) return;
             int wIdx = level.Index(ax, ay);
             if (level.cells[wIdx] != (int)CellType.Normal) return;
+            level.ClearColorCrateInitialHitsAt(wIdx);
             level.obstacles[wIdx] = (int)id;
             if (level.wallPieceIds == null || level.wallPieceIds.Length != level.width * level.height)
                 RecomputeWallOrigins(level);   // diziyi boyutlandırır
@@ -1908,14 +1998,19 @@ public class LevelDataEditor : Editor
             if (level.cells[idx] != (int)CellType.Normal) return;
         }
         int originIdx = level.Index(ax, ay);
+        if (StackedObstacleEntry.SupportsInitialHits(id)
+            && UpdateExistingStackedCrate(level, originIdx, id)) return;
         for (int y = ay; y < ay + h; y++)
         for (int x = ax; x < ax + w; x++)
         {
             int idx = level.Index(x, y);
+            level.ClearColorCrateInitialHitsAt(idx);
             level.obstacles[idx] = (int)id;
             level.obstacleOrigins[idx] = originIdx;
         }
         level.obstacleOrigins[originIdx] = originIdx;
+        if (StackedObstacleEntry.SupportsInitialHits(id))
+            level.SetColorCrateInitialHits(originIdx, id, selectedInitialCrateHits);
         EnsureHamsterSatietyArray(level);
         for (int y = ay; y < ay + h; y++)
         for (int x = ax; x < ax + w; x++)
@@ -1927,6 +2022,23 @@ public class LevelDataEditor : Editor
         // Başka engel duvar hücrelerinin üstüne basıldıysa kalan duvar parçalarını yeniden kur.
         if (level.wallPieceIds != null && System.Array.Exists(level.wallPieceIds, p => p > 0))
             RecomputeWallOrigins(level);
+    }
+
+    // Normal Obstacle fırçası, çamur vb. üzerinde zaten duran sandığın yalnız aşamasını değiştirir.
+    private bool UpdateExistingStackedCrate(LevelData level, int origin, ObstacleId id)
+    {
+        var entries = level.stackedObstacles;
+        if (entries == null) return false;
+        int top = -1;
+        for (int i = 0; i < entries.Length; i++)
+            if (entries[i].originCellIndex == origin
+                && (top < 0 || entries[i].stackOrder >= entries[top].stackOrder))
+                top = i;
+        if (top < 0 || entries[top].obstacleId != id) return false;
+        var entry = entries[top];
+        entry.initialRemainingHits = selectedInitialCrateHits;
+        entries[top] = entry;
+        return true;
     }
 
     private void DrawTilePinPalette(LevelData level)
@@ -2137,6 +2249,99 @@ public class LevelDataEditor : Editor
         level.magnets = list.ToArray();
     }
 
+    private void DrawChannelPalette(LevelData level)
+    {
+        EditorGUILayout.LabelField("Su Kanalı", EditorStyles.boldLabel);
+        EditorGUILayout.HelpBox(
+            "1) İlk tıklama = DEPO: herhangi bir oynanır hücre (oyunda taş içinden geçer, üstünde çeşme durur).\n" +
+            "2) Sonraki hücreler: bir öncekinin dik komşusu; YUKARI çıkamaz (aşağı ya da yana).\n" +
+            "3) Son hücre: tahtanın sol, sağ ya da alt kenarına (veya bir boşluğa) değmeli; su oradan çıkar.\n" +
+            "Son eklenen hücreye tekrar tıklamak onu geri alır. Erase modu: kanalı siler.",
+            MessageType.Info);
+
+        EditorGUILayout.LabelField($"Oluşturulan yol: {channelPathBuilding.Count} hücre", EditorStyles.miniLabel);
+        if (!string.IsNullOrEmpty(channelStatus))
+            EditorGUILayout.HelpBox(channelStatus, MessageType.Warning);
+
+        EditorGUILayout.BeginHorizontal();
+        EditorGUI.BeginDisabledGroup(channelPathBuilding.Count < 2);
+        if (GUILayout.Button("Kanalı Kaydet"))
+            FinalizeChannel(level);
+        EditorGUI.EndDisabledGroup();
+        if (GUILayout.Button("Yolu Temizle"))
+        {
+            channelPathBuilding.Clear();
+            channelStatus = null;
+        }
+        EditorGUILayout.EndHorizontal();
+
+        EditorGUILayout.Space(4);
+        int count = level.waterChannels != null ? level.waterChannels.Length : 0;
+        EditorGUILayout.LabelField($"Mevcut kanallar: {count}", EditorStyles.miniLabel);
+        if (count > 0)
+        {
+            for (int i = 0; i < count; i++)
+                if (!WaterChannelEntry.Validate(level, level.waterChannels[i].pathCellIndices, out string err))
+                    EditorGUILayout.HelpBox($"Kanal {i + 1}: {err}", MessageType.Error);
+            if (GUILayout.Button("Tüm kanalları temizle"))
+            {
+                Undo.RecordObject(level, "Clear All Water Channels");
+                level.waterChannels = System.Array.Empty<WaterChannelEntry>();
+                EditorUtility.SetDirty(level);
+            }
+        }
+    }
+
+    private void AddChannelPathCell(LevelData level, int cellIndex)
+    {
+        if (cellIndex < 0 || cellIndex >= level.cells.Length) return;
+        channelStatus = null;
+        int n = channelPathBuilding.Count;
+        if (n > 0 && channelPathBuilding[n - 1] == cellIndex) { channelPathBuilding.RemoveAt(n - 1); return; }   // geri al
+        if (level.cells[cellIndex] != (int)CellType.Normal) { channelStatus = "Bu hücre oynanır değil."; return; }
+        if (channelPathBuilding.Contains(cellIndex)) { channelStatus = "Bu hücre yolda zaten var."; return; }
+        if (IsChannelCell(level, cellIndex)) { channelStatus = "Bu hücre başka bir kanalda."; return; }
+        int w = level.width;
+        if (n > 0)
+        {
+            int p = channelPathBuilding[n - 1];
+            if (Mathf.Abs(cellIndex % w - p % w) + Mathf.Abs(cellIndex / w - p / w) != 1)
+            { channelStatus = "Yeni hücre bir öncekinin dik komşusu olmalı."; return; }
+            if (cellIndex / w < p / w)
+            { channelStatus = "Kanal yukarı çıkamaz (su yalnız aşağı ya da yana akar)."; return; }
+        }
+        channelPathBuilding.Add(cellIndex);
+    }
+
+    private static bool IsChannelCell(LevelData level, int cellIndex)
+    {
+        if (level.waterChannels == null) return false;
+        foreach (var e in level.waterChannels)
+            if (e.pathCellIndices != null && System.Array.IndexOf(e.pathCellIndices, cellIndex) >= 0) return true;
+        return false;
+    }
+
+    private void FinalizeChannel(LevelData level)
+    {
+        var path = channelPathBuilding.ToArray();
+        if (!WaterChannelEntry.Validate(level, path, out string err)) { channelStatus = err; return; }
+        Undo.RecordObject(level, "Add Water Channel");
+        var list = new System.Collections.Generic.List<WaterChannelEntry>(level.waterChannels ?? System.Array.Empty<WaterChannelEntry>())
+            { new WaterChannelEntry { pathCellIndices = path } };
+        level.waterChannels = list.ToArray();
+        channelPathBuilding.Clear();
+        channelStatus = null;
+        EditorUtility.SetDirty(level);
+    }
+
+    private void RemoveChannelAtCell(LevelData level, int cellIndex)
+    {
+        if (level.waterChannels == null || level.waterChannels.Length == 0) return;
+        var list = new System.Collections.Generic.List<WaterChannelEntry>(level.waterChannels);
+        list.RemoveAll(e => e.pathCellIndices != null && System.Array.IndexOf(e.pathCellIndices, cellIndex) >= 0);
+        level.waterChannels = list.ToArray();
+    }
+
     private void DrawTubePalette(LevelData level)
     {
         EditorGUILayout.LabelField("Tube Obstacle", EditorStyles.boldLabel);
@@ -2317,7 +2522,7 @@ public class LevelDataEditor : Editor
         return SafeLockColor.Red;
     }
 
-    private void DrawObstaclePreview(ObstacleLibrary library, ObstacleDef def, Rect rect, float padding)
+    private void DrawObstaclePreview(ObstacleLibrary library, ObstacleDef def, Rect rect, float padding, int remainingHits = 0)
     {
         if (def == null) return;
         if (def.id == ObstacleId.GrassWaterLily)
@@ -2326,7 +2531,10 @@ public class LevelDataEditor : Editor
             float grow = (GrassWaterLilyService.FlowerSizeRatio - 1) * (rect.width - padding * 2) * 0.5f;
             rect = new Rect(rect.x - grow, rect.y - grow, rect.width + grow * 2, rect.height + grow * 2);
         }
-        DrawSpriteInRect(def.GetPreviewSprite(), rect, padding);
+        // Mud's stage sprite is the underlay; palette/grid previews use its bordered display icon.
+        var sprite = remainingHits > 0 ? def.GetSpriteForRemainingHits(remainingHits)
+            : def.id == ObstacleId.Mud ? def.GetGoalIconSprite() : def.GetPreviewSprite();
+        DrawSpriteInRect(sprite, rect, padding);
     }
 
     private void DrawSpriteInRect(Sprite sprite, Rect r, float padding)

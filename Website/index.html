@@ -200,6 +200,10 @@
   .phone figcaption { font-weight: 700; font-size: 15px; color: var(--ink); }
   .phone figcaption span { display: block; }
   .phone figcaption span + span { font-weight: 600; font-size: 14px; color: var(--muted); }
+  /* oynanış videoları: aynı telefon çerçevesi, 9:16; yalnız ekrandayken ve tek tek oynar */
+  .clips { grid-auto-columns: minmax(170px, 260px); justify-content: center; }
+  .phone video { display: block; border-radius: 24px; width: 100%; height: auto; aspect-ratio: 9 / 16; object-fit: cover; background: #14112b; cursor: pointer; }
+  @media (max-width: 640px) { .clips { justify-content: start; grid-auto-columns: 62vw; } }
 
   /* ── Harikalar: kartpostal şeridi + gerçek görev listesi ── */
   .wonders { background: var(--paper); border-block: 1.5px solid var(--line); }
@@ -571,6 +575,21 @@
         <p class="eyebrow" data-i18n="sh_eyebrow">From the game</p>
         <h2 id="screens-title" data-i18n="sh_title">A look inside Wonder Fixers</h2>
       </div>
+      <h3 class="subhead" data-i18n="sh_play">In play</h3>
+      <div class="shots clips" role="list">
+        <figure class="phone" role="listitem">
+          <div class="screen"><video class="clip" muted playsinline preload="none" width="540" height="960" poster="/img/clips/play-l011.webp" aria-label="Gameplay of level 11: rockets clear a board of orange cabinets" data-i18n-aria="c1_alt"><source src="/img/clips/play-l011.mp4" type="video/mp4"></video></div>
+          <figcaption><span data-i18n="c1">Level 11</span><span data-i18n="c1t">Clear it with style</span></figcaption>
+        </figure>
+        <figure class="phone" role="listitem">
+          <div class="screen"><video class="clip" muted playsinline preload="none" width="540" height="960" poster="/img/clips/play-l067.webp" aria-label="Gameplay of level 67: a rocket combo sweeps the whole board" data-i18n-aria="c2_alt"><source src="/img/clips/play-l067.mp4" type="video/mp4"></video></div>
+          <figcaption><span data-i18n="c2">Level 67</span><span data-i18n="c2t">Rocket party</span></figcaption>
+        </figure>
+        <figure class="phone" role="listitem">
+          <div class="screen"><video class="clip" muted playsinline preload="none" width="540" height="960" poster="/img/clips/play-l151.webp" aria-label="Gameplay of level 151: a flower-patterned board with a Bosphorus view" data-i18n-aria="c3_alt"><source src="/img/clips/play-l151.mp4" type="video/mp4"></video></div>
+          <figcaption><span data-i18n="c3">Level 151</span><span data-i18n="c3t">One more move… or not?</span></figcaption>
+        </figure>
+      </div>
       <h3 class="subhead" data-i18n="sh_levels">Levels</h3>
       <div class="shots" role="list">
         <figure class="phone" role="listitem">
@@ -850,6 +869,10 @@
     s3_title: "Harikayı onar", s3_text: "Yıldızlarını tamir görevlerine harca: sütunları kaynakla, mermeri parlat, bayrağı dik. Hepsi bitince harika yeniden parlar.",
     sh_eyebrow: "Oyundan kareler", sh_title: "Wonder Fixers'ın içinden",
     sh_levels: "Seviyeler", sh_menus: "Harikalar ve etkinlikler",
+    sh_play: "Oynanış",
+    c1: "Seviye 11", c1t: "Tarzınla temizle", c1_alt: "Seviye 11'in oynanışı: roketler turuncu dolaplarla dolu tahtayı temizliyor",
+    c2: "Seviye 67", c2t: "Roket şenliği", c2_alt: "Seviye 67'nin oynanışı: bir roket kombosu bütün tahtayı süpürüyor",
+    c3: "Seviye 151", c3t: "Bir hamle daha… ya da değil?", c3_alt: "Seviye 151'in oynanışı: Boğaz manzarası önünde çiçek desenli tahta",
     k_eyebrow: "Alet çantası", k_title: "Taşlar, special'lar ve jokerler",
     k_tiles: "Dört renk, tek kural: aynı taştan üç ya da daha fazlasını yan yana getir. Daha büyük şekiller special verir.",
     k_specials: "Special'lar", k_jokers: "Jokerler", k_combo: "İki special'ı birbirine kaydır, daha büyük bir kombo çıkar.",
@@ -923,6 +946,7 @@
   document.querySelectorAll("[data-i18n]").forEach(el => en[el.dataset.i18n] = el.textContent);
   document.querySelectorAll("[data-i18n-html]").forEach(el => en[el.dataset.i18nHtml] = el.innerHTML);
   document.querySelectorAll("[data-i18n-alt]").forEach(el => en[el.dataset.i18nAlt] = el.alt);
+  document.querySelectorAll("[data-i18n-aria]").forEach(el => en[el.dataset.i18nAria] = el.getAttribute("aria-label"));
   const dict = { en, tr: TR };
 
   function apply(lang) {
@@ -931,6 +955,7 @@
     document.querySelectorAll("[data-i18n]").forEach(el => { const v = d[el.dataset.i18n]; if (v) el.textContent = v; });
     document.querySelectorAll("[data-i18n-html]").forEach(el => { const v = d[el.dataset.i18nHtml]; if (v) el.innerHTML = v; });
     document.querySelectorAll("[data-i18n-alt]").forEach(el => { const v = d[el.dataset.i18nAlt]; if (v) el.alt = v; });
+    document.querySelectorAll("[data-i18n-aria]").forEach(el => { const v = d[el.dataset.i18nAria]; if (v) el.setAttribute("aria-label", v); });
     document.querySelectorAll("[data-w]").forEach(el => el.textContent = WONDERS[lang][el.dataset.w]);
     document.querySelectorAll("[data-tasks]").forEach(ul => {
       const list = TASKS[lang][ul.dataset.tasks];
@@ -962,6 +987,39 @@
     apply(target);
   }));
   document.getElementById("year").textContent = new Date().getFullYear();
+
+  // Oynanış videoları: sayfa açılışında hiçbiri inmez (preload=none). Ekranda en az %60 görünenlerden
+  // yalnız biri oynar; bitince görünür olan sıradakine geçer, ekrandan çıkınca durur. Dokunma = oynat/durdur.
+  // Hareketi azalt tercihinde kendiliğinden oynamaz, oynatma düğmeleri görünür.
+  const clips = [...document.querySelectorAll("video.clip")];
+  if (clips.length) {
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches || !("IntersectionObserver" in window)) {
+      clips.forEach(v => v.controls = true);
+    } else {
+      const ratio = new Map();
+      let current = null;
+      const visible = () => clips.filter(v => (ratio.get(v) || 0) >= 0.6);
+      const play = v => {
+        if (current && current !== v) current.pause();
+        current = v;
+        if (v) v.play().catch(() => {});
+      };
+      const io = new IntersectionObserver(entries => {
+        entries.forEach(e => ratio.set(e.target, e.intersectionRatio));
+        if (!current || !visible().includes(current)) play(visible()[0] || null);
+      }, { threshold: [0, 0.6, 1] });
+      clips.forEach(v => {
+        io.observe(v);
+        v.addEventListener("ended", () => {
+          const vs = visible();
+          play(vs.length ? vs[(vs.indexOf(v) + 1) % vs.length] : null);
+        });
+        v.addEventListener("click", () => {
+          if (current === v && !v.paused) v.pause(); else play(v);
+        });
+      });
+    }
+  }
 })();
 </script>
 <!--TAWK-START: canlı destek sohbeti (Tawk.to, ücretsiz). Önizleme sürümünden çıkarılır.-->

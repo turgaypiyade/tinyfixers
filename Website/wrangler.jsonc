@@ -1,4 +1,4 @@
-// Wondi Games sitesi — Cloudflare Worker (yalnız statik dosyalar). Yayın: Website/ içinde
+// Wondi Games sitesi — Cloudflare Worker (statik dosyalar; worker.js yalnız video yollarında Range/206 için). Yayın: Website/ içinde
 //   set -a; . ~/.wondi-cloudflare.env; set +a; npx wrangler@4 deploy
 // build adımı (build.py): index.html + /tr/ + img/ + robots.txt + sitemap.xml → .wrangler/site; ham kareler (raw/, IMGStore/) asla yüklenmez.
 {
@@ -7,7 +7,12 @@
   "build": {
     "command": "python3 build.py"
   },
-  "assets": { "directory": ".wrangler/site" },
+  "main": "worker.js",
+  "assets": {
+    "directory": ".wrangler/site",
+    "binding": "ASSETS",
+    "run_worker_first": ["/img/clips/*", "/social/reels/*"]
+  },
   "workers_dev": true,
   "preview_urls": false,
   "routes": [

@@ -70,9 +70,15 @@ public class ObstacleHintManager : MonoBehaviour
             if (IsHintSeen(id)) continue;
             if (!hintLibrary.TryGet(id, out var entry)) continue;
 
-            Sprite icon = entry.iconOverride != null
-                ? entry.iconOverride
-                : obstacleLibrary?.Get(id)?.GetPreviewSprite();
+            Sprite icon = entry.iconOverride;
+            if (icon == null)
+            {
+                var definition = obstacleLibrary?.Get(id);
+                // Mud uses its bordered icon; Tube needs a display icon even without a stage sprite.
+                icon = id == ObstacleId.Mud || id == ObstacleId.Tube
+                    ? definition?.GetGoalIconSprite()
+                    : definition?.GetPreviewSprite();
+            }
 
             if (!ownsPause)
             {

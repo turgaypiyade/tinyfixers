@@ -27,7 +27,9 @@ public class SlowMoDebug : MonoBehaviour
         if (kb == null)
             return;
 
-        if (kb.sKey.wasPressedThisFrame)
+        // Ctrl/Cmd+S (sahne kaydetme) ağır çekimi tetiklemesin — yalnız tek başına S.
+        bool modifier = kb.ctrlKey.isPressed || kb.leftMetaKey.isPressed || kb.rightMetaKey.isPressed;
+        if (kb.sKey.wasPressedThisFrame && !modifier)
             SetScale(Mathf.Approximately(Time.timeScale, 1f) ? slowScale : 1f);
 
         if (kb.commaKey.wasPressedThisFrame)

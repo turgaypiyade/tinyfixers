@@ -729,10 +729,18 @@ public class JokerFocusOverlayController : MonoBehaviour
             if (!child.TryGetComponent(out Button button)) button = child.gameObject.AddComponent<Button>();
             jokerButtons[i] = button;
 
+            // AddComponent<Button> anında Selectable varsayılan ColorTint ile OnEnable'da durum rengini HEDEF görselin
+            // CanvasRenderer'ına yazar (hedef = slotun kendi Image'ı, joker arka plan çerçevesi). Giriş animasyonu
+            // (GameHudEntranceAnimator) alt barın CanvasGroup'unu Awake'te interactable=false yaptığı için bu renk
+            // "disabled" = gri %50 alfa oluyordu; transition None'a çekilince de bir daha sıfırlanmıyordu → çerçeve
+            // oyun boyunca soluk. Image.color beyaz kaldığı için Inspector'da görünmüyordu.
+            var autoTinted = button.targetGraphic;
             var raycastGraphic = EnsureRaycastSurface(child, icon);
             button.transition    = Selectable.Transition.None;
             button.targetGraphic = raycastGraphic;
             button.interactable  = true;
+            if (autoTinted != null) autoTinted.canvasRenderer.SetColor(Color.white);
+            raycastGraphic.canvasRenderer.SetColor(Color.white);
 
             int cap = i;
             button.onClick.RemoveAllListeners();
@@ -899,9 +907,11 @@ public class JokerFocusOverlayController : MonoBehaviour
     // Sahnede slotlar SOL-ÜST köşeye sabit x'lerle (200/382/564/746, ayarlar 920) dizilmiş, yerleşim grubu kapalı:
     // telefon oranında ortaya denk geliyor ama başka oranda (editör Game görünümü) sola kayıyordu; 5. joker de
     // karıştırıcının üstüne binerdi. Burada sıra her oranda ORTALANIR ve tüm öğeler (ayarlar dahil) AYNI oranda küçülür.
-    private const float SlotGap = 20f;        // jokerler arası (sahnedeki 182 adım − 162 slot)
-    private const float SettingsGap = 32f;    // son joker ile ayarlar arası (sahnedeki değer)
-    private const float MaxRowSpan = 914f;    // tek ölçek tavanı: 4 joker + ayarlar sırasının (862) biraz genişi
+    // 5 joker + ayarlar: tavan 914 iken (4 jokerlik sıraya göre) 5. joker gelince her şey ~%12.5 küçülüyordu.
+    // Boşluklar daraltıldı, tavan ~ekran genişliğinin %94'ü: slotlar ~%10 büyük, kenarlara yapışmaz.
+    private const float SlotGap = 12f;        // jokerler arası
+    private const float SettingsGap = 20f;    // son joker ile ayarlar arası
+    private const float MaxRowSpan = 946f;    // tek ölçek tavanı (geniş ekranda/tablette büyümesin)
     private const float SideMargin = 40f;
     private bool arranging;
 
@@ -925,6 +935,7 @@ public class JokerFocusOverlayController : MonoBehaviour
         }
         if (boosters.Count == 0) return;
         boosters.Sort((a, b) => a.index.CompareTo(b.index));
+        foreach (var b in boosters) FitButtonInsideFrame(b.rt);
 
         var row = new List<RectTransform>(boosters.Count + extras.Count);
         foreach (var b in boosters) row.Add(b.rt);
@@ -957,6 +968,24 @@ public class JokerFocusOverlayController : MonoBehaviour
             }
         }
         finally { arranging = false; }
+    }
+
+    // Yeşil buton (slot içindeki Button'ın hedef Image'ı) çerçevenin (slotun kendi Image'ı, JokerBGV1) altın halkasının
+    // içine oturur. Oran çizimden: halka 512 px'in her kenarında ~33 px → iç açıklık ~%87; buton halkanın iç kenarına
+    // hafifçe biner (ilk çizimdeki 114/130). Çizimler aynı tuval boyutunda geldiği için piksel oranı KULLANILMAZ.
+    private const float ButtonInFrameRatio = 114f / 130f;
+
+    private static void FitButtonInsideFrame(RectTransform slot)
+    {
+        if (!slot.TryGetComponent(out Image frame) || frame.sprite == null) return;
+        foreach (var btn in slot.GetComponentsInChildren<Button>(true))
+        {
+            if (btn.transform == slot || !(btn.targetGraphic is Image body)) continue;
+            var rt = body.rectTransform;
+            if (rt.anchorMin != rt.anchorMax) return;   // gerilen yerleşim: elle ayarlı, dokunma
+            rt.sizeDelta = slot.sizeDelta * ButtonInFrameRatio;
+            return;
+        }
     }
 
     // Boya Kovası hedefi kabul edilmedi: sebep açıklama satırında kısa süre görünür, sonra ipucu geri gelir.

@@ -79,7 +79,12 @@ public static class ShopPurchaseService
                     StoreIap.BeginPurchase(offer);
                     return false;
                 }
-                if (!SimulateRealMoneyPurchases) return false;
+                if (!SimulateRealMoneyPurchases)
+                {
+                    // Yayın sürümünde mağaza hazır değil: sessiz kalma, oyuncuya söyle (yeniden bağlanmayı da tetikler).
+                    StoreIap.ShowUnavailable();
+                    return false;
+                }
                 break;
 
             default:
