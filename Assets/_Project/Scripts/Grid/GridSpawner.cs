@@ -4265,28 +4265,26 @@ public class GridSpawner : MonoBehaviour
             return;
         }
 
+        // Jel fırlatıcı: ilk vuruşta pres yarıya iner; sprite değişmez (görsel GelLauncherPressView).
         if (BoardController.IsGelLauncher(change.obstacleId))
         {
             var press = image.GetComponent<GelLauncherPressView>();
             if (press == null) press = GelLauncherPressView.Ensure(image, change.obstacleId, 2);
-            if (press != null) { press.FirstHit(); return; }
+            if (press != null) press.FirstHit();
+            else PlayObstacleHitShake(change.originIndex, image.rectTransform);
+            return;
         }
 
         if (change.sprite != null && change.obstacleId != ObstacleId.Grass)
             image.sprite = change.sprite;
 
         // Barrell_v2 + su deposu: ara vuruşta (sprite değişimi) kısa sarsıntı — "çatladı" hissi.
-        if (change.obstacleId == ObstacleId.Barrell_v2 || BoardController.IsWaterTank(change.obstacleId)
-            || BoardController.IsGelLauncher(change.obstacleId))
+        if (change.obstacleId == ObstacleId.Barrell_v2 || BoardController.IsWaterTank(change.obstacleId))
             PlayObstacleHitShake(change.originIndex, image.rectTransform);
 
         // Su deposu: çatlak kareleri (Bidon → Bidon2 → Bidon3) oynar + gövdeden parça sıçrar.
         if (BoardController.IsWaterTank(change.obstacleId))
             PlayWaterTankCrack(image, change.sprite);
-
-        // Jel fırlatıcı: çatlak hâlde ara ara şişip buhar çıkarır.
-        if (BoardController.IsGelLauncher(change.obstacleId))
-            GelLauncherIdleFx.Ensure(image, change.obstacleId, tileSize);
     }
 
     private void PlayWaterTankCrack(Image image, Sprite stageSprite)

@@ -71,7 +71,9 @@ public class ObstacleHintManager : MonoBehaviour
             if (!hintLibrary.TryGet(id, out var entry)) continue;
 
             Sprite icon = entry.iconOverride;
-            if (icon == null)
+            // Jel kartuşu: library sprite'ı yerine katmanlı pres gösterilir (TutorialOverlayController).
+            bool gelLauncherPress = icon == null && BoardController.IsGelLauncher(id);
+            if (icon == null && !gelLauncherPress)
             {
                 var definition = obstacleLibrary?.Get(id);
                 // Mud uses its bordered icon; Tube needs a display icon even without a stage sprite.
@@ -90,7 +92,7 @@ public class ObstacleHintManager : MonoBehaviour
             }
 
             bool dismissed = false;
-            overlay.ShowHint(icon, entry.GetTitle(), entry.GetDescription(), () => dismissed = true);
+            overlay.ShowHint(icon, entry.GetTitle(), entry.GetDescription(), () => dismissed = true, gelLauncherPress);
             yield return new WaitUntil(() => dismissed || overlay == null || !overlay.IsVisible);
             if (!dismissed) yield break;
 

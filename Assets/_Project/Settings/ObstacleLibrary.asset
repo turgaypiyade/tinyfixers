@@ -2956,7 +2956,7 @@ MonoBehaviour:
     legacyBehavior: 4
   - id: 59
     stages:
-    - sprite: {fileID: 21300000, guid: 055100bc0e52446b80284a6074f8d0d6, type: 3}
+    - sprite: {fileID: 21300000, guid: 1d27c79f2f8d4a2cb1b334ceb5ba2404, type: 3}
       damageRule: 1
       blocksCells: 1
       behavior: 1
@@ -2967,7 +2967,7 @@ MonoBehaviour:
       hitParticleSprites: []
       hitSound: {fileID: 0}
       hitSoundVolume: 1
-    - sprite: {fileID: 21300000, guid: 3571f9b5478a409ca5501ddee15f4d6c, type: 3}
+    - sprite: {fileID: 21300000, guid: 1d27c79f2f8d4a2cb1b334ceb5ba2404, type: 3}
       damageRule: 1
       blocksCells: 1
       behavior: 1
@@ -3007,14 +3007,14 @@ MonoBehaviour:
     impactSound: {fileID: 0}
     impactSoundVolume: 1
     drawUnderTiles: 0
-    legacySprite: {fileID: 21300000, guid: 055100bc0e52446b80284a6074f8d0d6, type: 3}
+    legacySprite: {fileID: 21300000, guid: 1d27c79f2f8d4a2cb1b334ceb5ba2404, type: 3}
     legacyStageSprites: []
     legacyStageDamageRules: 
     legacyBlocksCells: 1
     legacyBehavior: 1
   - id: 60
     stages:
-    - sprite: {fileID: 21300000, guid: 75c2e72b115e4be9b9bca77d618f9d59, type: 3}
+    - sprite: {fileID: 21300000, guid: 1d27c79f2f8d4a2cb1b334ceb5ba2404, type: 3}
       damageRule: 1
       blocksCells: 1
       behavior: 1
@@ -3025,7 +3025,7 @@ MonoBehaviour:
       hitParticleSprites: []
       hitSound: {fileID: 0}
       hitSoundVolume: 1
-    - sprite: {fileID: 21300000, guid: 6e91739a32cf484292456c5ef094f95c, type: 3}
+    - sprite: {fileID: 21300000, guid: 1d27c79f2f8d4a2cb1b334ceb5ba2404, type: 3}
       damageRule: 1
       blocksCells: 1
       behavior: 1
@@ -3065,14 +3065,14 @@ MonoBehaviour:
     impactSound: {fileID: 0}
     impactSoundVolume: 1
     drawUnderTiles: 0
-    legacySprite: {fileID: 21300000, guid: 75c2e72b115e4be9b9bca77d618f9d59, type: 3}
+    legacySprite: {fileID: 21300000, guid: 1d27c79f2f8d4a2cb1b334ceb5ba2404, type: 3}
     legacyStageSprites: []
     legacyStageDamageRules: 
     legacyBlocksCells: 1
     legacyBehavior: 1
   - id: 61
     stages:
-    - sprite: {fileID: 21300000, guid: 99b1cc19ad7b4a79a8b805d3ec68bcaf, type: 3}
+    - sprite: {fileID: 21300000, guid: 1d27c79f2f8d4a2cb1b334ceb5ba2404, type: 3}
       damageRule: 1
       blocksCells: 1
       behavior: 1
@@ -3083,7 +3083,7 @@ MonoBehaviour:
       hitParticleSprites: []
       hitSound: {fileID: 0}
       hitSoundVolume: 1
-    - sprite: {fileID: 21300000, guid: 6b25b9dbfd2a41a98122f88548b38826, type: 3}
+    - sprite: {fileID: 21300000, guid: 1d27c79f2f8d4a2cb1b334ceb5ba2404, type: 3}
       damageRule: 1
       blocksCells: 1
       behavior: 1
@@ -3123,14 +3123,14 @@ MonoBehaviour:
     impactSound: {fileID: 0}
     impactSoundVolume: 1
     drawUnderTiles: 0
-    legacySprite: {fileID: 21300000, guid: 99b1cc19ad7b4a79a8b805d3ec68bcaf, type: 3}
+    legacySprite: {fileID: 21300000, guid: 1d27c79f2f8d4a2cb1b334ceb5ba2404, type: 3}
     legacyStageSprites: []
     legacyStageDamageRules: 
     legacyBlocksCells: 1
     legacyBehavior: 1
   - id: 62
     stages:
-    - sprite: {fileID: 21300000, guid: 403413ee9fdb4625880ec398722084af, type: 3}
+    - sprite: {fileID: 21300000, guid: 1d27c79f2f8d4a2cb1b334ceb5ba2404, type: 3}
       damageRule: 1
       blocksCells: 1
       behavior: 1
@@ -3141,7 +3141,7 @@ MonoBehaviour:
       hitParticleSprites: []
       hitSound: {fileID: 0}
       hitSoundVolume: 1
-    - sprite: {fileID: 21300000, guid: c034ce8640c64d9fada5f791545a14aa, type: 3}
+    - sprite: {fileID: 21300000, guid: 1d27c79f2f8d4a2cb1b334ceb5ba2404, type: 3}
       damageRule: 1
       blocksCells: 1
       behavior: 1
@@ -3181,7 +3181,7 @@ MonoBehaviour:
     impactSound: {fileID: 0}
     impactSoundVolume: 1
     drawUnderTiles: 0
-    legacySprite: {fileID: 21300000, guid: 403413ee9fdb4625880ec398722084af, type: 3}
+    legacySprite: {fileID: 21300000, guid: 1d27c79f2f8d4a2cb1b334ceb5ba2404, type: 3}
     legacyStageSprites: []
     legacyStageDamageRules: 
     legacyBlocksCells: 1

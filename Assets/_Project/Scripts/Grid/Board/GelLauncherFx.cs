@@ -1,15 +1,12 @@
-using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// Jel fırlatıcı (kartuş) görsel efektleri. Çatlak hâlde nabız + buhar: <see cref="GelLauncherIdleFx"/>.
-/// Atışta sıkışma/esneme ve buhar patlaması: GelLauncherFireAction bu yardımcıları kullanır.
-/// Sprite'lar Resources/GelLauncher altındadır (kapaksız gövde 4 yön, 3 buhar bulutu).
+/// Jel fırlatıcı (pres) yardımcıları: yön, gövde devri ve buhar bulutları. Görsel <see cref="GelLauncherPressView"/>,
+/// atış GelLauncherFireAction'dadır. Buhar sprite'ları Resources/GelLauncher/GelSteam1-3.
 /// </summary>
 public static class GelLauncherFx
 {
-    private const string OpenPath = "GelLauncher/GelLauncherOpen";
     private const string SteamPath = "GelLauncher/GelSteam";
     private static readonly Color SteamTint = new Color(0.60f, 0.38f, 0.78f, 1f);
     private static Sprite[] steamSprites;
@@ -57,14 +54,6 @@ public static class GelLauncherFx
     {
         var d = Direction(id);
         return new Vector2(d.x, -d.y);
-    }
-
-    public static Sprite LoadOpenSprite(ObstacleId id)
-    {
-        string suffix = id == ObstacleId.GelLauncherDown ? "Down"
-            : id == ObstacleId.GelLauncherLeft ? "Left"
-            : id == ObstacleId.GelLauncherRight ? "Right" : "Up";
-        return Resources.Load<Sprite>(OpenPath + suffix);
     }
 
     private static Sprite RandomSteamSprite()
@@ -117,82 +106,6 @@ public static class GelLauncherFx
             // A shared driver outlives the emitter; no per-puff component or coroutine allocation.
             float lifetime = Random.Range(0.75f, 1f);
             GelLauncherSteamFx.Track(img, rt, drift, lifetime);
-        }
-    }
-}
-
-/// <summary>
-/// Çatlak kartuş beklerken: ara ara hafifçe şişip eski hâline döner ve ağzından buhar çıkar.
-/// GridSpawner, kartuş ilk vuruşu alıp çatlak sprite'a geçince engel görseline ekler; görsel
-/// yıkılınca bileşen de gider.
-/// </summary>
-[DisallowMultipleComponent]
-public sealed class GelLauncherIdleFx : MonoBehaviour
-{
-    private const float PulseSeconds = 0.45f;
-    private const float PulseAmount = 0.07f;
-
-    private ObstacleId launcherId;
-    private float cellSize;
-    private RectTransform rt;
-
-    public static void Ensure(Image image, ObstacleId id, float cellSize)
-    {
-        if (image == null || image.GetComponent<GelLauncherPressView>() != null) return;
-        var fx = image.GetComponent<GelLauncherIdleFx>();
-        if (fx == null) fx = image.gameObject.AddComponent<GelLauncherIdleFx>();
-        fx.launcherId = id;
-        fx.cellSize = cellSize;
-        fx.rt = image.rectTransform;
-    }
-
-    private void Start() => StartCoroutine(Loop());
-
-    private IEnumerator Loop()
-    {
-        // Vuruş sarsıntısı bitsin, sonra nabız başlasın.
-        yield return new WaitForSeconds(Random.Range(0.45f, 0.9f));
-        while (true)
-        {
-            yield return Pulse();
-            yield return new WaitForSeconds(Random.Range(1.4f, 2.4f));
-        }
-    }
-
-    private IEnumerator Pulse()
-    {
-        if (rt == null) yield break;
-        Vector2 basePos = rt.anchoredPosition;
-        Vector3 baseScale = rt.localScale;
-        Vector2 size = rt.rect.size;
-        // Pivot ne olursa olsun görsel merkez etrafında ölçekle.
-        Vector2 pivotToCenter = new Vector2((0.5f - rt.pivot.x) * size.x, (0.5f - rt.pivot.y) * size.y);
-        bool steamed = false;
-
-        for (float t = 0f; t < PulseSeconds; t += Time.deltaTime)
-        {
-            if (rt == null) yield break;
-            float k = t / PulseSeconds;
-            float s = 1f + PulseAmount * Mathf.Sin(k * Mathf.PI);
-            rt.localScale = new Vector3(baseScale.x * s, baseScale.y * s, baseScale.z);
-            rt.anchoredPosition = basePos - pivotToCenter * (s - 1f);
-
-            if (!steamed && k >= 0.45f)
-            {
-                steamed = true;
-                Vector2 uiDir = GelLauncherFx.UiDirection(launcherId);
-                float halfLen = (GelLauncherFx.IsVertical(launcherId) ? size.y : size.x) * 0.5f;
-                Vector2 center = (Vector2)rt.localPosition + pivotToCenter;
-                GelLauncherFx.SpawnSteam(this, rt.parent as RectTransform, center + uiDir * halfLen * 0.85f,
-                    uiDir, cellSize, 2, 0.5f);
-            }
-            yield return null;
-        }
-
-        if (rt != null)
-        {
-            rt.localScale = baseScale;
-            rt.anchoredPosition = basePos;
         }
     }
 }

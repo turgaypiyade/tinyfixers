@@ -46,6 +46,8 @@ public class TutorialOverlayController : MonoBehaviour
     private CanvasGroup hintGroup;
     private Image hintBackdrop;
     private Image hintIcon;
+    private RectTransform hintPressArea;
+    private Image hintPressImage;
     private TMP_Text hintTitle;
     private TMP_Text hintEyebrow;
     private TMP_Text hintDescription;
@@ -138,7 +140,8 @@ public class TutorialOverlayController : MonoBehaviour
         keepHintBlocker = false;
     }
 
-    public void ShowHint(Sprite icon, string title, string description, Action onDismiss)
+    /// gelLauncherPress: ikon yerine tahtadaki jel presi (yukarı bakan, ilk hâl) gösterilir.
+    public void ShowHint(Sprite icon, string title, string description, Action onDismiss, bool gelLauncherPress = false)
     {
         StopSwap();
         StopFade();
@@ -157,14 +160,15 @@ public class TutorialOverlayController : MonoBehaviour
         if (hintDismissButton != null) hintDismissButton.gameObject.SetActive(false);
 
         hintIcon.sprite = icon;
-        hintIcon.gameObject.SetActive(icon != null);
+        hintIcon.gameObject.SetActive(icon != null && !gelLauncherPress);
+        ShowHintPress(gelLauncherPress);
         hintTitle.text = title;
         bool hasTitle = !string.IsNullOrEmpty(title);
         hintTitle.gameObject.SetActive(hasTitle);
         hintEyebrow.gameObject.SetActive(hasTitle);
         hintEyebrow.text = GameLocalization.Get("hint_obstacle_introduction");
         hintDescription.text = description;
-        bool textOnly = !hasTitle && icon == null;
+        bool textOnly = !hasTitle && icon == null && !gelLauncherPress;
         hintDescription.rectTransform.anchorMin = new Vector2(0.16f, textOnly ? 0.32f : 0.20f);
         hintDescription.rectTransform.anchorMax = new Vector2(0.84f, textOnly ? 0.68f : 0.40f);
         hintContinue.text = GameLocalization.Get("bridge_tap_continue");
@@ -279,6 +283,30 @@ public class TutorialOverlayController : MonoBehaviour
         hintContinue = CreateHintText("Continue", root,
             new Vector2(0.10f, 0.09f), new Vector2(0.90f, 0.16f), 45.6f);
         hintContinue.color = new Color(0.65f, 0.88f, 0.90f, 1f);
+    }
+
+    // Pres 1:2 oranında ikon alanına sığdırılır; katmanları GelLauncherPressView kurar (tahtadakiyle aynı).
+    private void ShowHintPress(bool show)
+    {
+        if (!show)
+        {
+            if (hintPressArea != null) hintPressArea.gameObject.SetActive(false);
+            return;
+        }
+        if (hintPressArea == null)
+        {
+            var iconRect = hintIcon.rectTransform;
+            hintPressArea = CreateHintRect("GelLauncherPress", iconRect.parent, iconRect.anchorMin, iconRect.anchorMax);
+            var body = CreateHintRect("Press", hintPressArea, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f));
+            hintPressImage = body.gameObject.AddComponent<Image>();
+            hintPressImage.raycastTarget = false;
+        }
+        hintPressArea.gameObject.SetActive(true);
+        Rect area = hintPressArea.rect;
+        float height = Mathf.Min(area.height, area.width * 2f);
+        hintPressImage.rectTransform.sizeDelta = new Vector2(height * 0.5f, height);
+        if (GelLauncherPressView.Ensure(hintPressImage, ObstacleId.GelLauncherUp, 2) == null)
+            hintPressArea.gameObject.SetActive(false);
     }
 
     private RectTransform CreateHintRect(string objectName, Transform parent, Vector2 min, Vector2 max)
