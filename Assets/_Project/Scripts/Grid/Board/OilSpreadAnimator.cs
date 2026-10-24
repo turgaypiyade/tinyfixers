@@ -116,6 +116,13 @@ public sealed class OilSpreadAnimator : MonoBehaviour
         if (h != null) h.gameObject.SetActive(horizontal);
         if (v != null) v.gameObject.SetActive(!horizontal);
         f.bridge = (horizontal ? h : v)?.GetComponent<Image>();
+        // Köprü sprite'ı yoksa (eski kırmızı robot-dönemi parçalar silindi; yeşil petrolde karşılığı yok) gösterme:
+        // sprite'sız Image Unity'de BEYAZ şerit çizer. Yayılma animasyonu (damla + hedef kareleri) köprüsüz sürer.
+        if (f.bridge != null && f.bridge.sprite == null)
+        {
+            f.bridge.gameObject.SetActive(false);
+            f.bridge = null;
+        }
         if (f.bridge != null)
         {
             var bridgeRect = f.bridge.rectTransform;
@@ -183,7 +190,7 @@ public sealed class OilSpreadAnimator : MonoBehaviour
         f.growTime = Mathf.Max(.001f, duration * .65f);
         f.revealTime = Mathf.Max(.001f, Mathf.Max(duration * .35f, spreadFrameSequenceDuration));
         f.frames.Clear();
-        if (!same && !horizontal) AddFrame(f.frames, f.finalSprite);
+        // Sıra: yayılma kareleri (küçükten büyüğe) → dolu petrol. Eskiden dikeyde liste DOLU kareyle başlıyordu.
         if (!same) AddFrames(f.frames, horizontal ? spreadRightFrames : spreadUpFrames);
         AddFrame(f.frames, f.finalSprite);
         f.frameTime = Mathf.Max(.04f, f.revealTime / Mathf.Max(1, f.frames.Count));
@@ -235,14 +242,25 @@ public sealed class OilSpreadAnimator : MonoBehaviour
         if (f.target != null)
         {
             f.target.gameObject.SetActive(true);
-            float blend = Mathf.SmoothStep(0f, 1f,
-                Mathf.Clamp01((revealAge - index * f.frameTime) / f.fadeTime));
-            f.target.sprite = index > 0 ? f.frames[index - 1] : f.finalSprite;
-            SetImageAlpha(f.target, 1f - blend);
-            if (f.blend != null)
+            float k01 = Mathf.Clamp01((revealAge - index * f.frameTime) / f.fadeTime);
+            float blend = k01 * k01 * (3f - 2f * k01);
+            if (index == 0)
             {
-                f.blend.sprite = f.frames[index];
-                SetImageAlpha(f.blend, blend);
+                // İlk kısmi şekil damla varınca belirir. Eskiden burada DOLU kare (finalSprite) gösteriliyordu →
+                // her yayılma önce tam petrolle başlıyor, çizilen yayılma kareleri fark edilmiyordu.
+                f.target.sprite = f.frames[0];
+                SetImageAlpha(f.target, blend);
+                if (f.blend != null) SetImageAlpha(f.blend, 0f);
+            }
+            else
+            {
+                f.target.sprite = f.frames[index - 1];
+                SetImageAlpha(f.target, 1f - blend);
+                if (f.blend != null)
+                {
+                    f.blend.sprite = f.frames[index];
+                    SetImageAlpha(f.blend, blend);
+                }
             }
         }
         return true;

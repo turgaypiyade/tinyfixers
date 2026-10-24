@@ -3056,6 +3056,8 @@ public class BoardController : MonoBehaviour
         if (!go.activeSelf)
             return;   // ÇİFT-RELEASE guard: zaten iade edilmiş (deaktif) → tekrar kuyruklama (bozulma önle)
 
+        // Kullanılan (havuza dönen) taş seçili kalmasın: aynı obje yeni taş olarak dönünce "seçili" sayılırdı.
+        if (selected == tile) selected = null;
         tile.PrepareForRelease();
         gelCleanMatchTiles.Remove(tile);   // havuzdan dönen yeni taşa muafiyet sızmasın
         go.SetActive(false);

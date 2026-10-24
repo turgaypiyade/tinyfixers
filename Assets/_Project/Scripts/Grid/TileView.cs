@@ -2936,6 +2936,9 @@ public class TileView : MonoBehaviour,
         if (fuseSparkleView != null) fuseSparkleView.gameObject.SetActive(false);
         if (propellerView != null) propellerView.gameObject.SetActive(false);
         StopLineIdleSpin();
+        // Special arkası hale (SpecialComboGlow): elle açılan hale (seçim / Override yerleşimi) special kullanılınca
+        // kapatılmadan kalabiliyordu → havuzdan gelen normal taş haleyle doğuyordu.
+        BoardIdleHintAndComboGlowController.ClearGlowOnRelease(this);
 
         IsPlannedToMoveThisFallPass = false;
         lastFallGeneration = -1;

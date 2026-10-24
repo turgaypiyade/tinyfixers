@@ -341,6 +341,15 @@ public sealed class BoardIdleHintAndComboGlowController : MonoBehaviour
             instance.CancelHint(board, state);
     }
 
+    /// <summary>Taş havuza dönerken çağrılır: hale çocuğu (varsa) kapanır. Yeni obje oluşturmaz.</summary>
+    public static void ClearGlowOnRelease(TileView tile)
+    {
+        var parent = tile != null ? tile.RectTransform : null;
+        if (parent == null) return;
+        var glow = parent.Find(GlowObjectName);
+        if (glow != null) glow.gameObject.SetActive(false);
+    }
+
     public static void SetManualSpecialGlow(TileView tile, bool active, int tileSize)
     {
         if (tile == null)

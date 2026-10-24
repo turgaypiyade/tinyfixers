@@ -36,8 +36,10 @@ public sealed class OilSpreadService
         initialOilCount = obstacles != null ? obstacles.GetAllOilCells().Count : 0;
     }
 
-    // Yayılma tavanı: oil board'u boğup oyunu kilitlemesin. Level'da açık değer yoksa oynanabilir
-    // hücrelerin dörtte biri; tasarımcının koyduğu başlangıç oil'i asla kısılmaz.
+    // Yayılma tavanı: oil board'u boğup oyunu kilitlemesin. Level'da açık değer varsa (boss level'ları) o.
+    // Yoksa: max(oynanabilir/4, başlangıç + oynanabilir/8). Eskiden max(başlangıç, oynanabilir/4) idi →
+    // başlangıcı çeyreği aşan level'da (ör. L6: 36 oil / 90 hücre) tavan = başlangıç, oil HİÇ çoğalamıyordu.
+    // Az oil'li level'larda (ör. L178) değer aynı kalır.
     private int SpreadCap
     {
         get
@@ -51,7 +53,7 @@ public sealed class OilSpreadService
             for (int y = 0; y < board.Height; y++)
                 for (int x = 0; x < board.Width; x++)
                     if (!board.Holes[x, y]) usable++;
-            return spreadCap = Mathf.Max(initialOilCount, Mathf.Max(1, usable / 4));
+            return spreadCap = Mathf.Max(Mathf.Max(1, usable / 4), initialOilCount + Mathf.Max(1, usable / 8));
         }
     }
 
