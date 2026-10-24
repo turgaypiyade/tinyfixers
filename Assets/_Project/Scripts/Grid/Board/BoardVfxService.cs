@@ -59,6 +59,9 @@ public class BoardVfxService
         board.BeginSystemOverrideWave(new Vector2Int(originX, originY));
         if (vfx == null) return 0f;
 
+        // Also cover callers outside ResolveSpecialSwap: hide the actual sources before lift starts.
+        SpecialVisualService.HideTileVisualForCombo(ta);
+        SpecialVisualService.HideTileVisualForCombo(tb);
         vfx.SetTurnSources(ta != null ? ta.OverrideSpecialView : null,
             tb != null ? tb.OverrideSpecialView : null);
         vfx.gameObject.SetActive(true);

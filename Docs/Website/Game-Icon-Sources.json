@@ -1,0 +1,158 @@
+[
+  {
+    "file": "Website/img/tile-gear.webp",
+    "libraryField": "gear",
+    "source": "Assets/_Project/Art/Icons/Gems/AnimalStyle/V3/YellowStoneV7.png",
+    "sourceSha256": "4406ad6e6e96bb26e9339307e05f99dc6a754bcd8cde68ff5cf0a71b3f760aba",
+    "exportSha256": "48894bc9466d5890f4597ee06fccf42e33c8032f2cb08285b6f2ad01921ec00f",
+    "size": [
+      320,
+      320
+    ],
+    "lossless": true
+  },
+  {
+    "file": "Website/img/tile-core.webp",
+    "libraryField": "core",
+    "source": "Assets/_Project/Art/Icons/Gems/AnimalStyle/V3/RedStoneV5.png",
+    "sourceSha256": "f751c1480269bd47475cb94b091d44b16ddb7996c1bdef6d4d9953d4bb1caee1",
+    "exportSha256": "6bcbb61c1f84e959e860594fd030d04c83062add19850f47ac34091928ec2510",
+    "size": [
+      320,
+      320
+    ],
+    "lossless": true
+  },
+  {
+    "file": "Website/img/tile-bolt.webp",
+    "libraryField": "bolt",
+    "source": "Assets/_Project/Art/Icons/Gems/AnimalStyle/V3/BlueStonev7.png",
+    "sourceSha256": "fe7469e364a95b43f29cd6b15cf5cc17c62dc826dcae07e5a92af77b2f244529",
+    "exportSha256": "a03607bfef8eb554dd14b6b1d060f718a65cda48ea0bf1d9726590e5bb283edc",
+    "size": [
+      320,
+      320
+    ],
+    "lossless": true
+  },
+  {
+    "file": "Website/img/tile-plate.webp",
+    "libraryField": "plate",
+    "source": "Assets/_Project/Art/Icons/Gems/AnimalStyle/V3/GreenStoneV9.png",
+    "sourceSha256": "ddc268b785cf30da07cd0c8cab4ba9a21870198f239fa22e6cf42dd9aa5d2156",
+    "exportSha256": "63cc87f6bb1d238a43e617d9bd86600d5958b685eb59a19425c084b858ef0a32",
+    "size": [
+      320,
+      320
+    ],
+    "lossless": true
+  },
+  {
+    "file": "Website/img/sp-rocket.webp",
+    "libraryField": "lineH",
+    "source": "Assets/_Project/Art/Icons/Specials/LineHV8.png",
+    "sourceSha256": "4f0fe44ea046e5ce83274cc26390f631556eb9a2049cd79ef84ca0417b428822",
+    "exportSha256": "b5f9180a055a3532d43535fe9203d2aa5d11a2dc2de277b5cc4e19bb62d817d4",
+    "size": [
+      320,
+      320
+    ],
+    "lossless": true
+  },
+  {
+    "file": "Website/img/sp-patchbot.webp",
+    "libraryField": "patchBotAll",
+    "source": "Assets/_Project/Art/Icons/Specials/PatchBot/V4/PPAB.png",
+    "sourceSha256": "9e3c539ab6d5e14c97e840d49c24608b0132ce674d5087cf5701ce34f23643ff",
+    "exportSha256": "ab5ae4365df071d6774eb83810f456a702f23d695760649309335e9f89a4017c",
+    "size": [
+      320,
+      320
+    ],
+    "lossless": true
+  },
+  {
+    "file": "Website/img/sp-pulse.webp",
+    "libraryField": "pulseCore",
+    "source": "Assets/_Project/Art/Icons/Specials/PulseCoreSpinV1.1/PS1.png",
+    "sourceSha256": "a9489fabc101fdf57ce984d9a912d352dd682c8c78c5c7de95351dab6f6ae2e1",
+    "exportSha256": "0432d5a06ca8e6753151cd974336289e27b1332152138780666a1286d2dfdb9c",
+    "size": [
+      320,
+      320
+    ],
+    "lossless": true
+  },
+  {
+    "file": "Website/img/sp-spark.webp",
+    "libraryField": "overrideRed",
+    "source": "Assets/_Project/Art/Icons/Specials/OverrideCopper.png",
+    "sourceSha256": "893f71dba1d46325d27e55c803f83d979d95d0938e7be7e70fab28b4e5d69c43",
+    "exportSha256": "db9b5c1fb73c5a10164cbd0897c870703d6a54b4572c33fd4cc123e7ec40f3f8",
+    "size": [
+      320,
+      320
+    ],
+    "lossless": true
+  },
+  {
+    "file": "Website/img/bo-hammer.webp",
+    "libraryField": "boosterHammer",
+    "source": "Assets/_Project/Art/Icons/Boosters/HM1.png",
+    "sourceSha256": "20c02a200359f1117a908b05ed95f7342922c892494cc7e0dc5ec7f843229de7",
+    "exportSha256": "b07f73bc1260b97952eafd9c7cd948dc8f522a66e35b55ec33d922acfca7d440",
+    "size": [
+      320,
+      320
+    ],
+    "lossless": true
+  },
+  {
+    "file": "Website/img/bo-drill.webp",
+    "libraryField": "boosterRow",
+    "source": "Assets/_Project/Art/Icons/Boosters/DrillV2.png",
+    "sourceSha256": "995b7e79907b6ea64db0f8feef8e54bcb364fc8bb7f20a310fe6eb805735a4b1",
+    "exportSha256": "947f41bdd499d461d75cb263dbe84f99708c4a8b1d9314f675a0c4a44130e0bc",
+    "size": [
+      320,
+      320
+    ],
+    "lossless": true
+  },
+  {
+    "file": "Website/img/bo-elevator.webp",
+    "libraryField": "boosterColumn",
+    "source": "Assets/_Project/Art/Icons/Boosters/LiftImgV2.png",
+    "sourceSha256": "f195c5a9b02de63c538639eea9861755a976ceb7a3564e1e5797dd9fe10e7c4c",
+    "exportSha256": "bd94962f7aaa6a6b27def5eaa3c0294d27fedd3fa21e3420a68d159b3703c841",
+    "size": [
+      320,
+      320
+    ],
+    "lossless": true
+  },
+  {
+    "file": "Website/img/bo-shuffle.webp",
+    "libraryField": "boosterShuffle",
+    "source": "Assets/_Project/Art/Icons/Boosters/ShuffleV2.png",
+    "sourceSha256": "1f8895e62980a069842f2bc6255d9fda6c6b0f3efc9fe7d69f94ac3803a4f279",
+    "exportSha256": "67041e10cc47e9ca80070ac244bae53071c3403d2c456530ffc530ef95a5af6f",
+    "size": [
+      320,
+      320
+    ],
+    "lossless": true
+  },
+  {
+    "file": "Website/img/bo-paint.webp",
+    "libraryField": "boosterPaintBucket",
+    "source": "Assets/_Project/Art/Icons/Boosters/PaintBucket.png",
+    "sourceSha256": "abc1a1bd7a1aafbb1e089995c1e4704f59b62995b6d413a89188616c946877de",
+    "exportSha256": "5884afd332dece5f81149b0e246b267bce61f3dfaf4ffe746d84b9b1e9928ca4",
+    "size": [
+      320,
+      320
+    ],
+    "lossless": true
+  }
+]

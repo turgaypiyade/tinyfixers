@@ -1,0 +1,1131 @@
+using System.Collections.Generic;
+using TMPro;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+using UnityEngine.U2D;
+using UnityEngine.UI;
+using UnityEngine.EventSystems;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
+
+/// <summary>
+/// Joker seçimi sırasında:
+///   - BoardContent (grid) açık ve tıklanabilir kalır
+///   - Grid dışı alan (TopHUD + BottomBar) iki panel ile karartılır ve bloklanır
+///   - Seçili joker: JokerGrid'in tüm JokerGrid canvas'ı overlay'in üstüne çıkar
+///   - Joker slot'larına ayrı Canvas EKLENMEZ → MissingComponentException yok
+///   - board.SetInputLocked() ÇAĞRILMAZ → grid her zaman aktif
+/// </summary>
+public class JokerFocusOverlayController : MonoBehaviour
+{
+    [Header("Debug")]
+
+    [Header("Text keys (tinyfixers_localization.json)")]
+    [SerializeField] private string singleTargetKey = "joker_hint_single";
+    [SerializeField] private string rowTargetKey    = "joker_hint_row";
+    [SerializeField] private string columnTargetKey = "joker_hint_column";
+    [SerializeField] private string shuffleKey      = "joker_hint_shuffle";
+    [SerializeField] private string paintKey        = "joker_hint_paint";
+
+    [Header("Title keys (üstteki büyük başlık)")]
+    [SerializeField] private string singleTitleKey  = "joker_title_single";
+    [SerializeField] private string rowTitleKey     = "joker_title_row";
+    [SerializeField] private string columnTitleKey  = "joker_title_column";
+    [SerializeField] private string shuffleTitleKey = "joker_title_shuffle";
+    [SerializeField] private string paintTitleKey   = "joker_title_paint";
+    [SerializeField] private Color  titleColor   = new Color(1f, 0.85f, 0.2f, 1f);   // referanstaki sarı
+    [Tooltip("Başlık fontu (boşsa TMP varsayılanı + faux-bold). Menü: TinyFixers ▸ Fonts ▸ 3) Joker Başlık Stili.")]
+    [SerializeField] private TMP_FontAsset titleFont;
+    [Tooltip("Başlık materyali (lacivert kontur + altın dış kontur).")]
+    [SerializeField] private Material titleMaterial;
+    [Tooltip("Yüz rengi üstten alta geçiş (üst krem, alt sarı). titleFont atanmışsa kullanılır.")]
+    [SerializeField] private Color titleGradientTop    = new Color(1f, 0.98f, 0.86f, 1f);
+    [SerializeField] private Color titleGradientBottom = new Color(1f, 0.86f, 0.38f, 1f);
+
+    [Header("Selection Highlight")]
+    [SerializeField] private bool   useProceduralSelectionFrame   = false;
+    [SerializeField] private string selectedFrameSpriteName       = "Top_border_img_v2";
+    [SerializeField] private float  selectedFramePadding          = 10f;
+    [SerializeField] private Color  selectedFrameOutlineColor     = new Color(1f, 0.85f, 0.25f, 1f);
+    [SerializeField] private float  disabledJokerAlpha            = 0.35f;
+    [SerializeField] private float  selectedJokerScale            = 1.1f;
+    [SerializeField] private string selectedGlowSpriteName        = "";
+    [SerializeField] private float  selectedGlowAlpha             = 0.9f;
+    [SerializeField] private float  selectedGlowScale             = 1.3f;
+    [SerializeField] private Color  selectionOutlineColor         = new Color(0.45f, 0.9f, 1f, 1f);
+    [SerializeField] private float  selectedOverlayAlpha          = 0.95f;
+
+    // ─────────────────────────────────────────────────────────────────────────
+    private const int MaxJokerSlots = 8;
+
+    private readonly Image[]     jokerIcons            = new Image[MaxJokerSlots];
+    private readonly Button[]    jokerButtons          = new Button[MaxJokerSlots];
+    private readonly Image[]     jokerSelectionFrames  = new Image[MaxJokerSlots];
+    private readonly Image[]     jokerSelectionGlows   = new Image[MaxJokerSlots];
+    private readonly Vector3[]   jokerBaseScales       = new Vector3[MaxJokerSlots];
+    private readonly Vector3[]   jokerIconBaseScales   = new Vector3[MaxJokerSlots];
+    private readonly Transform[] jokerSlotTransforms   = new Transform[MaxJokerSlots];
+    private readonly int[]       jokerBoosterIndices   = new int[MaxJokerSlots];
+    private readonly bool[]      jokerIsBoosterSlot    = new bool[MaxJokerSlots];
+    private int cachedJokerCount;
+
+    private Canvas          rootCanvas;
+    private BoardController board;
+    private RectTransform   boardContentRect;
+
+    // Overlay: iki panel (üst + alt) — BoardContent ortada açık kalır
+    private GameObject      overlayRoot;
+    private Image           overlayTop;
+    private Image           overlayBottom;
+    private Image           overlayLeft;
+    private Image           overlayRight;
+    private readonly System.Collections.Generic.List<Image> holePanels = new System.Collections.Generic.List<Image>();
+    private TextMeshProUGUI descriptionText;
+    private Image           titleIcon;        // üstteki booster ikonu
+    private TextMeshProUGUI titleText;        // üstteki büyük başlık
+
+    private int    selectedJokerIndex  = -1;
+    private Sprite selectionFrameSprite;
+    private Sprite selectionGlowSprite;
+    private int    lastHandledTapFrame = -1;
+    private int    lastHandledTapIndex = -1;
+
+    private static bool sceneHookRegistered;
+    private static readonly HashSet<string> missingFrameSpriteWarnings = new();
+    private static readonly HashSet<string> invalidFrameBorderWarnings = new();
+    private static readonly HashSet<string> fullRectFrameWarnings      = new();
+
+    // ── Pointer proxy ─────────────────────────────────────────────────────────
+    private sealed class JokerPointerProxy : MonoBehaviour, IPointerClickHandler
+    {
+        private JokerFocusOverlayController owner;
+        private int visualIndex = -1;
+        public void Init(JokerFocusOverlayController o, int i) { owner = o; visualIndex = i; }
+        public void OnPointerClick(PointerEventData e) => owner?.HandleJokerTap(visualIndex);
+    }
+
+    // ── Auto-install ──────────────────────────────────────────────────────────
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+    private static void RegisterInstaller()
+    {
+        if (sceneHookRegistered) return;
+        sceneHookRegistered = true;
+        SceneManager.sceneLoaded += HandleSceneLoaded;
+    }
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+    private static void Install() => TryInstallController();
+
+    private static void HandleSceneLoaded(Scene s, LoadSceneMode m) => TryInstallController();
+
+    private static void TryInstallController()
+    {
+        var jokerGrid = FindJokerGrid();
+        if (jokerGrid == null || jokerGrid.GetComponent<JokerFocusOverlayController>() != null) return;
+        jokerGrid.AddComponent<JokerFocusOverlayController>();
+    }
+
+    private static GameObject FindJokerGrid()
+    {
+        foreach (var tr in Resources.FindObjectsOfTypeAll<Transform>())
+        {
+            if (tr == null || tr.name != "JokerGrid") continue;
+            var go = tr.gameObject;
+            if (!go.scene.IsValid() || !go.scene.isLoaded) continue;
+            if ((go.hideFlags & HideFlags.HideInHierarchy) != 0) continue;
+            return go;
+        }
+        return null;
+    }
+
+    // ── Lifecycle ─────────────────────────────────────────────────────────────
+    private void Awake()
+    {
+        rootCanvas = GetComponentInParent<Canvas>();
+        if (rootCanvas == null) rootCanvas = FindFirstObjectByType<Canvas>();
+
+        selectionFrameSprite = ResolveSelectionFrameSprite();
+        if (selectionFrameSprite == null) useProceduralSelectionFrame = true;
+        selectionGlowSprite = ResolveSpriteByName(selectedGlowSpriteName);
+
+        ResolveBoardContentRect();
+        EnsurePaintBucketSlot();
+        ArrangeJokerBar();
+        CacheJokerIcons();
+        CreateOverlayUi();
+        SetOverlayVisible(false);
+        SetSelectedJoker(-1);
+    }
+
+    private void Start()
+    {
+        ResolveBoardContentRect();
+        CacheJokerIcons();
+        SetSelectedJoker(-1);
+    }
+
+    private void OnEnable()
+    {
+        if (board == null) board = FindFirstObjectByType<BoardController>();
+        if (board != null)
+        {
+            board.OnBoosterTargetingChanged += HandleBoosterTargetingChanged;
+            board.OnBoosterTargetRejected += HandleBoosterTargetRejected;
+        }
+    }
+
+    private void OnDisable()
+    {
+        if (board != null)
+        {
+            board.OnBoosterTargetingChanged -= HandleBoosterTargetingChanged;
+            board.OnBoosterTargetRejected -= HandleBoosterTargetRejected;
+        }
+        SetOverlayVisible(false);
+    }
+
+    // Ekran/Game görünümü boyutu değişince sıra yeniden ortalanır (taban ölçekler de güncellensin diye yeniden önbelleklenir).
+    private void OnRectTransformDimensionsChange()
+    {
+        if (!isActiveAndEnabled || arranging) return;
+        ArrangeJokerBar();
+        CacheJokerIcons();
+        SetSelectedJoker(selectedJokerIndex >= 0 && selectedJokerIndex < cachedJokerCount ? selectedJokerIndex : -1);
+    }
+
+    private void OnTransformChildrenChanged()
+    {
+        CacheJokerIcons();
+        SetSelectedJoker(selectedJokerIndex >= 0 && selectedJokerIndex < cachedJokerCount
+            ? selectedJokerIndex : -1);
+    }
+
+    // ── BoardContent rect ─────────────────────────────────────────────────────
+    private void ResolveBoardContentRect()
+    {
+        boardContentRect = null;
+
+        foreach (var rt in Resources.FindObjectsOfTypeAll<RectTransform>())
+        {
+            if (rt == null || !rt.gameObject.scene.IsValid() || !rt.gameObject.scene.isLoaded) continue;
+            if (rt.name == "BoardContent")
+            {
+                boardContentRect = rt;
+                return;
+            }
+        }
+
+        string[] fallbackNames = { "BoardMask", "BoardFrame", "BoardRoot", "BoardArea" };
+        foreach (var fname in fallbackNames)
+        {
+            foreach (var rt in Resources.FindObjectsOfTypeAll<RectTransform>())
+            {
+                if (rt == null || !rt.gameObject.scene.IsValid()) continue;
+                if (rt.name == fname)
+                {
+                    boardContentRect = rt;
+                    if (GameDiagnostics.CriticalErrors)
+                        Debug.LogWarning($"[JokerFocus] BoardContent not found. Fallback: '{fname}'");
+                    return;
+                }
+            }
+        }
+
+        if (board == null) board = FindFirstObjectByType<BoardController>();
+        if (board != null)
+        {
+            boardContentRect = board.GetComponent<RectTransform>();
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogWarning("[JokerFocus] Using BoardController RectTransform as last resort.");
+        }
+    }
+
+    // ── Overlay UI ────────────────────────────────────────────────────────────
+    private void CreateOverlayUi()
+    {
+        if (rootCanvas == null) return;
+
+        overlayRoot = new GameObject("JokerFocusOverlayRoot", typeof(RectTransform));
+        overlayRoot.transform.SetParent(rootCanvas.transform, false);
+        StretchFull(overlayRoot.GetComponent<RectTransform>());
+        overlayRoot.AddComponent<GraphicRaycaster>();
+
+        overlayTop    = MakeBlockPanel(overlayRoot.transform, "OverlayTop");
+        overlayBottom = MakeBlockPanel(overlayRoot.transform, "OverlayBottom");
+        overlayLeft   = MakeBlockPanel(overlayRoot.transform, "OverlayLeft");
+        overlayRight  = MakeBlockPanel(overlayRoot.transform, "OverlayRight");
+
+        // Üstteki booster ikonu (sol üst).
+        var iconGo = new GameObject("JokerFocusIcon", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        iconGo.transform.SetParent(overlayRoot.transform, false);
+        titleIcon = iconGo.GetComponent<Image>();
+        titleIcon.raycastTarget = false;
+        titleIcon.preserveAspect = true;
+        var ir = iconGo.GetComponent<RectTransform>();
+        ir.anchorMin = new Vector2(0.03f, 0.785f);
+        ir.anchorMax = new Vector2(0.245f, 0.895f);   // daha büyük + daha aşağı
+        ir.offsetMin = ir.offsetMax = Vector2.zero;
+
+        // Büyük başlık (ikonun sağı).
+        var titleGo = new GameObject("JokerFocusTitle",
+            typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
+        titleGo.transform.SetParent(overlayRoot.transform, false);
+        titleText = titleGo.GetComponent<TextMeshProUGUI>();
+        titleText.fontSize         = 72;
+        titleText.enableAutoSizing = true;
+        titleText.fontSizeMin      = 22;
+        titleText.fontSizeMax      = 80;
+        titleText.alignment        = TextAlignmentOptions.Left;
+        titleText.color            = titleColor;
+        titleText.fontStyle        = FontStyles.Bold;
+        if (titleFont != null)
+        {
+            // Oyun başlık stili: kalın font kendi başına kalın (faux-bold harf aralığını açar),
+            // yüz krem→sarı geçiş, kontur/altın dış kontur materyalden.
+            titleText.font = titleFont;
+            if (titleMaterial != null) titleText.fontSharedMaterial = titleMaterial;
+            titleText.fontStyle = FontStyles.Normal;
+            titleText.color = Color.white;
+            titleText.enableVertexGradient = true;
+            titleText.colorGradient = new VertexGradient(titleGradientTop, titleGradientTop,
+                titleGradientBottom, titleGradientBottom);
+        }
+        titleText.raycastTarget    = false;
+        titleText.textWrappingMode = TextWrappingModes.NoWrap;   // tek satır (autosize küçültür)
+        titleText.overflowMode     = TextOverflowModes.Overflow;
+        var titr = titleGo.GetComponent<RectTransform>();
+        titr.anchorMin = new Vector2(0.26f, 0.832f);
+        titr.anchorMax = new Vector2(0.98f, 0.898f);
+        titr.offsetMin = titr.offsetMax = Vector2.zero;
+
+        // Açıklama (başlığın altı).
+        var textGo = new GameObject("JokerFocusDescription",
+            typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
+        textGo.transform.SetParent(overlayRoot.transform, false);
+
+        descriptionText = textGo.GetComponent<TextMeshProUGUI>();
+        descriptionText.fontSize         = 44;
+        descriptionText.enableAutoSizing = true;
+        descriptionText.fontSizeMin      = 14;
+        descriptionText.fontSizeMax      = 46;
+        descriptionText.alignment        = TextAlignmentOptions.Left;
+        descriptionText.color            = Color.white;
+        descriptionText.fontStyle        = FontStyles.Bold;
+        descriptionText.raycastTarget    = false;
+        descriptionText.textWrappingMode = TextWrappingModes.NoWrap;   // tek satır
+        descriptionText.overflowMode     = TextOverflowModes.Overflow;
+
+        var tr = textGo.GetComponent<RectTransform>();
+        tr.anchorMin = new Vector2(0.26f, 0.768f);
+        tr.anchorMax = new Vector2(0.98f, 0.828f);
+        tr.offsetMin = tr.offsetMax = Vector2.zero;
+
+        // KRİTİK: new GameObject UI'ı layer 0'da doğuyor; Screen Space Camera sadece kendi layer'ını
+        // render ettiği için overlay cull'lanıp görünmez oluyordu (overlayScale=0 red herring).
+        // Tüm overlay alt-ağacını canvas/controller layer'ına al.
+        int uiLayer = rootCanvas != null ? rootCanvas.gameObject.layer : gameObject.layer;
+        SetLayerRecursive(overlayRoot.transform, uiLayer);
+    }
+
+    private static void SetLayerRecursive(Transform root, int layer)
+    {
+        if (root == null) return;
+        root.gameObject.layer = layer;
+        for (int i = 0; i < root.childCount; i++)
+            SetLayerRecursive(root.GetChild(i), layer);
+    }
+
+    private Image MakeBlockPanel(Transform parent, string goName)
+    {
+        var go  = new GameObject(goName, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        go.transform.SetParent(parent, false);
+        var img = go.GetComponent<Image>();
+        img.color         = new Color(0f, 0f, 0f, selectedOverlayAlpha);
+        img.raycastTarget = true;
+        return img;
+    }
+
+    private void RefreshOverlayPanels()
+    {
+        if (overlayTop == null || overlayBottom == null) return;
+        ResolveBoardContentRect();
+
+        var overlayRect = overlayRoot != null ? overlayRoot.GetComponent<RectTransform>() : null;
+        if (boardContentRect == null || overlayRect == null)
+        {
+            SetAnchors(overlayTop.rectTransform,    0, 0, 1, 1);
+            SetAnchors(overlayBottom.rectTransform, 0, 0, 0, 0);
+            return;
+        }
+
+        var corners = new Vector3[4];
+        boardContentRect.GetWorldCorners(corners);
+
+        Vector2 bl = overlayRect.InverseTransformPoint(corners[0]);
+        Vector2 tr = overlayRect.InverseTransformPoint(corners[2]);
+
+        Rect cr        = overlayRect.rect;
+        float normBotY = Mathf.Clamp01((bl.y - cr.yMin) / cr.height);
+        float normTopY = Mathf.Clamp01((tr.y - cr.yMin) / cr.height);
+        float normLeftX  = Mathf.Clamp01((bl.x - cr.xMin) / cr.width);
+        float normRightX = Mathf.Clamp01((tr.x - cr.xMin) / cr.width);
+
+        SetAnchors(overlayTop.rectTransform,    0, normTopY, 1, 1);
+        SetAnchors(overlayBottom.rectTransform, 0, 0,        1, normBotY);
+        // Board bbox'ın YANLARI (band içinde) da karartılır.
+        if (overlayLeft  != null) SetAnchors(overlayLeft.rectTransform,  0,          normBotY, normLeftX, normTopY);
+        if (overlayRight != null) SetAnchors(overlayRight.rectTransform, normRightX, normBotY, 1,         normTopY);
+
+        // Board İÇİNDEKİ hole hücreleri (staircase/boşluklar) tek tek karartılır.
+        RefreshHolePanels(overlayRect);
+    }
+
+    // Boşlukları karartır; obstacle hücrelerine joker hedefleme yüzeyi ekler.
+    // Bazı obstacle view'ları raycast almaz veya hücrede TileView bulunmaz.
+    private void RefreshHolePanels(RectTransform overlayRect)
+    {
+        if (board == null || overlayRect == null) return;
+
+        int w = board.Width, h = board.Height;
+        if (w <= 0 || h <= 0) return;
+
+        // Bir hücrenin overlay-local boyutu: iki komşu hücre merkezinin local farkı.
+        Vector2 l00 = overlayRect.InverseTransformPoint(board.GetCellWorldCenterPosition(0, 0));
+        Vector2 l10 = overlayRect.InverseTransformPoint(
+            board.GetCellWorldCenterPosition(0, 0) + board.TilesRoot.TransformVector(Vector3.right * board.TileSize));
+        float cellLocal = Mathf.Abs(l10.x - l00.x);
+        if (cellLocal < 1f) cellLocal = board.TileSize;
+
+        // Tüm pool panellerini gizle.
+        for (int i = 0; i < holePanels.Count; i++)
+            if (holePanels[i] != null) holePanels[i].gameObject.SetActive(false);
+
+        int used = 0;
+        for (int y = 0; y < h; y++)
+        {
+            for (int x = 0; x < w; x++)
+            {
+                bool hasObstacle = board.ObstacleStateService != null && board.ObstacleStateService.HasObstacleAt(x, y);
+                if (!hasObstacle && !board.IsMaskHoleCell(x, y)) continue;
+
+                Image panel = used < holePanels.Count ? holePanels[used] : CreateHolePanel();
+                if (used >= holePanels.Count) holePanels.Add(panel);
+                used++;
+
+                var proxy = panel.GetComponent<ObstacleClickProxy>();
+                if (hasObstacle)
+                {
+                    if (proxy == null) proxy = panel.gameObject.AddComponent<ObstacleClickProxy>();
+                    proxy.Init(board, x, y);
+                }
+                if (proxy != null) proxy.enabled = hasObstacle;
+                panel.color = hasObstacle ? Color.clear : new Color(0f, 0f, 0f, selectedOverlayAlpha);
+
+                var rt = panel.rectTransform;
+                Vector2 local = overlayRect.InverseTransformPoint(board.GetCellWorldCenterPosition(x, y));
+                rt.anchoredPosition = local;
+                float panelSize = cellLocal * (hasObstacle ? 1f : 1.03f);
+                rt.sizeDelta = new Vector2(panelSize, panelSize);
+                panel.gameObject.SetActive(true);
+            }
+        }
+    }
+
+    private Image CreateHolePanel()
+    {
+        var go = new GameObject("OverlayHole", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        go.layer = rootCanvas != null ? rootCanvas.gameObject.layer : gameObject.layer;
+        go.transform.SetParent(overlayRoot.transform, false);
+        var rt = go.GetComponent<RectTransform>();
+        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        var img = go.GetComponent<Image>();
+        img.color = new Color(0f, 0f, 0f, selectedOverlayAlpha);
+        img.raycastTarget = true;
+        return img;
+    }
+
+    private static void SetAnchors(RectTransform rt, float x0, float y0, float x1, float y1)
+    {
+        rt.anchorMin = new Vector2(x0, y0);
+        rt.anchorMax = new Vector2(x1, y1);
+        rt.offsetMin = rt.offsetMax = Vector2.zero;
+    }
+
+    private static void StretchFull(RectTransform rt)
+    {
+        rt.anchorMin = Vector2.zero;
+        rt.anchorMax = Vector2.one;
+        rt.offsetMin = rt.offsetMax = Vector2.zero;
+    }
+
+    // ── Visibility ────────────────────────────────────────────────────────────
+    private void SetOverlayVisible(bool visible)
+    {
+        // Awake'te rootCanvas bulunamadıysa overlay hiç oluşmamış olabilir → tembel oluştur.
+        if (overlayRoot == null && visible)
+        {
+            if (rootCanvas == null)
+                rootCanvas = GetComponentInParent<Canvas>();
+                if (rootCanvas == null) rootCanvas = FindFirstObjectByType<Canvas>();
+            CreateOverlayUi();
+        }
+
+        if (overlayRoot != null)
+        {
+            overlayRoot.SetActive(visible);
+            if (visible)
+                overlayRoot.transform.SetAsLastSibling();
+        }
+
+        SetJokerGridAboveOverlay(visible);
+    }
+
+    private void SetJokerGridAboveOverlay(bool above)
+    {
+        if (overlayRoot == null) return;
+        if (!above) return;
+
+        overlayRoot.transform.SetAsLastSibling();
+        var jokerRoot = FindRootCanvasChild(transform);
+        if (jokerRoot != null)
+            jokerRoot.SetAsLastSibling();
+    }
+
+    private Transform FindRootCanvasChild(Transform t)
+    {
+        if (rootCanvas == null) return null;
+        var canvasTr = rootCanvas.transform;
+        var current = t;
+        while (current != null)
+        {
+            if (current.parent == canvasTr) return current;
+            current = current.parent;
+        }
+        return null;
+    }
+
+    // ── Events ────────────────────────────────────────────────────────────────
+    private void HandleBoosterTargetingChanged(bool isTargeting)
+    {
+        if (!isTargeting) CancelVisualSelection();
+        else              RefreshOverlayPanels();
+    }
+
+    internal void HandleJokerTap(int tappedIndex)
+    {
+        if (lastHandledTapFrame == Time.frameCount && lastHandledTapIndex == tappedIndex) return;
+        lastHandledTapFrame = Time.frameCount;
+        lastHandledTapIndex = tappedIndex;
+
+        if (tappedIndex < 0 || tappedIndex >= cachedJokerCount) return;
+        if (!jokerIsBoosterSlot[tappedIndex]) return;
+
+        int boosterIndex = jokerBoosterIndices[tappedIndex];
+        if (boosterIndex < 0) return;
+
+        if (selectedJokerIndex == tappedIndex)
+        {
+            if (board == null || board.IsBoosterModeActive)
+            {
+                CancelActiveJoker();
+                return;
+            }
+            // Board already consumed the booster but UI didn't reset — desync, fall through to re-activate
+            selectedJokerIndex = -1;
+        }
+
+        // Kilitli ya da hakkı kalmamış booster seçilemez (free oyunda serbest).
+        // İptal (yukarıdaki blok) her durumda çalışır.
+        if (!BoosterAccessService.CanUse(boosterIndex))
+        {
+            return;
+        }
+
+        ActivateFocusFor(boosterIndex);
+        ActivateBooster(boosterIndex);
+        SetSelectedJoker(tappedIndex);
+    }
+
+    private void ActivateBooster(int index)
+    {
+        if (board == null) board = FindFirstObjectByType<BoardController>();
+        if (board == null) { if (GameDiagnostics.CriticalErrors)
+            Debug.LogWarning("[JokerFocus] BoardController not found."); return; }
+        board.ActivateBooster(index < 0 || index > BoosterAccessService.PaintBucketIndex ? -1 : index);
+    }
+
+    private void ActivateFocusFor(int index)
+    {
+        if (descriptionText != null)
+        {
+            descriptionText.text = index switch
+            {
+                0 => GameLocalization.Get(singleTargetKey),
+                1 => GameLocalization.Get(rowTargetKey),
+                2 => GameLocalization.Get(columnTargetKey),
+                3 => GameLocalization.Get(shuffleKey),
+                4 => GameLocalization.Get(paintKey),
+                _ => string.Empty
+            };
+        }
+
+        if (titleText != null)
+        {
+            titleText.text = index switch
+            {
+                0 => GameLocalization.Get(singleTitleKey),
+                1 => GameLocalization.Get(rowTitleKey),
+                2 => GameLocalization.Get(columnTitleKey),
+                3 => GameLocalization.Get(shuffleTitleKey),
+                4 => GameLocalization.Get(paintTitleKey),
+                _ => string.Empty
+            };
+        }
+
+        var lib = TileIconLibrary.Shared;
+        Sprite iconSprite = lib != null ? lib.GetBoosterIcon(BoosterAccessService.ToMode(index)) : null;
+        if (titleIcon != null)
+        {
+            titleIcon.sprite  = iconSprite;
+            titleIcon.enabled = iconSprite != null;
+        }
+
+        SetOverlayVisible(true);
+        RefreshOverlayPanels();
+    }
+
+    private void CancelActiveJoker()   { CancelVisualSelection(); ActivateBooster(-1); }
+
+    private void CancelVisualSelection()
+    {
+        SetOverlayVisible(false);
+        if (descriptionText != null) descriptionText.text = string.Empty;
+        if (titleText != null) titleText.text = string.Empty;
+        if (titleIcon != null) titleIcon.enabled = false;
+        SetSelectedJoker(-1);
+    }
+
+    // ── Joker visual state ────────────────────────────────────────────────────
+    private void SetSelectedJoker(int index)
+    {
+        selectedJokerIndex = index;
+
+        for (int i = 0; i < cachedJokerCount; i++)
+        {
+            bool isSelected = i == selectedJokerIndex;
+
+            var frame = jokerSelectionFrames[i];
+            if (frame != null)
+                frame.enabled = isSelected;
+
+            var glow = jokerSelectionGlows[i];
+            if (glow != null)
+            {
+                glow.enabled = isSelected && glow.sprite != null;
+                glow.color   = new Color(1f, 1f, 1f, Mathf.Clamp01(selectedGlowAlpha));
+            }
+
+            // Outline yok — sarı kaplama önlendi
+
+            var icon = jokerIcons[i];
+            if (icon != null)
+                icon.color = (selectedJokerIndex < 0 || isSelected)
+                    ? Color.white
+                    : new Color(1f, 1f, 1f, disabledJokerAlpha);
+
+            var child = jokerSlotTransforms[i];
+            if (child != null)
+            {
+                Vector3 bs = jokerBaseScales[i] == Vector3.zero ? Vector3.one : jokerBaseScales[i];
+                child.localScale = bs;
+            }
+            if (icon != null)
+            {
+                Vector3 bis = jokerIconBaseScales[i] == Vector3.zero ? Vector3.one : jokerIconBaseScales[i];
+                icon.rectTransform.localScale = (selectedJokerIndex >= 0 && isSelected)
+                    ? bis * Mathf.Max(1f, selectedJokerScale)
+                    : bis;
+            }
+        }
+    }
+
+    // ── Joker cache ───────────────────────────────────────────────────────────
+    private void CacheJokerIcons()
+    {
+        for (int i = 0; i < MaxJokerSlots; i++)
+        {
+            jokerIcons[i]             = null;
+            jokerButtons[i]           = null;
+            jokerSelectionFrames[i]   = null;
+            jokerSelectionGlows[i]    = null;
+            jokerSlotTransforms[i]    = null;
+            jokerBoosterIndices[i]    = -1;
+            jokerIsBoosterSlot[i]     = false;
+        }
+
+        var entries = new List<(Transform slot, JokerBoosterSlotMapping mapping)>(MaxJokerSlots);
+
+        for (int i = 0; i < transform.childCount; i++)
+        {
+            var child = transform.GetChild(i);
+            if (child == null) continue;
+            if (child.name.Contains("SelectionFrame") || child.name.Contains("SelectionGlow")) continue;
+            if (child.GetComponent<Image>() == null && child.GetComponentInChildren<Image>(true) == null) continue;
+
+            var mapping = child.GetComponent<JokerBoosterSlotMapping>();
+            if (mapping == null || !mapping.IsBoosterSlot)
+            {
+                int inf;
+                if (!TryInferBoosterIndex(child, out inf) && !TryInferBoosterIndexBySiblingOrder(child, out inf))
+                    continue;
+                mapping = child.gameObject.AddComponent<JokerBoosterSlotMapping>();
+                ForceSetJokerMapping(mapping, true, inf);
+            }
+            else if (mapping.BoosterIndex < 0)
+            {
+                // Elle eklenmiş ama index'i ayarlanmamış (-1) mapping: index'i yine
+                // isim/sıradan çıkar — yoksa slot tap'leri sessizce yutulur.
+                int inf;
+                if (!TryInferBoosterIndex(child, out inf) && !TryInferBoosterIndexBySiblingOrder(child, out inf))
+                    continue;
+                ForceSetJokerMapping(mapping, true, inf);
+            }
+
+            entries.Add((child, mapping));
+            if (entries.Count >= MaxJokerSlots) break;
+        }
+
+        entries.Sort((a, b) => a.mapping.BoosterIndex.CompareTo(b.mapping.BoosterIndex));
+
+        if (entries.Count == 0)
+            {
+                if (GameDiagnostics.CriticalErrors)
+                    Debug.LogWarning("[JokerFocus] No booster slots found in JokerGrid.");
+            }
+
+        cachedJokerCount = entries.Count;
+
+        for (int i = 0; i < cachedJokerCount; i++)
+        {
+            var child   = entries[i].slot;
+            var mapping = entries[i].mapping;
+            if (!child.TryGetComponent(out Image icon)) icon = child.GetComponentInChildren<Image>(true);
+
+            jokerSlotTransforms[i]  = child;
+            jokerBoosterIndices[i]  = mapping.BoosterIndex;
+            jokerIsBoosterSlot[i]   = true;
+            jokerIcons[i]           = icon;
+            jokerBaseScales[i]      = child.localScale;
+
+            if (icon != null)
+            {
+                jokerIconBaseScales[i]    = icon.rectTransform.localScale;
+                jokerSelectionFrames[i]   = EnsureSelectionFrame(icon);
+                jokerSelectionGlows[i]    = EnsureSelectionGlow(icon);
+            }
+
+            if (!child.TryGetComponent(out Button button)) button = child.gameObject.AddComponent<Button>();
+            jokerButtons[i] = button;
+
+            // AddComponent<Button> anında Selectable varsayılan ColorTint ile OnEnable'da durum rengini HEDEF görselin
+            // CanvasRenderer'ına yazar (hedef = slotun kendi Image'ı, joker arka plan çerçevesi). Giriş animasyonu
+            // (GameHudEntranceAnimator) alt barın CanvasGroup'unu Awake'te interactable=false yaptığı için bu renk
+            // "disabled" = gri %50 alfa oluyordu; transition None'a çekilince de bir daha sıfırlanmıyordu → çerçeve
+            // oyun boyunca soluk. Image.color beyaz kaldığı için Inspector'da görünmüyordu.
+            var autoTinted = button.targetGraphic;
+            var raycastGraphic = EnsureRaycastSurface(child, icon);
+            button.transition    = Selectable.Transition.None;
+            button.targetGraphic = raycastGraphic;
+            button.interactable  = true;
+            if (autoTinted != null) autoTinted.canvasRenderer.SetColor(Color.white);
+            raycastGraphic.canvasRenderer.SetColor(Color.white);
+
+            int cap = i;
+            button.onClick.RemoveAllListeners();
+            button.onClick.AddListener(() => HandleJokerTap(cap));
+
+            EnsurePointerProxy(child.gameObject, cap);
+            if (raycastGraphic != null)
+                EnsurePointerProxy(raycastGraphic.gameObject, cap);
+        }
+    }
+
+    // ── Component helpers ─────────────────────────────────────────────────────
+    private Image EnsureSelectionGlow(Image icon)
+    {
+        var existing = icon.transform.Find("SelectionGlow");
+        Image glow;
+        if (existing != null)
+            glow = existing.TryGetComponent(out Image existingGlow) ? existingGlow : existing.gameObject.AddComponent<Image>();
+        else
+        {
+            var go = new GameObject("SelectionGlow", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            go.transform.SetParent(icon.transform, false);
+            go.transform.SetAsFirstSibling();
+            glow = go.GetComponent<Image>();
+        }
+
+        var rt = glow.rectTransform;
+        rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
+        rt.offsetMin = rt.offsetMax = Vector2.zero;
+        rt.localScale = Vector3.one * Mathf.Max(1f, selectedGlowScale);
+
+        glow.sprite         = null;
+        glow.type           = Image.Type.Simple;
+        glow.preserveAspect = false;
+        glow.raycastTarget  = false;
+        glow.enabled        = false;
+        glow.color          = new Color(0f, 0f, 0f, 0f);
+        return glow;
+    }
+
+    private Image EnsureSelectionFrame(Image icon)
+    {
+        var parent = icon.transform;
+        if (parent == null) return null;
+
+        string frameName = $"{icon.gameObject.name}_SelectionFrame";
+        Transform existing = parent.Find(frameName)
+                          ?? parent.parent?.Find(frameName)
+                          ?? parent.Find("SelectionFrame");
+
+        Image frame;
+        if (existing != null)
+        {
+            if (existing.parent != parent) existing.SetParent(parent, false);
+            existing.name = frameName;
+            frame = existing.TryGetComponent(out Image existingFrame) ? existingFrame : existing.gameObject.AddComponent<Image>();
+        }
+        else
+        {
+            var go = new GameObject(frameName, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            go.transform.SetParent(parent, false);
+            frame = go.GetComponent<Image>();
+        }
+
+        frame.transform.SetAsFirstSibling();
+
+        var fr = frame.rectTransform;
+        fr.anchorMin        = Vector2.zero;
+        fr.anchorMax        = Vector2.one;
+        fr.pivot            = new Vector2(0.5f, 0.5f);
+        fr.anchoredPosition = Vector2.zero;
+        fr.offsetMin        = new Vector2(-selectedFramePadding, -selectedFramePadding);
+        fr.offsetMax        = new Vector2( selectedFramePadding,  selectedFramePadding);
+
+        // Sprite ve Outline YOK — iPhone fill + sarı kaplama önlendi
+        // Seçim sadece scale ile belli olur
+        frame.sprite        = null;
+        frame.type          = Image.Type.Simple;
+        frame.fillCenter    = false;
+        frame.color         = new Color(0f, 0f, 0f, 0f);
+        frame.preserveAspect = false;
+        frame.raycastTarget  = false;
+        frame.enabled        = false;
+
+        // Varsa eski Outline'ı kaldır
+        var oldOutline = frame.GetComponent<Outline>();
+        if (oldOutline != null) DestroyImmediate(oldOutline);
+
+        return frame;
+    }
+
+    private void EnsurePointerProxy(GameObject target, int index)
+    {
+        if (target == null) return;
+        if (!target.TryGetComponent(out JokerPointerProxy p)) p = target.AddComponent<JokerPointerProxy>();
+        p.Init(this, index);
+    }
+
+    private Graphic EnsureRaycastSurface(Transform slot, Image icon)
+    {
+        if (icon != null) { icon.raycastTarget = true; return icon; }
+
+        var g = slot.GetComponent<Graphic>();
+        if (g != null) { g.raycastTarget = true; return g; }
+
+        var hitT = slot.Find("JokerHitArea");
+        Image hit;
+        if (hitT != null)
+            hit = hitT.TryGetComponent(out Image existingHit) ? existingHit : hitT.gameObject.AddComponent<Image>();
+        else
+        {
+            var go = new GameObject("JokerHitArea", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            go.transform.SetParent(slot, false);
+            go.transform.SetAsFirstSibling();
+            hit = go.GetComponent<Image>();
+        }
+
+        var rt = hit.rectTransform;
+        rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
+        rt.offsetMin = rt.offsetMax = Vector2.zero;
+        hit.color = new Color(1f, 1f, 1f, 0.001f);
+        hit.raycastTarget = true;
+        return hit;
+    }
+
+    // ── 5. joker: Wonder Boya Kovası ─────────────────────────────────────────
+    // Sahne dosyasına dokunmadan: karıştırıcı slotu çalışma anında kopyalanıp index 4'e bağlanır (yatay yerleşim
+    // grubu kendiliğinden dizer). İkon kütüphaneye eklenmeden slot oluşturulmaz — yoksa kopya karıştırıcı ikonuyla
+    // görünürdü.
+    private void EnsurePaintBucketSlot()
+    {
+        var lib = TileIconLibrary.Shared;
+        if (lib == null || lib.boosterPaintBucket == null) return;
+
+        // Index, CacheJokerIcons'la AYNI kuralla çözülür: sahnedeki mapping'lerin index'i -1 (atanmamış) olabilir →
+        // ad/sıradan çıkarılır. (İlk sürüm yalnız mapping index'ine bakıyordu → karıştırıcı bulunamıyor, slot çıkmıyordu.)
+        Transform template = null;
+        for (int i = 0; i < transform.childCount; i++)
+        {
+            var child = transform.GetChild(i);
+            int idx = -1;
+            if (child.TryGetComponent(out JokerBoosterSlotMapping m) && m.IsBoosterSlot && m.BoosterIndex >= 0)
+                idx = m.BoosterIndex;
+            else if (child.GetComponent<Image>() != null || child.GetComponentInChildren<Image>(true) != null)
+            {
+                if (!TryInferBoosterIndex(child, out idx)) TryInferBoosterIndexBySiblingOrder(child, out idx);
+            }
+            if (idx == BoosterAccessService.PaintBucketIndex) return;      // zaten var
+            if (idx == 3) template = child;
+        }
+        if (template == null) return;
+
+        var clone = Instantiate(template.gameObject, transform);
+        clone.name = "PaintBucketJoker";
+        clone.transform.SetSiblingIndex(template.GetSiblingIndex() + 1);
+        if (!clone.TryGetComponent(out JokerBoosterSlotMapping mapping))
+            mapping = clone.AddComponent<JokerBoosterSlotMapping>();
+        mapping.SetBoosterIndex(BoosterAccessService.PaintBucketIndex);
+        var view = clone.GetComponentInChildren<BoosterSlotView>(true);
+        if (view != null) view.Rebind(BoosterAccessService.PaintBucketIndex);
+    }
+
+    // ── Joker çubuğu yerleşimi ───────────────────────────────────────────────
+    // Sahnede slotlar SOL-ÜST köşeye sabit x'lerle (200/382/564/746, ayarlar 920) dizilmiş, yerleşim grubu kapalı:
+    // telefon oranında ortaya denk geliyor ama başka oranda (editör Game görünümü) sola kayıyordu; 5. joker de
+    // karıştırıcının üstüne binerdi. Burada sıra her oranda ORTALANIR ve tüm öğeler (ayarlar dahil) AYNI oranda küçülür.
+    // 5 joker + ayarlar: tavan 914 iken (4 jokerlik sıraya göre) 5. joker gelince her şey ~%12.5 küçülüyordu.
+    // Boşluklar daraltıldı, tavan ~ekran genişliğinin %94'ü: slotlar ~%10 büyük, kenarlara yapışmaz.
+    private const float SlotGap = 12f;        // jokerler arası
+    private const float SettingsGap = 20f;    // son joker ile ayarlar arası
+    private const float MaxRowSpan = 946f;    // tek ölçek tavanı (geniş ekranda/tablette büyümesin)
+    private const float SideMargin = 40f;
+    private bool arranging;
+
+    private void ArrangeJokerBar()
+    {
+        var self = transform as RectTransform;
+        if (self == null) return;
+
+        var boosters = new List<(int index, RectTransform rt)>(6);
+        var extras = new List<RectTransform>(2);
+        for (int i = 0; i < transform.childCount; i++)
+        {
+            if (!(transform.GetChild(i) is RectTransform child) || !child.gameObject.activeSelf) continue;
+            if (child.name.Contains("SelectionFrame") || child.name.Contains("SelectionGlow")) continue;
+            if (child.GetComponent<Image>() == null && child.GetComponentInChildren<Image>(true) == null) continue;
+            int idx = -1;
+            if (child.TryGetComponent(out JokerBoosterSlotMapping m) && m.IsBoosterSlot && m.BoosterIndex >= 0) idx = m.BoosterIndex;
+            else if (child.TryGetComponent<BoosterSlotView>(out _) && !TryInferBoosterIndex(child, out idx))
+                TryInferBoosterIndexBySiblingOrder(child, out idx);
+            if (idx >= 0) boosters.Add((idx, child)); else extras.Add(child);
+        }
+        if (boosters.Count == 0) return;
+        boosters.Sort((a, b) => a.index.CompareTo(b.index));
+        foreach (var b in boosters) FitButtonInsideFrame(b.rt);
+
+        var row = new List<RectTransform>(boosters.Count + extras.Count);
+        foreach (var b in boosters) row.Add(b.rt);
+        row.AddRange(extras);
+
+        float span = 0f;
+        for (int i = 0; i < row.Count; i++)
+        {
+            span += row[i].sizeDelta.x;
+            if (i > 0) span += i == boosters.Count ? SettingsGap : SlotGap;
+        }
+        float available = Mathf.Max(1f, self.rect.width - 2f * SideMargin);
+        float k = Mathf.Min(1f, Mathf.Min(available, MaxRowSpan) / span);
+
+        arranging = true;
+        try
+        {
+            float x = -span * k * 0.5f;
+            for (int i = 0; i < row.Count; i++)
+            {
+                var rt = row[i];
+                if (i > 0) x += (i == boosters.Count ? SettingsGap : SlotGap) * k;
+                float w = rt.sizeDelta.x * k;
+                // Yatayda ortaya bağla; dikey (üst kenar + y) sahnedeki gibi kalır.
+                rt.anchorMin = new Vector2(0.5f, rt.anchorMin.y);
+                rt.anchorMax = new Vector2(0.5f, rt.anchorMax.y);
+                rt.anchoredPosition = new Vector2(x + w * (rt.pivot.x), rt.anchoredPosition.y);
+                rt.localScale = new Vector3(k, k, 1f);
+                x += w;
+            }
+        }
+        finally { arranging = false; }
+    }
+
+    // Yeşil buton (slot içindeki Button'ın hedef Image'ı) çerçevenin (slotun kendi Image'ı, JokerBGV1) altın halkasının
+    // içine oturur. Oran çizimden: halka 512 px'in her kenarında ~33 px → iç açıklık ~%87; buton halkanın iç kenarına
+    // hafifçe biner (ilk çizimdeki 114/130). Çizimler aynı tuval boyutunda geldiği için piksel oranı KULLANILMAZ.
+    private const float ButtonInFrameRatio = 114f / 130f;
+
+    private static void FitButtonInsideFrame(RectTransform slot)
+    {
+        if (!slot.TryGetComponent(out Image frame) || frame.sprite == null) return;
+        foreach (var btn in slot.GetComponentsInChildren<Button>(true))
+        {
+            if (btn.transform == slot || !(btn.targetGraphic is Image body)) continue;
+            var rt = body.rectTransform;
+            if (rt.anchorMin != rt.anchorMax) return;   // gerilen yerleşim: elle ayarlı, dokunma
+            rt.sizeDelta = slot.sizeDelta * ButtonInFrameRatio;
+            return;
+        }
+    }
+
+    // Boya Kovası hedefi kabul edilmedi: sebep açıklama satırında kısa süre görünür, sonra ipucu geri gelir.
+    private Coroutine rejectRoutine;
+    private void HandleBoosterTargetRejected(string key)
+    {
+        if (descriptionText == null || string.IsNullOrEmpty(key)) return;
+        if (rejectRoutine != null) StopCoroutine(rejectRoutine);
+        rejectRoutine = StartCoroutine(ShowReject(GameLocalization.Get(key)));
+    }
+
+    private System.Collections.IEnumerator ShowReject(string message)
+    {
+        descriptionText.text = message;
+        var rt = descriptionText.rectTransform;
+        Vector3 basePos = rt.localPosition;
+        for (float t = 0f; t < 0.3f; t += Time.unscaledDeltaTime)
+        {
+            rt.localPosition = basePos + Vector3.right * Mathf.Sin(t * 60f) * 8f * (1f - t / 0.3f);
+            yield return null;
+        }
+        rt.localPosition = basePos;
+        yield return new WaitForSecondsRealtime(1.6f);
+        if (board != null && board.ActiveBooster == BoardController.BoosterMode.PaintBucket)
+            descriptionText.text = GameLocalization.Get(paintKey);
+        rejectRoutine = null;
+    }
+
+    // ── Mapping helpers ───────────────────────────────────────────────────────
+    private void ForceSetJokerMapping(JokerBoosterSlotMapping m, bool isSlot, int bIndex)
+    {
+        var t = typeof(JokerBoosterSlotMapping);
+        const System.Reflection.BindingFlags F = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance;
+        t.GetField("isBoosterSlot", F)?.SetValue(m, isSlot);
+        t.GetField("boosterIndex",  F)?.SetValue(m, bIndex);
+    }
+
+    private bool TryInferBoosterIndex(Transform child, out int idx)
+    {
+        idx = -1;
+        if (child == null) return false;
+        string lower = child.name.ToLowerInvariant();
+        if (lower.Contains("hammer") || lower.Contains("single"))     { idx = 0; return true; }
+        if (lower.Contains("row")    || lower.Contains("horizontal")) { idx = 1; return true; }
+        if (lower.Contains("column") || lower.Contains("vertical"))   { idx = 2; return true; }
+        if (lower.Contains("shuffle")|| lower.Contains("mix"))        { idx = 3; return true; }
+        if (lower.Contains("paint")  || lower.Contains("bucket"))     { idx = 4; return true; }
+        return false;
+    }
+
+    private bool TryInferBoosterIndexBySiblingOrder(Transform child, out int idx)
+    {
+        idx = -1;
+        if (child == null || child.parent != transform) return false;
+        int s = child.GetSiblingIndex();
+        if (s < 0 || s > 3) return false;
+        idx = s;
+        return true;
+    }
+
+    // ── Sprite helpers ────────────────────────────────────────────────────────
+    private Sprite ResolveSelectionFrameSprite()
+    {
+        if (string.IsNullOrEmpty(selectedFrameSpriteName)) return null;
+        var s = ResolveSpriteByName(selectedFrameSpriteName);
+        if (s != null) return s;
+
+        string n    = selectedFrameSpriteName.Trim();
+        string bare = n.EndsWith("_0") ? n[..^2] : n;
+        foreach (var c in new[] { n, $"{n}_0", bare, $"{bare}_0" })
+        {
+            if (string.IsNullOrEmpty(c)) continue;
+            s = ResolveSpriteByName(c) ?? ResolveSpriteByNameCaseInsensitive(c);
+            if (s != null) return s;
+        }
+
+        if (!useProceduralSelectionFrame && missingFrameSpriteWarnings.Add(n))
+            {
+                if (GameDiagnostics.CriticalErrors)
+                    Debug.LogWarning($"[JokerFocus] Frame sprite '{selectedFrameSpriteName}' not found. Using procedural frame.");
+            }
+        return null;
+    }
+
+    private Sprite ResolveSpriteByName(string name)
+    {
+        if (string.IsNullOrEmpty(name)) return null;
+        foreach (var s in Resources.FindObjectsOfTypeAll<Sprite>())
+            if (s != null && s.name == name) return s;
+        return ResolveSpriteFromLoadedAtlases(name, false)
+#if UNITY_EDITOR
+               ?? ResolveSpriteFromAssetDatabase(name, false)
+#endif
+               ;
+    }
+
+    private Sprite ResolveSpriteByNameCaseInsensitive(string name)
+    {
+        if (string.IsNullOrEmpty(name)) return null;
+        foreach (var s in Resources.FindObjectsOfTypeAll<Sprite>())
+            if (s != null && string.Equals(s.name, name, System.StringComparison.OrdinalIgnoreCase)) return s;
+        return ResolveSpriteFromLoadedAtlases(name, true)
+#if UNITY_EDITOR
+               ?? ResolveSpriteFromAssetDatabase(name, true)
+#endif
+               ;
+    }
+
+    private Sprite ResolveSpriteFromLoadedAtlases(string name, bool ignoreCase)
+    {
+        foreach (var atlas in Resources.FindObjectsOfTypeAll<SpriteAtlas>())
+        {
+            if (atlas == null) continue;
+            if (!ignoreCase) { var s = atlas.GetSprite(name); if (s != null) return s; continue; }
+            int cnt = atlas.spriteCount;
+            if (cnt <= 0) continue;
+            var buf = new Sprite[cnt];
+            atlas.GetSprites(buf);
+            foreach (var s in buf)
+                if (s != null && string.Equals(s.name, name, System.StringComparison.OrdinalIgnoreCase)) return s;
+        }
+        return null;
+    }
+
+#if UNITY_EDITOR
+    private Sprite ResolveSpriteFromAssetDatabase(string name, bool ignoreCase)
+    {
+        foreach (var guid in AssetDatabase.FindAssets($"{name} t:Sprite"))
+        {
+            string path = AssetDatabase.GUIDToAssetPath(guid);
+            if (string.IsNullOrEmpty(path)) continue;
+            foreach (var asset in AssetDatabase.LoadAllAssetsAtPath(path))
+            {
+                if (asset is not Sprite sprite) continue;
+                if (!ignoreCase && sprite.name == name) return sprite;
+                if (ignoreCase && string.Equals(sprite.name, name, System.StringComparison.OrdinalIgnoreCase)) return sprite;
+            }
+        }
+        return null;
+    }
+#endif
+
+}

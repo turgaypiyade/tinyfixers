@@ -64,14 +64,14 @@ public class RectTransform {
  public void SetParent(RectTransform p,bool keep){parent=p;}public void SetAsLastSibling(){}
  public Vector3 TransformPoint(Vector3 p)=>position+new Vector3(p.x*localScale.x,p.y*localScale.y,p.z);
  public Vector3 InverseTransformPoint(Vector3 p)=>p-position;public Vector3 InverseTransformVector(Vector3 p)=>p;
- public T GetComponent<T>() where T:class=>typeof(T)==typeof(Image)?gameObject.image as T:null;
+ public T GetComponent<T>() where T:class=>typeof(T)==typeof(Image)?gameObject.image as T:gameObject.image.GetComponent<T>();
  public void GetWorldCorners(Vector3[] c){c[0]=TransformPoint(new Vector3(-rect.width/2,-rect.height/2,0));c[2]=TransformPoint(new Vector3(rect.width/2,rect.height/2,0));}
 }
 public class Image {
  public GameObject gameObject;public RectTransform rectTransform;public Sprite sprite;public bool raycastTarget,preserveAspect;public Color color=Color.white;
- public GelLauncherIdleFx idle;
+ public GelLauncherIdleFx idle;public GelLauncherPressView press;
  public Image(){gameObject=new GameObject();rectTransform=new RectTransform{gameObject=gameObject};gameObject.transform=rectTransform;gameObject.image=this;}
- public T GetComponent<T>() where T:class=>idle as T;
+ public T GetComponent<T>() where T:class=>typeof(T)==typeof(GelLauncherPressView)?press as T:idle as T;
 }
 public class GelLauncherIdleFx {public bool enabled=true,stopped;public void StopAllCoroutines(){stopped=true;}}
 public static class UiVfxPool {
@@ -80,7 +80,7 @@ public static class UiVfxPool {
  public static Image RentImage(string key,RectTransform parent,string name){
   if(!pool.TryGetValue(key,out var s))pool[key]=s=new Stack<Image>();
   Image i;if(s.Count>0)i=s.Pop();else{i=new Image();created++;}
-  i.gameObject.active=true;i.gameObject.destroyed=false;i.sprite=null;i.color=Color.white;i.preserveAspect=false;
+  i.gameObject.active=true;i.gameObject.destroyed=false;i.sprite=null;i.color=Color.white;i.preserveAspect=false;i.press=null;
   i.rectTransform.localScale=Vector3.one;i.rectTransform.pivot=new Vector2(.5f,.5f);i.rectTransform.SetParent(parent,false);
   if(key.EndsWith(""Body""))body=i;else cap=i;return i;
  }
@@ -88,6 +88,13 @@ public static class UiVfxPool {
 }
 public static class Resources {public static bool missingCap;public static T Load<T>(string path) where T:class=>missingCap?null:new Sprite(path) as T;}
 public enum ObstacleId {GelLauncherUp,GelLauncherDown,GelLauncherLeft,GelLauncherRight}
+public class GelLauncherPressView {
+ public static bool UsePress;public bool compressed;public float opacity=1;
+ public Sprite FrameSprite=new Sprite(""press-frame""),HeadSprite=new Sprite(""gold-head"");
+ public static GelLauncherPressView Ensure(Image image,ObstacleId id,int hits){if(!UsePress)return null;var v=new GelLauncherPressView();image.press=v;image.sprite=v.FrameSprite;return v;}
+ public IEnumerator CompressForFire(){yield return new WaitForSeconds(.45f);compressed=true;}
+ public void SetOpacity(float value){opacity=value;}
+}
 public class Stage {public Sprite sprite=new Sprite(""cracked"");}
 public class Definition {public List<Stage> stages=new List<Stage>{new Stage(),new Stage()};}
 public class ObstacleLibrary {public Definition def=new Definition();public Definition Get(ObstacleId id)=>def;}
@@ -210,6 +217,26 @@ public sealed partial class GelLauncherFireAction {
    for(int i=0;i<400&&!run.done;i++){run.Tick();b.Tick();}
    Check(run.done&&b.jobs==0&&b.holds==0,""missing cap art preserves completion and cleanup"");
   }
+  Resources.missingCap=false;
+  GelLauncherPressView.UsePress=true;
+  foreach(ObstacleId id in Enum.GetValues(typeof(ObstacleId))){
+   Reset();var b=new BoardController();var a=new GelLauncherFireAction(b,new Vector2Int(1,2),id);
+   var fp=Footprint(a.origin,id);var dir=GelLauncherFx.Direction(id);var front=FrontCell(fp,dir);
+   var run=new Coroutine(a.ExecuteVisuals(null));bool sawCap=false;int frames=0;
+   while(!run.done){run.Tick();
+    if(UiVfxPool.cap!=null&&UiVfxPool.cap.gameObject.active){sawCap=true;Check(UiVfxPool.body.press.compressed,""final stroke precedes projectile"");Check(UiVfxPool.cap.sprite.name==""gold-head"",""new golden projectile"");Check(UiVfxPool.body.sprite.name==""press-frame"",""no flash of legacy blue art"");}
+    b.Tick();Check(++frames<500,""press shot bounded"");
+   }
+   Check(sawCap&&b.jobs==0&&b.holds==0,""press finale releases job and footprint"");
+   Check(b.painted.Count==fp.Count+a.BuildPath(front,dir).Count,""same gel lane in four directions"");
+   Check(UiVfxPool.body.press.opacity==0,""layered press fades completely"");
+  }
+  Reset();{
+   var b=new BoardController();var run=new Coroutine(new GelLauncherFireAction(b,new Vector2Int(1,2),ObstacleId.GelLauncherUp).ExecuteVisuals(null));
+   for(int i=0;i<8;i++){run.Tick();b.Tick();}run.Dispose();
+   Check(b.jobs==0&&b.holds==0,""cancel during compression releases ownership"");Check(UiVfxPool.body==null||!UiVfxPool.body.gameObject.active,""cancel returns fallback body"");
+  }
+  GelLauncherPressView.UsePress=false;
   Console.WriteLine(""PASS: ""+checks+"" production motion samples, four directions at 30/60/120 Hz, cap timing, pool reuse, cancellation and cleanup checks. UI doubles; no Unity playback/performance measurement."");
  }
 }

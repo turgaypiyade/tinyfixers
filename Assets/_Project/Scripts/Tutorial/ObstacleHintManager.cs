@@ -181,16 +181,17 @@ public class ObstacleHintManager : MonoBehaviour
         var levelData = board?.ActiveLevelData;
         if (levelData == null) return result;
 
+        var state = board.ObstacleStateService;
         if (levelData.obstacles != null)
         {
-            foreach (int raw in levelData.obstacles)
-                AddId((ObstacleId)raw);
+            for (int cell = 0; cell < levelData.obstacles.Length; cell++)
+                AddCellId(cell, (ObstacleId)levelData.obstacles[cell]);
         }
 
         // obstacles[] runtime'da yalnız EN ÜST katmanı tutar (StampLayeredEntriesIntoLevel); 3+ katlı
         // yığında en alttaki authored katman yalnız beneath store'da kalır → oradan da topla.
         var beneath = new List<ObstacleId>();
-        board.ObstacleStateService?.CollectStampedBeneathIds(beneath);
+        state?.CollectStampedBeneathIds(beneath, useHintIdentity: true);
         foreach (var id in beneath)
             AddId(id);
 
@@ -214,7 +215,7 @@ public class ObstacleHintManager : MonoBehaviour
         if (levelData.stackedObstacles != null)
         {
             for (int i = 0; i < levelData.stackedObstacles.Length; i++)
-                AddId(levelData.stackedObstacles[i].obstacleId);
+                AddCellId(levelData.stackedObstacles[i].originCellIndex, levelData.stackedObstacles[i].obstacleId);
         }
 
         if (levelData.tubes != null)
@@ -256,6 +257,8 @@ public class ObstacleHintManager : MonoBehaviour
         }
 
         return result;
+
+        void AddCellId(int cell, ObstacleId id) => AddId(state != null ? state.GetHintObstacleId(cell, id) : id);
 
         void AddId(ObstacleId id)
         {

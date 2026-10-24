@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::LevelData
   width: 9
   height: 10
-  moves: 28
+  moves: 33
   baseCoinReward: 10
   goals:
   - targetType: 2

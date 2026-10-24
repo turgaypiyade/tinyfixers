@@ -1,0 +1,9 @@
+{
+  "protected": 1899,
+  "authorizedChanges": [
+    "Assets/_Project/Settings/ProductionLevels/LevelP_00991.asset",
+    "Assets/_Project/Settings/ProductionLevels/LevelP_00500.asset",
+    "Assets/_Project/Scripts/UI/LevelEndSimplePopupController.cs"
+  ],
+  "othersUnchanged": 1896
+}

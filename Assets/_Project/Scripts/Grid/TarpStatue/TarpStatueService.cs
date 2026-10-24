@@ -73,7 +73,7 @@ public sealed class TarpStatueService : MonoBehaviour
         int ox = origin % board.Width, oy = origin / board.Width;
         int hits = state != null && state.GetObstacleIdAt(ox, oy) == ObstacleId.TarpStatue
             ? state.GetRemainingHitsAt(ox, oy) : 3;
-        s.view = TarpStatueView.Ensure(image, s.color, s.remaining, hits > 0 ? hits : 3);
+        s.view = TarpStatueView.Ensure(image, s.color, s.remaining, hits > 0 ? hits : 3, board);
     }
 
     private Statue GetOrCreate(int origin)

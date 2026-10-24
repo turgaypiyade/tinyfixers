@@ -138,7 +138,7 @@ public sealed class GelLauncherIdleFx : MonoBehaviour
 
     public static void Ensure(Image image, ObstacleId id, float cellSize)
     {
-        if (image == null) return;
+        if (image == null || image.GetComponent<GelLauncherPressView>() != null) return;
         var fx = image.GetComponent<GelLauncherIdleFx>();
         if (fx == null) fx = image.gameObject.AddComponent<GelLauncherIdleFx>();
         fx.launcherId = id;

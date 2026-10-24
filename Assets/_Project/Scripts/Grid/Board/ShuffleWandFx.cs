@@ -142,6 +142,13 @@ public sealed class ShuffleWandFx
         if (Alive(id)) root.gameObject.SetActive(false);
     }
 
+    public void Cancel()
+    {
+        runId++;
+        exiting = false;
+        if (root != null) root.gameObject.SetActive(false);
+    }
+
     private bool Alive(int id) => id == runId && root != null;
 
     // 0→1 hızlı açılış (ilk %25), tutma, son %25'te kapanış.

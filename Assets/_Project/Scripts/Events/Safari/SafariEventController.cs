@@ -85,7 +85,7 @@ public sealed class SafariEventController : MonoBehaviour
         if (!CanJoinNow) return null;
 
         bool rising = mapScreen is RisingMapScreen;
-        string title = rising ? Loc("rising_title", "TIRMANIŞ") : config.eventName;
+        string title = rising ? Loc("rising_title", "Tırmanış") : config.eventName;
         string tagline = string.Format(Loc("promo_safari_tagline", "Zirveye çık, {0:N0} altını paylaş!"),
             config.prizePoolGold);
         return new PreLevelEventPromo(title, tagline, ResolvePromoIcon(),

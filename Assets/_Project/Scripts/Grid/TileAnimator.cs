@@ -41,7 +41,7 @@ public sealed class TileAnimator
 
     private IEnumerator PlayPopCore(TileView tile, float duration, bool suppressBurst = false)
     {
-        if (tile == null || !tile)
+        if (tile == null || !tile || tile.KeepHiddenForCombo)
             yield break;
 
         Transform root;
@@ -97,7 +97,7 @@ public sealed class TileAnimator
 
         while (t < shrinkDuration)
         {
-            if (tile == null || !tile || root == null) yield break;
+            if (tile == null || !tile || root == null || tile.KeepHiddenForCombo) yield break;
 
             try
             {
@@ -477,7 +477,7 @@ public sealed class TileAnimator
         if (delay > 0f)
             yield return new WaitForSeconds(delay);
 
-        if (tile == null) yield break;
+        if (tile == null || tile.KeepHiddenForCombo) yield break;
 
         RectTransform rt;
         CanvasGroup g;
@@ -514,7 +514,7 @@ public sealed class TileAnimator
 
         while (t < half)
         {
-            if (tile == null || rt == null) yield break;
+            if (tile == null || rt == null || tile.KeepHiddenForCombo) yield break;
 
             try
             {
@@ -534,7 +534,7 @@ public sealed class TileAnimator
         float backDur = Mathf.Max(0.0001f, totalTime - half);
         while (t < backDur)
         {
-            if (tile == null || rt == null) yield break;
+            if (tile == null || rt == null || tile.KeepHiddenForCombo) yield break;
 
             try
             {
@@ -554,16 +554,18 @@ public sealed class TileAnimator
     }
 
 
-    public IEnumerator PlaySpecialCreationMerge(TileView createdTile, IEnumerable<TileView> sourceTiles, float duration)
+    public IEnumerator PlaySpecialCreationMerge(TileView createdTile, IEnumerable<TileView> sourceTiles, float duration,
+        ClearEffectPlaybackContext context = null)
     {
         return createdTile != null
-            ? createdTile.RunForCurrentLifetime(PlaySpecialCreationMergeCore(createdTile, sourceTiles, duration))
+            ? createdTile.RunForCurrentLifetime(PlaySpecialCreationMergeCore(createdTile, sourceTiles, duration, context))
             : EmptyAnimation();
     }
 
-    private IEnumerator PlaySpecialCreationMergeCore(TileView createdTile, IEnumerable<TileView> sourceTiles, float duration)
+    private IEnumerator PlaySpecialCreationMergeCore(TileView createdTile, IEnumerable<TileView> sourceTiles, float duration,
+        ClearEffectPlaybackContext context)
     {
-        if (createdTile == null)
+        if (createdTile == null || (context != null && !context.IsCurrentTile(createdTile)))
             yield break;
 
         Image createdIcon = createdTile.IconImage;
@@ -610,7 +612,8 @@ public sealed class TileAnimator
         {
             foreach (var src in sourceTiles)
             {
-                if (src == null || src == createdTile || !seen.Add(src))
+                if (src == null || src == createdTile || !seen.Add(src)
+                    || (context != null && !context.IsCurrentTile(src)))
                     continue;
 
                 Image srcIcon = src.IconImage;
@@ -1160,6 +1163,9 @@ public sealed class TileAnimator
             tileRt.localRotation = Quaternion.identity;
         }
 
+        if (tile.KeepHiddenForCombo)
+            return;
+
         if (tile.TryGetComponent<CanvasGroup>(out var cg))
         {
             cg.alpha = 1f;
@@ -1191,7 +1197,8 @@ public sealed class TileAnimator
     IReadOnlyList<TileView> sourceTiles,
     float duration,
     float clearAtNormalizedTime,
-    Action<TileView> onTileClear)
+    Action<TileView> onTileClear,
+    ClearEffectPlaybackContext context = null)
     {
         if (board == null || sourceTiles == null || sourceTiles.Count == 0)
             yield break;
@@ -1211,7 +1218,8 @@ public sealed class TileAnimator
 
         foreach (var tile in sourceTiles)
         {
-            if (tile == null || !seen.Add(tile))
+            if (tile == null || !seen.Add(tile)
+                || (context != null && !context.IsCurrentTile(tile)))
                 continue;
 
             Image sourceIcon = tile.IconImage;

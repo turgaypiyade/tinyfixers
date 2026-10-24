@@ -424,8 +424,9 @@ public sealed class WaterChannelService
 
     private void PlaySfx(AudioClip clip, float volume)
     {
-        var src = board.SfxSource;   // Unity nesnesi: ?. kullanma (sahte-null)
-        if (clip != null && src != null) src.PlayOneShot(clip, volume);
+        if (board == null) return;
+        var audio = board.Audio;   // Unity nesnesi: ?. kullanma (sahte-null)
+        if (audio != null) audio.PlayOneShotClip(clip, volume);
     }
 
     private static Image CreateImage(RectTransform parent, string name, int x, int y, float tileSize, Sprite sprite)

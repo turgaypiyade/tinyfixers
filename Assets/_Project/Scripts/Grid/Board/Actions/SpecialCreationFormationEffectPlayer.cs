@@ -12,7 +12,7 @@ public sealed class SpecialCreationFormationEffectPlayer : IClearEffectPlayer
     public IEnumerator Play(IClearEffectDescriptor effect, BoardController board, ClearEffectPlaybackContext context)
     {
         var creation = effect as SpecialCreationFormationEffectDescriptor;
-        if (creation == null)
+        if (creation == null || context == null)
             yield break;
 
         BoardAnimator animator = board.boardAnimatorRef;
@@ -23,11 +23,14 @@ public sealed class SpecialCreationFormationEffectPlayer : IClearEffectPlayer
             ? new List<TileView>(creation.TargetTiles)
             : new List<TileView>();
 
-        contributors.RemoveAll(tile => tile == null);
+        for (int i = contributors.Count - 1; i >= 0; i--)
+            if (!context.IsCurrentTile(contributors[i])) contributors.RemoveAt(i);
 
         // Eski davranış: created special formation
         if (creation.CreatedTile != null)
         {
+            if (!context.TryGetCurrentTileLifetime(creation.CreatedTile, out int createdLifetime))
+                yield break;
             contributors.RemoveAll(tile => tile == creation.CreatedTile);
 
             if (creation.CreatedTile != null)
@@ -35,17 +38,15 @@ public sealed class SpecialCreationFormationEffectPlayer : IClearEffectPlayer
 
             try
             {
-                yield return animator.PlayCreatedSpecialFormation(
+                yield return creation.CreatedTile.RunForLifetime(animator.PlayCreatedSpecialFormation(
                     creation.CreatedTile,
                     contributors,
-                    creation.Duration);
+                    creation.Duration,
+                    context), createdLifetime);
 
-                // Yaratım reveal: imaj + halo birlikte büyür, sonra 360° döner ve oturur.
-                // Animasyondan sonra tile destroy edilmiş olabilir (örn. PatchBot uçuşu)
-                // bu yüzden Unity null kontrolü (== null) ile destroyed kontrolü yapıyoruz.
-                if (creation.CreatedTile != null
-                    && creation.CreatedTile.gameObject != null
-                    && creation.CreatedTile.gameObject.activeInHierarchy
+                // Animasyon beklerken aynı GameObject havuzdan yeni bir taş olarak çıkmış olabilir.
+                // Reveal ve finally yalnız kuyrukta yakalanan kullanımın görselini/durumunu değiştirir.
+                if (creation.CreatedTile != null && creation.CreatedTile.IsCurrentLifetime(createdLifetime)
                     && creation.CreatedTile.GetSpecial() != TileSpecial.None)
                 {
                     // Re-enforce correct layout right before reveal — the merge animation may
@@ -62,7 +63,7 @@ public sealed class SpecialCreationFormationEffectPlayer : IClearEffectPlayer
                     for (int i = 0; i < contributors.Count; i++)
                     {
                         var tile = contributors[i];
-                        if (tile == null)
+                        if (!context.IsCurrentTile(tile))
                             continue;
 
                         context.NotifyCellImpactNow(new Vector2Int(tile.X, tile.Y));
@@ -75,7 +76,7 @@ public sealed class SpecialCreationFormationEffectPlayer : IClearEffectPlayer
             finally
             {
                 if (creation.CreatedTile != null
-                    && creation.CreatedTile
+                    && creation.CreatedTile.IsCurrentLifetime(createdLifetime)
                     && creation.CreatedTile.RuntimeState == TileRuntimeState.Special)
                     creation.CreatedTile.SetRuntimeState(TileRuntimeState.Idle);
             }
@@ -96,12 +97,12 @@ public sealed class SpecialCreationFormationEffectPlayer : IClearEffectPlayer
                 creation.ClearAtNormalizedTime,
                 tile =>
                 {
-                    if (tile == null || context == null)
+                    if (!context.IsCurrentTile(tile))
                         return;
 
                     context.NotifyCellImpactNow?.Invoke(new Vector2Int(tile.X, tile.Y));
                     context.ClearTileNow?.Invoke(tile);
-                });
+                }, context);
 
             if (creation.TailHoldSeconds > 0f)
                 yield return new WaitForSeconds(creation.TailHoldSeconds);

@@ -17,6 +17,37 @@ public sealed class ClearPresentationPlan
     public bool CommitFinalClearsBeforeEffects { get; set; }
     public bool BackgroundEffectsBlockResolve { get; set; } = true;
 
+    // Capture when the action is queued, never when a delayed effect starts.
+    // The same TileView can already belong to a new stone by then.
+    private readonly Dictionary<TileView, int> tileLifetimes = new();
+    private bool lifetimesCaptured;
+
+    public void CaptureTileLifetimes()
+    {
+        if (lifetimesCaptured) return;
+        lifetimesCaptured = true;
+        foreach (var tile in FinalClearTiles) CaptureTile(tile);
+        foreach (var effect in Effects)
+        {
+            if (effect?.TargetTiles != null)
+                foreach (var tile in effect.TargetTiles) CaptureTile(tile);
+            if (effect is SpecialCreationFormationEffectDescriptor creation)
+                CaptureTile(creation.CreatedTile);
+        }
+    }
+
+    private void CaptureTile(TileView tile)
+    {
+        if (tile != null) tileLifetimes[tile] = tile.LifetimeVersion;
+    }
+
+    public bool TryGetCurrentTileLifetime(TileView tile, out int lifetime)
+    {
+        lifetime = -1;
+        return tile != null && tileLifetimes.TryGetValue(tile, out lifetime)
+            && tile.IsCurrentLifetime(lifetime);
+    }
+
     public void RegisterNormalMatchSource(TileView tile)
     {
         if (tile == null)

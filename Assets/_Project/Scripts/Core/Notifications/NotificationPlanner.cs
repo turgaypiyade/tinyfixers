@@ -76,7 +76,7 @@ public static class NotificationPlanner
             "notif_lives_full_title", "notif_lives_full_body");
     }
 
-    // Safari takvimini kullanan TIRMANIŞ etkinliği (RisingMapScreen); bildirim adı lokalizasyondan gelir.
+    // Safari takvimini kullanan Tırmanış etkinliği (RisingMapScreen); bildirim adı lokalizasyondan gelir.
     private static void AddRising(List<PlannedNotification> list, DateTime utcNow)
     {
         var config = SafariState.Config;

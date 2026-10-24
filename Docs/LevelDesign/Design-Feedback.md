@@ -1,5 +1,13 @@
 # Tasarım geri bildirimi
 
+## 101+ otomatik special engelleme · 2026-10-24
+
+Kullanıcı: “%40-90 agresif olmuş sadece yumuşatalım ... randomize ... %30-70 olabilir”. Önceki isteğin kapsamı 100 sonrası; tamamen kapatma yerine otomatik engelleme 101+ için %30–70 oldu. Önceki levellar ve elle atanmış oranlar korunur. Seviyeye bağlı mevcut karma farklı oranlar verir; aynı seviyenin oranı tekrar denemelerde sabittir, her aday şeklin engellenmesi mevcut rastgele kararla belirlenir. Bu bir geçiş oranı veya special çıkma garantisi değildir; oynanış dengesi henüz ölçülmedi.
+
+## 89–90 oynanış düzeltmesi · 2026-10-23
+
+Kullanıcı: “89 ve90 levellar zor olmuş”; 90'a5 hamle, 89'un sağ alt taş alanı üstüne1 oynanabilir satır ve5 hamle istedi. İki level28→33 hamle oldu. 89'da4. satır/5–9. sütunlarda5 normal hücre açıldı; tam-board jel hedefi41→46 ile yeni maskeye eşitlendi. Diğer mevcut içerikler korundu. Bu, iki level için açık yerel düzeltmedir; bütün eski levelları kolaylaştırma veya ölçülmüş kazanılabilirlik onayı değildir. [Önce/sonra ve kayıt](Batches/089-090-Ease-2026-10-23/Review.md).
+
 Kanıt, yorum ve oyun ölçümü ayrı tutulur. Açık kullanıcı onayı olmadan bir tasarım onaylı sayılmaz. Mevcut ilkelerin ayrıntıları Design-Principles.md içindedir.
 
 | Kayıt | Kullanıcı kanıtı / durum | Çıkarılan ders | Sınır |
@@ -109,3 +117,12 @@ Ders/kapsam:182'deki tek sütun tercihi yatay sıraları genel olarak yasaklamaz
 ## ColorCrate başlangıç aşamasının editördeki yeri
 
 Kullanıcı: “overlaye neden koydun normal chest obstacle gibi birşey bu ama”. İlk uygulama 179’daki katmanlı veriden dolayı Overlay ile sınırlandı; bu normal sandık yerleşimi için uygun değildi. Aşama seçimi normal Obstacle paletinde bulunmalı; başlangıç hasarı ile üst üste engel katmanı ayrı kavramlardır. Normal sandıkta 1/2/3 vuruş seçimi ve doğrudan yeniden boyayarak güncelleme eklendi. Gerçek katman desteği ve 179 asseti korundu.
+
+
+## 189 — iki nilüferli kanal ve duvar arkası bahçe isteği · 2026-10-22
+
+Kullanıcı zor seviye istedi: iki bölgede water channel üstünde nilüfer, 2×2 boşluklarda EggBird, alt solda/sağda yatay ve dikey GelLauncher; sağda 3 veya4 ayrı2×2 Wall ve arkasında GrassFlower altında fener. 189 bu açık yerleşim talebiyle yetkilendirildi; önceki levellar korunur.
+
+Uygulama: iki C biçimli kanal, kuşlu2×2 pencereler, dört bağımsız duvar parçası ve çiçek üstü/fener altı iki sütun. Alt yardımcıların atışları birbirine bağlanır. “Boşluk” nilüfersiz oynanabilir pencere olarak açıklandı; opsiyonel soruya yanıt gelmeden bu varsayımla taslak tamamlandı. Kullanıcı onayı veya ölçülmüş denge olarak kaydedilmez.
+
+Ders/kapsam: Bölge ve katman talebini yalnız engel sayısına dönüştürme; açıklanan açılma sırasını ve yardımcı yönlerini de doğrula. Bu özel 189 kompozisyonudur; sonraki her leveli aynı iki gölet/duvar düzenine dönüştürme. 32 hamle ilk Super Hard ayarıdır.

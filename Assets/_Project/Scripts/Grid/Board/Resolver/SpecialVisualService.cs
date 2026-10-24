@@ -35,6 +35,9 @@ public class SpecialVisualService
         cg.alpha = 0f;
         cg.blocksRaycasts = false;
         cg.interactable = false;
+        // The combo VFX now owns this consumed source's presentation until clear/pool reset.
+        // A concurrent fall/refresh must not reveal a second icon in the original cell.
+        t.KeepHiddenForCombo = true;
         t.NoteHidden("comboHide");
     }
 

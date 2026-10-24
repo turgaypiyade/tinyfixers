@@ -35,16 +35,21 @@ public sealed class WardrobeObstacleView : MonoBehaviour
     [SerializeField] private float doorSpinDegrees = 80f;
 
     [Header("Item Düşüşü")]
-    [SerializeField, Min(0.05f)] private float itemFallDuration = 0.65f;
+    [SerializeField, Min(0.05f)] private float itemFallDuration = 0.85f;
     [SerializeField] private float itemFallGravity = 1800f;
-    [SerializeField] private float itemFallSideKick = 90f;
-    [SerializeField] private float itemFallLaunchUp = 260f;
+    [Tooltip("İçeriklerin dolabın dışına, daha geniş alana savrulma hızı (px/s).")]
+    [SerializeField] private float itemFallSideKick = 260f;
+    [SerializeField] private float itemFallLaunchUp = 650f;
     [SerializeField] private float itemSpinDegrees = 160f;
+    private const float FlyingItemScale = 1.28f;
 
     // ── State ────────────────────────────────────────────────────────────────
     private Image _rootImage;
+    private BoardController _board;
     private Coroutine _shakeRoutine;
     private Vector2 _shakeBasePos;
+    private int _itemThrowSequence;
+    private bool _finalBreakPlayed;
 
     // Ön → arka sırasıyla tutulan item image'ları (index 0 = en önde = ilk kırılacak)
     private readonly List<Image> _frontToBack = new();
@@ -61,8 +66,9 @@ public sealed class WardrobeObstacleView : MonoBehaviour
     }
 
     /// <summary>Kapı açıldığında çağrılır. Arka plan değişir, item'lar yerleştirilir.</summary>
-    public void OpenDoor(Sprite openBackground, List<Sprite> itemSprites, int shelfCount = 1)
+    public void OpenDoor(Sprite openBackground, List<Sprite> itemSprites, int shelfCount = 1, BoardController board = null)
     {
+        _board = board;
         // Kapakları kapalı sprite'ın sol/sağ yarısından üretmek için ÖNCE yakala (swap'tan önce).
         Sprite closedSprite = _rootImage != null ? _rootImage.sprite : null;
 
@@ -83,17 +89,79 @@ public sealed class WardrobeObstacleView : MonoBehaviour
             SpawnFallingDoors(closedSprite);
     }
 
-    /// <summary>En öndeki item'ı kaldırır (fade-out + destroy).</summary>
-    public void RemoveFrontItem()
+    /// <summary>Alternate outward lanes so a special's two items never share the same trajectory.</summary>
+    public void RemoveFrontItem(BoardController board, int itemsRemaining)
     {
         if (_frontToBack.Count == 0) return;
         var img = _frontToBack[0];
         _frontToBack.RemoveAt(0);
-        if (img != null)
-            StartCoroutine(CoItemFallAndDestroy(img));
+        if (img == null) return;
+        // The final hit belongs to the empty cabinet, not another acorn throw.
+        if (itemsRemaining > 0)
+        {
+            var parent = board != null ? board.UnclippedFxRoot : null;
+            if (parent != null)
+            {
+                var rt = img.rectTransform;
+                bool rightLane = (_itemThrowSequence++ & 1) != 0;
+                float side = rightLane ? 1f : -1f;
+                float units = parent.InverseTransformVector(transform.TransformVector(Vector3.right)).magnitude;
+                ObstacleScatterFx.Play(board, parent, img.sprite, rt.TransformPoint(rt.rect.center),
+                    ObstacleScatterFx.SizeIn(parent, rt) * FlyingItemScale, img.color,
+                    "WardrobeItemThrow", new ObstacleScatterFx.Motion
+                    {
+                        travel = ItemVelocity(side, rightLane, units),
+                        gravity = itemFallGravity * units, spin = side * itemSpinDegrees,
+                        life = itemFallDuration
+                    });
+            }
+        }
+        img.gameObject.SetActive(false);
+        Destroy(img.gameObject);
     }
 
-    public float RecommendedClearDestroyDelay => Mathf.Max(0.1f, itemFallDuration + 0.05f);
+    private Vector2 ItemVelocity(float side, bool highLane, float units)
+        => new Vector2(side * itemFallSideKick * units,
+            itemFallLaunchUp * (highLane ? 1.12f : 1f) * units);
+
+    /// <summary>The open, empty cabinet breaks into four large quarters, outside the board mask.</summary>
+    public void PlayFinalBreak(BoardController board)
+    {
+        if (_finalBreakPlayed) return;
+        _finalBreakPlayed = true;
+        if (_shakeRoutine != null)
+        {
+            StopCoroutine(_shakeRoutine);
+            ((RectTransform)transform).anchoredPosition = _shakeBasePos;
+            _shakeRoutine = null;
+        }
+        // Also covers forced clears that did not emit individual item-removed events.
+        foreach (var item in _frontToBack)
+            if (item != null) item.gameObject.SetActive(false);
+        _frontToBack.Clear();
+        var parent = board != null ? board.UnclippedFxRoot : null;
+        var pieces = _rootImage != null ? ObstacleScatterFx.GetQuarters(board, _rootImage.sprite) : null;
+        if (parent != null && pieces != null)
+        {
+            var body = _rootImage.rectTransform;
+            Vector2 size = ObstacleScatterFx.SizeIn(parent, body);
+            for (int i = 0; i < pieces.Length; i++)
+            {
+                float side = i % 2 == 0 ? -1f : 1f;
+                float up = i < 2 ? -1f : 1f;
+                Vector3 world = body.TransformPoint(body.rect.center + new Vector2(
+                    side * body.rect.width * 0.25f, up * body.rect.height * 0.25f));
+                ObstacleScatterFx.Play(board, parent, pieces[i], world, size * 0.5f, Color.white,
+                    "WardrobeBodyQuarter", new ObstacleScatterFx.Motion
+                    {
+                        travel = new Vector2(side * size.x * (up > 0f ? 0.9f : 1.15f),
+                            size.y * (up > 0f ? 2.1f : 1.45f)),
+                        gravity = size.y * 6f, spin = side * (up > 0f ? 190f : -260f), life = 0.85f
+                    });
+            }
+        }
+        if (_rootImage != null) _rootImage.enabled = false;
+    }
 
     public void Shake() => StartShake();
 
@@ -136,6 +204,11 @@ public sealed class WardrobeObstacleView : MonoBehaviour
     {
         Vector2 pos = rt.anchoredPosition;
         Vector2 vel = new Vector2(dir * doorFallSideKick, doorFallLaunchUp);   // önce yukarı fırlar, sonra düşer
+        var bounds = ObstacleDebrisBounds.For(_board, rt.parent as RectTransform)
+            .WithAnchorOffset(rt.localPosition.x - rt.anchoredPosition.x);
+        Vector2 pieceSize = rt.rect.size;
+        bounds.Fit(ref pos, ref vel, ref pieceSize, doorFallDuration);
+        rt.sizeDelta = pieceSize;
         float rot = 0f;
         float t = 0f;
         while (t < doorFallDuration && rt != null)
@@ -144,6 +217,7 @@ public sealed class WardrobeObstacleView : MonoBehaviour
             t += dt;
             vel.y -= doorFallGravity * dt;
             pos   += vel * dt;
+            pos = bounds.ClampCenter(pos, pieceSize);
             rot   += dir * doorSpinDegrees * dt;
             rt.anchoredPosition = pos;
             rt.localRotation = Quaternion.Euler(0f, 0f, rot);
@@ -294,46 +368,5 @@ public sealed class WardrobeObstacleView : MonoBehaviour
 
         rt.anchoredPosition = _shakeBasePos;
         _shakeRoutine = null;
-    }
-
-    private IEnumerator CoItemFallAndDestroy(Image img)
-    {
-        float duration = Mathf.Max(0.05f, itemFallDuration);
-        float elapsed = 0f;
-        var rt = img.GetComponent<RectTransform>();
-        if (rt == null)
-        {
-            if (img != null) Destroy(img.gameObject);
-            yield break;
-        }
-
-        rt.SetAsLastSibling();
-        Color start = img.color;
-        Vector2 pos = rt.anchoredPosition;
-        Vector3 startScale = rt.localScale;
-        float side = Random.value < 0.5f ? -1f : 1f;
-        Vector2 vel = new Vector2(side * itemFallSideKick, itemFallLaunchUp);
-        float rot = rt.localEulerAngles.z;
-
-        while (elapsed < duration && img != null)
-        {
-            float dt = Time.deltaTime;
-            elapsed += dt;
-            vel.y -= itemFallGravity * dt;
-            pos += vel * dt;
-            rot += side * itemSpinDegrees * dt;
-
-            rt.anchoredPosition = pos;
-            rt.localRotation = Quaternion.Euler(0f, 0f, rot);
-            rt.localScale = startScale * Mathf.Lerp(1f, 0.82f, Mathf.Clamp01(elapsed / duration));
-
-            float k = Mathf.Clamp01(elapsed / duration);
-            if (k > 0.72f)
-                img.color = new Color(start.r, start.g, start.b, Mathf.Lerp(start.a, 0f, (k - 0.72f) / 0.28f));
-
-            yield return null;
-        }
-
-        if (img != null) Destroy(img.gameObject);
     }
 }

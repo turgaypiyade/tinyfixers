@@ -20,6 +20,7 @@ Shader "UI/WonderReveal"
         _RegionCut ("Stage, contour progress, active", Vector) = (0, 0, 0, 0)
         _RegionFinish ("Stage, restoration progress, active", Vector) = (0, 0, 0, 0)
         _Torch ("Torch UV, active", Vector) = (0, 0, 0, 0)
+        [HideInInspector] _RhodesTorch ("RodosDevi background flame", Float) = 0
 
         _EdgeWidth     ("Weld Edge Width", Range(0.001, 0.2)) = 0.05
         [HDR] _EdgeColor ("Weld Edge Color", Color) = (1.9, 1.45, 0.7, 1)
@@ -104,6 +105,7 @@ Shader "UI/WonderReveal"
             float  _Reveal;
             float _Restoration, _RestorationPiece, _CutThickness, _RegionCount, _RegionStride;
             float4 _RestorationRect, _SpriteUVRect, _RegionCut, _RegionFinish, _Torch;
+            float _RhodesTorch;
             float  _EdgeWidth;
             fixed4 _EdgeColor;
             float  _EdgeNoise;
@@ -238,9 +240,47 @@ Shader "UI/WonderReveal"
                 return c;
             }
 
+            // RodosDevi.png's painted flame: localized motion, warm flicker and two drifting embers.
+            // Coordinates are sprite-relative, so aspect fitting and atlas packing preserve the anchor.
+            float3 rhodesFlame(float2 uv, float3 photo)
+            {
+                if (uv.x < 0.175 || uv.x > 0.355 || uv.y < 0.925) return photo;
+                float t = _Time.y;
+                float height = saturate((uv.y - 0.944) / 0.056);
+                float widthMask = 1.0 - smoothstep(0.045, 0.068, abs(uv.x - 0.258));
+                float warm = saturate((photo.r - photo.b - 0.18) * 4.0);
+                float flameMask = smoothstep(0.0, 0.25, height) * widthMask * warm;
+                float2 bend = float2(
+                    sin(height * 9.0 - t * 7.2) * 0.0060 + sin(height * 17.0 - t * 11.1) * 0.0024,
+                    sin(t * 6.4 + uv.x * 51.0) * 0.0030) * height;
+                float2 sampleUV = lerp(_SpriteUVRect.xy, _SpriteUVRect.zw, saturate(uv + bend));
+                float3 moving = tex2D(_MainTex, sampleUV).rgb;
+                float flicker = 1.0 + sin(t * 9.3) * 0.080 + sin(t * 16.7 + 0.8) * 0.050;
+                float3 c = lerp(photo, moving * flicker, flameMask);
+                float2 glow = (uv - float2(0.258, 0.963)) / float2(0.066, 0.039);
+                c += float3(1.0, 0.40, 0.055) * exp(-dot(glow, glow) * 2.0) * (0.055 + 0.018 * sin(t * 6.1));
+                [unroll] for (int ember = 0; ember < 2; ember++)
+                {
+                    float seed = (float)ember;
+                    float age = frac(t * 0.52 + seed * 0.53);
+                    float2 p = float2(0.258 + (seed - 0.5) * 0.095 + 0.007 * sin(age * 5.0 + seed),
+                        0.946 + age * 0.067);
+                    float2 d = (uv - p) / float2(0.0020, 0.0020);
+                    float spark = exp(-dot(d, d) * 2.0) * sin(age * 3.14159265);
+                    c += float3(1.0, 0.62, 0.15) * spark * 1.0;
+                }
+                return c;
+            }
+
             fixed4 frag(v2f i) : SV_Target
             {
                 fixed4 textureColor = tex2D(_MainTex, i.texcoord);
+                if (_RhodesTorch > 0.5 && _RestorationPiece < 0.5 && _Reveal > 0.999)
+                {
+                    float2 photoUV = saturate((i.texcoord - _SpriteUVRect.xy) /
+                        max(_SpriteUVRect.zw - _SpriteUVRect.xy, float2(0.0001, 0.0001)));
+                    textureColor.rgb = rhodesFlame(photoUV, textureColor.rgb);
+                }
                 fixed4 src = textureColor * i.color;
                 float3 rgb;
                 float a;

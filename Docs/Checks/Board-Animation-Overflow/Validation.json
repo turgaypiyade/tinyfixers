@@ -1,0 +1,16 @@
+{
+  "only_change": "BoardMask.RectMask2D.enabled = false",
+  "masks": [
+    {
+      "component": "415868973",
+      "path": "Canvas/SafeArea/BoardArea/BoardRoot/BoardFrame/BoardMask",
+      "enabled": 0
+    },
+    {
+      "component": "1790995003",
+      "path": "Canvas/SafeArea/TopHUD/TopHudVisuals/TopContent/CenterPanel/RobotMask",
+      "enabled": 1
+    }
+  ],
+  "unity_play_or_build": false
+}

@@ -87,6 +87,7 @@ public class MatchClearAction : BoardAction
         this.staggerAnimTime = staggerAnimTime;
         this.isSpecialActivationPhase = isSpecialPhase;
         this.PresentationPlan = presentationPlan;
+        this.PresentationPlan?.CaptureTileLifetimes();
         this.impactCells = impactCells;
         this.isBlocking = isBlocking;
         this.enqueueCascadeOnComplete = enqueueCascadeOnComplete;

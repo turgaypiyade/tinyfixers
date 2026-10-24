@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// TIRMANIŞ eventinin üst HUD'u — salt görüntü. Sol kutu "Seviye" (kat N/7), sağ kutu
+/// Tırmanış eventinin üst HUD'u — salt görüntü. Sol kutu "Seviye" (kat N/7), sağ kutu
 /// "Oyuncu" (kalan sayı). Başlıklar lokalizasyondan (rising_title/rising_level/rising_players);
 /// değerleri <c>RisingMapScreen</c> koreografi sırasında <see cref="SetLevel"/>/<see cref="SetPlayers"/>
 /// ile besler (tek kaynak = harita ekranı; kalabalık boyutu orada hesaplanır).
@@ -69,7 +69,7 @@ public sealed class RisingTopHud : MonoBehaviour
     /// <summary>Statik başlıkları (mor bant + kutu etiketleri) mevcut dile göre günceller.</summary>
     public void RefreshTitles()
     {
-        if (titleText != null)        titleText.text        = Loc("rising_title",   "TIRMANIŞ");
+        if (titleText != null)        titleText.text        = Loc("rising_title",   "Tırmanış");
         if (levelTitleText != null)   levelTitleText.text   = Loc("rising_level",   "Seviye");
         if (playersTitleText != null) playersTitleText.text = Loc("rising_players", "Oyuncu");
     }

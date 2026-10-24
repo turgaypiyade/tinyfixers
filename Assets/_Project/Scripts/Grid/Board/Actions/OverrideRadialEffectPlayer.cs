@@ -49,15 +49,15 @@ public sealed class OverrideRadialEffectPlayer : IClearEffectPlayer
         for (int i = 0; i < radial.TargetTiles.Count; i++)
         {
             TileView tile = radial.TargetTiles[i];
-            if (tile == null)
+            if (context == null || !context.TryGetCurrentTileLifetime(tile, out int lifetime))
                 continue;
 
             float delay = 0f;
             if (radial.DelayMap != null)
                 radial.DelayMap.TryGetValue(tile, out delay);
 
-            impacts.Add(tile.RunForCurrentLifetime(
-                PlayTileImpactWithVfx(board, vfxRoot, tile, delay, context)));
+            impacts.Add(tile.RunForLifetime(
+                PlayTileImpactWithVfx(board, vfxRoot, tile, delay, context), lifetime));
         }
 
         // The square/flash visuals were removed. Join the actual impact callbacks

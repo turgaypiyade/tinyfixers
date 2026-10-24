@@ -7,6 +7,7 @@ using UnityEngine.UI;
 // Layout, parent boyutu kesinlestikten sonra ApplyLayout() ile set edilir.
 public class ChestObstacleView : MonoBehaviour
 {
+    private BoardController board;
     [SerializeField] private Image gearObject;
     [SerializeField] private Image coreObject;
     [SerializeField] private Image boltObject;
@@ -97,6 +98,22 @@ public class ChestObstacleView : MonoBehaviour
         SetActive(GetColorImage(color), false);
     }
 
+    public bool ThrowColor(ChestColorMask color, BoardController board)
+    {
+        var source = GetColorImage(color);
+        var root = board != null ? board.UnclippedFxRoot : null;
+        if (source == null || root == null) return false;
+        var chest = (RectTransform)transform;
+        float side = chest.InverseTransformPoint(source.rectTransform.TransformPoint(source.rectTransform.rect.center)).x
+            < chest.rect.center.x ? -1f : 1f;
+        float cell = ObstacleScatterFx.SizeIn(root, chest).x * 0.5f;
+        return ObstacleScatterFx.PlayCopy(board, root, source, "ChestBulbThrow", new ObstacleScatterFx.Motion
+        {
+            travel = new Vector2(side * cell * Random.Range(1.6f, 2.0f), cell * Random.Range(4.4f, 5.0f)),
+            gravity = cell * 13f, spin = -side * Random.Range(260f, 380f), life = 0.60f, burst = true
+        });
+    }
+
     // Renk maskesi → o rengin child Image'i (gizleme + sprite/konum erişimi tek yerden).
     private Image GetColorImage(ChestColorMask color)
     {
@@ -138,8 +155,9 @@ public class ChestObstacleView : MonoBehaviour
 
     /// <summary>İlk hit açılışı: kapaklar 2 büyük parça halinde düşer, iç (renkler) görünür.
     /// GridSpawner.HandleChestOpened bunu çağırır (eski ShowAll yerine).</summary>
-    public void OpenCabinet()
+    public void OpenCabinet(BoardController owner = null)
     {
+        board = owner;
         // Önce iç görünsün (açık gövde + renkler)...
         if (openBodySprite != null)
         {
@@ -193,6 +211,11 @@ public class ChestObstacleView : MonoBehaviour
     {
         Vector2 pos = rt.anchoredPosition;
         Vector2 vel = new Vector2(dir * doorFallSideKick, doorFallLaunchUp);   // önce yukarı fırlar, sonra düşer
+        var bounds = ObstacleDebrisBounds.For(board, rt.parent as RectTransform)
+            .WithAnchorOffset(rt.localPosition.x - rt.anchoredPosition.x);
+        Vector2 pieceSize = rt.rect.size;
+        bounds.Fit(ref pos, ref vel, ref pieceSize, doorFallDuration);
+        rt.sizeDelta = pieceSize;
         float rot = 0f;
         float t = 0f;
         while (t < doorFallDuration && rt != null)
@@ -201,6 +224,7 @@ public class ChestObstacleView : MonoBehaviour
             t += dt;
             vel.y -= doorFallGravity * dt;
             pos   += vel * dt;
+            pos = bounds.ClampCenter(pos, pieceSize);
             rot   += dir * doorSpinDegrees * dt;
             rt.anchoredPosition = pos;
             rt.localRotation = Quaternion.Euler(0f, 0f, rot);

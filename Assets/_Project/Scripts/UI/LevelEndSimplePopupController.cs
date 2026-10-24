@@ -1648,7 +1648,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
         return items;
     }
 
-    // Kahraman balonundaki cümle: "Vazgeçersen <Altın>, <TIRMANIŞ> ve <İttifak güçleri> elinden gidecek!"
+    // Kahraman balonundaki cümle: "Vazgeçersen <Altın>, <Tırmanış> ve <İttifak güçleri> elinden gidecek!"
     // Aynı isim (ör. aynı event'in birden çok hedefi) bir kez yazılır; isimsiz öğeler cümleye girmez.
     private string BuildLossSentence(System.Collections.Generic.List<(Sprite icon, string label, int amount, bool achieved)> items)
     {
@@ -2838,8 +2838,11 @@ public class LevelEndSimplePopupController : MonoBehaviour
         if (goalResultRoots[index] != null || goalResultRoots[0] == null)
             return;
 
-        // Older scene/prefab instances contain four slots. Create the extra slot once and reuse it.
-        var template = goalResultRoots[0];
+        // Existing slots have individually authored icon/check offsets. Continue the last slot's
+        // offsets: cloning slot 1 here moves icon 5 back toward icon 4 and makes them overlap.
+        // Older scenes contain four slots; create the extra slot once and reuse it.
+        var template = index > 0 && goalResultRoots[index - 1] != null
+            ? goalResultRoots[index - 1] : goalResultRoots[0];
         var result = Instantiate(template, template.transform.parent, false);
         result.name = $"GoalResult_{index + 1}";
         result.SetActive(false);

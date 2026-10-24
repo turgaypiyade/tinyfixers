@@ -61,6 +61,9 @@ public class SpreadingGelOverlayService : MonoBehaviour
     // Tam kapatan örtü (ObstacleDef.coversCellFully) altındaki mühürlü jel: görseli gizli, kenar/köşe hesabında
     // jel sayılmaz (oyun mantığı — IsGelAt/yayılma/sayım — etkilenmez). Mühür açılınca görünür.
     private readonly HashSet<int> hiddenCells = new();
+    // Channel ground remains after its logical obstacle is opened/removed. Remember the full
+    // authored path (including the depot) for this board, rather than checking the current ID.
+    private readonly HashSet<int> channelCellIndices = new();
     private readonly Dictionary<Vector3Int, RawImage> cornerPatches = new();
 
     private int gridWidth, gridHeight, tileSize;
@@ -73,13 +76,23 @@ public class SpreadingGelOverlayService : MonoBehaviour
     /// Kaplama hedefi bunu sayar — kapak açılmadan sayaç düşmez.
     public int RevealedCount => viewsByCellIndex.Count - sealedCellIndices.Count;
 
-    // Jel hiç temizlenmediği (yalnız eklendiği) için ObstacleVisualChanged'a abone olmaz → board gerekmez.
-    public void Init(int width, int height, int tileSize, RectTransform overlayRoot)
+    // Channel membership is built once per board; gel additions only perform a set lookup.
+    public void Init(int width, int height, int tileSize, RectTransform overlayRoot, LevelData level = null)
     {
         gridWidth = Mathf.Max(1, width);
         gridHeight = Mathf.Max(1, height);
         if (tileSize > 0) this.tileSize = tileSize;
         if (overlayRoot != null) this.overlayRoot = overlayRoot;
+        channelCellIndices.Clear();
+        if (level == null || level.width != gridWidth || level.height != gridHeight || level.waterChannels == null)
+            return;
+        foreach (var entry in level.waterChannels)
+        {
+            if (!WaterChannelEntry.Validate(level, entry.pathCellIndices, out _))
+                continue;
+            foreach (int index in entry.pathCellIndices)
+                channelCellIndices.Add(index);
+        }
     }
 
     public bool IsGelAt(int x, int y)
@@ -142,6 +155,8 @@ public class SpreadingGelOverlayService : MonoBehaviour
         if (overlayRoot == null || tileSize <= 0) return false;
         if (x < 0 || x >= gridWidth || y < 0 || y >= gridHeight) return false;
         int idx = CellIndex(x, y);
+        // All callers share this guard: matches, special/combo clears, boosters, launchers and seeds.
+        if (channelCellIndices.Contains(idx)) return false;
         if (viewsByCellIndex.ContainsKey(idx)) return false;
 
         var view = SpawnCell(x, y);
@@ -250,6 +265,7 @@ public class SpreadingGelOverlayService : MonoBehaviour
 
     public void ClearAll()
     {
+        // Clear visuals while retaining this board's eligibility map. Init replaces it for a new level.
         if (pendingBorderRefresh != null)
         {
             StopCoroutine(pendingBorderRefresh);

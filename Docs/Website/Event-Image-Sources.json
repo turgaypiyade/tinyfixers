@@ -1,0 +1,57 @@
+[
+  {
+    "source": "Assets/_Project/Art/UI/MainScreenEvents/BridgeRepair/BridgeEventLogo.png",
+    "file": "Website/img/event-bridge.webp",
+    "sha256": "871cc4fc61b98b4d65d7790d8ae0ac3fdc5ffac3eb17ede8c2512f61b098b23d"
+  },
+  {
+    "source": "Assets/_Project/Art/UI/MainScreenEvents/Harvest/Harvest_Logo.png",
+    "file": "Website/img/event-harvest.webp",
+    "sha256": "66910cfd914bef660655409ade3a7ea6e706de054186e2bf64a3af450a30abc8"
+  },
+  {
+    "source": "Assets/_Project/Art/UI/AreaScreenImgs/AreaBonusChest.png",
+    "file": "Website/img/event-tasks.webp",
+    "sha256": "2b18d318a43bdd03dcac3763b35fa0c875e88ad990adbc608212c3a038d77e12"
+  },
+  {
+    "source": "Assets/_Project/Art/UI/ProfileUI/TeamIcon.png",
+    "file": "Website/img/event-teams.webp",
+    "sha256": "a440e4cb49dc530738d262f59b2f954e04e770f252d806bc9217e285f5ff818d"
+  },
+  {
+    "source": "Assets/_Project/Art/UI/WonderCharacters/Ram/Duel/RamIdle.png",
+    "file": "Website/img/event-ram.webp",
+    "sha256": "f255d65082554ccfb1376cc18bd4560d7dec0b4bd2f2484fcd76214611cf0394"
+  },
+  {
+    "source": "Assets/_Project/Art/UI/WonderCharacters/Badger/BadgerIdle.png",
+    "file": "Website/img/event-badger.webp",
+    "sha256": "920ae515a8e5da11ce7c1cbf14e95442268003a43b015aff9a611782bc7e9f39"
+  },
+  {
+    "source": "Assets/_Project/Art/UI/MainScreenEvents/TinySafari/RisingDesignV4.png",
+    "file": "Website/img/event-climb-tree.webp",
+    "sha256": "e50498de9294f2c45b1c3082bd5c234cffa079318ac68952a95f03e8eee7afa3"
+  },
+  {
+    "source": "Assets/_Project/Resources/RisingEvent/RisingLiftT2.png",
+    "file": "Website/img/event-climb-lift.webp",
+    "sha256": "a6f77050b6b091408a2b5fa4fe616468bb7c35652ef03e5dd3a5faceecb54df5"
+  },
+  {
+    "source": "Assets/_Project/Art/UI/Missions/GearCup/Gear Trophy Stadium Badge.png",
+    "file": "Website/img/event-cup.webp",
+    "sha256": "7b70558072809aeeb2520037f248bd96287e22151dfdbabce47c1925f92e3b22"
+  },
+  {
+    "source": "User-provided Daily Spin screenshot, 2026-10-23",
+    "file": "Website/img/event-spin.webp",
+    "sha256": "de5ca200648bdc66745ed725621a25d5037f5c6b5f34bb718544ff9e06f05098"
+  },
+  {
+    "source": "User-provided Daily Spin screenshot, 2026-10-23",
+    "file": "Website/img/ui-spin.webp",
+    "sha256": "7aac0ebf18ddbe9cbe0a1b1fa0f56fe2a25755df7473bd6abbfc73b48f859043"
+  }
+]

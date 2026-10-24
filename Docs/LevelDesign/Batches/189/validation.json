@@ -1,0 +1,46 @@
+{
+  "level": 189,
+  "passed": true,
+  "name": "İkiz Gölet Kalesi",
+  "difficulty": "Super Hard",
+  "moves": 32,
+  "active": 96,
+  "authoredEdgeHoles": 3,
+  "freeNormalOpeningTileCells": 36,
+  "normalTileCellsIncludingLockedLily": 50,
+  "totalInitialTileViewSlots": 74,
+  "channelSources": 2,
+  "channelCells": 14,
+  "lilyAboveChannelCells": 14,
+  "eggBirdWindows": [
+    [
+      18,
+      19,
+      27,
+      28
+    ],
+    [
+      63,
+      64,
+      72,
+      73
+    ]
+  ],
+  "helperEggBirds": 8,
+  "independentWallPieces": 4,
+  "wallCells": 16,
+  "flowerAboveLanternCells": 16,
+  "lanterns": 16,
+  "perpendicularLaunchers": {
+    "rightOrigin": 91,
+    "upOrigin": 88,
+    "rayIntersection": 97
+  },
+  "extraMovableRefillQuota": 0,
+  "previousCatalogEntriesScanned": 188,
+  "previousSettingsScriptsResourcesScenesPrefabsUnchanged": 2790,
+  "runtimeCodeChanged": false,
+  "unityBuildRun": false,
+  "gameplaySimulationRun": false,
+  "winRateMeasured": false
+}

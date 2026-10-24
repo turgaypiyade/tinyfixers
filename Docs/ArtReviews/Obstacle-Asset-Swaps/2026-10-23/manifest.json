@@ -1,0 +1,30 @@
+{
+  "date": "2026-10-23",
+  "replacements": [
+    {
+      "source": "/Users/turgayp/Downloads/OverrideBatteryBox.png",
+      "target": "Assets/_Project/Art/UI/Obstacles/RobotStyle/OverrideBattery/OverrideBatteryBody.png",
+      "beforeSha256": "c252a0c6ba9fca5cf4502cb1aae81cfa1baadd286483d34d181b1f2b9d7671f7",
+      "afterSha256": "bdd60c13ea94406cbe9c78bfd7b888bdca0eba5cdb9c37a903693a3fbebe7a29",
+      "guidPreserved": "656ad9091235247e384634762535e77a",
+      "sourceBytesPreserved": true
+    },
+    {
+      "source": "/Users/turgayp/Downloads/GelLauncherNavy.png",
+      "target": "Assets/_Project/Resources/GelLauncher/Press/PressFrame.png",
+      "beforeSha256": "e179624a264512cbe9bf4e1603cf0ee9c03f65c31063250950da5f87b92d95bc",
+      "afterSha256": "cee525b58ea4d7dbda25f6b16f69b7d6cb9194e939f322903b82a0f29e65ee38",
+      "guidPreserved": "1d27c79f2f8d4a2cb1b334ceb5ba2404",
+      "sourceBytesPreserved": true
+    }
+  ],
+  "protected": {
+    "Assets/_Project/Settings/ObstacleLibrary.asset": "2ae846de2e760f4c9469aa3833263d407669204f76d7134d65bda904fa45c3b6",
+    "Assets/_Project/Scripts/Grid/GridSpawner.cs": "4fdcdc89a3bafd145af3784ea74f886b1f33021d2f99f8ab806395313431dab2",
+    "Assets/_Project/Scripts/VFX/OverrideBatteryBoxView.cs": "ba82bfa3f1dae7c28c6067ca4f5277df56757fd1337fd8678cff9466e9471152",
+    "Assets/_Project/Scripts/Grid/Board/GelLauncherPressView.cs": "29b7e7130aac246b4f2700f322f478df40fc19cb0f84e983d6f40337f023bc40",
+    "Assets/_Project/Scripts/Editor/GelLauncherPressPreview.cs": "ca37c5e55caf076fe400e7c3634453755c6d49c14d802943a48abb9927fcde8d",
+    "Assets/_Project/Art/UI/Obstacles/RobotStyle/OverrideBattery/OverrideBatteryBody.png.meta": "7c984bb1fd115b7de6e7882da2a40cf454df3ea7b293f11f8fee4fc5243dd5df",
+    "Assets/_Project/Resources/GelLauncher/Press/PressFrame.png.meta": "dfe7559115e95063822e02f8070c433deb6133d35736072f67e32eafcfd8cb92"
+  }
+}

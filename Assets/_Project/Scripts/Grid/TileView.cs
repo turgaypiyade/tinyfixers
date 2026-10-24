@@ -657,7 +657,8 @@ public class TileView : MonoBehaviour,
         HiddenFrame = Time.frameCount;
     }
 
-    // Combo'nun tüketeceği kaynak taş (Line+Pulse orbit intro): temizlenene kadar gizli kalmalı.
+    // Combo'nun tüketeceği kaynak taş: kaldırılan/kopyalanan görselin altında ikinci ikon kalmasın.
+    // Pulse+Pulse charge, Override+Override lift ve Line+Pulse orbit boyunca temizlenene kadar gizli.
     // Paralel bir düşmenin RestoreTilePresentation'ı onu hücresinde yeniden görünür yapmasın.
     internal bool KeepHiddenForCombo { get; set; }
 

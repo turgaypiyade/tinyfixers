@@ -1,0 +1,15 @@
+{
+  "worker": "wondigames",
+  "domains": [
+    "wondigames.com",
+    "www.wondigames.com"
+  ],
+  "version": "62a421c7-6f66-43ae-99fa-0561bdc6d838",
+  "deploySucceeded": true,
+  "unityBuildExecuted": false,
+  "levelReleaseRecorded": false,
+  "levelsPublished": false,
+  "launchWaitlistLiveVerified": true,
+  "paidPlanOpened": false,
+  "testsPassed": 13
+}

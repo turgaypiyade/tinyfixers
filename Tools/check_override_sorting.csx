@@ -21,6 +21,7 @@ public class Component {
 }
 public class GameObject {
  public static int added;public Transform transform;public List<Component> components=new List<Component>();
+ public bool activeSelf=true;public void SetActive(bool value){activeSelf=value;}
  public GameObject(Transform parent=null){transform=new Transform{gameObject=this,parent=parent};if(parent!=null)parent.children.Add(transform);}
  public T AddComponent<T>() where T:Component,new(){added++;var c=new T{gameObject=this};components.Add(c);return c;}
  public T GetComponent<T>() where T:Component{foreach(var c in components)if(c is T)return (T)c;return null;}
@@ -32,10 +33,12 @@ public class GraphicRaycaster:Component {public bool ignoreReversedGraphics;publ
 public class MaskableGraphic:Component {public int masks,dirty;public void RecalculateMasking(){masks++;}public void SetMaterialDirty(){dirty++;}}
 public class Image:MaskableGraphic {}
 public class PatchBotPropellerView:Component {}
+public class PulseFuseSparkleView:Component {}
 public class OverrideSpecialView:Component {}
 public enum TileSpecial {None,PatchBot,SystemOverride}
 public class Model {public TileSpecial special;public void SetSpecial(TileSpecial v){special=v;}}
 public class TileView {
+ public PulseFuseSparkleView fuseSparkleView;
  public Image iconImage;public PatchBotPropellerView propellerView;public OverrideSpecialView overrideSpecialView;public Model model=new Model();
  int LifetimeVersion,activeMoveToken,lastFallGeneration;bool IsPlannedToMoveThisFallPass,revealUsesCreationSorting,IsSpecialLocked,CageGrace,GelContaminated;
  public bool revealActive;

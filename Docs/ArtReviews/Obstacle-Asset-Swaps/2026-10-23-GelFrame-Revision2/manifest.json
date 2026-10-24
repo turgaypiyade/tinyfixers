@@ -1,0 +1,21 @@
+{
+  "source": "/Users/turgayp/Downloads/OverrideBatteryBox.png",
+  "target": "Assets/_Project/Resources/GelLauncher/Press/PressFrame.png",
+  "beforeSha256": "cee525b58ea4d7dbda25f6b16f69b7d6cb9194e939f322903b82a0f29e65ee38",
+  "afterSha256": "6d2b966d3ec21273b664a8bbc022f9804b572f677d1b73d23ed6168f8b2e5605",
+  "guidPreserved": "1d27c79f2f8d4a2cb1b334ceb5ba2404",
+  "dimensions": [
+    887,
+    1774
+  ],
+  "sourceBytesPreserved": true,
+  "protected": {
+    "Assets/_Project/Resources/GelLauncher/Press/PressFrame.png.meta": "dfe7559115e95063822e02f8070c433deb6133d35736072f67e32eafcfd8cb92",
+    "Assets/_Project/Resources/GelLauncher/Press/PressGel.png": "aac81ba4496791c63a095dfba55a94dd11a1d88600e1b647a930b5c6d0dc961e",
+    "Assets/_Project/Resources/GelLauncher/Press/PressHead.png": "8176cb0fcdf3f9ea8a4e318ba67e048b8a04ef025e0dfea7dff5009e9e7c8b70",
+    "Assets/_Project/Art/UI/Obstacles/RobotStyle/OverrideBattery/OverrideBatteryBody.png": "bdd60c13ea94406cbe9c78bfd7b888bdca0eba5cdb9c37a903693a3fbebe7a29",
+    "Assets/_Project/Scripts/Grid/Board/GelLauncherPressView.cs": "29b7e7130aac246b4f2700f322f478df40fc19cb0f84e983d6f40337f023bc40",
+    "Assets/_Project/Scripts/Editor/GelLauncherPressPreview.cs": "ca37c5e55caf076fe400e7c3634453755c6d49c14d802943a48abb9927fcde8d"
+  },
+  "userClarification": "User confirmed this is the GelLauncher frame, despite the source filename OverrideBatteryBox.png."
+}

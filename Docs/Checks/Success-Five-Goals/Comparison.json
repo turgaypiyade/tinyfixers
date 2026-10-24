@@ -1,0 +1,117 @@
+{
+  "Assets/_Project/Prefabs/UI/LevelEndPopup.prefab": {
+    "rowSize": [
+      650.0,
+      200.0
+    ],
+    "slotWidth": 120.0,
+    "icons": [
+      {
+        "position": [
+          -100.0,
+          -50.0
+        ],
+        "size": [
+          100.0,
+          100.0
+        ]
+      },
+      {
+        "position": [
+          -90.0,
+          -50.0
+        ],
+        "size": [
+          100.0,
+          100.0
+        ]
+      },
+      {
+        "position": [
+          -80.0,
+          -50.0
+        ],
+        "size": [
+          100.0,
+          100.0
+        ]
+      },
+      {
+        "position": [
+          -70.0,
+          -50.0
+        ],
+        "size": [
+          100.0,
+          100.0
+        ]
+      }
+    ],
+    "fiveGoalScale": 0.8,
+    "oldLastIconGap": -8.0,
+    "newLastIconGap": 16.0,
+    "measurement": "Serialized geometry, not Unity rendered pixels"
+  },
+  "Assets/_Project/Scenes/01_Game.unity": {
+    "rowSize": [
+      650.0,
+      200.0
+    ],
+    "slotWidth": 120.0,
+    "icons": [
+      {
+        "position": [
+          -100.0,
+          -50.0
+        ],
+        "size": [
+          100.0,
+          100.0
+        ]
+      },
+      {
+        "position": [
+          -90.0,
+          -50.0
+        ],
+        "size": [
+          100.0,
+          100.0
+        ]
+      },
+      {
+        "position": [
+          -80.0,
+          -50.0
+        ],
+        "size": [
+          100.0,
+          100.0
+        ]
+      },
+      {
+        "position": [
+          -70.0,
+          -50.0
+        ],
+        "size": [
+          100.0,
+          100.0
+        ]
+      }
+    ],
+    "fiveGoalScale": 0.8,
+    "oldLastIconGap": -8.0,
+    "newLastIconGap": 16.0,
+    "measurement": "Serialized geometry, not Unity rendered pixels"
+  },
+  "preLevel": {
+    "rowSize": [
+      600,
+      130
+    ],
+    "baseSlotWidth": 105,
+    "fiveGoalScale": 1.1428571428571428,
+    "totalFiveSlotWidth": 600
+  }
+}

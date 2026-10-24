@@ -1,0 +1,6 @@
+/stable/*
+  Cache-Control: public, max-age=300
+/releases/*
+  Cache-Control: public, max-age=31536000, immutable
+/levels/*
+  Cache-Control: public, max-age=31536000, immutable

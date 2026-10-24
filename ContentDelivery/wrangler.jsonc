@@ -1,0 +1,10 @@
+// Dedicated static level delivery. Keeps the marketing website deployment independent.
+// Deploy only through Tools/level_release.py publish --apply after reviewing a prepared plan.
+{
+  "name": "wondi-levels",
+  "compatibility_date": "2026-10-23",
+  "assets": { "directory": "./public" },
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [{ "pattern": "levels.wondigames.com", "custom_domain": true }]
+}

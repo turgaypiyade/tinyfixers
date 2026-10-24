@@ -73,6 +73,9 @@ public sealed class SafeObstacleView : MonoBehaviour
     [SerializeField, Range(0.2f, 0.8f)] private float fragmentScale = 0.42f;
     [Tooltip("Saçılma hızı — gövde küçük kenarının oranı.")]
     [SerializeField, Range(0.3f, 2f)] private float fragmentSpread = 0.9f;
+    // Preserve prefab tuning; widen the existing radial pattern without adding more fragments.
+    private const float FragmentSpreadMultiplier = 1.65f;
+    private static int[] fragmentPickBuffer = new int[16];
     [Tooltip("Parça yerçekimi — gövde küçük kenarının oranı.")]
     [SerializeField, Range(0f, 3f)] private float fragmentGravity = 1.3f;
     [Tooltip("Parça ömrü (sn). Yumuşak saçılıp söner.")]
@@ -267,26 +270,26 @@ public sealed class SafeObstacleView : MonoBehaviour
     }
 
     // Gövdeyi büyükçe parçalara böl: her parça gövde sprite'ından (hafif koyulaştırılmış) bir kopya,
-    // merkezden radyal + yerçekimiyle YUMUŞAK saçılır. Her parça kendi kendini yönetir (leak yok).
+    // Merkezden radyal + yerçekimiyle saçılır; ortak sürücü uçuşları havuza geri verir.
     private void SpawnShatterPieces(RectTransform body, Graphic bodyGraphic, Color baseColor)
     {
-        var parent = transform.parent;
-        if (parent == null) return;
+        var board = service != null ? service.Board : null;
+        var parent = board != null ? board.UnclippedFxRoot : transform.parent as RectTransform;
+        if (parent == null || board == null) return;
 
         Sprite bodyFrag = (bodyGraphic is Image bi) ? bi.sprite : null;
         Vector3 centerWorld = SafeCenterWorld();
-        Vector2 bodySize = body != null ? body.rect.size : new Vector2(100f, 100f);
+        Vector2 bodySize = body != null ? ObstacleScatterFx.SizeIn(parent, body) : new Vector2(100f, 100f);
         float minDim = Mathf.Max(1f, Mathf.Min(bodySize.x, bodySize.y));
         float pieceBase = minDim * fragmentScale;
 
         // Caseparts sheet atanmışsa: her kırılmada rastgele 3-4 farklı parça seç. Yoksa gövde kopyası.
         bool useCase = caseFragmentSprites != null && caseFragmentSprites.Length > 0;
-        int[] pick = null;
         int n;
         if (useCase)
         {
             n = Mathf.Min(Random.Range(3, 5), caseFragmentSprites.Length);   // 3-4 parça
-            pick = PickDistinctIndices(caseFragmentSprites.Length, n);
+            PickDistinctIndices(caseFragmentSprites.Length, n);
         }
         else
         {
@@ -295,62 +298,50 @@ public sealed class SafeObstacleView : MonoBehaviour
 
         for (int i = 0; i < n; i++)
         {
-            Sprite s = useCase ? caseFragmentSprites[pick[i]] : bodyFrag;
-            if (useCase && s == null) continue;
-
-            var go = new GameObject("SafeFragment", typeof(Image));
-            go.layer = gameObject.layer;
-            var rt = (RectTransform)go.transform;
-            rt.SetParent(parent, false);
-            rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
-            rt.pivot = new Vector2(0.5f, 0.5f);
-            rt.position = centerWorld;
+            Sprite s = useCase ? caseFragmentSprites[fragmentPickBuffer[i]] : bodyFrag;
+            if (s == null) continue;
 
             float sz = pieceBase * Random.Range(0.85f, 1.25f);
             // Case parçaları kendi en-boy oranını korusun (kare değil).
             float ar = (s != null && s.rect.width > 0f) ? s.rect.height / s.rect.width : 1f;
-            rt.sizeDelta = new Vector2(sz, sz * ar);
-            rt.localRotation = Quaternion.Euler(0f, 0f, Random.Range(0f, 360f));
-
-            var img = go.GetComponent<Image>();
-            img.sprite = s;
-            img.preserveAspect = true;
-            img.raycastTarget = false;
+            Color tint;
             if (useCase)
             {
                 // Gerçek parça art'ı → kendi renginde kalsın (tint yok).
-                img.color = Color.white;
+                tint = Color.white;
             }
             else
             {
                 float shade = Random.Range(0.72f, 1f);
-                img.color = new Color(baseColor.r * shade, baseColor.g * shade, baseColor.b * shade, 1f);
+                tint = new Color(baseColor.r * shade, baseColor.g * shade, baseColor.b * shade, 1f);
             }
 
             float angle = (360f / n) * i + Random.Range(-22f, 22f);
-            float speed = minDim * fragmentSpread * Random.Range(0.8f, 1.25f);
+            float speed = minDim * fragmentSpread * FragmentSpreadMultiplier * Random.Range(0.8f, 1.25f);
             Vector2 vel = new Vector2(Mathf.Cos(angle * Mathf.Deg2Rad),
                                       Mathf.Sin(angle * Mathf.Deg2Rad)) * speed;
 
-            var motion = go.AddComponent<SafeFragmentMotion>();
-            motion.Init(vel, Random.Range(-200f, 200f), fragmentLifetime, minDim * fragmentGravity);
+            ObstacleScatterFx.Play(board, parent, s, centerWorld, new Vector2(sz, sz * ar), tint,
+                "SafeFragment", new ObstacleScatterFx.Motion
+                {
+                    travel = vel, spin = Random.Range(-200f, 200f), life = fragmentLifetime,
+                    gravity = minDim * fragmentGravity, eased = true, rotation = Random.Range(0f, 360f)
+                });
         }
     }
 
     // 0..total-1 arasından tekrarsız 'count' indeks seç (kısmi Fisher-Yates).
-    private static int[] PickDistinctIndices(int total, int count)
+    private static void PickDistinctIndices(int total, int count)
     {
         count = Mathf.Clamp(count, 0, total);
-        var pool = new int[total];
+        if (fragmentPickBuffer.Length < total) System.Array.Resize(ref fragmentPickBuffer, total);
+        var pool = fragmentPickBuffer;
         for (int i = 0; i < total; i++) pool[i] = i;
         for (int i = 0; i < count; i++)
         {
             int j = Random.Range(i, total);
             (pool[i], pool[j]) = (pool[j], pool[i]);
         }
-        var result = new int[count];
-        System.Array.Copy(pool, result, count);
-        return result;
     }
 
     // Patlama flash'i: gövde bir an sıcak-beyaza parlar (hızlı yükselir, yavaş söner).
@@ -602,67 +593,5 @@ public sealed class SafeObstacleView : MonoBehaviour
             yield return null;
         }
         if (knob != null) knob.anchoredPosition = target;
-    }
-}
-
-/// <summary>
-/// Kasa kırılınca saçılan tek bir parçayı kendi kendine yönetir: merkezden radyal savrulur
-/// (easeOut ile YUMUŞAK yavaşlar) + yerçekimi + yavaş dönme + son bölümde sönme; ömrü bitince
-/// kendini yok eder. Kendi Update'inde çalıştığı için kasa root'u destroy olsa bile leak olmaz.
-/// </summary>
-public sealed class SafeFragmentMotion : MonoBehaviour
-{
-    private RectTransform rt;
-    private Graphic gfx;
-    private Vector2 startPos;
-    private Vector2 velocity;
-    private float angularVel;
-    private float lifetime;
-    private float gravity;
-    private float age;
-    private Color baseColor;
-    private Vector3 baseScale;
-
-    public void Init(Vector2 velocity, float angularVel, float lifetime, float gravityPx)
-    {
-        rt = transform as RectTransform;
-        gfx = GetComponent<Graphic>();
-        this.velocity = velocity;
-        this.angularVel = angularVel;
-        this.lifetime = Mathf.Max(0.05f, lifetime);
-        this.gravity = gravityPx;
-        startPos = rt != null ? rt.anchoredPosition : Vector2.zero;
-        baseScale = rt != null ? rt.localScale : Vector3.one;
-        baseColor = gfx != null ? gfx.color : Color.white;
-    }
-
-    private void Update()
-    {
-        if (rt == null) { Destroy(gameObject); return; }
-
-        age += Time.deltaTime;
-        float k = Mathf.Clamp01(age / lifetime);
-
-        // Yumuşak dışa savrulma (easeOutQuad → başta hızlı, sona doğru nazikçe yavaşlar) + yerçekimi.
-        float eo = 1f - (1f - k) * (1f - k);
-        Vector2 pos = startPos + velocity * eo;
-        pos.y -= 0.5f * gravity * k * k;
-        rt.anchoredPosition = pos;
-
-        rt.localRotation *= Quaternion.Euler(0f, 0f, angularVel * Time.deltaTime);
-
-        // Hafif beliriş + sona doğru hafif küçülme.
-        float sc = k < 0.14f ? Mathf.Lerp(0.7f, 1f, k / 0.14f)
-                             : Mathf.Lerp(1f, 0.82f, (k - 0.14f) / 0.86f);
-        rt.localScale = baseScale * sc;
-
-        // Son %40'ta yumuşak sön.
-        if (gfx != null)
-        {
-            float a = k < 0.6f ? 1f : 1f - (k - 0.6f) / 0.4f;
-            Color c = baseColor; c.a = Mathf.Clamp01(a); gfx.color = c;
-        }
-
-        if (k >= 1f) Destroy(gameObject);
     }
 }

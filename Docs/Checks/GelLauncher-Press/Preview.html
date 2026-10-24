@@ -1,0 +1,32 @@
+<!doctype html><html lang="tr"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>GelLauncher — pres önizlemesi</title>
+<style>body{margin:0;background:#19283a;color:#e7edf6;font:16px system-ui}main{max-width:1050px;margin:24px auto;padding:0 18px}h1{color:#ffcf75;font-size:26px}p{color:#a9bdd1}canvas{width:100%;height:auto;background:#19283a;border-radius:16px}button{padding:11px 17px;border:0;border-radius:10px;background:#6346a5;color:white;font:600 16px system-ui;cursor:pointer;margin:4px}button:hover{background:#8560c9}#status{display:inline-block;margin:10px;color:#ffcf75}</style>
+<main><h1>GelLauncher · iki aşamalı pres</h1><p>Gönderilen gerçek parçalarla yerleşim ve hareket önizlemesi. Unity ekran görüntüsü değildir; milin tarayıcı çizimi shader ışığını yaklaşık gösterir.</p>
+<div><button id="hit">Vuruş</button><button id="reset">Sıfırla</button><button id="up">Yukarı</button><button id="right">Sağ</button><button id="down">Aşağı</button><button id="left">Sol</button><span id="status">Yükleniyor…</span></div><canvas width="1000" height="690" id="view"></canvas><p>İlk vuruş: yarım baskı → bekleme. İkinci vuruş: tam baskı → çatlama → atış. İkinci vuruşu hareket bitmeden de deneyebilirsin.</p></main>
+<script>
+const base='../../../Assets/_Project/', c=document.querySelector('canvas'),ctx=c.getContext('2d'), status=document.querySelector('#status');
+const urls={frame:'Resources/GelLauncher/Press/PressFrame.png',head:'Resources/GelLauncher/Press/PressHead.png',gel:'Resources/GelLauncher/Press/PressGel.png',red:'Art/Icons/Gems/AnimalStyle/V3/RedStoneV5.png',blue:'Art/Icons/Gems/AnimalStyle/V3/BlueStonev7.png',green:'Art/Icons/Gems/AnimalStyle/V3/GreenStoneV9.png',yellow:'Art/Icons/Gems/AnimalStyle/V3/YellowStoneV7.png'};
+const images={};let ready=false,progress=0,phase=0,motion=null,hit=0,dir=0,fired=0,time=0,last=0,queueFinal=false,fireAt=0;
+Promise.all(Object.entries(urls).map(([key,url])=>new Promise((resolve,reject)=>{const im=new Image;im.onload=()=>{images[key]=im;resolve()};im.onerror=reject;im.src=base+url}))).then(()=>{ready=true;status.textContent='Hazır · 0/2'}).catch(()=>status.textContent='Görsel yüklenemedi: dosyayı proje klasöründen açın.');
+function move(to,duration,turns){motion={from:progress,to,duration,t:0,turns}}
+function reset(){progress=phase=hit=fired=fireAt=0;motion=null;queueFinal=false;status.textContent='Hazır · 0/2'}
+document.querySelector('#hit').onclick=()=>{if(!ready||hit>=2)return;hit++;if(hit===1){move(.5,.32,1.25);status.textContent='İlk vuruş · yarım baskı'}else{queueFinal=true;if(progress<.5)move(.5,.13,.65);else{queueFinal=false;move(1,.30,1.75)}status.textContent='İkinci vuruş · tam baskı'}};
+document.querySelector('#reset').onclick=reset;['up','right','down','left'].forEach((d,i)=>document.querySelector('#'+d).onclick=()=>{dir=i;reset()});
+function round(x,y,w,h,r,fill){ctx.fillStyle=fill;ctx.beginPath();ctx.roundRect(x,y,w,h,r);ctx.fill()}
+function tile(im,x,y,s){let w=s*.90,h=s*.90;if(im.width>im.height)h*=im.height/im.width;else w*=im.width/im.height;ctx.drawImage(im,x+(s-w)/2,y+(s-h)/2,w,h)}
+function rod(x,y,w,h){if(h<=0)return;ctx.save();ctx.beginPath();ctx.rect(x,y,w,h);ctx.clip();ctx.fillStyle='#161720';ctx.fillRect(x,y,w,h);ctx.fillStyle='#ffc71c';const period=w*1.6;for(let k=-3;k<h/period+3;k++){const yy=y+k*period+phase*period;ctx.beginPath();ctx.moveTo(x,yy);ctx.lineTo(x+w,yy+w*.7);ctx.lineTo(x+w,yy+w*.7+period*.5);ctx.lineTo(x,yy+period*.5);ctx.closePath();ctx.fill()}const g=ctx.createLinearGradient(x,0,x+w,0);g.addColorStop(0,'#190a38aa');g.addColorStop(.25,'#fff3c977');g.addColorStop(.43,'#ffffff11');g.addColorStop(.75,'#03081755');g.addColorStop(1,'#110524aa');ctx.fillStyle=g;ctx.fillRect(x,y,w,h);ctx.restore()}
+function press(cx,cy,w,h,angle){ctx.save();ctx.translate(cx,cy);ctx.rotate(angle);ctx.translate(-w/2,-h/2);const fade=fireAt?Math.max(0,1-(time-fireAt-.065)/.24):1;ctx.globalAlpha=fade;const x=w*.205,y=h*.12,iw=w*.6,ih=h*.745,bottom=y+ih,lh=ih*(.63-.49*progress),hw=iw*.96,hh=hw*385/760;
+ctx.save();ctx.beginPath();ctx.rect(x,y,iw,ih);ctx.clip();ctx.fillStyle='#1a0736';ctx.fillRect(x,y,iw,ih);
+ctx.drawImage(images.gel,82,680,730,995,x,bottom-lh,iw,lh);
+const hy=bottom-(lh-hh*.025)-hh, rb=bottom-(lh+hh*.92);rod(x+(iw-iw*.26)/2,y,iw*.26,Math.max(1,rb-y));
+ctx.drawImage(images.head,65,1050,760,385,x+(iw-hw)/2,hy,hw,hh);
+ctx.fillStyle='#ffe8ff1f';ctx.fillRect(x+iw*.03,y+ih*.02,iw*.035,ih*.96);ctx.fillStyle='#ffe8ff12';ctx.fillRect(x+iw*.96,y+ih*.02,iw*.018,ih*.96);
+if(fireAt){ctx.strokeStyle='#f2c7ff';ctx.lineWidth=1.3;ctx.beginPath();ctx.moveTo(x+iw*.6,bottom-ih*.35);ctx.lineTo(x+iw*.43,bottom-ih*.46);ctx.lineTo(x+iw*.52,bottom-ih*.56);ctx.stroke()}
+ctx.restore();ctx.drawImage(images.frame,0,0,w,h);ctx.restore();
+if(fireAt&&time-fireAt>.065){let k=(time-fireAt-.065)/.45;if(k<1){ctx.save();ctx.translate(cx,cy);ctx.rotate(angle);ctx.fillStyle=`rgba(220,0,255,${1-k})`;ctx.beginPath();ctx.ellipse(0,-h/2-k*120,w*.18,w*.25,0,0,Math.PI*2);ctx.fill();ctx.restore()}}}
+function draw(dt){if(!ready)return;if(motion){const old=motion.t/motion.duration;motion.t=Math.min(motion.duration,motion.t+dt);const k=motion.t/motion.duration;progress=motion.from+(motion.to-motion.from)*k*k*(3-2*k);phase=(phase+(k-old)*motion.turns)%1;if(k===1){motion=null;if(queueFinal){queueFinal=false;move(1,.30,1.75)}else if(hit===2&&!fireAt){fireAt=time;status.textContent='Tam baskı → çatlama ve atış'}else status.textContent='Yarım baskıda bekliyor · 1/2'}}
+ctx.clearRect(0,0,c.width,c.height);const s=105,ox=32,oy=70;round(ox-7,oy-7,5*s+14,5*s+14,15,'#ffd450');const keys=['blue','red','green','yellow'];for(let row=0;row<5;row++)for(let col=0;col<5;col++){round(ox+col*s,oy+row*s,s-1,s-1,7,'#797db5');let blocked=dir%2===0?col===2&&(row===1||row===2):row===2&&(col===1||col===2);if(!blocked||fireAt&&time-fireAt>.5)tile(images[keys[(col*3+row*2)%4]],ox+col*s,oy+row*s,s)}
+let cx=dir%2===0?ox+2.5*s:ox+2*s,cy=dir%2===0?oy+2*s:oy+2.5*s;press(cx,cy,s,2*s,dir*Math.PI/2);
+ctx.fillStyle='#ffcf75';ctx.font='600 22px system-ui';ctx.fillText('1 × 2 hücre',32,36);ctx.fillText('Parçalarla yakın görünüm',612,36);press(775,330,165,330,dir*Math.PI/2);
+ctx.fillStyle='#a9bdd1';ctx.font='16px system-ui';ctx.fillText('Gerçek kaynak PNG’ler · kodla şerit hareketi',32,642)}
+function frame(t){const dt=Math.min(.05,(t-last)/1000||0);last=t;time+=dt;draw(dt);requestAnimationFrame(frame)}requestAnimationFrame(frame);
+</script></html>

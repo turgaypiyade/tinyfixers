@@ -1,0 +1,27 @@
+{
+  "worker": "wondigames",
+  "domains": [
+    "wondigames.com",
+    "www.wondigames.com"
+  ],
+  "version": "250d6177-180a-4ab3-ba58-5d19d22de9fe",
+  "deploySucceeded": true,
+  "unityBuildExecuted": false,
+  "levelReleaseRecorded": false,
+  "levelsPublished": false,
+  "automatedLiveFetch": {
+    "verified": false,
+    "reason": "Direct HTTP check returned 403; browser tool unavailable. Wrangler upload and custom-domain deployment both succeeded."
+  },
+  "publishedUpdates": [
+    "team banner first",
+    "white background and blue toolbar",
+    "13 current game icons",
+    "Wonder Drill / Harika Yontucu",
+    "Rhodes and Next placeholder",
+    "8 event cards with images",
+    "user-provided Daily Spin capture",
+    "tree and small bottom-right lift",
+    "Tırmanış capitalization"
+  ]
+}

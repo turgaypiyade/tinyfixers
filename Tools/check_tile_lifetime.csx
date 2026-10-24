@@ -60,6 +60,7 @@ public enum TileSpecial { None }
 public enum ClearAnimationMode {Default,GoalFlyToHud}
 public enum ObstacleHitContext {NormalMatch,SpecialActivation}
 public class TileView {
+ public bool KeepHiddenForCombo;
  public int LifetimeVersion {get;private set;} public GameObject gameObject=new GameObject();
  public RectTransform RectTransform=new RectTransform();public Transform transform=>RectTransform;
  public int X,Y;public TileType GetTileType()=>TileType.Gear;public TileSpecial GetSpecial()=>TileSpecial.None;
@@ -162,6 +163,15 @@ public static class Checks {
    for(int i=0;i<100&&!animation.Done;i++){animation.Step();board.Pump();safe&=!board.releasedVisible;}
    Check(safe&&animation.Done&&board.releases==1&&board.Tiles[0,0]==null,
     ""Continuous clear opens each cell only after actual PlayPop hides the body, including slow motion"");
+  }
+  // A lifted combo source already has its body hidden. Skipping the duplicate pop
+  // must still finish the real clear handoff exactly once, without a stuck empty cell.
+  foreach(float dt in new[]{1f/30,1f/60,1f/120}){
+   Time.deltaTime=dt;tile=new TileView{KeepHiddenForCombo=true};tile.gameObject.group.alpha=0;
+   board=new BoardController();board.Tiles[0,0]=tile;pass=new ClearPass(tile,board);
+   var hiddenClear=new Routine(pass.Animate(tile));for(int i=0;i<100&&!hiddenClear.Done;i++){hiddenClear.Step();board.Pump();}
+   Check(hiddenClear.Done&&board.releases==1&&!board.releasedVisible&&board.Tiles[0,0]==null,
+    ""Consumed combo source stays hidden and releases its cell once even when pop is skipped"");
   }
   Time.deltaTime=.01f;tile=new TileView();board=new BoardController();board.Tiles[0,0]=tile;pass=new ClearPass(tile,board);
   var waiting=new Routine(pass.Animate(tile,ClearAnimationMode.Default,.1f));waiting.Step();

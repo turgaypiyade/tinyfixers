@@ -30,6 +30,7 @@ public sealed class TarpStatueView : MonoBehaviour, ICollectionFxTarget
     private const int ChipsPerHit = 8;
 
     private Image baseImage;
+    private BoardController boundBoard;
     private RectTransform stone, tarp, frame, tagRoot, counterRoot;
     private Image stoneImage, tarpImage;
     private TextMeshProUGUI counter, counterShadow;
@@ -37,17 +38,21 @@ public sealed class TarpStatueView : MonoBehaviour, ICollectionFxTarget
     private bool covered;
     private bool peeling;
     private Coroutine punchCo;
+    private Coroutine tagDropCo;
+    private Graphic[] tagGraphics;
+    private Vector2 tagStart;
 
     public TarpStatueColor TagColor => color;
     public bool IsCovered => covered;
     public Vector3 CenterWorld => baseImage.rectTransform.TransformPoint(baseImage.rectTransform.rect.center);
 
     /// GridSpawner çağırır: katmanları bir kez kurar, mevcut durumu çizer.
-    public static TarpStatueView Ensure(Image image, TarpStatueColor color, int remainingCount, int remainingHits)
+    public static TarpStatueView Ensure(Image image, TarpStatueColor color, int remainingCount, int remainingHits, BoardController board = null)
     {
         if (image == null) return null;
         if (!image.TryGetComponent<TarpStatueView>(out var view))
             view = image.gameObject.AddComponent<TarpStatueView>();
+        view.boundBoard = board;
         view.Build(color);
         view.SetCountInstant(remainingCount);
         view.SetStoneStage(StageForRemaining(remainingHits));
@@ -85,6 +90,8 @@ public sealed class TarpStatueView : MonoBehaviour, ICollectionFxTarget
         counterShadow = NewText("CounterShadow", CounterDark);
         counter = NewText("CounterText", new Color32(255, 255, 255, 255));
         LayoutCounter();
+        tagGraphics = tagRoot.GetComponentsInChildren<Graphic>(true);
+        tagStart = tagRoot.anchoredPosition;
         covered = true;
     }
 
@@ -106,6 +113,9 @@ public sealed class TarpStatueView : MonoBehaviour, ICollectionFxTarget
 
     private void SetCountInstant(int remaining)
     {
+        if (tagDropCo != null) StopCoroutine(tagDropCo);
+        tagDropCo = null;
+        ResetTag();
         covered = remaining > 0;
         counter.text = counterShadow.text = Mathf.Max(0, remaining).ToString();
         tarp.gameObject.SetActive(covered);
@@ -133,8 +143,8 @@ public sealed class TarpStatueView : MonoBehaviour, ICollectionFxTarget
     {
         covered = false;
         peeling = true;
-        // Etiket ipten kopar: hafif sıçrar, dönerek düşer, söner.
-        StartCoroutine(CoDropTag());
+        // Etiket ve sayacı birlikte yana sıçrayıp dönerek düşer.
+        tagDropCo = StartCoroutine(CoDropTag());
         // Branda alt kenarından yukarı doğru toplanarak soyulur (dolgu kesilir + hafif yukarı çekilir).
         float lift = ((RectTransform)transform).rect.height * 0.06f;
         for (float t = 0f; t < PeelTime; t += Time.deltaTime)
@@ -153,23 +163,50 @@ public sealed class TarpStatueView : MonoBehaviour, ICollectionFxTarget
 
     private IEnumerator CoDropTag()
     {
-        var start = tagRoot.anchoredPosition;
         float h = ((RectTransform)transform).rect.height;
-        float vy = h * 0.6f, spin = Random.Range(-220f, 220f);
-        var graphics = tagRoot.GetComponentsInChildren<Graphic>();
+        float side = Random.value < 0.5f ? -1f : 1f;
+        Vector2 velocity = new Vector2(side * h * Random.Range(1.25f, 1.65f), h * Random.Range(0.9f, 1.2f));
+        float spin = -side * Random.Range(340f, 480f);
         const float life = 0.6f;
+        var bounds = ObstacleDebrisBounds.For(boundBoard, tagRoot.parent as RectTransform)
+            .WithAnchorOffset(tagRoot.localPosition.x - tagRoot.anchoredPosition.x);
+        Vector2 launch = tagStart, tagSize = tagRoot.rect.size;
+        float originalWidth = tagSize.x;
+        bounds.Fit(ref launch, ref velocity, ref tagSize, life);
+        tagRoot.localScale = Vector3.one * (originalWidth > 0f ? tagSize.x / originalWidth : 1f);
         for (float t = 0f; t < life; t += Time.deltaTime)
         {
-            vy -= h * 4f * Time.deltaTime;
-            tagRoot.anchoredPosition += new Vector2(0f, vy * Time.deltaTime);
+            tagRoot.anchoredPosition = launch + velocity * t + Vector2.down * (0.5f * h * 4f * t * t);
             tagRoot.localRotation = Quaternion.Euler(0f, 0f, spin * t);
             float a = 1f - Mathf.Clamp01((t - life * 0.5f) / (life * 0.5f));
-            foreach (var g in graphics) { var c = g.color; c.a = a; g.color = c; }
+            foreach (var g in tagGraphics) { if (g == null) continue; var c = g.color; c.a = a; g.color = c; }
             yield return null;
         }
         tagRoot.gameObject.SetActive(false);
-        tagRoot.anchoredPosition = start;
+        ResetTag();
+        tagDropCo = null;
+    }
+
+    private void ResetTag()
+    {
+        if (tagRoot == null) return;
+        tagRoot.anchoredPosition = tagStart;
         tagRoot.localRotation = Quaternion.identity;
+        tagRoot.localScale = Vector3.one;
+        if (tagGraphics == null) return;
+        foreach (var g in tagGraphics)
+        {
+            if (g == null) continue;
+            var c = g.color; c.a = 1f; g.color = c;
+        }
+    }
+
+    private void OnDisable()
+    {
+        if (tagDropCo != null) StopCoroutine(tagDropCo);
+        tagDropCo = null;
+        ResetTag();
+        if (tagRoot != null) tagRoot.gameObject.SetActive(covered);
     }
 
     // ── Taş evresi ───────────────────────────────────────────────────
@@ -198,6 +235,8 @@ public sealed class TarpStatueView : MonoBehaviour, ICollectionFxTarget
         var imgs = new Image[count];
         var vel = new Vector2[count];
         var spin = new float[count];
+        const float life = 0.85f;
+        var bounds = ObstacleDebrisBounds.For(boundBoard, root);
         for (int i = 0; i < count; i++)
         {
             var chip = Load("Chip_" + Random.Range(0, 6));
@@ -208,9 +247,9 @@ public sealed class TarpStatueView : MonoBehaviour, ICollectionFxTarget
             Vector2 off = new Vector2(Random.Range(-0.28f, 0.28f), Random.Range(-0.05f, 0.25f)) * size;
             parts[i].localPosition = center + off;
             vel[i] = new Vector2(Mathf.Sign(off.x) * Random.Range(0.5f, 1.3f), Random.Range(0.9f, 1.7f)) * size * power;
+            FitDebris(parts[i], ref vel[i], life, bounds);
             spin[i] = Random.Range(-540f, 540f);
         }
-        const float life = 0.85f;
         float gravity = size * 4.5f;
         for (float t = 0f; t < life; t += Time.deltaTime)
         {
@@ -220,6 +259,7 @@ public sealed class TarpStatueView : MonoBehaviour, ICollectionFxTarget
                 if (parts[i] == null) continue;
                 vel[i].y -= gravity * dt;
                 parts[i].localPosition += (Vector3)(vel[i] * dt);
+                parts[i].localPosition = bounds.ClampCenter(parts[i].localPosition, parts[i].sizeDelta);
                 parts[i].localRotation *= Quaternion.Euler(0f, 0f, spin[i] * dt);
                 imgs[i].color = new Color(1f, 1f, 1f, fade);
             }
@@ -265,6 +305,8 @@ public sealed class TarpStatueView : MonoBehaviour, ICollectionFxTarget
         var vel = new Vector2[n];
         var spin = new float[n];
         int idx = 0;
+        const float life = 0.75f;
+        var bounds = ObstacleDebrisBounds.For(boundBoard, root);
         void Add(Sprite s, Vector2 norm, float scale, float speed)
         {
             if (s == null) return;
@@ -273,6 +315,7 @@ public sealed class TarpStatueView : MonoBehaviour, ICollectionFxTarget
             p.localPosition = center + off;
             var dir = (off.sqrMagnitude > 1f ? off.normalized : Random.insideUnitCircle.normalized) + Random.insideUnitCircle * 0.3f;
             vel[idx] = (dir.normalized + Vector2.up * 0.6f) * size * speed;
+            FitDebris(p, ref vel[idx], life, bounds);
             spin[idx] = Random.Range(-500f, 500f);
             parts[idx] = p;
             imgs[idx] = p.GetComponent<Image>();
@@ -286,7 +329,6 @@ public sealed class TarpStatueView : MonoBehaviour, ICollectionFxTarget
         for (int i = 0; i < 8; i++)
             Add(Load("Chip_" + (i % 6)), new Vector2(0.5f, 0.45f) + Random.insideUnitCircle * 0.2f, Random.Range(0.17f, 0.26f), Random.Range(1.5f, 2.4f));
 
-        const float life = 0.75f;
         float gravity = size * 4.5f;
         for (float t = 0f; t < life; t += Time.deltaTime)
         {
@@ -297,6 +339,7 @@ public sealed class TarpStatueView : MonoBehaviour, ICollectionFxTarget
                 vel[i].y -= gravity * dt;
                 vel[i] *= 1f - 0.5f * dt;
                 parts[i].localPosition += (Vector3)(vel[i] * dt);
+                parts[i].localPosition = bounds.ClampCenter(parts[i].localPosition, parts[i].sizeDelta);
                 parts[i].localRotation *= Quaternion.Euler(0f, 0f, spin[i] * dt);
                 parts[i].localScale = Vector3.one * Mathf.Lerp(1f, 0.7f, k);
                 imgs[i].color = new Color(1f, 1f, 1f, fade);
@@ -305,6 +348,14 @@ public sealed class TarpStatueView : MonoBehaviour, ICollectionFxTarget
         }
         for (int i = 0; i < idx; i++)
             if (parts[i] != null) Destroy(parts[i].gameObject);
+    }
+
+    private static void FitDebris(RectTransform part, ref Vector2 velocity, float life, ObstacleDebrisBounds bounds)
+    {
+        Vector2 position = part.localPosition, size = part.sizeDelta;
+        bounds.Fit(ref position, ref velocity, ref size, life);
+        part.localPosition = position;
+        part.sizeDelta = size;
     }
 
     // Çerçeve/zemin parçaları: dört köşe + dört kenar ortası (normalize merkez, UI y yukarı). Sprite başına önbellek.

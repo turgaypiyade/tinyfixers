@@ -84,6 +84,7 @@ public class WonderRevealView : MonoBehaviour
     static readonly int RegionStrideId = Shader.PropertyToID("_RegionStride");
     static readonly int SpriteUVRectId = Shader.PropertyToID("_SpriteUVRect");
     static readonly int TorchId = Shader.PropertyToID("_Torch");
+    static readonly int RhodesTorchId = Shader.PropertyToID("_RhodesTorch");
     static readonly int RegionFinishId = Shader.PropertyToID("_RegionFinish");
 
     Image WelderImage
@@ -487,6 +488,8 @@ public class WonderRevealView : MonoBehaviour
         _reveal = Mathf.Clamp01(r);
         if (_mat == null) return;
         _mat.SetFloat(RevealId, _reveal);
+        if (_mat.HasProperty(RhodesTorchId))
+            _mat.SetFloat(RhodesTorchId, HasRhodesTorch(_image.sprite) ? 1f : 0f);
         _mat.SetFloat(RestorationId, useRustRestoration ? 1f : 0f);
         _mat.SetFloat(RegionCountId, Mathf.Max(1, totalStages));
         _mat.SetFloat(RegionStrideId, WonderRestorationLayout.Stride(totalStages));
@@ -495,6 +498,9 @@ public class WonderRevealView : MonoBehaviour
         Rect rect = _rt.rect;
         _mat.SetVector(RestorationRectId, new Vector4(rect.xMin, rect.yMin, rect.width, rect.height));
     }
+
+    // Scope to the supplied background art, not all wonders or gameplay statue obstacles.
+    internal static bool HasRhodesTorch(Sprite sprite) => sprite != null && sprite.name == "RodosDevi";
 
     void OnRectTransformDimensionsChange()
     {

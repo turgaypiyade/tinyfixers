@@ -34,6 +34,9 @@ public sealed class RhodesStatueView : MonoBehaviour
     private Image swordImage, shieldImage;
     private int stage = -1;
     private Coroutine hitCo;
+    private int lastNearbyFrame = -1;
+    private float lastSwingTime = -10f;
+    private static readonly Sprite[] StoneChips = new Sprite[4];
 
     /// Kalan vuruş → aşama: 4 sağlam, 3 çatlak, 2 iskele açığa çıkmış, 1 yalnız baş + iskele.
     public static int StageForRemaining(int remainingHits) => Mathf.Clamp(5 - remainingHits, 1, 4);
@@ -94,23 +97,106 @@ public sealed class RhodesStatueView : MonoBehaviour
     }
 
     /// Ara vuruş (GridSpawner): yeni aşama + kılıç savrulması + kalkan yalpalaması.
-    public void OnHit(int remainingHits)
+    public void OnHit(int remainingHits, BoardController board)
     {
-        SetStage(StageForRemaining(remainingHits));
+        int nextStage = StageForRemaining(remainingHits);
+        if (nextStage == stage) return;
         if (hitCo != null) StopCoroutine(hitCo);
-        if (isActiveAndEnabled) hitCo = StartCoroutine(HitMotion());
+        ResetAttachments();
+        // Capture the departing attachment BEFORE SetStage hides/replaces its sprite.
+        switch (DebrisForTransition(stage, nextStage))
+        {
+            case 1: PlayStoneChips(board); break;
+            case 2: PlayAttachmentBreak(board, shieldImage, 2, 1, 2.8f); break;
+            case 3: PlayAttachmentBreak(board, swordImage, 1, 4, 1.65f); break;
+        }
+        SetStage(nextStage);
+        StartSwing();
+    }
+
+    /// <summary>A rejected adjacent normal-match hit reacts visually without advancing the stage.</summary>
+    public void OnNearbyMatch()
+    {
+        if (!isActiveAndEnabled || stage >= 4 || lastNearbyFrame == Time.frameCount) return;
+        lastNearbyFrame = Time.frameCount;
+        // Several matched cells can touch one statue. Let the current recoil play through its first kick.
+        if (Time.time - lastSwingTime < 0.16f) return;
+        StartSwing();
+    }
+
+    private void StartSwing()
+    {
+        if (!isActiveAndEnabled) return;
+        if (hitCo != null) StopCoroutine(hitCo);
+        ResetAttachments();
+        lastSwingTime = Time.time;
+        hitCo = StartCoroutine(HitMotion());
+    }
+
+    // 1→2 stone chips, 2→3 shield, 3→4 sword. Reloads/duplicate stage notifications emit nothing.
+    internal static int DebrisForTransition(int previous, int next)
+        => next == previous + 1 && previous >= 1 && previous <= 3 ? previous : 0;
+
+    private void PlayStoneChips(BoardController board)
+    {
+        var root = board != null ? board.UnclippedFxRoot : null;
+        if (root == null) return;
+        var body = baseImage.rectTransform;
+        Vector2 size = ObstacleScatterFx.SizeIn(root, body);
+        float span = Mathf.Min(size.x, size.y);
+        for (int i = 0; i < StoneChips.Length; i++)
+        {
+            if (StoneChips[i] == null) StoneChips[i] = Resources.Load<Sprite>("TarpStatue/Chip_" + i);
+            float side = i % 2 == 0 ? -1f : 1f;
+            float x = side * (i < 2 ? 0.22f : 0.11f);
+            float y = i < 2 ? 0.17f : -0.12f;
+            Vector3 world = body.TransformPoint(body.rect.center + new Vector2(body.rect.width * x, body.rect.height * y));
+            float pieceSize = span * (i < 2 ? 0.40f : 0.46f);
+            ObstacleScatterFx.Play(board, root, StoneChips[i], world, new Vector2(pieceSize, pieceSize), Color.white,
+                "RhodesStoneChunk", new ObstacleScatterFx.Motion
+                {
+                    travel = new Vector2(side * span * (i < 2 ? 1.05f : 0.65f), span * (i < 2 ? 1.4f : 0.9f)),
+                    gravity = span * 4f, spin = side * (220f + i * 35f), life = 0.85f, delay = i * 0.045f
+                });
+        }
+    }
+
+    private void PlayAttachmentBreak(BoardController board, Image source, int columns, int rows, float scale)
+    {
+        var root = board != null ? board.UnclippedFxRoot : null;
+        if (root == null || source == null || source.sprite == null) return;
+        var pieces = ObstacleScatterFx.GetSlices(board, source.sprite, columns, rows);
+        if (pieces == null) return;
+        var body = source.rectTransform;
+        Vector2 size = ObstacleScatterFx.SizeIn(root, body);
+        Vector2 statueSize = ObstacleScatterFx.SizeIn(root, baseImage.rectTransform);
+        float span = Mathf.Min(statueSize.x, statueSize.y);
+        for (int i = 0; i < pieces.Length; i++)
+        {
+            float x = (i % columns + 0.5f) / columns - 0.5f;
+            float y = (i / columns + 0.5f) / rows - 0.5f;
+            Vector3 world = body.TransformPoint(body.rect.center + new Vector2(body.rect.width * x, body.rect.height * y));
+            float side = i % 2 == 0 ? -1f : 1f;
+            ObstacleScatterFx.Play(board, root, pieces[i], world,
+                new Vector2(size.x / columns, size.y / rows) * scale, Color.white,
+                columns == 2 ? "RhodesShieldPiece" : "RhodesSwordPiece", new ObstacleScatterFx.Motion
+                {
+                    travel = new Vector2(side * span * (0.65f + i * 0.12f), span * (1.0f + i * 0.15f)),
+                    gravity = span * 4.5f, spin = side * (210f + i * 45f), life = 0.9f
+                });
+        }
     }
 
     private IEnumerator HitMotion()
     {
-        const float T = 0.5f;
+        const float T = 0.90f;
         for (float t = 0f; t < T; t += Time.deltaTime)
         {
             float u = t / T;
-            // Kılıç: önce geri savrulur (+15°), sonra ileri (−9°), sönümle yerine oturur.
-            float swordAngle = 15f * Mathf.Sin(u * Mathf.PI * 2.4f) * Mathf.Pow(1f - u, 1.6f);
-            // Kalkan: ters yönde daha küçük yalpalama + darbe anında hafif sıkışma.
-            float shieldAngle = -6f * Mathf.Sin(u * Mathf.PI * 3f) * Mathf.Pow(1f - u, 1.8f);
+            // Readable recoil on the surviving attachments, decaying back to their authored pivots.
+            // Immediate, large kick: even quick consecutive hits show a visible first frame.
+            float swordAngle = 72f * Mathf.Cos(u * Mathf.PI * 3.0f) * Mathf.Pow(1f - u, 1.35f);
+            float shieldAngle = -56f * Mathf.Cos(u * Mathf.PI * 3.4f) * Mathf.Pow(1f - u, 1.45f);
             float squash = 1f - 0.05f * Mathf.Sin(Mathf.Clamp01(u * 4f) * Mathf.PI);
             if (sword.gameObject.activeSelf) sword.localRotation = Quaternion.Euler(0f, 0f, swordAngle);
             if (shield.gameObject.activeSelf)
@@ -129,6 +215,11 @@ public sealed class RhodesStatueView : MonoBehaviour
     private void OnDisable()
     {
         if (hitCo != null) { StopCoroutine(hitCo); hitCo = null; }
+        ResetAttachments();
+    }
+
+    private void ResetAttachments()
+    {
         if (sword != null) sword.localRotation = Quaternion.identity;
         if (shield != null) { shield.localRotation = Quaternion.identity; shield.localScale = Vector3.one; }
     }

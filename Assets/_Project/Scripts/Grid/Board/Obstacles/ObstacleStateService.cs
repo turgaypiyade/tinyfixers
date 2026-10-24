@@ -1580,6 +1580,12 @@ public class ObstacleStateService : ISimObstacleQuery
     public static bool IsSeeThroughLayer(ObstacleId id) =>
         id == ObstacleId.Grass || id == ObstacleId.GrassFlower || id == ObstacleId.GrassWaterLily || id == ObstacleId.Oil;
 
+    // Hint identity is distinct from the shared Grass damage/rendering implementation.
+    // Resolve per cell so real standalone Grass in the same level keeps its own introduction.
+    public ObstacleId GetHintObstacleId(int cell, ObstacleId runtimeId) =>
+        runtimeId == ObstacleId.Grass && waterLilyCells.Contains(cell)
+            ? ObstacleId.GrassWaterLily : runtimeId;
+
     public void RegisterWaterLilyCell(int cell) => waterLilyCells.Add(cell);
     public void CollectWaterLilyCells(ICollection<int> into)
     {
@@ -1678,7 +1684,7 @@ public class ObstacleStateService : ISimObstacleQuery
     /// altındaki under-tile). obstacles[] yalnız en üst katmanı tutar; 3+ katlı yığınlarda alttakiler
     /// yalnız burada görünür (ör. obstacle hint taraması).
     /// </summary>
-    public void CollectStampedBeneathIds(ICollection<ObstacleId> into)
+    public void CollectStampedBeneathIds(ICollection<ObstacleId> into, bool useHintIdentity = false)
     {
         if (into == null) return;
         foreach (var kv in _stampedBeneathByCell)
@@ -1686,11 +1692,11 @@ public class ObstacleStateService : ISimObstacleQuery
             if (kv.Value == null) continue;
             for (int i = 0; i < kv.Value.Count; i++)
                 if (kv.Value[i].Id != ObstacleId.None)
-                    into.Add(kv.Value[i].Id);
+                    into.Add(useHintIdentity ? GetHintObstacleId(kv.Key, kv.Value[i].Id) : kv.Value[i].Id);
         }
         foreach (var kv in _underTileBeneathMovable)
             if (kv.Value.Id != ObstacleId.None)
-                into.Add(kv.Value.Id);
+                into.Add(useHintIdentity ? GetHintObstacleId(kv.Key, kv.Value.Id) : kv.Value.Id);
     }
 
     public int CountStampedBeneath(ObstacleId obstacleId)

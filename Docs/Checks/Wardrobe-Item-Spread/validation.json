@@ -1,0 +1,11 @@
+{
+  "durationSeconds": 0.65,
+  "horizontalDistanceAtDurationBefore": 58.5,
+  "horizontalDistanceAtDurationAfterRange": [
+    143.65,
+    194.35
+  ],
+  "nominalHeightBefore": 18.77777777777778,
+  "nominalHeightAfter": 49.0,
+  "limits": "Analytic trajectory estimates in local UI units; no Unity render or device measurement."
+}

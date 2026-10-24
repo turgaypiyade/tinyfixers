@@ -24,6 +24,9 @@ public class BoardAudioDirector : MonoBehaviour
 
     private void OnEnable()
     {
+        GameSettings.OnSoundChanged += ApplySoundEnabled;
+        ApplySoundEnabled(GameSettings.SoundEnabled);
+
         if (!listenToBoardBehaviorEvents)
             return;
 
@@ -33,8 +36,19 @@ public class BoardAudioDirector : MonoBehaviour
 
     private void OnDisable()
     {
+        GameSettings.OnSoundChanged -= ApplySoundEnabled;
         ComboBehaviorEvents.ComboTriggered -= HandleComboTriggered;
         SystemOverrideBehaviorEvents.OverrideFanoutStarted -= HandleOverrideFanoutStarted;
+        StopAllCoroutines();
+        if (transientSource != null) transientSource.Stop();
+        if (accentSource != null && accentSource != transientSource) accentSource.Stop();
+    }
+
+    // Mixer atanmamış board kaynakları da Settings değişikliğine anında uyar.
+    private void ApplySoundEnabled(bool enabled)
+    {
+        if (transientSource != null) transientSource.mute = !enabled;
+        if (accentSource != null && accentSource != transientSource) accentSource.mute = !enabled;
     }
 
     private void HandleComboTriggered(TileSpecial a, TileSpecial b, Vector2Int originCell)
@@ -115,7 +129,7 @@ public class BoardAudioDirector : MonoBehaviour
     /// </summary>
     public void PlayOneShotClip(AudioClip clip, float volume = 1f)
     {
-        if (clip == null || !GameSettings.SoundEnabled)
+        if (!isActiveAndEnabled || clip == null || !GameSettings.SoundEnabled)
             return;
 
         AudioSource src = transientSource != null ? transientSource : accentSource;
@@ -127,8 +141,12 @@ public class BoardAudioDirector : MonoBehaviour
 
     public void Emit(BoardSfxRequest request)
     {
+        if (!isActiveAndEnabled)
+            return;
+
         if (request.Delay > 0f)
         {
+            if (!GameSettings.SoundEnabled) return;
             StartCoroutine(EmitDelayed(request));
             return;
         }
@@ -144,7 +162,7 @@ public class BoardAudioDirector : MonoBehaviour
 
     private void PlayNow(BoardSfxRequest request)
     {
-        if (!GameSettings.SoundEnabled)
+        if (!isActiveAndEnabled || !GameSettings.SoundEnabled)
             return;
 
         if (profile == null)

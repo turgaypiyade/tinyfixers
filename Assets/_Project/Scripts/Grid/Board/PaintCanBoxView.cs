@@ -142,8 +142,8 @@ public sealed class PaintCanBoxView : MonoBehaviour
     }
 
     /// Vuruş: kalan tüm kutular sallanır; eksilen kutular <paramref name="fxRoot"/> altına alınıp uçar.
-    /// Düşen kutuların animasyonu <paramref name="host"/> üzerinde koşar (kasa yıkılsa da sürer).
-    public void SetCount(int newCount, MonoBehaviour host, RectTransform fxRoot)
+    /// Uçan kopyaları tahtanın ortak sürücüsü yönetir; kasa yıkılsa da uçuş sürer.
+    public void SetCount(int newCount, BoardController board, RectTransform fxRoot)
     {
         newCount = Mathf.Clamp(newCount, 0, Capacity);
         if (slots.Count == 0) { count = newCount; return; }
@@ -151,7 +151,7 @@ public sealed class PaintCanBoxView : MonoBehaviour
 
         bool hit = newCount < count;
         for (int k = Capacity - count; k < Capacity - newCount; k++)
-            DropSlot(RemovalOrder[k], host, fxRoot);
+            DropSlot(RemovalOrder[k], board, fxRoot);
         count = Mathf.Min(count, newCount);
 
         if (count > 0 && isActiveAndEnabled)
@@ -222,74 +222,26 @@ public sealed class PaintCanBoxView : MonoBehaviour
         wobble = null;
     }
 
-    private void DropSlot(int slot, MonoBehaviour host, RectTransform fxRoot)
+    private void DropSlot(int slot, BoardController board, RectTransform fxRoot)
     {
         if (slot < 0 || slot >= slots.Count) return;
         var src = slots[slot];
         if (src == null || !src.gameObject.activeSelf) return;
-
-        // Uçan kopya: kasa yıkılsa bile yaşasın diye fxRoot altında, aynı yer ve boyda.
-        var parent = fxRoot != null ? fxRoot : (RectTransform)transform.parent;
-        var go = new GameObject("PaintCanFall", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-        go.layer = parent.gameObject.layer;
-        var rt = (RectTransform)go.transform;
-        rt.SetParent(parent, false);
-        rt.SetAsLastSibling();
-        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
-        rt.pivot = new Vector2(0.5f, 0.5f);
-        Vector3 world = src.TransformPoint(src.rect.center);
-        rt.position = world;
-        Vector3 lossy = src.lossyScale;
-        Vector3 parentScale = parent.lossyScale;
-        rt.sizeDelta = new Vector2(src.rect.width * lossy.x / Mathf.Max(1e-4f, parentScale.x),
-            src.rect.height * lossy.y / Mathf.Max(1e-4f, parentScale.y));
-        var img = go.GetComponent<Image>();
-        img.sprite = src.GetComponent<Image>().sprite;
-        img.preserveAspect = true;
-        img.raycastTarget = false;
+        var parent = fxRoot != null ? fxRoot : transform.parent as RectTransform;
+        if (parent != null)
+        {
+            float x = src.anchorMin.x + src.anchorMax.x - 1f;
+            float side = Mathf.Abs(x) < 0.01f ? (Random.value < 0.5f ? -1f : 1f) : Mathf.Sign(x);
+            // Convert the cell to the FX root's units (Canvas/board scaling can differ).
+            float cell = parent.InverseTransformVector(transform.TransformVector(
+                new Vector3(cellSize > 0f ? cellSize : ((RectTransform)transform).rect.width * 0.5f, 0f, 0f))).magnitude;
+            ObstacleScatterFx.PlayCopy(board, parent, src.GetComponent<Image>(), "PaintCanFall", new ObstacleScatterFx.Motion
+            {
+                travel = new Vector2(side * cell * Random.Range(2.8f, 3.5f), cell * Random.Range(3.4f, 4.1f)),
+                gravity = cell * 14f, spin = -side * Random.Range(420f, 600f),
+                delay = FallDelay, life = FallSeconds
+            });
+        }
         src.gameObject.SetActive(false);
-
-        // Kasanın ortasına göre dışa doğru savrulur; ortadaki kutu rastgele bir yana.
-        float side = Mathf.Sign(src.anchorMin.x + src.anchorMax.x - 1f);
-        if (Mathf.Abs(src.anchorMin.x + src.anchorMax.x - 1f) < 0.01f)
-            side = Random.value < 0.5f ? -1f : 1f;
-
-        float cell = cellSize > 0f ? cellSize : rt.sizeDelta.x * 2.5f;
-        var runner = host != null && host.isActiveAndEnabled ? host : this;
-        runner.StartCoroutine(CoFall(rt, img, side, cell));
-    }
-
-    private static IEnumerator CoFall(RectTransform rt, Image img, float side, float cell)
-    {
-        // Önce yerinde bir an sallanır…
-        for (float t = 0f; t < FallDelay; t += Time.deltaTime)
-        {
-            if (rt == null) yield break;
-            rt.localRotation = Quaternion.Euler(0f, 0f, -side * 10f * Mathf.Sin(t / FallDelay * Mathf.PI * 2f));
-            yield return null;
-        }
-
-        // …sonra hoplayıp takla atarak dışarı düşer.
-        Vector2 pos = rt.anchoredPosition;
-        Vector2 vel = new Vector2(side * cell * Random.Range(1.6f, 2.2f), cell * Random.Range(2.6f, 3.2f));
-        float gravity = cell * 14f;
-        float spin = -side * Random.Range(420f, 600f);
-        float angle = 0f;
-        for (float t = 0f; t < FallSeconds; t += Time.deltaTime)
-        {
-            if (rt == null) yield break;
-            float dt = Time.deltaTime;
-            vel.y -= gravity * dt;
-            pos += vel * dt;
-            angle += spin * dt;
-            rt.anchoredPosition = pos;
-            rt.localRotation = Quaternion.Euler(0f, 0f, angle);
-            float k = t / FallSeconds;
-            var c = img.color;
-            c.a = k < 0.6f ? 1f : 1f - (k - 0.6f) / 0.4f;
-            img.color = c;
-            yield return null;
-        }
-        if (rt != null) Object.Destroy(rt.gameObject);
     }
 }

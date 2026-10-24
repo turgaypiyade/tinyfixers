@@ -185,8 +185,10 @@ public class BoardBreakFxService
         // generic hit/break particle'ları onun üstüne binmesin.
         // Hamster kendi kare/zıplama/ayrılış animasyonunu oynar (HamsterObstacleService).
         return change.obstacleId == ObstacleId.ColorChest
+            || change.obstacleId == ObstacleId.Wardrobe // whole item throws and four empty-cabinet chunks replace generic particles
             || change.obstacleId == ObstacleId.KeyGenerator
             || change.obstacleId == ObstacleId.Hamster
+            || change.obstacleId == ObstacleId.RhodesStatue // staged chunks and the final body shatter own all debris
             || change.obstacleId == ObstacleId.TarpStatue;   // taş parçaları + parçalanma TarpStatueView'da
     }
 

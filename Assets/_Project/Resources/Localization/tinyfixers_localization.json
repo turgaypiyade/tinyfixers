@@ -418,7 +418,7 @@
         },
         {
           "key": "rising_title",
-          "value": "TIRMANIŞ"
+          "value": "Tırmanış"
         },
         {
           "key": "safari_lost_title",
@@ -514,7 +514,7 @@
         },
         {
           "key": "level_end_loss_safari",
-          "value": "TIRMANIŞ"
+          "value": "Tırmanış"
         },
         {
           "key": "level_end_loss_alliance",
@@ -1574,7 +1574,7 @@
         },
         {
           "key": "joker_title_row",
-          "value": "Wonder Roketi!"
+          "value": "Harika Yontucu!"
         },
         {
           "key": "joker_title_column",
@@ -2022,7 +2022,7 @@
         },
         {
           "key": "rising_intro_title",
-          "value": "TIRMANIŞ BAŞLIYOR!"
+          "value": "Tırmanış başlıyor!"
         },
         {
           "key": "rising_intro_ready",
@@ -2062,7 +2062,7 @@
         },
         {
           "key": "safari_reward_event",
-          "value": "TIRMANIŞ TAMAMLANDI"
+          "value": "Tırmanış tamamlandı"
         },
         {
           "key": "safari_reward_title",
@@ -2094,7 +2094,7 @@
         },
         {
           "key": "safari_join_title",
-          "value": "TIRMANIŞ"
+          "value": "Tırmanış"
         },
         {
           "key": "safari_join_prize",
@@ -2186,7 +2186,7 @@
         },
         {
           "key": "rising_icon_label",
-          "value": "TIRMANIŞ"
+          "value": "Tırmanış"
         },
         {
           "key": "prelevel_booster_select",
@@ -2866,7 +2866,7 @@
         },
         {
           "key": "notif_event_rising_title",
-          "value": "TIRMANIŞ başladı! 🎉"
+          "value": "Tırmanış başladı! 🎉"
         },
         {
           "key": "notif_event_rising_body",
@@ -2882,7 +2882,7 @@
         },
         {
           "key": "notif_event_name_rising",
-          "value": "TIRMANIŞ"
+          "value": "Tırmanış"
         },
         {
           "key": "notif_event_name_bridge",
@@ -4719,7 +4719,7 @@
         },
         {
           "key": "joker_title_row",
-          "value": "Wonder Rocket!"
+          "value": "Wonder Drill!"
         },
         {
           "key": "joker_title_column",

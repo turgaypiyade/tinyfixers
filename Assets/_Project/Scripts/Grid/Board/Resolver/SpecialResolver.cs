@@ -265,6 +265,11 @@ public class SpecialResolver
 
         if (bothOriginallySpecial && originalSa == TileSpecial.PulseCore && originalSb == TileSpecial.PulseCore)
         {
+            // One pulse emits for BOTH consumed sources. Carry the partner's gel onto that
+            // emitter too, so its targets/arrival specials keep the combo's contamination.
+            if (a != null && board.IsGelSpreadSourceTile(b))
+                a.GelContaminated = true;
+
             ctx.Affected.Add(a);
             ctx.Affected.Add(b);
             SpecialCellUtils.MarkAffectedCell(ctx, a, board);

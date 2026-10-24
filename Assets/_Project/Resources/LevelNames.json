@@ -936,6 +936,16 @@
       "level": 187,
       "levelKey": "LevelCL_0187",
       "name": "Boyalı Akarsu"
+    },
+    {
+      "level": 188,
+      "levelKey": "LevelCL_0188",
+      "name": "Üç Mühürlü Geçit"
+    },
+    {
+      "level": 189,
+      "levelKey": "LevelCL_0189",
+      "name": "İkiz Gölet Kalesi"
     }
   ]
 }

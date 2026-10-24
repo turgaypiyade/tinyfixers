@@ -1,0 +1,23 @@
+{
+  "89": {
+    "asset": "Assets/_Project/Settings/ProductionLevels/LevelP_00991.asset",
+    "movesBefore": 28,
+    "movesAfter": 33,
+    "sha256": "f52f8817091082b1489ea8d8991951c6ac38ca07a04e83d103f7de7e9c02dfdc"
+  },
+  "90": {
+    "asset": "Assets/_Project/Settings/ProductionLevels/LevelP_00500.asset",
+    "movesBefore": 28,
+    "movesAfter": 33,
+    "sha256": "ddc8d27c2c7e7d6aa6cdeb0261a6171a1bd10f4218917681e67e271a5c5b749f"
+  },
+  "preservation": {
+    "protectedFiles": 1899,
+    "changed": [
+      "Assets/_Project/Settings/ProductionLevels/LevelP_00991.asset",
+      "Assets/_Project/Settings/ProductionLevels/LevelP_00500.asset"
+    ],
+    "otherFilesUnchanged": 1897
+  },
+  "limits": "Static mask/field/layer/preservation checks; no Unity Play/build or bot/cascade simulation."
+}

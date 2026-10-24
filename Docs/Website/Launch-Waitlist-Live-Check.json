@@ -1,0 +1,30 @@
+{
+  "verified": true,
+  "checks": [
+    {
+      "check": "health",
+      "host": "https://www.wondigames.com",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "check": "registration stored",
+      "status": 200
+    },
+    {
+      "check": "private export and deduplication",
+      "ok": true
+    },
+    {
+      "check": "public export rejected",
+      "status": 401
+    },
+    {
+      "check": "test registration removed",
+      "ok": true
+    }
+  ],
+  "realEmailsSent": 0,
+  "paidPlanOpened": false,
+  "deploymentVersion": "62a421c7-6f66-43ae-99fa-0561bdc6d838"
+}

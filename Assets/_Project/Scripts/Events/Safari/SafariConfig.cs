@@ -13,12 +13,12 @@ using UnityEngine;
 ///  - Düşünce (ilk-hakta geçemeyince) <see cref="fallCooldownMinutes"/> dk beklenir.
 ///  - <see cref="pitstopCount"/> pitstop; 7 strike tamamlayan kazananlar <see cref="prizePoolGold"/> altını paylaşır (booster YOK).
 /// </summary>
-[CreateAssetMenu(fileName = "SafariConfig", menuName = "TinyFixers/Events/TIRMANIŞ Config")]
+[CreateAssetMenu(fileName = "SafariConfig", menuName = "TinyFixers/Events/Tırmanış Config")]
 public sealed class SafariConfig : ScriptableObject
 {
     [Header("Kimlik")]
     public string eventId   = "tiny_safari";
-    public string eventName = "TIRMANIŞ";
+    public string eventName = "Tırmanış";
     [Tooltip("Fail popup 'kaybedeceklerin' listesinde bu event için gösterilecek ikon.")]
     public Sprite lossIcon;
 
@@ -58,7 +58,7 @@ public sealed class SafariConfig : ScriptableObject
     [Min(1)] public int avatarsOnScreen = 24;
 
     [Header("Ödül (kazananlar arasında paylaşılır)")]
-    [Tooltip("TIRMANIŞ etkinliğini tamamlayan (7 strike) TÜM kazananlar arasında paylaşılacak toplam altın. " +
+    [Tooltip("Tırmanış etkinliğini tamamlayan (7 strike) TÜM kazananlar arasında paylaşılacak toplam altın. " +
              "Booster verilmez.")]
     [Min(0)] public int prizePoolGold = 10000;
 

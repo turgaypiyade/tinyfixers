@@ -1,0 +1,11 @@
+{
+  "source": "/Users/turgayp/Downloads/OverrideBatteryBox.png",
+  "destination": "Assets/_Project/Art/UI/Obstacles/RobotStyle/OverrideBattery/OverrideBatteryBody.png",
+  "size": [
+    1024,
+    1024
+  ],
+  "sha256": "2f3abff6be91a2bdc5e4d487b833c421b4e99433f9b3f7b8e51a64567d388c69",
+  "meta_unchanged": true,
+  "revision": "gap-fixed-latest"
+}

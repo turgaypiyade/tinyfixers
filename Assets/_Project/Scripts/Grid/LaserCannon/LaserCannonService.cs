@@ -688,6 +688,8 @@ public sealed class LaserCannonService : MonoBehaviour
         var spin = new float[n];
         var tints = new Color[n];
         var shrink = new float[n];
+        const float life = 0.85f;
+        var bounds = ObstacleDebrisBounds.For(board, root);
         int idx = 0;
         void Add(Sprite s, Vector2 offset, float size, Color tint, float speed, float endScale)
         {
@@ -696,6 +698,10 @@ public sealed class LaserCannonService : MonoBehaviour
             Vector2 dir = offset.sqrMagnitude > 1f ? offset.normalized : Random.insideUnitCircle.normalized;
             dir = (dir + Random.insideUnitCircle * 0.35f).normalized;
             vel[idx] = (dir + Vector2.up * 0.7f) * footprint * speed;
+            Vector2 start = rt.localPosition, pieceSize = rt.sizeDelta;
+            bounds.Fit(ref start, ref vel[idx], ref pieceSize, life);
+            rt.localPosition = start;
+            rt.sizeDelta = pieceSize;
             spin[idx] = Random.Range(-600f, 600f);
             rts[idx] = rt;
             imgs[idx] = rt.GetComponent<Image>();
@@ -732,7 +738,6 @@ public sealed class LaserCannonService : MonoBehaviour
         flash.SetAsFirstSibling();
         var flashImg = flash.GetComponent<Image>();
 
-        const float life = 0.85f;
         const float flashTime = 0.25f;
         float gravity = footprint * 5f;
         for (float t = 0f; t < life; t += Time.deltaTime)
@@ -752,6 +757,7 @@ public sealed class LaserCannonService : MonoBehaviour
                 vel[i].y -= gravity * dt;
                 vel[i] *= 1f - 0.6f * dt;   // hafif hava sürtünmesi
                 rt.localPosition += (Vector3)(vel[i] * dt);
+                rt.localPosition = bounds.ClampCenter(rt.localPosition, rt.sizeDelta);
                 rt.localRotation *= Quaternion.Euler(0f, 0f, spin[i] * dt);
                 rt.localScale = Vector3.one * Mathf.Lerp(1f, shrink[i], k);
                 imgs[i].color = FlightTrailFx.WithAlpha(tints[i], fade);

@@ -1,0 +1,12 @@
+{
+  "gelChannelChecks": 38,
+  "pulsePulseBeforeControlChecks": 68,
+  "pulsePulseAfterChecks": 72,
+  "protectedFiles": 1898,
+  "otherFilesUnchanged": 1896,
+  "changed": [
+    "Assets/_Project/Scripts/Grid/GridSpawner.cs",
+    "Assets/_Project/Scripts/Grid/SpreadingGel/SpreadingGelOverlayService.cs"
+  ],
+  "limits": "Production methods with doubles, not Unity render/Play/build or board/cascade simulation; no device performance measurement."
+}

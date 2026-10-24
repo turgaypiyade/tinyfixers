@@ -1972,6 +1972,7 @@ public class BoardController : MonoBehaviour
 
     private void OnDestroy()
     {
+        boosterService?.CancelShuffleFx();
         fallMotion?.Reset();
         if (obstacleStateService == null) return;
         obstacleStateService.OnObstacleDestroyed -= HandleObstacleDestroyed;
@@ -1986,6 +1987,8 @@ public class BoardController : MonoBehaviour
 
     public void Init(int width, int height, TileIconLibrary iconLibrary)
     {
+        ObstacleScatterFx.Cancel(this);
+        boosterService?.CancelShuffleFx();
         fallMotion?.Reset();
         flowLive = false;
         GetComponent<OilSpreadAnimator>()?.CancelSpreads();
@@ -2003,6 +2006,7 @@ public class BoardController : MonoBehaviour
 
     public void SetLevelData(LevelData levelData)
     {
+        ObstacleScatterFx.Cancel(this);
         this.levelData = levelData;
         RefillSpecialGuardStrength = levelData != null ? RefillSpecialGuard.Resolve(levelData, CurrentLevel.Global) : 0f;
         RemainingMoves = levelData != null ? Mathf.Max(0, levelData.moves) : 0;
@@ -3494,8 +3498,12 @@ public class BoardController : MonoBehaviour
     /// tekli joker vurulabilir hücre ister, satır/sütun jokeri hatta en az bir vurulabilir hücre.
     public bool TryUseBoosterAtBoardCell(int x, int y)
     {
-        if (activeBooster == BoosterMode.None || activeBooster == BoosterMode.Shuffle) return false;
+        if (activeBooster == BoosterMode.None) return false;
         if (x < 0 || x >= width || y < 0 || y >= height) return false;
+
+        // Shuffle uses the board tap as confirmation, including obstacles and authored holes.
+        if (activeBooster == BoosterMode.Shuffle)
+            return TryUseBoosterAtCell(x, y);
 
         // Boya Kovası yalnız taşa uygulanır; taşsız hücre (engel/boşluk) hakkı yakmaz.
         if (activeBooster == BoosterMode.PaintBucket)
@@ -3519,6 +3527,19 @@ public class BoardController : MonoBehaviour
         if (IsBusy || InputLocked) { return true; }
         if (x < 0 || x >= width || y < 0 || y >= height) return true;
 
+        // The slot opens targeting; any in-board cell confirms the global shuffle.
+        // Keep the selection and charge if the board cannot currently be shuffled.
+        if (activeBooster == BoosterMode.Shuffle)
+        {
+            if (boosterService == null || !BoosterAccessService.CanUse(3)
+                || !boosterService.CanShuffleBoard()) return true;
+            SetBoosterMode(BoosterMode.None);
+            SetSelectedTile(null);
+            // The routine spends only after its valid animation plan has been built.
+            StartCoroutine(boosterService.ShuffleBoardRoutine(actionSequencer));
+            return true;
+        }
+
         // Boya Kovası: önce hedef doğrulanır; uygun değilse joker seçili kalır, hak düşmez, sebep gösterilir.
         if (activeBooster == BoosterMode.PaintBucket)
         {
@@ -3540,16 +3561,8 @@ public class BoardController : MonoBehaviour
 
         // Hak düşümü: free oyunda düşmez, normalde 1 hak harcar (tek merkez: BoosterAccessService).
         BoosterAccessService.OnBoosterUsed(mode);
-
-        if (mode == BoosterMode.Shuffle)
-        {
-            StartCoroutine(boosterService.ShuffleBoardRoutine(actionSequencer));
-        }
-        else
-        {
-            StartCoroutine(boosterService.ApplyBoosterRoutine(mode, targetTile, targetCell,
-                specialResolver, actionSequencer, cascadeLogic, lineSweepService, lightningSpawner, lineTravelPlayer));
-        }
+        StartCoroutine(boosterService.ApplyBoosterRoutine(mode, targetTile, targetCell,
+            specialResolver, actionSequencer, cascadeLogic, lineSweepService, lightningSpawner, lineTravelPlayer));
         return true;
     }
 
@@ -5182,6 +5195,10 @@ public class BoardController : MonoBehaviour
             ? obstacleResolutionService.ApplyDamage(request)
             : default;
 
+        // Adjacent matches already reach this path. Special-only Rhodes keeps all its HP,
+        // but its attachments still react; no extra board scan or damage fallback is needed.
+        ReactToRejectedRhodesMatch(request, result.didHit);
+
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         if (traceOn)
         {
@@ -5200,6 +5217,15 @@ public class BoardController : MonoBehaviour
         }
 
         return result;
+    }
+
+    private void ReactToRejectedRhodesMatch(ObstacleDamageRequest request, bool didHit)
+    {
+        if (didHit || request.context != ObstacleHitContext.NormalMatch || obstacleStateService == null
+            || obstacleStateService.GetObstacleIdAt(request.cell.x, request.cell.y) != ObstacleId.RhodesStatue) return;
+        int origin = obstacleStateService.GetObstacleOriginAt(request.cell.x, request.cell.y);
+        var image = origin >= 0 ? ObstacleViewByOriginLookup?.Invoke(origin) : null;
+        if (image != null && image.TryGetComponent<RhodesStatueView>(out var statue)) statue.OnNearbyMatch();
     }
 
     internal ObstacleStateService.ObstacleHitResult ApplyObstacleDamageAt(

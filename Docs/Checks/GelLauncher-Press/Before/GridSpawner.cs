@@ -1,0 +1,4428 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.UI;
+
+public class GridSpawner : MonoBehaviour
+{
+    private static readonly Vector2 IconReferenceSize = new Vector2(100f, 100f);
+    private static readonly Vector3[] RectWorldCorners = new Vector3[4];
+    private const float BarrellV2HitShakeDuration = 0.18f;
+    private const float BarrellV2HitShakeCycles = 3f;
+    private const float WardrobeFinalItemDestroyDelay = 0.75f;
+
+    [Header("Level")]
+    public LevelData level;
+    [SerializeField] private LevelRuntimeSelector levelRuntimeSelector;
+
+    [Header("Tile")]
+    public GameObject tilePrefab;
+    public TileIconLibrary iconLibrary;
+    public BoardController board;
+
+    [Header("Layout")]
+    public int tileSize = 105;
+    // Auto-fit ayarları
+    [SerializeField] private int fitSafetyMarginPx = 8;   // border güvenlik payı
+    [SerializeField, Range(0.8f, 1f)] private float fitScale = 1f; // ekstra küçültme oranı
+
+    [Header("Border System")]
+    public DynamicBoardBorder borderDrawer;
+
+    [Tooltip("BoardContent iç boşluk (kenarlara yapışmayı keser)")]
+    public int boardPadding = 8;
+
+    [Header("Cell BG")]
+    public GameObject cellBgPrefab;
+    [SerializeField] private Color underTileCellBgTint = new Color32(0x84, 0x83, 0xB9, 0xFF);
+
+    [SerializeField, Range(0.5f, 1f)]
+    private float iconScale = 0.95f;
+    [SerializeField] private Vector2 iconSize = new Vector2(100f, 100f);
+    [SerializeField] private bool fullCellIcons = false;
+
+    [Header("Spawn Parent (BoardMask altındaki BoardContent)")]
+    [SerializeField] private RectTransform spawnParent;
+
+    [Header("Roots (auto create)")]
+    [SerializeField] private RectTransform cellBgRoot;
+    [SerializeField] private RectTransform mudOverlayRoot;
+    [SerializeField] private RectTransform obstaclesRoot;
+    [SerializeField] private RectTransform underTilesObstaclesRoot;
+    [SerializeField] private RectTransform overTilesObstaclesRoot;
+    private WaterChannelService waterChannelService;   // su kanalı görünüm + akış (Docs/WaterChannel_Plan.md)
+    [SerializeField] private RectTransform tilesRoot;
+
+    [Header("Mud Overlay")]
+    [SerializeField] private MudOverlayService mudOverlayService;
+
+    [Header("Spreading Gel Overlay")]
+    [Tooltip("Yayılan jel hücrelerinin doğacağı root — mud gibi taşların ALTINDA. Boşsa otomatik kurulur.")]
+    [SerializeField] private RectTransform spreadingGelOverlayRoot;
+    [SerializeField] private SpreadingGelOverlayService spreadingGelOverlayService;
+
+    [Header("Grass Overlay")]
+    [Tooltip("Grass hücre görsellerinin doğacağı root — taşların ÜSTÜNDE olmalı. Boşsa otomatik kurulur.")]
+    [SerializeField] private RectTransform grassOverlayRoot;
+    [SerializeField] private GrassOverlayService grassOverlayService;
+
+    [Header("Key Generator")]
+    [Tooltip("KeyGenerator katmanlı makine görseli (kol + draft + yeşil tarama). crankSprite=KG_C1, draftSprite=KG_D1 ata; boşsa eski pulse davranışı korunur. Servis runtime'da bu GO'ya eklendiği için ayarlar burada.")]
+    [SerializeField] private KeyGeneratorMachineConfig keyGeneratorMachineConfig = new KeyGeneratorMachineConfig();
+
+    [Header("Rocket Basket")]
+    [SerializeField] private RocketBasketService rocketBasketService;
+    [SerializeField] private Color runtimeBoardBg = new Color(0.78f, 0.88f, 0.97f, 1f);
+    [SerializeField] private Color runtimeNormalCell = new Color(1f, 1f, 1f, 0.16f);
+    [SerializeField] private RectTransform gridLinesRoot;
+    [SerializeField] private Color runtimeGridLineColor = new Color32(0x93, 0x92, 0xC3, 0xFF);
+    // Koyu arka planlı bölümler (ChapterTheme.lightBoardCells) için açık palet: 2026-10-18 öncesi renkler.
+    [SerializeField] private Color lightCellBgColor = new Color32(0xA9, 0xA7, 0xD9, 0xFF);
+    [SerializeField] private Color lightGridLineColor = new Color32(0xB8, 0xB4, 0xDD, 0xFF);
+    [SerializeField] private Color lightUnderTileCellBgTint = new Color32(0xA9, 0xA7, 0xD9, 0xFF);
+    private bool useLightBoardCells;
+    private Color GridLineColor => useLightBoardCells ? lightGridLineColor : runtimeGridLineColor;
+    private Color UnderTileCellBgTint => useLightBoardCells ? lightUnderTileCellBgTint : underTileCellBgTint;
+    [SerializeField, Min(1f)] private float runtimeGridLineThickness = 2f;
+    [SerializeField] private bool gridJunctionEnabled = false;
+    [Tooltip("Diamond boyutu. 0 = otomatik (çizgi kalınlığı × 2.5).")]
+    [SerializeField, Min(0f)] private float gridJunctionSize = 0f;
+    [Tooltip("Yatay uzama. 1 = kare elmas ◇, >1 = geniş <> şekli.")]
+    [SerializeField, Min(0.1f)] private float gridJunctionAspectX = 1.6f;
+    [Tooltip("Dikey daralma. 1 = kare elmas ◇, <1 = yassı <> şekli.")]
+    [SerializeField, Min(0.1f)] private float gridJunctionAspectY = 0.6f;
+
+    [SerializeField] private RectTransform boardBgRoot;
+
+    [Header("Tube Obstacle")]
+    [SerializeField] private TubeObstacleService tubeObstacleService;
+    [SerializeField] private TubeView tubeViewPrefab;
+    [SerializeField] private RectTransform tubeRoot;
+
+    [Header("Magnet Obstacle")]
+    [SerializeField] private MagnetObstacleService magnetObstacleService;
+    [SerializeField] private MagnetView magnetViewPrefab;
+    [SerializeField] private RectTransform magnetRoot;
+
+    [Header("Safe (Kasa) Obstacle")]
+    [SerializeField] private SafeObstacleView safeViewPrefab;
+    [Tooltip("Boşsa obstaclesRoot kullanılır.")]
+    [SerializeField] private RectTransform safeRoot;
+    // Kasa görselleri (origin → view): üstü kapalı kasa gizli başlar, açığa çıkınca etkinleşir.
+    private readonly Dictionary<int, SafeObstacleView> safeViewsByOrigin = new();
+    private readonly Dictionary<int, AncientSealView> ancientSealViewsByOrigin = new();
+    private readonly Dictionary<int, GameObject> ancientSealClickProxyByCell = new();
+    private AncientSealService ancientSealService;
+    private SafeObstacleService safeObstacleService;   // StampLayeredEntriesIntoLevel'de bulunur
+
+    // Generic stacked-obstacle + Safe beneath kayıtları. Stamp aşaması (SetLevelData ÖNCESİ)
+    // burada toplar; ObstacleStateService SetLevelData'da oluştuğu için kayıt SONRASINDA yapılır.
+    private readonly System.Collections.Generic.List<(int cell, ObstacleId beneathId, int beneathOrigin, int overOrigin)>
+        pendingStampedBeneath = new();
+
+    // Overlay altındaki obstacle'ı BAŞTAN göstermek için: stamp aşamasında toplanan beneath
+    // kayıtlarının kalıcı kopyası (pendingStampedBeneath register'da temizleniyor). Beneath
+    // view'ları overlay'in ARKASINA çizilir; overlay kırılınca reveal bu view'ı promote eder.
+    private readonly System.Collections.Generic.List<(int cell, ObstacleId beneathId, int beneathOrigin, int overOrigin)>
+        stampedBeneathVisuals = new();
+
+    // Movable (Plastic/Helmet…) ÜSTÜNE yığılan Grass: movable birincil kalır (gerçek movable taşı
+    // spawn olur), grass motorun "movable üstü örtü" yuvasına (_underTileBeneathMovable) kaydedilir —
+    // oyun içinde movable çim hücresine düşünce kurulan modelin AYNISI (vuruş önce çime:
+    // TryConsumeCoveringOverlayHit). Eskiden grass birincil, movable stamped-beneath'te gizli kalıyordu:
+    // hücreye normal taş konuyor, çim kırılınca movable dolu hücreye VERİ olarak açılıyordu (aynı
+    // hücrede taş/PatchBot + plastik) ve sonraki düşüşlerde yığında 2 movable oluşuyordu.
+    private readonly System.Collections.Generic.List<(int cell, ObstacleId overlayId)> pendingCoveringOverlays = new();
+    private readonly System.Collections.Generic.List<(int cell, ObstacleId overlayId)> coveringOverlayVisuals = new();
+    // Çiçekli çim (GrassFlower) hücreleri: stamp aşamasında Grass'a çevrilir, SetLevelData SONRASI
+    // ObstacleStateService'e çiçekli olarak kaydedilir (çimin kalan vuruşu +1).
+    private readonly List<int> pendingGrassFlowerCells = new();
+    private GrassFlowerOverlayService grassFlowerOverlayService;
+    private readonly List<int> pendingWaterLilyCells = new();
+    private GrassWaterLilyService waterLilyService;
+    private readonly Dictionary<int, Image> beneathViewsByCell = new();
+
+    [Header("Obstacle Visual (UI)")]
+    [SerializeField] private bool drawObstacles = true;
+    [Tooltip("ColorChest icin katmanli gorsel prefabi (ChestObstacleView component'i olmali)")]
+    [SerializeField] private ChestObstacleView chestObstacleViewPrefab;
+    [Tooltip("BatteryBox icin katmanli gorsel prefabi (BatteryBoxView component'i olmali)")]
+    [SerializeField] private BatteryBoxView batteryBoxViewPrefab;
+    [Tooltip("OverrideBatteryBox icin katmanli gorsel prefabi (OverrideBatteryBoxView component'i olmali)")]
+    [SerializeField] private OverrideBatteryBoxView overrideBatteryBoxViewPrefab;
+    [Header("OverrideBatteryBox sprite'lari (prefab yoksa kod fallback kullanir)")]
+    [Tooltip("Core / kirmizi bar sprite'i (yatay). Sol panele 90° donuk oturur.")]
+    [SerializeField] private Sprite overrideBarRedSprite;
+    [Tooltip("Gear / sari bar sprite'i (yatay). Sag panele 90° donuk oturur.")]
+    [SerializeField] private Sprite overrideBarYellowSprite;
+    [Tooltip("Bolt / mavi bar sprite'i (yatay). Ust panele duz oturur.")]
+    [SerializeField] private Sprite overrideBarBlueSprite;
+    [Tooltip("Plate / yesil bar sprite'i (yatay). Alt panele duz oturur.")]
+    [SerializeField] private Sprite overrideBarGreenSprite;
+    [Tooltip("Gauge ibresi (pin) sprite'i. Gobek dogru donsun diye needlePivot ayarla.")]
+    [SerializeField] private Sprite overrideNeedleSprite;
+    [Tooltip("Merkez gauge/dial sprite'i (ibresiz). Barlarin USTUNDE, ibrenin ALTINDA render edilir.")]
+    [SerializeField] private Sprite overrideGaugeSprite;
+    [Tooltip("Patlama oncesi buhar puf sprite'i (opsiyonel). Bossa duz beyaz kare kullanilir.")]
+    [SerializeField] private Sprite overrideSteamSprite;
+    [Header("OverrideBatteryBox yerlesim ayari (fallback, canli)")]
+    [Tooltip("Mavi/yesil (ust/alt) bar genislik orani.")]
+    [SerializeField, Range(0.2f, 1.2f)] private float obbHorizontalBarWidthScale = 0.85f;
+    [Tooltip("Mavi/yesil (ust/alt) bar yukseklik orani.")]
+    [SerializeField, Range(0.2f, 1.2f)] private float obbHorizontalBarHeightScale = 0.6f;
+    [Tooltip("Kirmizi/sari (sol/sag, donuk) bar genislik orani.")]
+    [SerializeField, Range(0.2f, 1.2f)] private float obbRotatedBarWidthScale = 0.62f;
+    [Tooltip("Kirmizi/sari (sol/sag, donuk) bar yukseklik orani.")]
+    [SerializeField, Range(0.2f, 1.2f)] private float obbRotatedBarHeightScale = 1.0f;
+    [Tooltip("Ibre boyutu (kutunun kisa kenarina oran).")]
+    [SerializeField, Range(0.1f, 1.2f)] private float obbNeedleSize = 0.34f;
+    [Tooltip("Merkez gauge/dial boyutu (kutunun kisa kenarina oran).")]
+    [SerializeField, Range(0.1f, 1.2f)] private float obbGaugeSize = 0.34f;
+    [Tooltip("Gauge merkezi (kutu ici fraksiyon).")]
+    [SerializeField] private Vector2 obbGaugeCenter = new Vector2(0.5f, 0.47f);
+    [Tooltip("Ibre sprite'i icindeki gobek (pivot) fraksiyonu.")]
+    [SerializeField] private Vector2 obbNeedlePivot = new Vector2(0.5f, 0.42f);
+    [Tooltip("progress=0 iken ibre acisi (sol/yesil). Hizalarken 0 yapip gobegi ortala.")]
+    [SerializeField] private float obbNeedleStartAngle = 90f;
+    [Tooltip("progress=total iken ibre acisi (sag/kirmizi).")]
+    [SerializeField] private float obbNeedleEndAngle = -90f;
+    [Tooltip("Wardrobe obstacle prefabi (WardrobeObstacleView component'i olmali). Null bırakılırsa fallback ile spawn edilir.")]
+    [SerializeField] private WardrobeObstacleView wardrobeObstacleViewPrefab;
+
+    [Header("Initial Resolve")]
+    [SerializeField] private bool resolveInitialOnStart = false;
+
+    [Header("Random Pool")]
+    [Tooltip("Varsayılan random havuz. LevelData.randomPool doluysa o levelda ONUN yerine level'inki kullanılır.")]
+    public TileType[] randomPool = { TileType.Gear, TileType.Core, TileType.Bolt, TileType.Plate };
+
+    // Level bazlı override çözülmüş hali: LevelData.randomPool doluysa o, değilse yukarıdaki varsayılan.
+    private TileType[] effectiveRandomPool;
+
+    [SerializeField] private int referenceCols = 9;
+    [SerializeField] private int referenceRows = 11;
+    [SerializeField] private bool useReferenceGridSizing = true;
+    [SerializeField] private bool useFixedTileSize = true;
+
+    private int width;
+    private int height;
+    private LevelData resolvedLevel;
+    private bool ownsResolvedLevelInstance;
+    private readonly Dictionary<int, Image> obstacleViewsByOrigin = new();
+    private readonly Dictionary<int, ObstacleDef> obstacleDefsByOrigin = new();
+    private readonly Dictionary<int, Coroutine> obstacleHitShakeRoutines = new();
+    private readonly Dictionary<int, Vector2> obstacleHitShakeBasePositions = new();
+    private readonly Dictionary<int, ChestObstacleView> _chestViews = new();
+    private readonly Dictionary<int, BatteryBoxView> _batteryBoxViews = new();
+    private readonly Dictionary<int, OverrideBatteryBoxView> _overrideBatteryBoxViews = new();
+    // Seri detonasyon: kutu destroy olunca view HEMEN patlatılmaz; burada bekler, BoardController
+    // kuyruğu sırası gelince OnRequestObbDetonationView ile tetikler (çoklu kutu aynı anda patlamaz).
+    private readonly Dictionary<int, OverrideBatteryBoxView> _pendingObbDetonationViews = new();
+    private readonly Dictionary<int, WardrobeObstacleView> _wardrobeViews = new();
+    private readonly Dictionary<int, GameObject> cellBgByIndex = new();
+    private readonly Dictionary<int, Image> cellBgImageByIndex = new();
+    private readonly Dictionary<int, Color> baseCellBgColorByIndex = new();
+    private readonly Dictionary<int, GameObject> tubeClickProxyByCell = new();
+    private readonly Dictionary<int, GameObject> safeClickProxyByCell = new();
+    private EnergyContainerService energyContainerService;
+    private KeyGeneratorService keyGeneratorService;
+    private RectTransform cachedTopHudRect;
+    private RectTransform cachedBottomAreaRect;
+
+    private void Awake()
+    {
+        if (board == null) board = GetComponent<BoardController>()
+                          ?? GetComponentInParent<BoardController>(true)
+                          ?? FindFirstObjectByType<BoardController>();
+
+        //if (borderDrawer == null) borderDrawer = GetComponent<DynamicBoardBorder>();
+        if (borderDrawer == null) borderDrawer = GetComponent<DynamicBoardBorder>()
+                                ?? GetComponentInChildren<DynamicBoardBorder>(true)
+                                ?? FindFirstObjectByType<DynamicBoardBorder>();
+    }
+
+    private void OnEnable()
+    {
+        if (board != null)
+            board.ObstacleVisualChanged += HandleObstacleVisualChanged;
+    }
+
+    private void OnDisable()
+    {
+        if (board != null)
+            board.ObstacleVisualChanged -= HandleObstacleVisualChanged;
+        UnbindBoardEvents();
+        StopAllObstacleHitShakes();
+    }
+
+    private void OnDestroy()
+    {
+        StopAllObstacleHitShakes();
+        waterChannelService?.Dispose();
+        waterChannelService = null;
+
+        if (ownsResolvedLevelInstance && resolvedLevel != null)
+            Destroy(resolvedLevel);
+
+        resolvedLevel = null;
+        ownsResolvedLevelInstance = false;
+    }
+
+    private IEnumerator Start()
+    {
+        // SafeAreaFitter applies after the first frame. Build the board after that so it
+        // appears directly in its final TopHUD/BottomBar-centered slot instead of shifting.
+        yield return new WaitForEndOfFrame();
+        Canvas.ForceUpdateCanvases();
+
+        resolvedLevel = ResolveLevelData();
+        ApplyResolvedLevelToConsumers(resolvedLevel);
+        pendingStampedBeneath.Clear();
+        pendingCoveringOverlays.Clear();
+        ConvertGrassFlowersToGrass(resolvedLevel); // must happen before stacking + SetLevelData
+        StampTubeCellsIntoLevel(resolvedLevel);    // must happen before SetLevelData
+        StampMagnetCellsIntoLevel(resolvedLevel);  // must happen before SetLevelData
+        channelCovers.Clear();
+        StampWaterChannelCellsIntoLevel(resolvedLevel);   // must happen before SetLevelData
+        StampChannelCoversIntoLevel(resolvedLevel);       // kanal üstündeki çim vb. → yığın katmanı
+        // Üst üste konan engeller (stackedObstacles + safes) TEK yığın sırasıyla (stackOrder) kurulur:
+        // Safe artık zorunlu en üst değil — sandık Safe'in üstüne de konabilir (Docs/ObstacleStack_Plan.md).
+        StampLayeredEntriesIntoLevel(resolvedLevel);   // must happen before SetLevelData (saves beneath content)
+
+        if (board == null || resolvedLevel == null || tilePrefab == null || iconLibrary == null || cellBgPrefab == null)
+        {
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogError("GridSpawner: Eksik referans var (board/resolvedLevel/tilePrefab/iconLibrary/cellBgPrefab).");
+            enabled = false;
+            yield break;
+        }
+        PlayLevelMusic(resolvedLevel);
+        var themeLibrary = Resources.Load<ChapterThemeLibrary>("ChapterThemeLibrary");
+        var boardTheme = themeLibrary != null ? themeLibrary.GetCurrentTheme() : null;
+        useLightBoardCells = boardTheme != null && boardTheme.lightBoardCells;
+        width = resolvedLevel.width;
+        height = resolvedLevel.height;
+
+        if (!useFixedTileSize)
+            AutoFitTileSizeToMask();
+
+        EnsureRoots();
+        ApplyPaddingToSpawnParent();
+        board.RebaseShakeHomeToCurrent();
+
+        // Event item'ları level boyunca staging'de bekler: kazanınca commit,
+        // kaybetmeyi kabul edince discard (LevelEndSimplePopupController yönetir).
+        ProgressEventService.Instance?.BeginLevelStaging();
+        LivesManager.ClaimPendingPurchaseThanks();
+        LevelAttemptStats.BeginAttempt(CurrentLevel.Global, resolvedLevel.moves);
+
+        board.Init(width, height, iconLibrary);
+        board.SetLevelData(resolvedLevel);
+        ScriptedTutorial.Begin(board, resolvedLevel, CurrentLevel.Global);
+        EnsureKeyGeneratorService();
+
+        // ObstacleStateService artık var (SetLevelData onu init etti). Stamp aşamasında toplanan
+        // beneath kayıtlarını şimdi push et — init store'ları temizledikten SONRA.
+        RegisterPendingStampedBeneath();
+        RegisterPendingCoveringOverlays();
+        RegisterPendingGrassFlowers();   // çim katmanları yerleştikten SONRA (+1 vuruş doğru katmana)
+
+        effectiveRandomPool = resolvedLevel.randomPool != null && resolvedLevel.randomPool.Length > 0
+            ? resolvedLevel.randomPool
+            : randomPool;
+
+        board.SetupFactory(tilePrefab, tilesRoot, tileSize, effectiveRandomPool, iconScale, fullCellIcons, iconSize);
+
+        BindBoardEvents();
+
+        // board init sonrası subscribe güvence
+        board.ObstacleVisualChanged -= HandleObstacleVisualChanged;
+        board.ObstacleVisualChanged += HandleObstacleVisualChanged;
+
+        BuildInitialGrid();
+        board.WarmTilePool();
+
+        // Board şekli ne olursa olsun açılışta düşüş olmasın: ilk yerleşimi runtime gravity'yle
+        // animasyonsuz oturt (ekran dışında, oyuncu görmeden).
+        board.SettleInitialBoard();
+
+        // Board taşlar dizili halde sağdan sola kayarak otursun (giriş animasyonu).
+        // Initial settle (varsa) ekran dışında çalışır; sonra board kayarak gelir.
+        StartCoroutine(board.PlayBoardEntrance(resolveInitialOnStart ? board.ResolveInitial() : null));
+    }
+
+    private void PlayLevelMusic(LevelData activeLevel)
+    {
+        if (MusicManager.Instance == null)
+        {
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogWarning("GridSpawner: MusicManager sahnede yok, level müziği çalınamadı.");
+            return;
+        }
+
+        if (MusicState.TryGetSelectedTrack(out var selectedClip, out var selectedVolume))
+        {
+            MusicManager.Instance.Play(selectedClip, selectedVolume);
+            return;
+        }
+
+        if (activeLevel == null)
+            return;
+
+        if (activeLevel.musicClip == null)
+            return;
+
+        MusicManager.Instance.Play(activeLevel.musicClip, activeLevel.musicVolume);
+    }
+    private void BindBoardEvents()
+    {
+        UnbindBoardEvents();
+        if (board == null) return;
+
+        board.ObstacleViewByOriginLookup    = GetObstacleViewImage;
+        board.OnObstacleStageChanged       += HandleObstacleStageChanged;
+        board.OnObstacleDestroyed           += HandleObstacleDestroyed;
+        board.OnCellUnlocked                += HandleCellUnlocked;
+        board.OnObstacleCreatedDynamic      += HandleObstacleCreatedDynamic;
+        board.OnObstacleViewRestored        += HandleObstacleCreatedDynamic;
+        board.OnChestOpened                 += HandleChestOpened;
+        board.OnChestColorRemoved           += HandleChestColorRemoved;
+        board.OnBatteryHit                  += HandleBatteryHit;
+        board.OnOverrideBatteryBoxHit       += HandleOverrideBatteryBoxHit;
+        board.OnRequestObbDetonationView    += HandleRequestObbDetonationView;
+        board.OnWardrobeOpened              += HandleWardrobeOpened;
+        board.OnWardrobeItemRemoved         += HandleWardrobeItemRemoved;
+    }
+
+    private void EnsureKeyGeneratorService()
+    {
+        if (keyGeneratorService != null)
+            return;
+
+        keyGeneratorService = GetComponent<KeyGeneratorService>()
+                              ?? GetComponentInChildren<KeyGeneratorService>(true)
+                              ?? FindFirstObjectByType<KeyGeneratorService>();
+
+        if (keyGeneratorService == null)
+            keyGeneratorService = gameObject.AddComponent<KeyGeneratorService>();
+
+        // Servis runtime'da eklendiği için editörde inspector'ı yok; makine görseli ayarlarını
+        // GridSpawner'dan (gerçek scene/prefab objesi) buraya pushluyoruz.
+        keyGeneratorService.ApplyMachineConfig(keyGeneratorMachineConfig);
+    }
+
+    private void UnbindBoardEvents()
+    {
+        if (board == null) return;
+
+        board.OnObstacleStageChanged       -= HandleObstacleStageChanged;
+        board.OnObstacleDestroyed          -= HandleObstacleDestroyed;
+        board.OnCellUnlocked               -= HandleCellUnlocked;
+        board.OnObstacleCreatedDynamic     -= HandleObstacleCreatedDynamic;
+        board.OnObstacleViewRestored       -= HandleObstacleCreatedDynamic;
+        board.OnChestOpened                -= HandleChestOpened;
+        board.OnChestColorRemoved          -= HandleChestColorRemoved;
+        board.OnBatteryHit                 -= HandleBatteryHit;
+        board.OnOverrideBatteryBoxHit      -= HandleOverrideBatteryBoxHit;
+        board.OnRequestObbDetonationView   -= HandleRequestObbDetonationView;
+        board.OnWardrobeOpened             -= HandleWardrobeOpened;
+        board.OnWardrobeItemRemoved        -= HandleWardrobeItemRemoved;
+    }
+
+    private void ApplyPaddingToSpawnParent()
+    {
+        if (spawnParent == null) return;
+
+        float gridW = width * tileSize;
+        float gridH = height * tileSize;
+        Vector2 slotSize = GetBoardSlotSize(gridW, gridH);
+
+        spawnParent.anchorMin = new Vector2(0.5f, 0.5f);
+        spawnParent.anchorMax = new Vector2(0.5f, 0.5f);
+        spawnParent.pivot = new Vector2(0.5f, 0.5f);
+        spawnParent.anchoredPosition = Vector2.zero;
+
+        spawnParent.sizeDelta = new Vector2(
+            slotSize.x + boardPadding * 2f,
+            slotSize.y + boardPadding * 2f
+        );
+        AlignBoardRootToLayoutSlot(spawnParent.sizeDelta);
+
+        Vector2 inner = GetBoardContentAnchoredPosition(gridW, gridH, slotSize);
+
+        ApplyCellAnchoredRootPosition(cellBgRoot, inner);
+        ApplyCellAnchoredRootPosition(mudOverlayRoot, inner);
+        ApplyCellAnchoredRootPosition(spreadingGelOverlayRoot, inner);   // jel de mud gibi top-left hizalı
+        ApplyCellAnchoredRootPosition(grassOverlayRoot, inner);   // grass PlaceInCell top-left hizası (mud ile aynı)
+        ApplyCellAnchoredRootPosition(gridLinesRoot, inner);
+        ApplyCellAnchoredRootPosition(tilesRoot, inner);
+        ApplyCellAnchoredRootPosition(obstaclesRoot, inner);
+        ApplyCellAnchoredRootPosition(underTilesObstaclesRoot, inner);
+        ApplyCellAnchoredRootPosition(overTilesObstaclesRoot, inner);
+        ApplyCellAnchoredRootPosition(tubeRoot, inner);
+        ApplyCellAnchoredRootPosition(magnetRoot, inner);
+        ApplyCellAnchoredRootPosition(safeRoot, inner);
+    }
+
+    private void AlignBoardRootToLayoutSlot(Vector2 contentSize)
+    {
+        if (IsBossDuelLevel() || spawnParent == null)
+            return;
+
+        var maskRoot = spawnParent.parent as RectTransform;
+        var boardRoot = maskRoot != null ? maskRoot.parent as RectTransform : null;
+        var boardArea = boardRoot != null ? boardRoot.parent as RectTransform : null;
+        if (boardRoot == null || boardArea == null)
+            return;
+
+        Vector2 frameSize = GetBoardFrameSize(contentSize);
+
+        boardRoot.sizeDelta = frameSize;
+        if (maskRoot != null && maskRoot.parent == boardRoot)
+            maskRoot.sizeDelta = frameSize;
+
+        if (boardArea.parent is RectTransform layoutParent)
+            LayoutRebuilder.ForceRebuildLayoutImmediate(layoutParent);
+        Canvas.ForceUpdateCanvases();
+
+        boardRoot.anchorMin = new Vector2(0.5f, 0.5f);
+        boardRoot.anchorMax = boardRoot.anchorMin;
+        boardRoot.pivot = new Vector2(0.5f, 0.5f);
+        boardRoot.anchoredPosition = Vector2.zero;
+        boardRoot.localRotation = Quaternion.identity;
+        boardRoot.localScale = Vector3.one;
+
+        if (TryGetBoardPlayAreaWorldCenter(boardArea, out Vector3 playAreaCenter))
+            boardRoot.position = playAreaCenter;
+    }
+
+    private bool TryGetBoardPlayAreaWorldCenter(RectTransform boardArea, out Vector3 center)
+    {
+        center = Vector3.zero;
+        if (boardArea == null)
+            return false;
+
+        cachedTopHudRect = ResolveCachedRect(cachedTopHudRect, boardArea, "TopHUD");
+        if (cachedBottomAreaRect == null)
+            cachedBottomAreaRect = FindRectInCanvas(boardArea, "BottomArea")
+                ?? FindRectInCanvas(boardArea, "BottomBar");
+
+        RectTransform topHud = cachedTopHudRect;
+        RectTransform bottomArea = cachedBottomAreaRect;
+        if (topHud == null || bottomArea == null)
+            return false;
+
+        float topHudBottomY = GetWorldBottomY(topHud);
+        float bottomAreaTopY = GetWorldTopY(bottomArea);
+        if (topHudBottomY <= bottomAreaTopY)
+            return false;
+
+        center = GetWorldCenter(boardArea);
+        center.y = (topHudBottomY + bottomAreaTopY) * 0.5f;
+        return true;
+    }
+
+    private static RectTransform ResolveCachedRect(RectTransform cached, RectTransform source, string rectName)
+    {
+        return cached != null ? cached : FindRectInCanvas(source, rectName);
+    }
+
+    private static RectTransform FindRectInCanvas(RectTransform source, string rectName)
+    {
+        if (source == null || string.IsNullOrEmpty(rectName))
+            return null;
+
+        var canvas = source.GetComponentInParent<Canvas>();
+        Transform root = canvas != null ? canvas.transform : source.root;
+        var rects = root.GetComponentsInChildren<RectTransform>(true);
+        for (int i = 0; i < rects.Length; i++)
+        {
+            var rect = rects[i];
+            if (rect != null && rect.name == rectName)
+                return rect;
+        }
+
+        return null;
+    }
+
+    private static Vector3 GetWorldCenter(RectTransform rect)
+    {
+        rect.GetWorldCorners(RectWorldCorners);
+        return (RectWorldCorners[0] + RectWorldCorners[2]) * 0.5f;
+    }
+
+    private static float GetWorldTopY(RectTransform rect)
+    {
+        rect.GetWorldCorners(RectWorldCorners);
+        return RectWorldCorners[1].y;
+    }
+
+    private static float GetWorldBottomY(RectTransform rect)
+    {
+        rect.GetWorldCorners(RectWorldCorners);
+        return RectWorldCorners[0].y;
+    }
+
+    private void ApplyCellAnchoredRootPosition(RectTransform root, Vector2 inner)
+    {
+        if (root == null || root == spawnParent)
+            return;
+
+        RectTransform boardRoot = spawnParent != null ? spawnParent : (RectTransform)transform;
+        bool isChildOfObstacleRoot = obstaclesRoot != null && root.parent == obstaclesRoot;
+        if (root.parent != boardRoot && !isChildOfObstacleRoot)
+            return;
+
+        root.anchorMin = new Vector2(0f, 1f);
+        root.anchorMax = new Vector2(0f, 1f);
+        root.pivot = new Vector2(0f, 1f);
+        root.anchoredPosition = isChildOfObstacleRoot ? Vector2.zero : inner;
+        root.localRotation = Quaternion.identity;
+        root.localScale = Vector3.one;
+    }
+
+    private Vector2 GetBoardSlotSize(float gridW, float gridH)
+    {
+        return new Vector2(gridW, gridH);
+    }
+
+    private bool IsBossDuelLevel()
+        => resolvedLevel != null && resolvedLevel.levelKind == LevelKind.BossDuel;
+
+    private Vector2 GetBoardContentAnchoredPosition()
+    {
+        float gridW = width * tileSize;
+        float gridH = height * tileSize;
+        return GetBoardContentAnchoredPosition(gridW, gridH, GetBoardSlotSize(gridW, gridH));
+    }
+
+    private Vector2 GetBoardContentAnchoredPosition(float gridW, float gridH, Vector2 slotSize)
+    {
+        Vector2 gridOffset = new Vector2((slotSize.x - gridW) * 0.5f, -(slotSize.y - gridH) * 0.5f);
+        return new Vector2(boardPadding, -boardPadding) + gridOffset;
+    }
+
+    private void AlignBorderRootToSpawnParent()
+    {
+        if (borderDrawer == null || borderDrawer.borderRoot == null || spawnParent == null)
+            return;
+
+        RectTransform br = borderDrawer.borderRoot;
+        EnsureBorderRootInBoardContent(br);
+
+        br.anchorMin = new Vector2(0.5f, 0.5f);
+        br.anchorMax = new Vector2(0.5f, 0.5f);
+        br.pivot = new Vector2(0.5f, 0.5f);
+
+        br.anchoredPosition = Vector2.zero;
+        br.sizeDelta = GetBoardFrameSize(spawnParent.rect.size);
+
+        br.localRotation = Quaternion.identity;
+        br.localScale = Vector3.one;
+    }
+
+    private void BuildInitialGrid()
+    {
+        StopAllObstacleHitShakes();
+        ClearChildren(cellBgRoot);
+        ClearChildren(gridLinesRoot);
+        ClearChildren(underTilesObstaclesRoot);
+        ClearChildren(overTilesObstaclesRoot);
+        ClearChildren(tilesRoot);
+        // Taş havuzu: teardown root çocuklarını Destroy ettiği için havuzda ölü referans kalabilir →
+        // taze level taze havuzla başlasın (pooling kapalıysa zaten no-op, havuz boş).
+        board?.ClearTilePool();
+        obstacleViewsByOrigin.Clear();
+        obstacleDefsByOrigin.Clear();
+        beneathViewsByCell.Clear();
+        _chestViews.Clear();
+        safeViewsByOrigin.Clear();
+        ancientSealViewsByOrigin.Clear();
+        ancientSealClickProxyByCell.Clear();
+        cellBgByIndex.Clear();
+        cellBgImageByIndex.Clear();
+        baseCellBgColorByIndex.Clear();
+        tubeClickProxyByCell.Clear();
+        safeClickProxyByCell.Clear();
+        // Lazer topları DrawObstacleImage'dan yeniden kaydolur; önceki level'ın topları/kafesleri bırakılsın.
+        if (board != null && board.TryGetComponent<LaserCannonService>(out var laserCannons))
+            laserCannons.Clear();
+        // Brandalı heykeller de DrawObstacleImage'dan yeniden kaydolur.
+        if (board != null && board.TryGetComponent<TarpStatueService>(out var tarpStatues))
+            tarpStatues.Clear();
+
+        bool[] blocked = BuildBlockedMap();
+
+        if (drawObstacles)
+        {
+            // Grass artık standart obstacle image yolu ile çiziliyor ama grassOverlayRoot'a
+            // (magnetin üstü, mask dışı). Root'u önce hazırla ki DrawObstacleVisuals grass'ı oraya koysun.
+            EnsureGrassRootSetup();
+            DrawObstacleVisuals();
+            DrawMudOverlays();
+            DrawSpreadingGelOverlays();
+            DrawWallObstacles();
+            DrawHamsterObstacles();
+            // DrawMudOverlays ClearAll() yapar; stamped-beneath mud'ları bundan SONRA çizilmeli.
+            // Aksi halde LevelP_00540'ta plastic/movable altındaki mud ilk açılışta silinir,
+            // movable ayrılınca restore path'i yeniden çizdiği için ancak sonradan görünür.
+            DrawStampedBeneathVisuals();   // overlay altındaki obstacle'ı arkada baştan göster
+            DrawCoveringOverlayVisuals();  // movable üstündeki grass örtüsü
+            DrawWaterLilies();
+            DrawGrassFlowerOverlays();     // çiçekli çimlerin menekşeleri (grass kökünde, en üstte)
+            DrawTubeObstacles();
+            DrawMagnetObstacles();
+            DrawWaterChannels();
+            DrawSafeObstacles();
+            DrawAncientSealObstacles();
+            // Grass root'unu border'ın üstüne taşı (worldPositionStays: hücre hizası korunur) +
+            // child layer'larını border'a eşle — yapraklar mask'a takılmaz, magnetin üstünde kalır.
+            LiftGrassRootAboveBorder();
+        }
+
+        for (int y = 0; y < height; y++)
+            for (int x = 0; x < width; x++)
+            {
+                int idx = resolvedLevel.Index(x, y);
+                bool isBlockedByObstacle = blocked[idx];
+
+                bool isEmpty = (resolvedLevel.cells != null && idx >= 0 && idx < resolvedLevel.cells.Length && resolvedLevel.cells[idx] == (int)CellType.Empty);
+                if (isEmpty)
+                {
+                    board.SetHole(x, y, true);
+                    continue;
+                }
+
+                // Oyun sırasında geçirgen yapılmış hücre (su kanalı deposu): delik gibi, taş konmaz, zemin çizilmez.
+                if (board.IsMaskHoleCell(x, y))
+                {
+                    board.SetHole(x, y, true);
+                    continue;
+                }
+
+                SpawnCellBg(x, y);
+                if (isBlockedByObstacle)
+                {
+                    // DEBUG: Mud bloklamamalı; bloklanıyorsa def'i veya stage flag'lerini logla.
+                    if ((ObstacleId)resolvedLevel.obstacles[idx] == ObstacleId.Mud)
+                        {
+                            if (GameDiagnostics.CriticalErrors)
+                                Debug.LogError($"[MudDebug] Cell ({x},{y}) Mud OLMASINA RAĞMEN blocked sayıldı → hole olarak işaretleniyor!");
+                        }
+                    board.SetHole(x, y, true);
+                    continue;
+                }
+
+                board.SetHole(x, y, false);
+            }
+
+        ApplyUnderTileCellBgTint();
+
+        DrawGridLines();
+
+        // İlk açılışta yalnızca gravity'nin GERÇEKTEN erişebildiği hücrelere taş koy.
+        // Normal kural: hole'lar geçirgen (taş hole'dan akar + yanından diagonal kayar),
+        // sadece gravity-blocklayan obstacle'lar (chest vb.) akışı durdurur. Erişilemeyen
+        // hücreler (örn. chest'in dikey gölgesindeki orta mud) boş bırakılır — chest
+        // kırılınca runtime cascade (CalculateCascades) o hücreleri kendi doldurur.
+        bool[,] gravityIsolated = new bool[width, height];
+        if (board.CascadeLogic != null)
+        {
+            bool[,] reachable = board.CascadeLogic.ComputeGravityReachableMask();
+            for (int y = 0; y < height; y++)
+                for (int x = 0; x < width; x++)
+                {
+                    if (board.Holes[x, y]) continue;
+                    if (!reachable[x, y])
+                        gravityIsolated[x, y] = true;
+                }
+        }
+
+        // Tip simülasyonu/oynanabilirlik garantisi de izole hücreleri hariç tutmalı,
+        // aksi hâlde garanti edilen tek hamle boş bırakılan bölgeye düşebilir.
+        var initialTypes = board.SimulateInitialTypes(gravityIsolated);
+
+        for (int y = 0; y < height; y++)
+            for (int x = 0; x < width; x++)
+            {
+                if (board.Holes[x, y]) continue;
+
+                // MovableObstacle: hücre bloklanmamış ama obstacle var → tile yerine obstacle tile spawn et
+                bool isMovableObstacle = board.ObstacleStateService != null
+                    && board.ObstacleStateService.IsMovableObstacleAt(x, y);
+
+                if (isMovableObstacle)
+                {
+                    SpawnMovableObstacleTile(x, y);
+                }
+                else
+                {
+                    // Gravity'nin erişemediği hücre: ilk açılışta taş koyma (boş mud kalır).
+                    // İSTİSNA: holdsTile obstacle (Oil) cell'inde bir taş TUTULUR. Oil görseli
+                    // artık cell-anchored (OilOverlayRenderer) olduğu için GÖRSEL açıdan tile
+                    // gerekmez; ama gameplay için altta bir taş bulunmalı — oil temizlenince o taş
+                    // açığa çıksın (yoksa boş hücre kalır). Tamamı oil olan sütunlar gravity-izole
+                    // sayıldığından spawn'da hiç taş almıyordu; holdsTile hücrelerini izole olsalar
+                    // da seed et (gravity-blocked oldukları için taş yerinde kalır).
+                    bool holdsTileCell = board.ObstacleStateService != null
+                        && board.ObstacleStateService.HoldsTileAt(x, y);
+
+                    int idx = resolvedLevel.Index(x, y);
+
+                    // Designer'ın elle koyduğu pinned special (emitter) / pinned tile'ı ÖNCE oku.
+                    // Bunlar blocker'larla çevrili gravity-izole bir hücrede olsa bile spawn
+                    // EDİLMELİ — yoksa (örn. alt köşe emitter'ları) hiç yerleşmezdi ("2 eklendi,
+                    // gerisi eklenmedi" bug'ı).
+                    TileSpecial pinnedSpecial = TileSpecial.None;
+                    if (resolvedLevel.pinnedSpecialTypes != null && idx < resolvedLevel.pinnedSpecialTypes.Length)
+                        pinnedSpecial = (TileSpecial)resolvedLevel.pinnedSpecialTypes[idx];
+
+                    int pinnedTileVal = 0;
+                    if (resolvedLevel.pinnedTileTypes != null && idx < resolvedLevel.pinnedTileTypes.Length)
+                        pinnedTileVal = resolvedLevel.pinnedTileTypes[idx];
+
+                    bool hasPinned = pinnedSpecial != TileSpecial.None || pinnedTileVal > 0;
+
+                    // Per-obstacle gölge dolgusu: hücrenin üstündeki kolondaki TÜM blocker'lar
+                    // fillsShadowBeneath=true ise (örn. Oil duvarı) gölge hücre de dolu başlar.
+                    // Chest gibi default-false blocker varsa eski davranış: boş kalır.
+                    bool fillShadowed = gravityIsolated[x, y] && !holdsTileCell && !hasPinned
+                        && ShadowCastersAllowFill(x, y);
+
+                    if (gravityIsolated[x, y] && !holdsTileCell && !hasPinned && !fillShadowed)
+                        continue;
+
+                    TileType tileType = initialTypes[x, y];
+
+                    // İzole hücre (holdsTile/pinned/fillShadowed) VEYA interaction-locked hücre (Grass/Oil)
+                    // SimulateInitialTypes'ta locked sayılıp default tip (hep aynı) bırakıldı; grass'la
+                    // kaplı board'da tüm taşlar aynı geliyordu. Rastgele tip ver — sol/üst komşuya bakarak
+                    // anlık 3'lü oluşturmadan (pinned tile type varsa aşağıda ezilir). Locked hücrede match
+                    // kilitli olduğu için "3'lü" görsel de sorun değil.
+                    bool interactionLocked = board.ObstacleStateService != null
+                        && board.ObstacleStateService.IsInteractionLockedAt(x, y);
+                    if (((gravityIsolated[x, y] && (holdsTileCell || hasPinned || fillShadowed)) || interactionLocked)
+                        && effectiveRandomPool != null && effectiveRandomPool.Length > 0)
+                        tileType = PickIsolatedRandomType(x, y, effectiveRandomPool);
+
+                    if (pinnedTileVal > 0)
+                        tileType = (TileType)(pinnedTileVal - 1);
+
+                    SpawnTile(x, y, tileType);
+
+                    if (pinnedSpecial != TileSpecial.None)
+                    {
+                        var view = board.GetTileViewAt(x, y);
+                        if (view != null)
+                        {
+                            if (pinnedSpecial == TileSpecial.SystemOverride)
+                                view.SetOverrideBaseType(tileType, deferVisualUpdate: true);
+                            view.SetSpecial(pinnedSpecial);
+                            board.SyncTileData(x, y);
+                        }
+                    }
+                }
+            }
+
+        // Tüm tile'lar spawn edildikten sonra sıralamayı toplu yenile
+        board.RefreshAllSortingOrders();
+        board.RefreshOilOverlays();
+
+        // ─── DEBUG: İlk yerleşim snapshot'u ───────────────────────────────
+        {
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine($"[INITIAL BOARD SNAPSHOT] ({width}x{height}) (H=Hole, ·=null, first letter of type)");
+            for (int dbgY = 0; dbgY < height; dbgY++)
+            {
+                sb.Append($"  row{dbgY}: ");
+                for (int dbgX = 0; dbgX < width; dbgX++)
+                {
+                    if (board.Holes[dbgX, dbgY]) sb.Append("[H ]");
+                    else { var td = board.GridData[dbgX, dbgY]; sb.Append(td == null ? "[· ]" : $"[{td.ToDebugString().PadRight(2)}]"); }
+                }
+                sb.AppendLine();
+            }
+        }
+        // ─── END DEBUG ─────────────────────────────────────────────────────
+
+        // Sıralama: CellBG < GridLines < underlays < Tiles < Static Obstacles < Line-Travel VFX
+        // Hücre içi grid çizgileri obstacle'ların altında kalır; dynamic board border ise
+        // BoardMask altında BoardContent'in üstünde tutulur.
+        // Animasyon VFX parent'ları (lineTravelSpawnParent, afterImageParent) spawnParent'ın
+        // direkt çocuğuysa son sıraya alınır — böylece combo animasyonları grid çizgilerinin
+        // üstünde render edilir.
+        if (cellBgRoot != null) cellBgRoot.SetAsFirstSibling();
+        // Mud overlay tile altında kalır; hücre içi grid çizgileri obstacle'ları bölmez.
+        if (mudOverlayRoot != null) mudOverlayRoot.SetSiblingIndex(1);
+        if (tilesRoot != null) tilesRoot.SetAsLastSibling();
+        if (gridLinesRoot != null) gridLinesRoot.SetSiblingIndex(1);
+        if (underTilesObstaclesRoot != null) underTilesObstaclesRoot.SetSiblingIndex(2);
+        if (mudOverlayRoot != null) mudOverlayRoot.SetSiblingIndex(3);
+        if (spreadingGelOverlayRoot != null) spreadingGelOverlayRoot.SetSiblingIndex(3);   // jel de taşların altında (mud bandı)
+        if (obstaclesRoot != null) obstaclesRoot.SetAsLastSibling();
+        // Grass örtüsü taşların ÜSTÜNDE görünmeli (görüntüyü örter) → tiles/obstacles'tan sonra son sıraya.
+        if (grassOverlayRoot != null) grassOverlayRoot.SetAsLastSibling();
+
+        BringForegroundRootsToFront();
+
+        // var drawer = GetComponent<DynamicBoardBorder>();
+        var drawer = borderDrawer;
+        if (drawer != null)
+        {
+            drawer.level = resolvedLevel;
+            drawer.tileSize = tileSize;
+            drawer.contentOffset = Vector2.zero;
+            drawer.includeObstaclesAsSolid = true;
+
+            AlignBorderRootToSpawnParent();
+
+            // board.Holes[x,y] → 1D array (hole olan hücreler border almaz)
+            bool[] holes = new bool[resolvedLevel.width * resolvedLevel.height];
+            for (int hy = 0; hy < resolvedLevel.height; hy++)
+                for (int hx = 0; hx < resolvedLevel.width; hx++)
+                    holes[resolvedLevel.Index(hx, hy)] = board.Holes[hx, hy];
+
+            drawer.Draw(blocked, holes);
+            PlaceBorderRootBelowTiles(drawer.borderRoot);
+
+            if (grassOverlayRoot != null)
+                grassOverlayRoot.SetAsLastSibling();
+            BringForegroundRootsToFront();
+        }
+
+        // Oil cell-anchored overlay'i tile'ların üstünde olmalı. Initial kurulumda yukarıda bir kez
+        // çiziliyor, fakat final sibling sıralaması tilesRoot'u sonradan öne alabiliyor; en sonda
+        // tekrar refresh etmek ilk frame'de oil'in taşların altında kalmasını engeller.
+        board.RefreshOilOverlays();
+    }
+
+    // Çizim sırası (alttan üste): CellBG < GridLines < BORDER < under-tile/mud < Taşlar < Obstacle'lar
+    // < special animasyonları (TilesTopOverlay). Border eskiden BoardContent'in KARDEŞİ olarak tüm
+    // içeriğin üstündeydi → spawn olan taş, kenardaki PulseCore dönmesi ve küçülen obstacle'lar
+    // çerçeve çizgisinin altında kalıyordu. Artık BoardContent'in çocuğu, hücre zemininin hemen üstü.
+    private void EnsureBorderRootInBoardContent(RectTransform borderRoot)
+    {
+        if (borderRoot == null || spawnParent == null || borderRoot.parent == spawnParent)
+            return;
+        // spawnParent maske köküne merkezli (anchoredPosition=0) → merkez hizası değişmez.
+        borderRoot.SetParent(spawnParent, worldPositionStays: false);
+        borderRoot.gameObject.layer = spawnParent.gameObject.layer;
+    }
+
+    private void PlaceBorderRootBelowTiles(RectTransform borderRoot)
+    {
+        if (borderRoot == null)
+            return;
+
+        EnsureBorderRootInBoardContent(borderRoot);
+        if (borderRoot.parent != spawnParent)
+            return;
+
+        // Zemin katmanlarının (CellBG + GridLines) hemen üstüne yerleştir.
+        int floorTop = -1;
+        if (cellBgRoot != null && cellBgRoot.parent == spawnParent)
+            floorTop = Mathf.Max(floorTop, cellBgRoot.GetSiblingIndex());
+        if (gridLinesRoot != null && gridLinesRoot.parent == spawnParent)
+            floorTop = Mathf.Max(floorTop, gridLinesRoot.GetSiblingIndex());
+
+        int current = borderRoot.GetSiblingIndex();
+        // Kendisi zeminin altındaysa SetSiblingIndex çıkarıldıktan sonraki indeksi kullanır.
+        borderRoot.SetSiblingIndex(current < floorTop ? floorTop : floorTop + 1);
+    }
+
+    private Vector2 GetBoardFrameSize(Vector2 contentSize)
+    {
+        float extraPadding = Mathf.Max(0f, GetRequiredBorderPadding() - boardPadding);
+        if (extraPadding <= 0f)
+            return contentSize;
+
+        return contentSize + new Vector2(extraPadding * 2f, extraPadding * 2f);
+    }
+
+    private float GetRequiredBorderPadding()
+    {
+        if (borderDrawer == null)
+            return boardPadding;
+
+        float borderThickness = Mathf.Max(1f, borderDrawer.borderThickness);
+        float spriteCoreRatio = Mathf.Clamp(borderDrawer.spriteCoreRatio, 0.1f, 1f);
+        float visibleBorderThickness = borderThickness * spriteCoreRatio;
+        float outsideCenterOffset = borderDrawer.keepBorderOutsideGrid
+            ? Mathf.Max(0f, borderDrawer.outsideGap) + visibleBorderThickness * 0.5f
+            : 0f;
+
+        return Mathf.Max(boardPadding, Mathf.Ceil(outsideCenterOffset + borderThickness * 0.5f));
+    }
+
+    private void BringForegroundRootsToFront()
+    {
+        // Magnet path overlay'i (glow yol + uç sprite'ları) taşların ve obstacle'ların ÜSTÜNDE
+        // render edilmeli; aksi halde tilesRoot.SetAsLastSibling magnet'i taşların arkasında bırakır
+        // ve soft glow yol tamamen kaybolur. magnetRoot AYRI bir child root olmalı (spawnParent'ın
+        // KENDİSİ değil) — root'un kendisini reorder etmek anlamsızdır, o yüzden o durumu atlıyoruz.
+        // (Inspector'da magnetRoot None bırakılırsa GridSpawner otomatik "MagnetObstacles" child'ı kurar.)
+        var magnetBoardRoot = spawnParent != null ? spawnParent : (RectTransform)transform;
+        if (magnetRoot != null && magnetRoot != magnetBoardRoot)
+            magnetRoot.SetAsLastSibling();
+
+        // Level editöründeki kat sırası: grass (örtü) magnet'in ÜSTÜNDE. Grass kökü border'ın
+        // parent'ına taşındığı için (border artık BoardContent içinde) magnet ile aynı parent'ta —
+        // magnet'i öne alınca grass'ı da hemen arkasından öne al, yoksa grass magnet'in altında kalır.
+        if (grassOverlayRoot != null && magnetRoot != null && grassOverlayRoot.parent == magnetRoot.parent)
+            grassOverlayRoot.SetAsLastSibling();
+
+        if (board != null)
+        {
+            // Special animasyonları (PulseCore dönmesi…) TÜM obstacle'ların, grass dahil, üstünde.
+            board.TilesTopOverlayAbove = grassOverlayRoot != null ? grassOverlayRoot : obstaclesRoot;
+            _ = board.TilesTopOverlayRoot;   // getter kendini anchor'ın hemen arkasına yerleştirir
+        }
+
+        if (board != null && spawnParent != null)
+        {
+            var lineTravelParent = board.LineTravelSpawnParent as RectTransform;
+            if (lineTravelParent != null && lineTravelParent.parent == spawnParent)
+                lineTravelParent.SetAsLastSibling();
+
+            if (board.lineTravelPlayer != null)
+            {
+                var afterImgParent = board.lineTravelPlayer.afterImageParent;
+                if (afterImgParent != null && afterImgParent.parent == spawnParent)
+                    afterImgParent.SetAsLastSibling();
+            }
+        }
+    }
+
+    // Gölgedeki boş hücre ilk dağıtımda doldurulsun mu? Hücrenin ÜSTÜNDEKİ kolonu tarar:
+    // en az bir gravity-blocker (blocksCells veya holdsTile) bulunmalı ve blocker'ların
+    // HEPSİ fillsShadowBeneath=true olmalı. Chest gibi default-false bir blocker varsa
+    // (veya kolonda hiç blocker yoksa — salt geometri gölgesi) eski davranış: boş kalır.
+    private bool ShadowCastersAllowFill(int x, int y)
+    {
+        var lib = resolvedLevel != null ? resolvedLevel.obstacleLibrary : null;
+        var obstacles = board != null ? board.ObstacleStateService : null;
+        if (lib == null || obstacles == null) return false;
+
+        bool anyBlocker = false;
+        for (int yy = y - 1; yy >= 0; yy--)
+        {
+            bool blocks = obstacles.IsCellBlocked(x, yy) || obstacles.HoldsTileAt(x, yy);
+            if (!blocks) continue;
+
+            anyBlocker = true;
+            var def = lib.Get(obstacles.GetObstacleIdAt(x, yy));
+            if (def == null || !def.fillsShadowBeneath)
+                return false;
+        }
+        return anyBlocker;
+    }
+
+    // İzole (gravity-gölgesi) hücre için rastgele tip: sol-sol ve üst-üst komşulara bakarak
+    // ilk dağıtımda anlık 3'lü match oluşturmayı önler. Spawn döngüsü satır-satır (üst→alt,
+    // sol→sağ) ilerlediğinden sol ve üst taşlar bu noktada zaten yerleşmiştir.
+    private TileType PickIsolatedRandomType(int x, int y, TileType[] pool)
+    {
+        TileType? banH = null, banV = null;
+
+        var l1 = board.GetTileViewAt(x - 1, y);
+        var l2 = board.GetTileViewAt(x - 2, y);
+        if (l1 != null && l2 != null && l1.GetTileType() == l2.GetTileType())
+            banH = l1.GetTileType();
+
+        var u1 = board.GetTileViewAt(x, y - 1);
+        var u2 = board.GetTileViewAt(x, y - 2);
+        if (u1 != null && u2 != null && u1.GetTileType() == u2.GetTileType())
+            banV = u1.GetTileType();
+
+        for (int attempt = 0; attempt < 12; attempt++)
+        {
+            var t = pool[UnityEngine.Random.Range(0, pool.Length)];
+            if ((banH == null || t != banH.Value) && (banV == null || t != banV.Value))
+                return t;
+        }
+        return pool[UnityEngine.Random.Range(0, pool.Length)];
+    }
+
+    private void SpawnMovableObstacleTile(int x, int y)
+    {
+        int idx = resolvedLevel.Index(x, y);
+        var obsId = (ObstacleId)resolvedLevel.obstacles[idx];
+        var def = resolvedLevel.obstacleLibrary?.Get(obsId);
+        if (def == null) return;
+
+        var tile = Instantiate(tilePrefab, tilesRoot);
+        var rt = tile.GetComponent<RectTransform>();
+        rt.anchorMin = new Vector2(0, 1);
+        rt.anchorMax = new Vector2(0, 1);
+        rt.pivot = new Vector2(0, 1);
+        rt.anchoredPosition = new Vector2(x * tileSize, -y * tileSize);
+        rt.sizeDelta = new Vector2(tileSize, tileSize);
+
+        var view = tile.GetComponent<TileView>();
+        if (view == null)
+        {
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogError("GridSpawner: TileView yok (movable obstacle).");
+            Destroy(tile);
+            return;
+        }
+
+        view.SetIconScale(iconScale);
+        view.SetIconSize(iconSize);
+        view.SetUseFullCellIcon(false);
+        view.SetMovableObstacleTile(true);
+        view.SetFullCellMovableSprite(def.fullCellSprite);
+        view.SetVisualLayout(TileView.TileVisualLayout.Centered);
+        view.ApplyTileSize(tileSize);
+
+        // GoldMoney: ince idle "para dönme" animasyonu (arada bir sağa-sola).
+        if (obsId == ObstacleId.GoldMoney && view.IconImage != null &&
+            view.IconImage.GetComponent<CoinIdleWobble>() == null)
+            view.IconImage.gameObject.AddComponent<CoinIdleWobble>();
+
+        // Cargo (işçi robot): süzülerek iniyor hissi — sürekli hafif tilt sway.
+        if (def.exitAtBottom && view.IconImage != null &&
+            view.IconImage.GetComponent<CargoFloatSway>() == null)
+            view.IconImage.gameObject.AddComponent<CargoFloatSway>();
+
+        board.RegisterTile(view, x, y);
+
+        Sprite obstacleSprite = def.GetPreviewSprite();
+        if (obstacleSprite != null)
+            view.SetMovableObstacleSprite(obstacleSprite);
+
+        var pool = effectiveRandomPool ?? randomPool;
+        var dummyType = pool != null && pool.Length > 0
+            ? pool[0]
+            : TileType.Gear;
+        view.SetType(dummyType);
+        board.SyncTileData(x, y);
+
+        // Bilardo topu: yuvarlanma dönüşü + sabit parlama katmanı (BoardController.EnsureMovableIdleFx).
+        if (obsId == ObstacleId.BilliardBall)
+            board.RefreshTileObstacleVisual(view);
+    }
+    private void ApplyResolvedLevelToConsumers(LevelData activeLevel)
+    {
+        if (activeLevel == null) return;
+
+        if (borderDrawer != null)
+            borderDrawer.SetLevelData(activeLevel);
+
+        var staticBorderDrawer = GetComponent<BoardBorderDrawer>();
+        if (staticBorderDrawer != null)
+            staticBorderDrawer.SetLevelData(activeLevel);
+    }
+
+
+    private LevelData ResolveLevelData()
+    {
+        var sourceLevel = RuntimeSimulationSession.IsActive
+            ? RuntimeSimulationSession.CurrentLevel
+            : levelRuntimeSelector != null ? levelRuntimeSelector.ResolveLevelData() : null;
+
+        sourceLevel ??= level;
+        var runtimeClone = CloneLevelDataForRuntime(sourceLevel);
+        ownsResolvedLevelInstance = runtimeClone != null;
+
+        // Merkezden (Firestore config/levels) ayarlanan hamle sayısı — kopyaya yazılır, asset kirlenmez;
+        // hamleyi okuyan her yer (HUD, yıldız, skor) aynı değeri görür.
+        if (runtimeClone != null && !RuntimeSimulationSession.IsActive)
+            runtimeClone.moves = LevelRemoteTuning.MovesFor(CurrentLevel.Global, runtimeClone.moves);
+
+        return runtimeClone;
+    }
+
+    // Runtime'da level üzerinde mutasyon yaparız (obstacle stamp'leme, hedef ilerlemesi vb.) ama
+    // kaynak ScriptableObject ASSET'i kirletmemeliyiz. Bu yüzden runtime için bağımsız bir kopya alırız.
+    //
+    // Unity'nin Instantiate'i serialization-tabanlı derin kopya yapar: TÜM serialized alanlar (diziler,
+    // [Serializable] sınıflar dahil) yeni instance olarak kopyalanır; UnityEngine.Object referansları
+    // (sprite, AudioClip, obstacleLibrary) paylaşılır. Bu sayede LevelData'ya eklenen YENİ alanlar
+    // otomatik kopyalanır — eski elle alan-alan kopyalamada her yeni alan sessizce düşüyordu
+    // (stackedObstacles bu tuzağa düşmüştü). Sayısal clamp'leri LevelData.OnValidate zaten uyguluyor.
+    private LevelData CloneLevelDataForRuntime(LevelData source)
+    {
+        if (source == null)
+            return null;
+
+        var clone = Instantiate(source);
+        clone.name = $"{source.name}_Runtime";
+        return clone;
+    }
+
+    // Yukarıdan dikey düşme veya diyagonal kayma ile ulaşılabilen hücreleri hesaplar.
+    // Algoritma CascadeLogic.TrySlide ile aynı köşe-geçirgenlik kurallarını kullanır:
+    // diyagonal için iki köşeden en az biri geçilebilir olmalı (!hole && !blocked).
+    // Tek top-to-bottom geçiş yeterlidir; her hücre yalnızca bir önceki satırdan beslenir.
+    private bool[,] ComputeReachable(bool[,] holes)
+    {
+        var reachable = new bool[width, height];
+
+        for (int y = 0; y < height; y++)
+        {
+            for (int x = 0; x < width; x++)
+            {
+                if (holes[x, y]) continue;
+
+                if (y == 0) { reachable[x, y] = true; continue; }
+
+                // Dikey düşme
+                if (reachable[x, y - 1]) { reachable[x, y] = true; continue; }
+
+                // Sol diyagonal: (x-1, y-1) → (x, y)
+                // köşeA=(fromX=x-1, toY=y), köşeB=(toX=x, fromY=y-1)
+                if (x > 0 && reachable[x - 1, y - 1])
+                {
+                    if (!holes[x - 1, y] || !holes[x, y - 1])
+                    { reachable[x, y] = true; continue; }
+                }
+
+                // Sağ diyagonal: (x+1, y-1) → (x, y)
+                // köşeA=(fromX=x+1, toY=y), köşeB=(toX=x, fromY=y-1)
+                if (x < width - 1 && reachable[x + 1, y - 1])
+                {
+                    if (!holes[x + 1, y] || !holes[x, y - 1])
+                        reachable[x, y] = true;
+                }
+            }
+        }
+
+        return reachable;
+    }
+
+    private bool[] BuildBlockedMap()
+    {
+        bool[] blocked = new bool[width * height];
+        if (board?.ObstacleStateService == null)
+            return blocked;
+
+        for (int y = 0; y < height; y++)
+            for (int x = 0; x < width; x++)
+                blocked[resolvedLevel.Index(x, y)] = board.ObstacleStateService.IsCellBlocked(x, y);
+
+        return blocked;
+    }
+
+    private void DrawObstacleVisuals()
+    {
+        if (resolvedLevel.obstacleLibrary == null || resolvedLevel.obstacles == null || resolvedLevel.obstacleOrigins == null) return;
+
+        for (int y = 0; y < height; y++)
+            for (int x = 0; x < width; x++)
+            {
+                int idx = resolvedLevel.Index(x, y);
+                var obsId = (ObstacleId)resolvedLevel.obstacles[idx];
+                if (obsId == ObstacleId.None) continue;
+                if (resolvedLevel.obstacleOrigins[idx] != idx) continue;
+
+                var def = resolvedLevel.obstacleLibrary.Get(obsId);
+                if (def == null) continue;
+
+                // ── MovableObstacle tile olarak yönetilir, ayrı visual çizilmez ──
+                if (def.IsMovableObstacle) continue;
+
+                // Mud kendi seamless renderer'ını kullanır, default sprite Image üretme.
+                if (obsId == ObstacleId.Mud) continue;
+                // SpreadingGel kendi overlay renderer'ını kullanır (mud gibi, tek-stage).
+                if (obsId == ObstacleId.SpreadingGel) continue;
+                // Wall kendi parça renderer'ını kullanır (WallObstacleService / WallPieceView).
+                if (obsId == ObstacleId.Wall || obsId == ObstacleId.MetalWall) continue;
+                // Oil kendi cell-anchored blob renderer'ını kullanır. Generic full-cell image
+                // üretirsek her hücrede iç bevel kalır ve tek sıvı alan gibi birleşmez.
+                if (obsId == ObstacleId.Oil) continue;
+                // Tube kendi TubeView renderer'ını kullanır.
+                if (obsId == ObstacleId.Tube) continue;
+                // Safe kendi SafeObstacleView renderer'ını kullanır.
+                if (obsId == ObstacleId.Safe || obsId == ObstacleId.AncientSeal) continue;
+                // Magnet kendi MagnetView renderer'ını (DrawMagnetObstacles) kullanır; buradaki
+                // def yalnızca goal ikonu içindir, board görselini üretmez (çift-çizim olmasın).
+                if (obsId == ObstacleId.Magnet) continue;
+                // Su kanalı kendi renderer'ını kullanır (WaterChannelService; şekil yoldaki komşulardan).
+                if (obsId == ObstacleId.WaterChannel) continue;
+
+                var image = DrawObstacleImage(def, x, y);
+                if (image != null)
+                {
+                    obstacleViewsByOrigin[idx] = image;
+                    obstacleDefsByOrigin[idx] = def;
+                }
+            }
+    }
+
+    private void DrawMudOverlays()
+    {
+        if (mudOverlayService == null) return;
+        if (resolvedLevel?.obstacles == null || resolvedLevel.obstacleOrigins == null) return;
+        if (mudOverlayRoot == null) return;
+
+        mudOverlayService.Init(board, width, height, tileSize);
+        mudOverlayService.ClearAll();
+
+        for (int y = 0; y < height; y++)
+        for (int x = 0; x < width; x++)
+        {
+            int idx = resolvedLevel.Index(x, y);
+            if ((ObstacleId)resolvedLevel.obstacles[idx] != ObstacleId.Mud) continue;
+            // Mud her cell için 1x1 — origin kendi cell'i olmalı.
+            if (resolvedLevel.obstacleOrigins[idx] != idx) continue;
+
+            // Empty cell (hole) üzerine mud çizme — irregular grid shape'leri için.
+            bool isEmpty = resolvedLevel.cells != null
+                && idx < resolvedLevel.cells.Length
+                && resolvedLevel.cells[idx] == (int)CellType.Empty;
+            if (isEmpty) continue;
+
+            SpawnMudOverlayCell(x, y);
+        }
+
+        // TÜM mud hücreleri kaydolduktan sonra tek yetkili exposure geçişi — artımlı komşu
+        // refresh'inin sınır hücrelerinde bıraktığı bayat bevel'i (izole "kutu") giderir.
+        mudOverlayService.RefreshAllBorders();
+    }
+
+    // Duvar parçaları: hücre aşamaları + kenar/köşe autotile görseli WallObstacleService'te (board'a
+    // runtime eklenir, sahne kurulumu yok). Level'da duvar yoksa servis varsa temizlenir.
+    private void DrawWallObstacles()
+    {
+        if (board == null || resolvedLevel?.obstacles == null || overTilesObstaclesRoot == null) return;
+
+        bool hasWall = false;
+        for (int i = 0; i < resolvedLevel.obstacles.Length && !hasWall; i++)
+            hasWall = WallKind.For((ObstacleId)resolvedLevel.obstacles[i]) != null;
+        // Örtünün (Grass vb.) altında kalan duvarlar da servisi kurmalı.
+        if (!hasWall && board.ObstacleStateService != null)
+        {
+            var buried = new HashSet<ObstacleId>();
+            board.ObstacleStateService.CollectStampedBeneathIds(buried);
+            foreach (var id in buried)
+                if (WallKind.For(id) != null) { hasWall = true; break; }
+        }
+
+        if (!hasWall)
+        {
+            if (board.TryGetComponent<WallObstacleService>(out var existing))
+                existing.Clear();
+            return;
+        }
+
+        WallObstacleService.Ensure(board).Build(resolvedLevel, overTilesObstaclesRoot, tileSize);
+    }
+
+    // Aç Hamster: tek hücre hareketli engel (TileView, kargo gibi); beslenme/kare değişimi/zıplama
+    // HamsterObstacleService'te (board'a runtime eklenir). Level'da hamster yoksa servis varsa temizlenir.
+    private void DrawHamsterObstacles()
+    {
+        if (board == null || resolvedLevel?.obstacles == null) return;
+
+        bool hasHamster = false;
+        for (int i = 0; i < resolvedLevel.obstacles.Length && !hasHamster; i++)
+            hasHamster = (ObstacleId)resolvedLevel.obstacles[i] == ObstacleId.Hamster;
+
+        if (!hasHamster)
+        {
+            if (board.TryGetComponent<HamsterObstacleService>(out var existing))
+                existing.Clear();
+            return;
+        }
+
+        HamsterObstacleService.Ensure(board).Build(resolvedLevel);
+    }
+
+    // Author'lanmış SpreadingGel seed hücrelerini çizer (runtime yayılma Faz 3'te SpreadingGelService).
+    private void DrawSpreadingGelOverlays()
+    {
+        if (spreadingGelOverlayService == null) return;
+        if (resolvedLevel?.obstacles == null || resolvedLevel.obstacleOrigins == null) return;
+        if (spreadingGelOverlayRoot == null) return;
+
+        // GEÇİCİ TEŞHİS: NRE'nin jel çiziminde olup olmadığını kesinleştirmek için try/catch.
+        try
+        {
+            spreadingGelOverlayService.Init(width, height, tileSize, spreadingGelOverlayRoot);
+            spreadingGelOverlayService.ClearAll();
+            board?.SetSpreadingGelService(spreadingGelOverlayService);   // swap/özel yayılma hook'ları için
+
+            for (int y = 0; y < height; y++)
+            for (int x = 0; x < width; x++)
+            {
+                int idx = resolvedLevel.Index(x, y);
+                if ((ObstacleId)resolvedLevel.obstacles[idx] != ObstacleId.SpreadingGel) continue;
+                if (resolvedLevel.obstacleOrigins[idx] != idx) continue;   // 1x1, origin kendi cell'i
+
+                // Empty cell (hole) üzerine jel çizme.
+                bool isEmpty = resolvedLevel.cells != null
+                    && idx < resolvedLevel.cells.Length
+                    && resolvedLevel.cells[idx] == (int)CellType.Empty;
+                if (isEmpty) continue;
+
+                spreadingGelOverlayService.AddGelImmediate(x, y);   // seed: dalga yok, hemen çiz
+            }
+
+            spreadingGelOverlayService.RefreshAllBorders();
+        }
+        catch (System.Exception e)
+        {
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogError($"[GelDraw] EXCEPTION jel çiziminde: {e}");
+        }
+    }
+
+    private void SpawnMudOverlayCell(int x, int y)
+    {
+        if (mudOverlayService == null || mudOverlayRoot == null || resolvedLevel == null)
+            return;
+
+        mudOverlayService.Init(board, width, height, tileSize);
+        // Örtü kırılıp çamur açığa çıktı (reveal) ya da yeni çizim: tam-örtü gizlemesi kalkar.
+        mudOverlayService.SetCellHidden(x, y, false);
+
+        int mudMaxHits = Mathf.Max(1, resolvedLevel.obstacleLibrary?.Get(ObstacleId.Mud)?.hits ?? 1);
+        int remaining = mudMaxHits;
+        var obstacleState = board != null ? board.ObstacleStateService : null;
+        if (obstacleState != null && !obstacleState.TryGetMudRemainingHitsAt(x, y, out remaining))
+            return;
+
+        if (mudOverlayService.TryGetView(x, y, out var existing) && existing != null)
+        {
+            mudOverlayService.UpdateCellHits(x, y, remaining, mudMaxHits);
+            return;
+        }
+
+        var go = new GameObject(
+            $"Mud_{x}_{y}",
+            typeof(RectTransform),
+            typeof(CanvasRenderer),
+            typeof(UnityEngine.UI.Image),
+            typeof(MudCellView));
+        go.transform.SetParent(mudOverlayRoot, false);
+
+        var view = go.GetComponent<MudCellView>();
+        view.Init(
+            mudOverlayService.BorderedMudSprite,
+            mudOverlayService.PlainMudTexture,
+            x, y,
+            width, height);
+        view.SetStage0InteriorStyle(
+            mudOverlayService.UseFlatStage0Interior,
+            mudOverlayService.FlatStage0InteriorColor,
+            mudOverlayService.Stage0InteriorOffsetPixels,
+            mudOverlayService.Stage0InteriorPerCell);
+        view.PlaceInCell(tileSize);
+
+        mudOverlayService.RegisterCell(x, y, view, remaining, mudMaxHits);
+    }
+
+    // ── Grass overlay ────────────────────────────────────────────────────────────
+
+    /// Grass, Oil gibi gerçek bir CellAnchoredOverlay obstacle'ıdır (obstacles[]'te kalır). Bu metod
+    /// yalnızca GÖRSELİ çizer: id==Grass hücrelerine GrassCellView doğurur; hasar/temizlenme
+    // Grass image'larının çizileceği root'u hazırlar (service/GrassCellView YOK — yalnız parent
+    // transform). DrawObstacleVisuals'tan ÖNCE çağrılır; grass obstacle image'ları buraya konur.
+    private void EnsureGrassRootSetup()
+    {
+        var rootParent = spawnParent != null ? spawnParent : (RectTransform)transform;
+        if (grassOverlayRoot == null)
+            grassOverlayRoot = GetOrCreateChildRoot(rootParent, "GrassOverlay");
+
+        if (waterLilyService != null) waterLilyService.enabled = false;
+        ClearChildren(grassOverlayRoot);
+        if (spawnParent != null && grassOverlayRoot.parent != spawnParent)
+            grassOverlayRoot.SetParent(spawnParent, worldPositionStays: false);
+
+        grassOverlayRoot.anchorMin = new Vector2(0f, 1f);
+        grassOverlayRoot.anchorMax = new Vector2(0f, 1f);
+        grassOverlayRoot.pivot     = new Vector2(0f, 1f);
+        grassOverlayRoot.anchoredPosition = GetBoardContentAnchoredPosition();
+        grassOverlayRoot.sizeDelta = Vector2.zero;
+        grassOverlayRoot.localScale = Vector3.one;
+        grassOverlayRoot.gameObject.layer = rootParent.gameObject.layer;   // culling'i önle
+    }
+
+    // Grass root'unu BoardMask DIŞINA + border'ın ÜSTÜNE taşır (worldPositionStays: hücre hizası
+    // korunur): kenar yaprakları mask'a takılıp kesilmez, magnet gibi üst renderer'lı obstacle'ların
+    // ÜSTÜNDE kalır. DrawObstacleVisuals + magnet/safe çizimlerinden SONRA çağrılır.
+    private void LiftGrassRootAboveBorder()
+    {
+        if (grassOverlayRoot == null) return;
+
+        var grassBorderRoot = borderDrawer != null ? borderDrawer.borderRoot : null;
+        if (grassBorderRoot == null || grassBorderRoot.parent == null) return;
+
+        grassOverlayRoot.SetParent(grassBorderRoot.parent, worldPositionStays: true);
+        grassOverlayRoot.SetAsLastSibling();
+
+        int lyr = grassBorderRoot.gameObject.layer;
+        grassOverlayRoot.gameObject.layer = lyr;
+        foreach (Transform ch in grassOverlayRoot)
+            ch.gameObject.layer = lyr;
+
+        // Menekşe kökünün torunları (hücre kökü, çiçek/gölge görselleri) da aynı layer'a geçsin.
+        if (grassFlowerOverlayService != null)
+            foreach (var t in grassFlowerOverlayService.GetComponentsInChildren<Transform>(true))
+                t.gameObject.layer = lyr;
+        if (waterLilyService != null)
+            foreach (var t in waterLilyService.GetComponentsInChildren<Transform>(true))
+                t.gameObject.layer = lyr;
+    }
+
+    /// ObstacleVisualChanged üzerinden GrassOverlayService'e akar.
+    private void DrawGrassOverlays()
+    {
+        if (resolvedLevel?.obstacles == null || resolvedLevel.obstacleOrigins == null) return;
+
+        // Root her hâlükârda EnsureRoots'ta otomatik kurulur; yine de garanti altına al.
+        if (grassOverlayRoot == null)
+        {
+            var rootParent = spawnParent != null ? spawnParent : (RectTransform)transform;
+            grassOverlayRoot = GetOrCreateChildRoot(rootParent, "GrassOverlay");
+            grassOverlayRoot.gameObject.layer = rootParent.gameObject.layer; // culling'i önle
+            grassOverlayRoot.anchoredPosition = GetBoardContentAnchoredPosition();
+            grassOverlayRoot.SetAsLastSibling();
+        }
+
+        // Service atanmamışsa: sahnede bul, yoksa root'a otomatik ekle (default ayarlar + library sprite).
+        if (grassOverlayService == null)
+            grassOverlayService = FindFirstObjectByType<GrassOverlayService>();
+        if (grassOverlayService == null)
+            grassOverlayService = grassOverlayRoot.gameObject.AddComponent<GrassOverlayService>();
+
+        grassOverlayService.Init(board, width, height, tileSize);
+
+        // Rebuild temizliği + spawnParent altında hizala (hücreler doğru koordinatta doğsun; geçen
+        // build'de grass root border'ın yanına/mask dışına taşınmış olabilir → önce geri al).
+        grassOverlayService.ClearAll();
+        ClearChildren(grassOverlayRoot);
+        if (spawnParent != null && grassOverlayRoot.parent != spawnParent)
+            grassOverlayRoot.SetParent(spawnParent, worldPositionStays: false);
+        grassOverlayRoot.anchorMin = new Vector2(0f, 1f);
+        grassOverlayRoot.anchorMax = new Vector2(0f, 1f);
+        grassOverlayRoot.pivot     = new Vector2(0f, 1f);
+        grassOverlayRoot.anchoredPosition = GetBoardContentAnchoredPosition();
+        grassOverlayRoot.sizeDelta = Vector2.zero;
+        grassOverlayRoot.localScale = Vector3.one;
+
+        // Temel görsel: ObstacleLibrary Grass def'inin stage sprite'ı. Service A/B doluysa checkerboard override.
+        var grassDef = resolvedLevel.obstacleLibrary != null
+            ? resolvedLevel.obstacleLibrary.Get(ObstacleId.Grass)
+            : null;
+        if (grassDef != null) grassOverlayService.SetBaseSprite(grassDef.GetPreviewSprite());
+
+        int grassMaxHits = grassDef != null ? Mathf.Max(1, grassDef.hits) : 1;
+        int spawned = 0;
+
+        for (int y = 0; y < height; y++)
+        for (int x = 0; x < width; x++)
+        {
+            int idx = resolvedLevel.Index(x, y);
+            if ((ObstacleId)resolvedLevel.obstacles[idx] != ObstacleId.Grass) continue;
+            // Grass 1x1 — origin kendi hücresi.
+            if (resolvedLevel.obstacleOrigins[idx] != idx) continue;
+
+            bool isEmpty = resolvedLevel.cells != null
+                && idx < resolvedLevel.cells.Length
+                && resolvedLevel.cells[idx] == (int)CellType.Empty;
+            if (isEmpty) continue;
+
+            SpawnGrassOverlayCell(x, y, grassMaxHits);
+            spawned++;
+        }
+
+        // Grass'ı BoardMask DIŞINA + border'ın ÜSTÜNE taşı (worldPositionStays: hücre hizası korunur):
+        // kenar yaprakları mask'a takılıp kesilmez, border çerçevesinin üstüne taşar.
+        var grassBorderRoot = borderDrawer != null ? borderDrawer.borderRoot : null;
+        if (grassBorderRoot != null && grassBorderRoot.parent != null)
+        {
+            grassOverlayRoot.SetParent(grassBorderRoot.parent, worldPositionStays: true);
+            grassOverlayRoot.SetAsLastSibling();
+            int lyr = grassBorderRoot.gameObject.layer;
+            grassOverlayRoot.gameObject.layer = lyr;
+            foreach (Transform ch in grassOverlayRoot) ch.gameObject.layer = lyr;
+        }
+    }
+
+    private void SpawnGrassOverlayCell(int x, int y, int maxHits)
+    {
+        if (grassOverlayService == null || grassOverlayRoot == null) return;
+        if (grassOverlayService.TryGetView(x, y, out var existing) && existing != null) return;
+
+        var go = new GameObject(
+            $"Grass_{x}_{y}",
+            typeof(RectTransform),
+            typeof(CanvasRenderer),
+            typeof(UnityEngine.UI.Image),
+            typeof(GrassCellView));
+        go.layer = grassOverlayRoot.gameObject.layer;   // Screen Space Camera culling'i önle
+        go.transform.SetParent(grassOverlayRoot, false);
+
+        int remaining = board?.ObstacleStateService?.GetRemainingHitsAt(x, y) ?? maxHits;
+        if (remaining <= 0) remaining = maxHits;
+
+        var view = go.GetComponent<GrassCellView>();
+        grassOverlayService.RegisterCell(x, y, view, remaining, maxHits);
+    }
+
+    private void StampTubeCellsIntoLevel(LevelData lvl)
+    {
+        if (lvl?.tubes == null || lvl.tubes.Length == 0) return;
+        if (lvl.obstacles == null || lvl.obstacleOrigins == null) return;
+
+        foreach (var entry in lvl.tubes)
+        {
+            int[] cells = TubeObstacleService.GetCellIndices(entry, lvl.width, lvl.height);
+            if (cells == null) continue;
+
+            foreach (int cellIdx in cells)
+            {
+                if (cellIdx < 0 || cellIdx >= lvl.obstacles.Length) continue;
+                // Altındaki authored içerik silinmez: yığında saklanır, tüp o hücreyi bırakınca açılır.
+                RememberAuthoredBeneath(lvl, cellIdx, entry.originCellIndex);
+                lvl.obstacles[cellIdx]       = (int)ObstacleId.Tube;
+                lvl.obstacleOrigins[cellIdx] = entry.originCellIndex;
+            }
+        }
+    }
+
+    private void StampMagnetCellsIntoLevel(LevelData lvl)
+    {
+        if (lvl?.magnets == null || lvl.magnets.Length == 0) return;
+        if (lvl.obstacles == null || lvl.obstacleOrigins == null) return;
+
+        foreach (var entry in lvl.magnets)
+        {
+            if (entry.pathCellIndices == null || entry.pathCellIndices.Length < 2) continue;
+            int origin = entry.pathCellIndices[0];
+
+            foreach (int cellIdx in entry.pathCellIndices)
+            {
+                if (cellIdx < 0 || cellIdx >= lvl.obstacles.Length) continue;
+                // Altındaki authored içerik silinmez: mıknatıs hücreyi bırakınca açılır.
+                RememberAuthoredBeneath(lvl, cellIdx, origin);
+                lvl.obstacles[cellIdx]       = (int)ObstacleId.Magnet;
+                lvl.obstacleOrigins[cellIdx] = origin;
+            }
+        }
+    }
+
+    // Su kanalı: ilk hücre DEPO (engel değil; WaterChannelService onu geçirgen deliğe çevirir), kalan yol hücreleri tek
+    // vuruşluk taş altı katman olarak damgalanır; HER hücre kendi origin'i (bir hücre açılınca kalanı kalır).
+    // v1: kanal/depo hücresinde başka engel yok (yazılan engel ezilir).
+    private void StampWaterChannelCellsIntoLevel(LevelData lvl)
+    {
+        if (lvl?.waterChannels == null || lvl.waterChannels.Length == 0) return;
+        if (lvl.obstacles == null || lvl.obstacleOrigins == null) return;
+
+        foreach (var entry in lvl.waterChannels)
+        {
+            if (!WaterChannelEntry.Validate(lvl, entry.pathCellIndices, out string error))
+            {
+                if (GameDiagnostics.CriticalErrors)
+                    Debug.LogWarning($"[WaterChannel] Geçersiz kanal atlandı: {error}");
+                continue;
+            }
+            var path = entry.pathCellIndices;
+            lvl.obstacles[path[0]] = (int)ObstacleId.None;
+            lvl.obstacleOrigins[path[0]] = -1;
+            for (int i = 1; i < path.Length; i++)
+            {
+                int cell = path[i];
+                // Kanal hücresine boyanmış 1x1 engel (çim vb.) silinmez: kanalın ÜSTÜNE yığın katmanı olur. Engel
+                // temizlenince altındaki kanal açığa çıkar ve normal kuralla (üstündeki taş eşleşince) açılır.
+                var authored = (ObstacleId)lvl.obstacles[cell];
+                bool cover = authored != ObstacleId.None && authored != ObstacleId.WaterChannel
+                    && lvl.obstacleOrigins[cell] == cell && IsSingleCellObstacle(lvl, authored);
+                if (authored != ObstacleId.None && authored != ObstacleId.WaterChannel && !cover
+                    && GameDiagnostics.CriticalErrors)
+                    Debug.LogWarning($"[WaterChannel] Hücre {cell}: çok hücreli engel kanal üstünde desteklenmiyor ({authored}), silindi.");
+
+                lvl.obstacles[cell] = (int)ObstacleId.WaterChannel;
+                lvl.obstacleOrigins[cell] = cell;
+                if (cover) channelCovers.Add((cell, authored));
+            }
+        }
+    }
+
+    // Kanal üstüne düşen 1x1 engeller: kanal damgası SONRASI, diğer yığın katmanlarından (stackedObstacles/safes)
+    // ÖNCE kurulur → sıra alttan üste: kanal → boyanmış engel → yazarın yığın katmanları.
+    private readonly List<(int cell, ObstacleId id)> channelCovers = new();
+
+    private void StampChannelCoversIntoLevel(LevelData lvl)
+    {
+        foreach (var (cell, id) in channelCovers)
+            StampStackedEntry(lvl, new StackedObstacleEntry { originCellIndex = cell, obstacleId = id });
+        channelCovers.Clear();
+    }
+
+    private static bool IsSingleCellObstacle(LevelData lvl, ObstacleId id)
+    {
+        var def = lvl.obstacleLibrary != null ? lvl.obstacleLibrary.Get(id) : null;
+        var foot = lvl.GetObstacleFootprint(id, 0, def);
+        return foot.x == 1 && foot.y == 1;
+    }
+
+    private void DrawWaterChannels()
+    {
+        waterChannelService?.Dispose();
+        waterChannelService = null;
+        if (resolvedLevel?.waterChannels == null || resolvedLevel.waterChannels.Length == 0) return;
+        waterChannelService = new WaterChannelService(board, resolvedLevel, underTilesObstaclesRoot, overTilesObstaclesRoot,
+            tileSize);
+    }
+
+    // Safe (kasa): NxN bölgeyi kaplar. Model (a): altındaki MEVCUT içeriği per-cell kaydeder
+    // (beneath store), sonra hücreleri Safe ile stamp eder. Kasa kırılınca içerik geri yüklenir.
+    private void StampSafeEntry(LevelData lvl, SafeEntry entry, SafeObstacleService safeService)
+    {
+        int W = lvl.width, H = lvl.height;
+        int origin = entry.originCellIndex;
+        if (origin < 0 || origin >= lvl.obstacles.Length) return;
+
+        int ox = origin % W, oy = origin / W;
+        int w = Mathf.Max(1, entry.width), h = Mathf.Max(1, entry.height);
+
+        for (int r = 0; r < h; r++)
+            for (int c = 0; c < w; c++)
+            {
+                int cx = ox + c, cy = oy + r;
+                if (cx >= W || cy >= H) continue;
+                int cell = cy * W + cx;
+                if (cell < 0 || cell >= lvl.obstacles.Length) continue;
+
+                // 1) Altındaki mevcut içeriği generic beneath store için işaretle (kayıt SetLevelData sonrası).
+                pendingStampedBeneath.Add((cell, (ObstacleId)lvl.obstacles[cell], lvl.obstacleOrigins[cell], origin));
+                // 2) Safe ile stamp et.
+                lvl.obstacles[cell]       = (int)ObstacleId.Safe;
+                lvl.obstacleOrigins[cell] = origin;
+            }
+
+        safeService?.RegisterSafe(
+            origin,
+            entry.redHits,
+            entry.yellowHits,
+            entry.greenHits,
+            entry.lockHitMode,
+            entry.firstLock,
+            entry.secondLock,
+            entry.thirdLock);
+    }
+
+    private void StampAncientSealEntry(LevelData lvl, AncientSealEntry entry)
+    {
+        int W = lvl.width, H = lvl.height;
+        int origin = entry.originCellIndex;
+        if (origin < 0 || origin >= lvl.obstacles.Length) return;
+
+        int ox = origin % W, oy = origin / W;
+        int w = Mathf.Max(1, entry.width), h = Mathf.Max(1, entry.height);
+
+        for (int r = 0; r < h; r++)
+            for (int c = 0; c < w; c++)
+            {
+                int cx = ox + c, cy = oy + r;
+                if (cx >= W || cy >= H) continue;
+                int cell = cy * W + cx;
+                if (cell < 0 || cell >= lvl.obstacles.Length) continue;
+
+                // 1) Altındaki mevcut içeriği generic beneath store için işaretle (kayıt SetLevelData sonrası).
+                pendingStampedBeneath.Add((cell, (ObstacleId)lvl.obstacles[cell], lvl.obstacleOrigins[cell], origin));
+                // 2) Mühür ile stamp et.
+                lvl.obstacles[cell]       = (int)ObstacleId.AncientSeal;
+                lvl.obstacleOrigins[cell] = origin;
+            }
+
+        ancientSealService?.RegisterSeal(entry);
+    }
+
+    // Tüp/mıknatıs gibi yol engellerinin altındaki authored içerik (Grass, Mud...) yığında saklanır.
+    // Boş hücre kaydedilmez (eski davranış korunur: yol bırakılınca hücre boşalır).
+    private void RememberAuthoredBeneath(LevelData lvl, int cell, int overOrigin)
+    {
+        var beneath = (ObstacleId)lvl.obstacles[cell];
+        if (beneath == ObstacleId.None || beneath == ObstacleId.Tube || beneath == ObstacleId.Magnet) return;
+        pendingStampedBeneath.Add((cell, beneath, lvl.obstacleOrigins[cell], overOrigin));
+    }
+
+    // Üst üste konan engellerin TEK kurulum yolu: stackedObstacles + safes, stackOrder'a göre alttan üste.
+    // Eşit stackOrder'da eski davranış korunur (önce stackedObstacles dizi sırasıyla, sonra kasalar) →
+    // stackOrder alanı olmayan eski level'lar aynen kurulur.
+    private void StampLayeredEntriesIntoLevel(LevelData lvl)
+    {
+        if (lvl == null || lvl.obstacles == null || lvl.obstacleOrigins == null) return;
+
+        if (ancientSealService == null && board != null)
+            ancientSealService = board.GetComponent<AncientSealService>() ?? board.gameObject.AddComponent<AncientSealService>();
+        ancientSealService?.Initialize(board, lvl.ancientSeals);
+        bool hasSeals = lvl.ancientSeals != null && lvl.ancientSeals.Length > 0;
+        bool hasSafes = lvl.safes != null && lvl.safes.Length > 0;
+        bool hasStacks = lvl.stackedObstacles != null && lvl.stackedObstacles.Length > 0;
+        if (!hasSafes && !hasStacks && !hasSeals) return;
+
+        SafeObstacleService safeService = null;
+        if (hasSafes)
+        {
+            safeObstacleService = FindFirstObjectByType<SafeObstacleService>();
+            safeService = safeObstacleService;
+            safeService?.Clear();
+        }
+
+        var order = new List<(int stackOrder, int kind, int index)>();
+        if (hasStacks)
+            for (int i = 0; i < lvl.stackedObstacles.Length; i++)
+                order.Add((lvl.stackedObstacles[i].stackOrder, 0, i));
+        if (hasSafes)
+            for (int i = 0; i < lvl.safes.Length; i++)
+                order.Add((lvl.safes[i].stackOrder, 1, i));
+        if (hasSeals)
+            for (int i = 0; i < lvl.ancientSeals.Length; i++)
+                order.Add((lvl.ancientSeals[i].stackOrder, 2, i));
+        order.Sort((a, b) => a.stackOrder != b.stackOrder ? a.stackOrder.CompareTo(b.stackOrder)
+                           : a.kind != b.kind ? a.kind.CompareTo(b.kind)
+                           : a.index.CompareTo(b.index));
+
+        foreach (var o in order)
+        {
+            if (o.kind == 0) StampStackedEntry(lvl, lvl.stackedObstacles[o.index]);
+            else if (o.kind == 1) StampSafeEntry(lvl, lvl.safes[o.index], safeService);
+            else StampAncientSealEntry(lvl, lvl.ancientSeals[o.index]);
+        }
+    }
+
+    // Kapak kırılıp altındaki jel açığa çıktı: hücre zaten serviste olabilir (seed) ya da yeni
+    // eklenir; her iki durumda da MÜHÜR kalkar → artık yayılmaya kaynak olur.
+    private void RevealGelCell(int x, int y)
+    {
+        if (spreadingGelOverlayService == null) return;
+        spreadingGelOverlayService.AddGel(x, y);
+        spreadingGelOverlayService.UnsealCell(x, y);
+    }
+
+    // Generic stacking: bir stackedObstacles[] entry'sini obstacles[]'a stamp eder; altındaki authored
+    // içeriği (Mud, Stone...) beneath store için işaretler. Safe ile aynı 'beneath' akışı, her obstacle
+    // için. SetLevelData ÖNCESİ çağrılır; beneath kaydı RegisterPendingStampedBeneath ile SONRA yapılır.
+    private void StampStackedEntry(LevelData lvl, StackedObstacleEntry entry)
+    {
+        var overId = entry.obstacleId;
+        if (overId == ObstacleId.None) return;
+
+        int W = lvl.width, H = lvl.height;
+        int origin = entry.originCellIndex;
+        if (origin < 0 || origin >= lvl.obstacles.Length) return;
+
+        var lib = lvl.obstacleLibrary;
+        var def = lib != null ? lib.Get(overId) : null;
+        var foot = lvl.GetObstacleFootprint(overId, origin, def);
+        int w = foot.x, h = foot.y;
+        int ox = origin % W, oy = origin / W;
+
+        for (int r = 0; r < h; r++)
+            for (int c = 0; c < w; c++)
+            {
+                int cx = ox + c, cy = oy + r;
+                if (cx >= W || cy >= H) continue;
+                int cell = cy * W + cx;
+                if (cell < 0 || cell >= lvl.obstacles.Length) continue;
+
+                // Grass → movable'ın üstü: movable birincil kalır, grass örtü yuvasına (bkz. pendingCoveringOverlays).
+                if (w == 1 && h == 1 && overId == ObstacleId.Grass && IsMovableContent(lvl, cell))
+                {
+                    if (!HasPendingCoveringOverlay(cell))
+                        pendingCoveringOverlays.Add((cell, overId));
+                    continue;
+                }
+
+                // Örtülü movable'ın üstüne başka bir katman geliyor: örtüyü normal yığın katmanına
+                // çevir (eski kurulum), sonra yeni katmanı onun üstüne stamp et.
+                MaterializePendingCoveringOverlay(lvl, cell);
+
+                // 1) Altındaki authored içeriği beneath store için işaretle.
+                pendingStampedBeneath.Add((cell, (ObstacleId)lvl.obstacles[cell], lvl.obstacleOrigins[cell], origin));
+                // 2) Üstteki obstacle ile stamp et.
+                lvl.obstacles[cell]       = (int)overId;
+                lvl.obstacleOrigins[cell] = origin;
+            }
+    }
+
+    private static bool IsMovableContent(LevelData lvl, int cell)
+    {
+        var id = (ObstacleId)lvl.obstacles[cell];
+        if (id == ObstacleId.None || lvl.obstacleOrigins[cell] != cell) return false;   // movable'lar 1x1
+        var def = lvl.obstacleLibrary != null ? lvl.obstacleLibrary.Get(id) : null;
+        return def != null && def.IsMovableObstacle;
+    }
+
+    private bool HasPendingCoveringOverlay(int cell)
+    {
+        for (int i = 0; i < pendingCoveringOverlays.Count; i++)
+            if (pendingCoveringOverlays[i].cell == cell) return true;
+        return false;
+    }
+
+    private void MaterializePendingCoveringOverlay(LevelData lvl, int cell)
+    {
+        for (int i = pendingCoveringOverlays.Count - 1; i >= 0; i--)
+        {
+            if (pendingCoveringOverlays[i].cell != cell) continue;
+            pendingStampedBeneath.Add((cell, (ObstacleId)lvl.obstacles[cell], lvl.obstacleOrigins[cell], cell));
+            lvl.obstacles[cell] = (int)pendingCoveringOverlays[i].overlayId;
+            lvl.obstacleOrigins[cell] = cell;
+            pendingCoveringOverlays.RemoveAt(i);
+        }
+    }
+
+    // Çiçekli çim: level verisinde GrassFlower id'siyle durur (editör paleti, hedef). Runtime'da hücre
+    // düz Grass olur — çimin bütün kuralları (kilit, komşu aşınma, yığın, movable üstü örtü) aynen
+    // çalışır; çiçek katmanı yalnızca +1 vuruş + görseldir (RegisterPendingGrassFlowers).
+    private void ConvertGrassFlowersToGrass(LevelData lvl)
+    {
+        pendingGrassFlowerCells.Clear();
+        pendingWaterLilyCells.Clear();
+        if (lvl == null || lvl.obstacles == null || lvl.obstacleOrigins == null) return;
+
+        for (int i = 0; i < lvl.obstacles.Length && i < lvl.obstacleOrigins.Length; i++)
+        {
+            var id = (ObstacleId)lvl.obstacles[i];
+            if (id != ObstacleId.GrassFlower && id != ObstacleId.GrassWaterLily) continue;
+            lvl.obstacles[i] = (int)ObstacleId.Grass;
+            lvl.obstacleOrigins[i] = i;
+            (id == ObstacleId.GrassWaterLily ? pendingWaterLilyCells : pendingGrassFlowerCells).Add(i);
+        }
+
+        if (lvl.stackedObstacles == null) return;
+        for (int i = 0; i < lvl.stackedObstacles.Length; i++)
+        {
+            var entry = lvl.stackedObstacles[i];
+            var id = entry.obstacleId;
+            if (id != ObstacleId.GrassFlower && id != ObstacleId.GrassWaterLily) continue;
+            entry.obstacleId = ObstacleId.Grass;
+            lvl.stackedObstacles[i] = entry;
+            int cell = entry.originCellIndex;
+            var pending = id == ObstacleId.GrassWaterLily ? pendingWaterLilyCells : pendingGrassFlowerCells;
+            if (cell >= 0 && cell < lvl.obstacles.Length && !pending.Contains(cell)) pending.Add(cell);
+        }
+    }
+
+    private void RegisterPendingGrassFlowers()
+    {
+        var state = board != null ? board.ObstacleStateService : null;
+        if (state != null)
+            foreach (int cell in pendingGrassFlowerCells)
+                state.RegisterGrassFlowerCell(cell);
+        if (state != null)
+            foreach (int cell in pendingWaterLilyCells) state.RegisterWaterLilyCell(cell);
+        pendingWaterLilyCells.Clear();
+        pendingGrassFlowerCells.Clear();
+    }
+
+    private void DrawWaterLilies()
+    {
+        waterLilyService = null;
+        if (grassOverlayRoot == null || board == null || board.ObstacleStateService == null) return;
+        var cells = new List<int>();
+        board.ObstacleStateService.CollectWaterLilyCells(cells);
+        if (cells.Count == 0) return;
+        var root = CreateChildRoot(grassOverlayRoot, "GrassWaterLilyOverlay");
+        root.gameObject.layer = grassOverlayRoot.gameObject.layer;
+        waterLilyService = root.gameObject.AddComponent<GrassWaterLilyService>();
+        waterLilyService.Init(board, cells, tileSize);
+        foreach (int cell in cells)
+            if (obstacleViewsByOrigin.TryGetValue(cell, out var grass) && grass != null
+                && IsTrackedObstacleViewFor(cell, ObstacleId.Grass))
+                waterLilyService.BindGrassVisual(cell, grass.rectTransform);
+    }
+
+    // Menekşeler grass kökünün çocuğu olan ayrı bir kökte çizilir: grass ile birlikte border'ın üstüne
+    // taşınır, kendi içinde hep son sırada kalır (komşu çimin taşan yaprakları çiçeği örtmez).
+    private void DrawGrassFlowerOverlays()
+    {
+        grassFlowerOverlayService = null;
+        if (grassOverlayRoot == null || board == null || board.ObstacleStateService == null) return;
+
+        var flowerRoot = CreateChildRoot(grassOverlayRoot, "GrassFlowerOverlay");
+        flowerRoot.gameObject.layer = grassOverlayRoot.gameObject.layer;
+        flowerRoot.SetAsLastSibling();
+
+        grassFlowerOverlayService = flowerRoot.gameObject.AddComponent<GrassFlowerOverlayService>();
+        grassFlowerOverlayService.Init(board, width, tileSize);
+        grassFlowerOverlayService.SpawnAll();
+    }
+
+    // SetLevelData SONRASI (state store'ları temizlendikten sonra): örtüleri movable üstü yuvaya yaz.
+    private void RegisterPendingCoveringOverlays()
+    {
+        coveringOverlayVisuals.Clear();
+        var state = board != null ? board.ObstacleStateService : null;
+        if (state == null) { pendingCoveringOverlays.Clear(); return; }
+
+        foreach (var p in pendingCoveringOverlays)
+            if (state.RegisterCoveringOverlayOnMovable(p.cell, p.overlayId))
+                coveringOverlayVisuals.Add(p);
+        pendingCoveringOverlays.Clear();
+    }
+
+    // Örtü görselini hücrenin standart obstacle view'ı olarak çizer (grass kökü, taşın üstünde).
+    // Movable'ın kendi view'ı TileView olduğu için obstacleViewsByOrigin[cell] boştur → çakışma yok;
+    // örtü tükenince TryConsumeCoveringOverlayHit'in cleared değişikliği bu view'ı siler.
+    private void DrawCoveringOverlayVisuals()
+    {
+        if (coveringOverlayVisuals.Count == 0 || resolvedLevel?.obstacleLibrary == null) return;
+
+        foreach (var p in coveringOverlayVisuals)
+        {
+            var def = resolvedLevel.obstacleLibrary.Get(p.overlayId);
+            if (def == null || obstacleViewsByOrigin.ContainsKey(p.cell)) continue;
+
+            int savedObs = resolvedLevel.obstacles[p.cell];
+            int savedOrg = resolvedLevel.obstacleOrigins[p.cell];
+            resolvedLevel.obstacles[p.cell] = (int)p.overlayId;
+            resolvedLevel.obstacleOrigins[p.cell] = p.cell;
+
+            var image = DrawObstacleImage(def, p.cell % resolvedLevel.width, p.cell / resolvedLevel.width);
+
+            resolvedLevel.obstacles[p.cell] = savedObs;
+            resolvedLevel.obstacleOrigins[p.cell] = savedOrg;
+
+            if (image != null)
+            {
+                obstacleViewsByOrigin[p.cell] = image;
+                obstacleDefsByOrigin[p.cell] = def;
+            }
+        }
+    }
+
+    // Stamp aşamasında toplanan beneath kayıtlarını ObstacleStateService'e push eder.
+    // SetLevelData (ObstacleStateService init + store clear) SONRASINDA çağrılmalıdır.
+    private void RegisterPendingStampedBeneath()
+    {
+        if (pendingStampedBeneath.Count == 0) return;
+
+        var state = board != null ? board.ObstacleStateService : null;
+        if (state != null)
+            foreach (var p in pendingStampedBeneath)
+                state.RegisterStampedBeneath(p.cell, p.beneathId, p.beneathOrigin, p.overOrigin);
+
+        // Beneath view'larını baştan çizebilmek için kalıcı kopya (pendingStampedBeneath temizlenir).
+        stampedBeneathVisuals.Clear();
+        stampedBeneathVisuals.AddRange(pendingStampedBeneath);
+
+        pendingStampedBeneath.Clear();
+    }
+
+    // Overlay altındaki obstacle'ı overlay'in ARKASINDA baştan çizer. Yalnızca origin hücresinde,
+    // yalnızca "çizilebilir over-tile" beneath'ler için (movable/Mud/Oil/Safe/None hariç — bunların
+    // ayrı renderer'ları var). Overlay kırılınca HandleObstacleCreatedDynamic bu view'ı promote eder.
+    private void DrawStampedBeneathVisuals()
+    {
+        if (stampedBeneathVisuals.Count == 0 || resolvedLevel?.obstacleLibrary == null) return;
+
+        bool mudTrace = board != null && board.BoardFlowTraceEnabled;
+        int mudTotal = 0, mudSpawned = 0;
+        int gelSpawned = 0;
+
+        var topVisualIndexByCell = new Dictionary<int, int>();
+        for (int i = 0; i < stampedBeneathVisuals.Count; i++)
+            topVisualIndexByCell[stampedBeneathVisuals[i].cell] = i;
+
+        for (int i = 0; i < stampedBeneathVisuals.Count; i++)
+        {
+            var p = stampedBeneathVisuals[i];
+            bool isMud = p.beneathId == ObstacleId.Mud;
+            if (isMud) mudTotal++;
+
+            if (!topVisualIndexByCell.TryGetValue(p.cell, out int topIndex) || topIndex != i)
+            {
+                if (mudTrace && isMud) {}
+                continue;
+            }
+
+            if (p.beneathId == ObstacleId.None) continue;
+            if (p.cell != p.beneathOrigin)
+            {
+                if (mudTrace && isMud) {}
+                continue;              // beneath'i yalnızca origin'inde çiz
+            }
+            if (beneathViewsByCell.ContainsKey(p.cell))
+            {
+                if (mudTrace && isMud) {}
+                continue;
+            }
+
+            // Safe VE OverrideBatteryBox overlay'i: altındaki beneath'i BAŞTAN gösterme (kenardan
+            // sızmasın). Overlay kırılınca beneath normal reveal yoluyla (ReinitRestoredBeneathOrigin
+            // → RequestObstacleViewCreate) taze çizilir. Diğer stacked overlay'ler (Chest/Wardrobe...)
+            // beneath'i eskisi gibi baştan gösterir.
+            var overlayHere = (ObstacleId)resolvedLevel.obstacles[p.cell];
+            if (overlayHere == ObstacleId.Safe || overlayHere == ObstacleId.AncientSeal || overlayHere == ObstacleId.OverrideBatteryBox)
+            {
+                if (mudTrace && isMud) {}
+                continue;
+            }
+
+            int bx = p.cell % resolvedLevel.width;
+            int by = p.cell / resolvedLevel.width;
+
+            // Hücreyi TAM kapatan örtü (kare form: taş, sandık…) altındaki zemin örtüsü görünmez — yuvarlak köşelerinden
+            // sızmasın. Yuvarlak/boşluklu örtülerin (mıknatıs, roket sepeti…) altındaki ise kenar boşluklarından görünür.
+            var coverDef = resolvedLevel.obstacleLibrary.Get(overlayHere);
+            bool coverHidesGround = coverDef != null && coverDef.coversCellFully;
+
+            // Örtülü mud'ı DÜZ kare (MudUnder) yerine GERÇEK bir seamless MudOverlay hücresi olarak
+            // kaydet — sanki üstünde cover yokmuş gibi. Böylece bevel + köşe + komşu-birleşim + mask
+            // (grid çizgisi kapatma) hepsi normal mud gibi çalışır; üstteki cover (EnergyContainer,
+            // Chest...) zaten üzerine çizilir. Alt-resmi GİZLEYEN cover'lar (Safe/OverrideBatteryBox)
+            // bu döngüye girmeden yukarıda elendiği için buraya yalnız "beneath'i gösteren" cover'lar
+            // altındaki mud düşer. RefreshAllBorders döngü sonunda bir kez çağrılır.
+            if (p.beneathId == ObstacleId.Mud)
+            {
+                SpawnMudOverlayCell(bx, by);
+                if (coverHidesGround) mudOverlayService.SetCellHidden(bx, by, true);
+                mudSpawned++;
+                continue;
+            }
+
+            // SpreadingGel de mud gibi KENDİ overlay renderer'ını kullanır: generic beneath image
+            // (düz tek kare, bevel/komşu birleşimi yok) yerine jel servisine kaydet. Stamp aşaması
+            // obstacles[]'ı üstteki overlay ile ezdiği için DrawSpreadingGelOverlays bu seed'leri
+            // göremiyordu → jel ne birleşiyor ne de yayılıyordu (IsGelAt her yerde false).
+            if (p.beneathId == ObstacleId.SpreadingGel)
+            {
+                if (spreadingGelOverlayService != null)
+                {
+                    if (spreadingGelOverlayService.AddGelImmediate(bx, by))
+                        gelSpawned++;
+                    // Kapak altındaki jel MÜHÜRLÜ: kapak kırılana kadar komşusuna yayılmaz (tam kapatan kapakta görünmez de).
+                    spreadingGelOverlayService.SealCell(bx, by, hideVisual: coverHidesGround);
+                }
+                continue;
+            }
+
+            // Diğer ayrı renderer'lı / özel tipler v1'de kapsam dışı. Grass da pre-draw EDİLMEZ:
+            // grassOverlayRoot üstte çizdiğinden beneath grass cover'ın üstüne sızardı. Cover
+            // kırılınca grass reveal dinamik yolla (HandleObstacleCreatedDynamic) taze çizilir.
+            // Duvar parçaları WallObstacleService'te (örtü altındakiler dahil) çizilir.
+            if (p.beneathId == ObstacleId.Oil ||
+                p.beneathId == ObstacleId.Safe || p.beneathId == ObstacleId.AncientSeal || p.beneathId == ObstacleId.Tube ||
+                p.beneathId == ObstacleId.Magnet || p.beneathId == ObstacleId.Grass ||
+                WallKind.For(p.beneathId) != null)
+                continue;
+
+            var def = resolvedLevel.obstacleLibrary.Get(p.beneathId);
+            if (def == null || def.IsMovableObstacle) continue;
+            // Su birikintisi vb. zemin katmanı tam kapatan örtünün altında çizilmez; örtü kırılınca reveal çizer (Safe gibi).
+            if (coverHidesGround && def.IsUnderTileBehavior) continue;
+
+            // DrawObstacleImage level state'ini (obstacles/origins) beneath'e göre okusun diye
+            // hücreyi geçici olarak beneath'e çevir, çiz, sonra overlay'e geri al.
+            int savedObs = resolvedLevel.obstacles[p.cell];
+            int savedOrg = resolvedLevel.obstacleOrigins[p.cell];
+            resolvedLevel.obstacles[p.cell] = (int)p.beneathId;
+            resolvedLevel.obstacleOrigins[p.cell] = p.beneathOrigin;
+
+            int beneathRemaining = board?.ObstacleStateService != null
+                ? board.ObstacleStateService.ResolveInitialColorCrateHits(p.beneathId, p.beneathOrigin, Mathf.Max(1, def.hits)) : 0;
+            Image beneathImage = DrawObstacleImage(def, bx, by, beneathRemaining);
+
+            resolvedLevel.obstacles[p.cell] = savedObs;
+            resolvedLevel.obstacleOrigins[p.cell] = savedOrg;
+
+            if (beneathImage != null)
+            {
+                // Overlay'in arkasına gönder (ayni root'ta ilk sibling → en altta çizilir).
+                beneathImage.rectTransform.SetAsFirstSibling();
+                beneathImage.raycastTarget = false;   // tıklama overlay'e gitsin
+                beneathViewsByCell[p.cell] = beneathImage;
+            }
+        }
+
+        if (mudTrace)
+            {}
+
+        // Örtülü mud hücreleri DrawMudOverlays'in RefreshAllBorders'ından SONRA eklendi → görünür
+        // mud komşuları onları görsün + yeni hücreler bevel/köşe alsın diye tek yetkili geçiş.
+        if (mudSpawned > 0 && mudOverlayService != null)
+            mudOverlayService.RefreshAllBorders();
+
+        // Örtülü jel hücreleri de DrawSpreadingGelOverlays'in RefreshAllBorders'ından SONRA eklendi.
+        if (gelSpawned > 0 && spreadingGelOverlayService != null)
+            spreadingGelOverlayService.RefreshAllBorders();
+    }
+
+    // Her SafeEntry için bir SafeObstacleView spawn eder: NxN bölgeye konumlandır + boyutlandır,
+    // service event'lerine bağla. Body NxN'e göre ölçeklenir, LockPanel prefab'da ortalı/sabit.
+    private void DrawSafeObstacles()
+    {
+        if (safeViewPrefab == null) return;
+        if (resolvedLevel?.safes == null || resolvedLevel.safes.Length == 0) return;
+        if (safeObstacleService == null) safeObstacleService = FindFirstObjectByType<SafeObstacleService>();
+        if (safeObstacleService == null) return;
+
+        var root = safeRoot != null ? safeRoot : obstaclesRoot;
+        if (root == null) return;
+
+        int W = resolvedLevel.width, H = resolvedLevel.height;
+        foreach (var entry in resolvedLevel.safes)
+        {
+            int origin = entry.originCellIndex;
+            if (origin < 0 || origin >= W * H) continue;
+
+            int ox = origin % W, oy = origin / W;
+            int w = Mathf.Max(1, entry.width), h = Mathf.Max(1, entry.height);
+
+            var view = Instantiate(safeViewPrefab, root);
+            var rt = (RectTransform)view.transform;
+            rt.anchorMin = rt.anchorMax = new Vector2(0f, 1f);   // top-left, tile'larla aynı
+            rt.pivot = new Vector2(0f, 1f);
+            rt.anchoredPosition = new Vector2(ox * tileSize, -oy * tileSize);
+            rt.sizeDelta = new Vector2(w * tileSize, h * tileSize);
+
+            view.SetBodySize(w * tileSize, h * tileSize);
+            view.Setup(safeObstacleService, origin);
+            safeViewsByOrigin[origin] = view;
+
+            // Yığın kuralı: OPAK bir engelin altındaki kasa gizli başlar, tıklanmaz; üstündeki kırılıp kasa
+            // açığa çıkınca (HandleObstacleCreatedDynamic) görünür olur. Saydam örtü (Grass/Oil) altındaki
+            // kasa görünür kalır (vuruş kuralı ayrı: örtü tamamen gidene dek kasa hasar almaz).
+            if (IsHiddenUnderOpaqueLayer(origin, ObstacleId.Safe))
+            {
+                view.gameObject.SetActive(false);
+                continue;
+            }
+
+            AddSafeCellClickProxies(entry, root);
+        }
+    }
+
+    private void DrawAncientSealObstacles()
+    {
+        if (!AncientSealView.HasArt) return;
+        if (resolvedLevel?.ancientSeals == null || resolvedLevel.ancientSeals.Length == 0) return;
+        if (ancientSealService == null) ancientSealService = FindFirstObjectByType<AncientSealService>();
+        if (ancientSealService == null) return;
+
+        var root = safeRoot != null ? safeRoot : obstaclesRoot;
+        if (root == null) return;
+
+        int W = resolvedLevel.width, H = resolvedLevel.height;
+        foreach (var entry in resolvedLevel.ancientSeals)
+        {
+            int origin = entry.originCellIndex;
+            if (origin < 0 || origin >= W * H) continue;
+
+            int ox = origin % W, oy = origin / W;
+            int w = Mathf.Max(1, entry.width), h = Mathf.Max(1, entry.height);
+
+            var view = AncientSealView.Create(root);
+            var rt = (RectTransform)view.transform;
+            rt.anchorMin = rt.anchorMax = new Vector2(0f, 1f);   // top-left, tile'larla aynı
+            rt.pivot = new Vector2(0f, 1f);
+            rt.anchoredPosition = new Vector2(ox * tileSize, -oy * tileSize);
+            rt.sizeDelta = new Vector2(w * tileSize, h * tileSize);
+
+            view.SetBodySize(w * tileSize, h * tileSize, tileSize);
+            view.Setup(ancientSealService, origin);
+            ancientSealViewsByOrigin[origin] = view;
+
+            // Yığın kuralı: OPAK bir engelin altındaki kasa gizli başlar, tıklanmaz; üstündeki kırılıp kasa
+            // açığa çıkınca (HandleObstacleCreatedDynamic) görünür olur. Saydam örtü (Grass/Oil) altındaki
+            // kasa görünür kalır (vuruş kuralı ayrı: örtü tamamen gidene dek kasa hasar almaz).
+            if (IsHiddenUnderOpaqueLayer(origin, ObstacleId.AncientSeal))
+            {
+                view.gameObject.SetActive(false);
+                continue;
+            }
+
+            AddAncientSealCellClickProxies(entry, root);
+        }
+    }
+
+    private readonly List<(ObstacleId id, int origin)> layerScratch = new();
+
+    // Hücrede en üstten aşağı inilir: hedef engele ulaşmadan opak bir katmana çarpılırsa hedef gizlidir.
+    private bool IsHiddenUnderOpaqueLayer(int cell, ObstacleId targetId)
+    {
+        var svc = board != null ? board.ObstacleStateService : null;
+        if (svc == null) return (ObstacleId)resolvedLevel.obstacles[cell] != targetId;
+        svc.GetLayersTopDown(cell, layerScratch);
+        foreach (var layer in layerScratch)
+        {
+            if (layer.id == targetId) return false;
+            if (!ObstacleStateService.IsSeeThroughLayer(layer.id)) return true;
+        }
+        return false;
+    }
+
+    // Üstündeki engel kırılınca açığa çıkan kasa: gizli başlatılan görseli ve tıklama vekillerini aç.
+    private void RevealCoveredSafeView(int origin)
+    {
+        if (!safeViewsByOrigin.TryGetValue(origin, out var view) || view == null || view.gameObject.activeSelf)
+            return;
+        view.gameObject.SetActive(true);
+        view.transform.SetAsLastSibling();
+        if (resolvedLevel?.safes == null) return;
+        foreach (var entry in resolvedLevel.safes)
+            if (entry.originCellIndex == origin)
+            {
+                AddSafeCellClickProxies(entry, safeRoot != null ? safeRoot : obstaclesRoot);
+                break;
+            }
+    }
+
+    private void AddSafeCellClickProxies(SafeEntry entry, RectTransform root)
+    {
+        if (root == null || resolvedLevel == null) return;
+
+        int W = resolvedLevel.width;
+        int H = resolvedLevel.height;
+        int origin = entry.originCellIndex;
+        if (origin < 0 || origin >= W * H) return;
+
+        int ox = origin % W;
+        int oy = origin / W;
+        int w = Mathf.Max(1, entry.width);
+        int h = Mathf.Max(1, entry.height);
+
+        for (int r = 0; r < h; r++)
+        for (int c = 0; c < w; c++)
+        {
+            int cx = ox + c;
+            int cy = oy + r;
+            if (cx < 0 || cx >= W || cy < 0 || cy >= H) continue;
+
+            int cell = cy * W + cx;
+            if (safeClickProxyByCell.ContainsKey(cell)) continue;
+
+            var clickGo = new GameObject(
+                $"SafeClick_{cx}_{cy}",
+                typeof(RectTransform),
+                typeof(CanvasRenderer),
+                typeof(Image),
+                typeof(ObstacleClickProxy));
+            clickGo.transform.SetParent(root, false);
+
+            var rt = clickGo.GetComponent<RectTransform>();
+            rt.anchorMin = new Vector2(0f, 1f);
+            rt.anchorMax = new Vector2(0f, 1f);
+            rt.pivot = new Vector2(0f, 1f);
+            rt.anchoredPosition = new Vector2(cx * tileSize, -cy * tileSize);
+            rt.sizeDelta = new Vector2(tileSize, tileSize);
+
+            var img = clickGo.GetComponent<Image>();
+            img.color = new Color(0f, 0f, 0f, 0f);
+            img.raycastTarget = true;
+
+            var proxy = clickGo.GetComponent<ObstacleClickProxy>();
+            proxy.Init(board, cx, cy);
+
+            clickGo.transform.SetAsLastSibling();
+            safeClickProxyByCell[cell] = clickGo;
+        }
+    }
+
+    private void RemoveSafeCellClickProxiesForOrigin(int origin)
+    {
+        if (resolvedLevel?.safes == null || resolvedLevel.safes.Length == 0)
+            return;
+
+        int W = resolvedLevel.width;
+        int H = resolvedLevel.height;
+
+        foreach (var entry in resolvedLevel.safes)
+        {
+            if (entry.originCellIndex != origin)
+                continue;
+
+            int ox = origin % W;
+            int oy = origin / W;
+            int w = Mathf.Max(1, entry.width);
+            int h = Mathf.Max(1, entry.height);
+
+            for (int r = 0; r < h; r++)
+            for (int c = 0; c < w; c++)
+            {
+                int cx = ox + c;
+                int cy = oy + r;
+                if (cx < 0 || cx >= W || cy < 0 || cy >= H) continue;
+
+                int cell = cy * W + cx;
+                if (!safeClickProxyByCell.TryGetValue(cell, out var clickGo))
+                    continue;
+
+                if (clickGo != null)
+                    Destroy(clickGo);
+                safeClickProxyByCell.Remove(cell);
+            }
+
+            return;
+        }
+    }
+
+    private void RevealCoveredAncientSealView(int origin)
+    {
+        if (!ancientSealViewsByOrigin.TryGetValue(origin, out var view) || view == null || view.gameObject.activeSelf)
+            return;
+        view.gameObject.SetActive(true);
+        view.transform.SetAsLastSibling();
+        if (resolvedLevel?.ancientSeals == null) return;
+        foreach (var entry in resolvedLevel.ancientSeals)
+            if (entry.originCellIndex == origin)
+            {
+                AddAncientSealCellClickProxies(entry, safeRoot != null ? safeRoot : obstaclesRoot);
+                break;
+            }
+    }
+
+    private void AddAncientSealCellClickProxies(AncientSealEntry entry, RectTransform root)
+    {
+        if (root == null || resolvedLevel == null) return;
+
+        int W = resolvedLevel.width;
+        int H = resolvedLevel.height;
+        int origin = entry.originCellIndex;
+        if (origin < 0 || origin >= W * H) return;
+
+        int ox = origin % W;
+        int oy = origin / W;
+        int w = Mathf.Max(1, entry.width);
+        int h = Mathf.Max(1, entry.height);
+
+        for (int r = 0; r < h; r++)
+        for (int c = 0; c < w; c++)
+        {
+            int cx = ox + c;
+            int cy = oy + r;
+            if (cx < 0 || cx >= W || cy < 0 || cy >= H) continue;
+
+            int cell = cy * W + cx;
+            if (ancientSealClickProxyByCell.ContainsKey(cell)) continue;
+
+            var clickGo = new GameObject(
+                $"AncientSealClick_{cx}_{cy}",
+                typeof(RectTransform),
+                typeof(CanvasRenderer),
+                typeof(Image),
+                typeof(ObstacleClickProxy));
+            clickGo.transform.SetParent(root, false);
+
+            var rt = clickGo.GetComponent<RectTransform>();
+            rt.anchorMin = new Vector2(0f, 1f);
+            rt.anchorMax = new Vector2(0f, 1f);
+            rt.pivot = new Vector2(0f, 1f);
+            rt.anchoredPosition = new Vector2(cx * tileSize, -cy * tileSize);
+            rt.sizeDelta = new Vector2(tileSize, tileSize);
+
+            var img = clickGo.GetComponent<Image>();
+            img.color = new Color(0f, 0f, 0f, 0f);
+            img.raycastTarget = true;
+
+            var proxy = clickGo.GetComponent<ObstacleClickProxy>();
+            proxy.Init(board, cx, cy);
+
+            clickGo.transform.SetAsLastSibling();
+            ancientSealClickProxyByCell[cell] = clickGo;
+        }
+    }
+
+    private void RemoveAncientSealCellClickProxiesForOrigin(int origin)
+    {
+        if (resolvedLevel?.ancientSeals == null || resolvedLevel.ancientSeals.Length == 0)
+            return;
+
+        int W = resolvedLevel.width;
+        int H = resolvedLevel.height;
+
+        foreach (var entry in resolvedLevel.ancientSeals)
+        {
+            if (entry.originCellIndex != origin)
+                continue;
+
+            int ox = origin % W;
+            int oy = origin / W;
+            int w = Mathf.Max(1, entry.width);
+            int h = Mathf.Max(1, entry.height);
+
+            for (int r = 0; r < h; r++)
+            for (int c = 0; c < w; c++)
+            {
+                int cx = ox + c;
+                int cy = oy + r;
+                if (cx < 0 || cx >= W || cy < 0 || cy >= H) continue;
+
+                int cell = cy * W + cx;
+                if (!ancientSealClickProxyByCell.TryGetValue(cell, out var clickGo))
+                    continue;
+
+                if (clickGo != null)
+                    Destroy(clickGo);
+                ancientSealClickProxyByCell.Remove(cell);
+            }
+
+            return;
+        }
+    }
+
+    private void DrawMagnetObstacles()
+    {
+        if (magnetObstacleService == null || magnetViewPrefab == null) return;
+        if (resolvedLevel?.magnets == null || resolvedLevel.magnets.Length == 0) return;
+        if (magnetRoot == null) return;
+
+        magnetObstacleService.Init(board, board.ObstacleStateService);
+        board.ObstacleStateService.MagnetHitInterceptor = magnetObstacleService.HandleMagnetHit;
+        board.ObstacleStateService.MagnetEndpointQuery = magnetObstacleService.IsMagnetEndpoint;
+
+        foreach (var entry in resolvedLevel.magnets)
+        {
+            if (entry.pathCellIndices == null || entry.pathCellIndices.Length < 2) continue;
+
+            var go   = Instantiate(magnetViewPrefab.gameObject);
+            var view = go.GetComponent<MagnetView>();
+            if (view == null) { Destroy(go); continue; }
+
+            view.Init(entry.pathCellIndices, resolvedLevel.width, tileSize, magnetRoot);
+
+            int origin = entry.pathCellIndices[0];
+            magnetObstacleService.RegisterMagnet(origin, entry.pathCellIndices, view);
+        }
+    }
+
+    private void DrawTubeObstacles()
+    {
+        if (tubeObstacleService == null || tubeViewPrefab == null) return;
+        if (resolvedLevel?.tubes == null || resolvedLevel.tubes.Length == 0) return;
+        if (tubeRoot == null) return;
+
+        tubeObstacleService.Init(board.ObstacleStateService);
+        board.ObstacleStateService.TubeHitInterceptor = tubeObstacleService.HandleTubeHit;
+
+        foreach (var entry in resolvedLevel.tubes)
+        {
+            int[] cellIndices = TubeObstacleService.GetCellIndices(entry, resolvedLevel.width, resolvedLevel.height);
+            if (cellIndices == null || cellIndices.Length == 0) continue;
+
+            var go   = Instantiate(tubeViewPrefab.gameObject);
+            var view = go.GetComponent<TubeView>();
+            if (view == null) { Destroy(go); continue; }
+
+            view.Init(entry.direction, entry.length, tileSize);
+
+            var (tlX, tlY) = TubeObstacleService.GetTopLeftCell(entry, resolvedLevel.width);
+            view.PlaceOnGrid(tubeRoot, tlX, tlY);
+
+            tubeObstacleService.RegisterTube(entry.originCellIndex, cellIndices, view);
+
+            AddTubeCellClickProxies(cellIndices);
+        }
+    }
+
+    // TubeView görselleri raycastTarget=false. Tube hücresi blocked → tile yok.
+    // Hammer (Single booster) gibi tek hücre hedefli joker'lerin Tube'u vurabilmesi için
+    // her tube hücresine görünmez bir click proxy serilir.
+    private void AddTubeCellClickProxies(int[] cellIndices)
+    {
+        if (cellIndices == null || tubeRoot == null) return;
+
+        foreach (int idx in cellIndices)
+        {
+            if (tubeClickProxyByCell.ContainsKey(idx)) continue;
+
+            int cx = idx % width;
+            int cy = idx / width;
+
+            var clickGo = new GameObject(
+                $"TubeClick_{cx}_{cy}",
+                typeof(RectTransform),
+                typeof(CanvasRenderer),
+                typeof(Image),
+                typeof(ObstacleClickProxy));
+            clickGo.transform.SetParent(tubeRoot, false);
+
+            var rt = clickGo.GetComponent<RectTransform>();
+            rt.anchorMin = new Vector2(0f, 1f);
+            rt.anchorMax = new Vector2(0f, 1f);
+            rt.pivot     = new Vector2(0f, 1f);
+            rt.anchoredPosition = new Vector2(cx * tileSize, -cy * tileSize);
+            rt.sizeDelta = new Vector2(tileSize, tileSize);
+
+            var img = clickGo.GetComponent<Image>();
+            img.color = new Color(0f, 0f, 0f, 0f);
+            img.raycastTarget = true;
+
+            var proxy = clickGo.GetComponent<ObstacleClickProxy>();
+            proxy.Init(board, cx, cy);
+
+            clickGo.transform.SetAsFirstSibling();
+            tubeClickProxyByCell[idx] = clickGo;
+        }
+    }
+
+    // O(1) obstacle-view lookup by origin (wired to board.ObstacleViewByOriginLookup).
+    // Lets services avoid full-hierarchy GetComponentsInChildren<Image> scans.
+    private Image GetObstacleViewImage(int originIndex)
+    {
+        return obstacleViewsByOrigin.TryGetValue(originIndex, out var image) ? image : null;
+    }
+
+    // Hint effects use the live visuals, including multi-cell and tile-backed obstacles.
+    // A set avoids highlighting a shared origin or layered graphic more than once.
+    public void CollectObstacleHintGraphics(ObstacleId id, HashSet<Graphic> result)
+    {
+        if (board == null || board.ObstacleStateService == null) return;
+        var state = board.ObstacleStateService;
+        for (int y = 0; y < height; y++)
+            for (int x = 0; x < width; x++)
+            {
+                if (state.GetHintObstacleId(y * width + x, state.GetObstacleIdAt(x, y)) != id) continue;
+                if (state.IsMovableObstacleAt(x, y))
+                {
+                    var tile = board.GetTileViewAt(x, y);
+                    if (tile != null && tile.IconImage != null) result.Add(tile.IconImage);
+                }
+                else
+                {
+                    var image = GetObstacleViewImage(state.GetObstacleOriginAt(x, y));
+                    if (image != null) AddRoot(image.transform);
+                }
+            }
+
+        foreach (var beneath in stampedBeneathVisuals)
+            if (state.GetHintObstacleId(beneath.cell, beneath.beneathId) == id
+                && beneathViewsByCell.TryGetValue(beneath.cell, out var beneathImage)
+                && beneathImage != null) AddRoot(beneathImage.transform);
+
+        switch (id)
+        {
+            case ObstacleId.Safe:
+                foreach (var view in safeViewsByOrigin.Values)
+                    if (view != null) AddRoot(view.transform);
+                break;
+            case ObstacleId.AncientSeal:
+                foreach (var view in ancientSealViewsByOrigin.Values)
+                    if (view != null) AddRoot(view.transform);
+                break;
+            case ObstacleId.Tube: AddRoot(tubeRoot); break;
+            case ObstacleId.Magnet: AddRoot(magnetRoot); break;
+            case ObstacleId.Mud: AddRoot(mudOverlayRoot); break;
+            case ObstacleId.Grass: AddGrassCells(id); break;
+            case ObstacleId.GrassWaterLily:
+                AddGrassCells(id);
+                if (waterLilyService != null) AddRoot(waterLilyService.transform);
+                break;
+            case ObstacleId.GrassFlower:
+                if (grassFlowerOverlayService != null) AddRoot(grassFlowerOverlayService.transform);
+                break;
+            case ObstacleId.SpreadingGel: AddRoot(spreadingGelOverlayRoot); break;
+            case ObstacleId.Wall:
+            case ObstacleId.MetalWall:
+                if (board.TryGetComponent<WallObstacleService>(out var walls))
+                {
+                    var wallRoots = new List<Transform>();
+                    walls.CollectViewRoots(id, wallRoots);
+                    foreach (var r in wallRoots) AddRoot(r);
+                }
+                break;
+            case ObstacleId.Oil:
+                var parent = board.TilesRoot != null ? board.TilesRoot.parent : null;
+                if (parent != null)
+                {
+                    AddRoot(parent.Find("OilOverlay"));
+                    AddRoot(parent.Find("OilTileSet"));
+                }
+                break;
+        }
+
+        void AddGrassCells(ObstacleId hintId)
+        {
+            if (grassOverlayService == null) return;
+            for (int y = 0; y < height; y++)
+                for (int x = 0; x < width; x++)
+                    if (state.GetHintObstacleId(y * width + x, ObstacleId.Grass) == hintId
+                        && grassOverlayService.TryGetView(x, y, out var view) && view != null)
+                        AddRoot(view.transform);
+        }
+
+        void AddRoot(Transform root)
+        {
+            if (root == null || !root.gameObject.activeInHierarchy) return;
+            foreach (var graphic in root.GetComponentsInChildren<Graphic>())
+                if (!(graphic is TMPro.TMP_Text)) result.Add(graphic);
+        }
+    }
+
+    private void HandleObstacleStageChanged(int originIndex, ObstacleStageSnapshot nextStage)
+    {
+        if (nextStage.behavior == ObstacleBehaviorType.MovableObstacle)
+        {
+            int mx = originIndex % width;
+            int my = originIndex / width;
+            var tileView = board.GetTileViewAt(mx, my);
+            if (tileView != null && nextStage.sprite != null && tileView.IconImage != null)
+                tileView.IconImage.sprite = nextStage.sprite;
+            return;
+        }
+
+        if (!obstacleViewsByOrigin.TryGetValue(originIndex, out var image) || image == null)
+            return;
+
+        if (ShouldLetEnergyContainerOwnVisual(originIndex))
+            return;
+
+        // Boya kutusu: stage sprite'ları (dolu piramit) yalnız önizleme/hedef ikonu içindir; sahnede
+        // boş kasa + PaintCanBoxView kutuları durur.
+        // Lazer topu da aynı: stage sprite'ı kuleli ikon, sahnede taban + LaserCannonView kulesi.
+        if (nextStage.sprite != null && image.GetComponent<PaintCanBoxView>() == null
+            && image.GetComponent<LaserCannonView>() == null && image.GetComponent<TarpStatueView>() == null)
+            image.sprite = nextStage.sprite;
+
+        MoveObstacleToBehaviorRoot(image.rectTransform, nextStage.behavior);
+        ApplyUnderTileCellBgTint();
+    }
+
+    private void HandleObstacleDestroyed(int originIndex, ObstacleId obstacleId)
+    {
+        if (obstacleId == ObstacleId.Safe)
+            RemoveSafeCellClickProxiesForOrigin(originIndex);
+        if (obstacleId == ObstacleId.AncientSeal)
+            RemoveAncientSealCellClickProxiesForOrigin(originIndex);
+
+        if (obstacleId == ObstacleId.EnergyContainer)
+        {
+            // Don't destroy the image — EnergyContainerFx will apply the exhausted
+            // visual on the same GameObject. Just stop tracking it here.
+            if (IsTrackedObstacleViewFor(originIndex, obstacleId))
+            {
+                obstacleViewsByOrigin.Remove(originIndex);
+                obstacleDefsByOrigin.Remove(originIndex);
+            }
+            return;
+        }
+
+        if (obstacleId == ObstacleId.OverrideBatteryBox)
+        {
+            // Detonasyon VIEW'ını HEMEN oynatma — seri kuyruk (BoardController) sırası gelince
+            // OnRequestObbDetonationView ile tetikler. View'ı beklemede tut (çoklu kutu aynı anda
+            // patlamasın). Kuyruk tek kutuda da geçerli; tek frame gecikmeyle tetiklenir.
+            if (_overrideBatteryBoxViews.TryGetValue(originIndex, out var view) && view != null)
+                _pendingObbDetonationViews[originIndex] = view;
+
+            obstacleViewsByOrigin.Remove(originIndex);
+            obstacleDefsByOrigin.Remove(originIndex);
+            _overrideBatteryBoxViews.Remove(originIndex);
+            ApplyUnderTileCellBgTint();
+            return;
+        }
+
+        // Jel fırlatıcı: görseli SİLME — ateşleme animasyonu (sıkışma → atılma → kapak) gerçek görselde
+        // oynar. Bu olay görsel-değişim olayından ÖNCE gelir; burada silinince devir hiç olmuyor,
+        // sıkışma görünmüyordu. Devri burada yap (BoardController aksiyonu bu olaydan SONRA başlatır).
+        if (BoardController.IsGelLauncher(obstacleId) && IsTrackedObstacleViewFor(originIndex, obstacleId))
+        {
+            if (obstacleViewsByOrigin.TryGetValue(originIndex, out var gelImage) && gelImage != null)
+            {
+                StopObstacleHitShake(originIndex, gelImage.rectTransform);
+                GelLauncherFx.HandOverBody(originIndex, gelImage);
+                StartCoroutine(DestroyGelBodyIfUnclaimed(originIndex, gelImage));
+            }
+            obstacleViewsByOrigin.Remove(originIndex);
+            obstacleDefsByOrigin.Remove(originIndex);
+            ApplyUnderTileCellBgTint();
+            return;
+        }
+
+        // Brandalı heykel: hangi olay önce gelirse (yok edildi / görsel temizlendi) görseli finale devreder.
+        if (obstacleId == ObstacleId.TarpStatue && IsTrackedObstacleViewFor(originIndex, obstacleId)
+            && obstacleViewsByOrigin.TryGetValue(originIndex, out var tarpImage) && tarpImage != null
+            && TarpStatueService.TryPlayFinale(board, originIndex, tarpImage))
+        {
+            StopObstacleHitShake(originIndex, tarpImage.rectTransform);
+            obstacleViewsByOrigin.Remove(originIndex);
+            obstacleDefsByOrigin.Remove(originIndex);
+            ApplyUnderTileCellBgTint();
+            return;
+        }
+
+        if (IsTrackedObstacleViewFor(originIndex, obstacleId))
+        {
+            if (obstacleViewsByOrigin.TryGetValue(originIndex, out var image) && image != null)
+            {
+                if (obstacleId != ObstacleId.Grass || waterLilyService == null
+                    || !waterLilyService.TryPlayGrassBreak(originIndex, image))
+                    Destroy(image.gameObject);
+            }
+
+            obstacleViewsByOrigin.Remove(originIndex);
+            obstacleDefsByOrigin.Remove(originIndex);
+        }
+        _chestViews.Remove(originIndex);
+        _batteryBoxViews.Remove(originIndex);
+        _overrideBatteryBoxViews.Remove(originIndex);
+        ApplyUnderTileCellBgTint();
+    }
+
+    private void HandleCellUnlocked(int cellIndex)
+    {
+        int x = cellIndex % width;
+        int y = cellIndex / width;
+        if (x < 0 || x >= width || y < 0 || y >= height) return;
+
+        if (!cellBgByIndex.ContainsKey(cellIndex) || cellBgByIndex[cellIndex] == null)
+            SpawnCellBg(x, y);
+
+        if (tubeClickProxyByCell.TryGetValue(cellIndex, out var clickGo))
+        {
+            if (clickGo != null) Destroy(clickGo);
+            tubeClickProxyByCell.Remove(cellIndex);
+        }
+
+        if (safeClickProxyByCell.TryGetValue(cellIndex, out var safeClickGo))
+        {
+            if (safeClickGo != null) Destroy(safeClickGo);
+            safeClickProxyByCell.Remove(cellIndex);
+        }
+
+        if (ancientSealClickProxyByCell.TryGetValue(cellIndex, out var sealClickGo))
+        {
+            if (sealClickGo != null) Destroy(sealClickGo);
+            ancientSealClickProxyByCell.Remove(cellIndex);
+        }
+
+        TrySpawnPinnedTileRevealedAt(x, y, cellIndex);
+    }
+
+    // Kapak (Wardrobe, Chest… stack katmanı) altına sabitlenmiş (pinned) taş/special: açılışta hücre
+    // blocked → hole sayıldığı için hiç oluşmamıştı. Kapak kalkıp hücre oynanabilir olunca TAM YERİNDE
+    // çıkar (cascade oraya rastgele taş getirmesin). Runtime klonunda tüketilir → tek seferlik.
+    // Altında başka bir over-tile engel varsa hücre hâlâ hole'dur; o da kırılınca tekrar denenir.
+    private void TrySpawnPinnedTileRevealedAt(int x, int y, int idx)
+    {
+        if (resolvedLevel == null || board == null) return;
+        if (board.Holes[x, y] || board.GetTileViewAt(x, y) != null) return;
+
+        var specials = resolvedLevel.pinnedSpecialTypes;
+        var tileTypes = resolvedLevel.pinnedTileTypes;
+        TileSpecial pinnedSpecial = specials != null && idx < specials.Length ? (TileSpecial)specials[idx] : TileSpecial.None;
+        int pinnedTileVal = tileTypes != null && idx < tileTypes.Length ? tileTypes[idx] : 0;
+        if (pinnedSpecial == TileSpecial.None && pinnedTileVal <= 0) return;
+
+        if (specials != null && idx < specials.Length) specials[idx] = 0;
+        if (tileTypes != null && idx < tileTypes.Length) tileTypes[idx] = 0;
+
+        TileType tileType = pinnedTileVal > 0
+            ? (TileType)(pinnedTileVal - 1)
+            : (effectiveRandomPool != null && effectiveRandomPool.Length > 0
+                ? PickIsolatedRandomType(x, y, effectiveRandomPool)
+                : default);
+
+        SpawnTile(x, y, tileType);
+
+        var view = board.GetTileViewAt(x, y);
+        if (view != null && pinnedSpecial != TileSpecial.None)
+        {
+            if (pinnedSpecial == TileSpecial.SystemOverride)
+                view.SetOverrideBaseType(tileType, deferVisualUpdate: true);
+            view.SetSpecial(pinnedSpecial);
+            board.SyncTileData(x, y);
+        }
+
+        board.RefreshAllSortingOrders();
+    }
+
+    private void EnsureRoots()
+    {
+        var root = spawnParent != null ? spawnParent : (RectTransform)transform;
+
+        if (cellBgRoot == null)
+            cellBgRoot = GetOrCreateChildRoot(root, "CellBGs");
+
+        if (mudOverlayRoot == null)
+            mudOverlayRoot = GetOrCreateChildRoot(root, "MudOverlay");
+
+        if (spreadingGelOverlayRoot == null)
+        {
+            spreadingGelOverlayRoot = GetOrCreateChildRoot(root, "SpreadingGelOverlay");
+            spreadingGelOverlayRoot.gameObject.layer = root.gameObject.layer; // Screen Space Camera culling'i önle
+        }
+
+        if (tubeRoot == null || tubeRoot == root)
+            tubeRoot = GetOrCreateChildRoot(root, "TubeObstacles");
+
+        if (magnetRoot == null || magnetRoot == root)
+            magnetRoot = GetOrCreateChildRoot(root, "MagnetObstacles");
+
+        if (gridLinesRoot == null)
+            gridLinesRoot = GetOrCreateChildRoot(root, "GridLines");
+
+        if (obstaclesRoot == null)
+            obstaclesRoot = GetOrCreateChildRoot(root, "Obstacles");
+
+        if (underTilesObstaclesRoot == null)
+            underTilesObstaclesRoot = GetOrCreateChildRoot(obstaclesRoot, "UnderTiles");
+
+        if (overTilesObstaclesRoot == null)
+            overTilesObstaclesRoot = GetOrCreateChildRoot(obstaclesRoot, "OverTiles");
+
+        // Under-tile visuals (including MudUnder) must sit below the seamless MudOverlay.
+        // Keep over-tile obstacles under Obstacles so they remain above the board content.
+        if (underTilesObstaclesRoot != null && underTilesObstaclesRoot.parent != root)
+            underTilesObstaclesRoot.SetParent(root, false);
+
+        if (tilesRoot == null)
+            tilesRoot = GetOrCreateChildRoot(root, "Tiles");
+
+        // Grass overlay: mud gibi board'a hizalı bir child root; sibling sırası taşların ÜSTÜNE alınır
+        // (aşağıda). Inspector'da atanmadıysa otomatik kurulur — elle kurulum gerekmez.
+        if (grassOverlayRoot == null)
+        {
+            grassOverlayRoot = GetOrCreateChildRoot(root, "GrassOverlay");
+            grassOverlayRoot.gameObject.layer = root.gameObject.layer; // Screen Space Camera culling'i önle
+        }
+
+        // Border BoardContent içine erken alınır: grass root'u border'ın parent'ına taşındığı için
+        // grass çiziminden önce border yerinde olmalı (grass yine en üstte kalır).
+        if (borderDrawer != null)
+            EnsureBorderRootInBoardContent(borderDrawer.borderRoot);
+
+        // Joker hedeflemesi: tıklama vekili olmayan engel görselleri / taşsız hücreler de hücreye çözülsün.
+        BoardBoosterTapCatcher.Install(root, board, tilesRoot);
+    }
+
+    private RectTransform GetOrCreateChildRoot(RectTransform parent, string name)
+    {
+        var found = parent.Find(name) as RectTransform;
+        if (found != null) return found;
+        return CreateChildRoot(parent, name);
+    }
+
+    private RectTransform GetOrCreateBoardBgRoot(RectTransform parent)
+    {
+        var found = parent.Find("BoardBG") as RectTransform;
+        if (found != null)
+        {
+            if (found.TryGetComponent<Image>(out var foundImg))
+            {
+                foundImg.color = runtimeBoardBg;
+                foundImg.raycastTarget = false;
+            }
+            return found;
+        }
+
+        var go = new GameObject("BoardBG", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        go.transform.SetParent(parent, false);
+
+        var rt = go.GetComponent<RectTransform>();
+        rt.anchorMin = new Vector2(0, 1);
+        rt.anchorMax = new Vector2(0, 1);
+        rt.pivot = new Vector2(0, 1);
+        rt.anchoredPosition = Vector2.zero;
+        rt.sizeDelta = Vector2.zero;
+
+        var img = go.GetComponent<Image>();
+        img.color = runtimeBoardBg;
+        img.raycastTarget = false;
+
+        return rt;
+    }
+    private RectTransform CreateChildRoot(RectTransform parent, string name)
+    {
+        var go = new GameObject(name, typeof(RectTransform));
+        go.transform.SetParent(parent, false);
+
+        var rt = go.GetComponent<RectTransform>();
+        rt.anchorMin = new Vector2(0, 1);
+        rt.anchorMax = new Vector2(0, 1);
+        rt.pivot = new Vector2(0, 1);
+        rt.anchoredPosition = Vector2.zero;
+        rt.sizeDelta = Vector2.zero;
+        return rt;
+    }
+
+    private void ClearChildren(RectTransform parent)
+    {
+        if (parent == null) return;
+        for (int i = parent.childCount - 1; i >= 0; i--)
+            Destroy(parent.GetChild(i).gameObject);
+    }
+    private void DrawGridLines()
+    {
+        if (gridLinesRoot == null || board == null)
+            return;
+
+        float thickness = Mathf.Max(1f, runtimeGridLineThickness);
+
+        bool IsInside(int x, int y)
+        {
+            return x >= 0 && x < width && y >= 0 && y < height;
+        }
+
+        bool IsVisibleCell(int x, int y)
+        {
+            if (!IsInside(x, y))
+                return false;
+
+            int idx = resolvedLevel.Index(x, y);
+            return cellBgByIndex.ContainsKey(idx) && cellBgByIndex[idx] != null;
+        }
+
+        void CreateLine(string name, Vector2 anchoredPos, Vector2 size)
+        {
+            var go = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            go.transform.SetParent(gridLinesRoot, false);
+
+            var rt = go.GetComponent<RectTransform>();
+            rt.anchorMin = new Vector2(0, 1);
+            rt.anchorMax = new Vector2(0, 1);
+            rt.pivot = new Vector2(0, 1);
+            rt.anchoredPosition = anchoredPos;
+            rt.sizeDelta = size;
+
+            var img = go.GetComponent<Image>();
+            img.color = GridLineColor;
+            img.raycastTarget = false;
+        }
+
+        for (int y = 0; y < height; y++)
+        {
+            for (int x = 0; x < width; x++)
+            {
+                if (!IsVisibleCell(x, y))
+                    continue;
+
+                float x0 = x * tileSize;
+                float y0 = -y * tileSize;
+                float x1 = x0 + tileSize;
+                float y1 = y0 - tileSize;
+
+                // Top edge
+                CreateLine(
+                    $"GridLine_T_{x}_{y}",
+                    new Vector2(x0, y0 + thickness * 0.5f),
+                    new Vector2(tileSize, thickness)
+                );
+
+                // Left edge
+                CreateLine(
+                    $"GridLine_L_{x}_{y}",
+                    new Vector2(x0 - thickness * 0.5f, y0),
+                    new Vector2(thickness, tileSize)
+                );
+
+                // Right edge: sadece sağ komşu görünür değilse çiz.
+                if (!IsVisibleCell(x + 1, y))
+                {
+                    CreateLine(
+                        $"GridLine_R_{x}_{y}",
+                        new Vector2(x1 - thickness * 0.5f, y0),
+                        new Vector2(thickness, tileSize)
+                    );
+                }
+
+                // Bottom edge: sadece alt komşu görünür değilse çiz.
+                if (!IsVisibleCell(x, y + 1))
+                {
+                    CreateLine(
+                        $"GridLine_B_{x}_{y}",
+                        new Vector2(x0, y1 + thickness * 0.5f),
+                        new Vector2(tileSize, thickness)
+                    );
+                }
+            }
+        }
+
+        // Diamond junction'lar — çizgilerin kesiştiği node noktalara elmas koyar.
+        if (gridJunctionEnabled)
+        {
+            float jSize = gridJunctionSize > 0f ? gridJunctionSize : thickness * 2.5f;
+
+            for (int ny = 0; ny <= height; ny++)
+            {
+                for (int nx = 0; nx <= width; nx++)
+                {
+                    bool hasAbove = IsVisibleCell(nx - 1, ny - 1) || IsVisibleCell(nx, ny - 1);
+                    bool hasBelow = IsVisibleCell(nx - 1, ny)     || IsVisibleCell(nx, ny);
+                    bool hasLeft  = IsVisibleCell(nx - 1, ny - 1) || IsVisibleCell(nx - 1, ny);
+                    bool hasRight = IsVisibleCell(nx, ny - 1)     || IsVisibleCell(nx, ny);
+
+                    // Sadece hem H hem V çizgisi kesişen noktalara koy.
+                    bool hCross = (hasAbove || hasBelow);
+                    bool vCross = (hasLeft  || hasRight);
+                    if (!hCross || !vCross) continue;
+
+                    // Wrapper: konumlandırma + aspect ölçekleme
+                    var wrapper = new GameObject($"GridJunction_{nx}_{ny}", typeof(RectTransform));
+                    wrapper.transform.SetParent(gridLinesRoot, false);
+                    var wRt = wrapper.GetComponent<RectTransform>();
+                    wRt.anchorMin = new Vector2(0f, 1f);
+                    wRt.anchorMax = new Vector2(0f, 1f);
+                    wRt.pivot     = new Vector2(0.5f, 0.5f);
+                    wRt.anchoredPosition = new Vector2(nx * tileSize, -ny * tileSize);
+                    wRt.sizeDelta        = Vector2.zero;
+                    wRt.localScale       = new Vector3(gridJunctionAspectX, gridJunctionAspectY, 1f);
+                    wRt.localRotation    = Quaternion.identity;
+
+                    // Child: kare elmas (45° rotated square) → wrapper scale ile <> şekli
+                    var jGo = new GameObject("Diamond", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+                    jGo.transform.SetParent(wrapper.transform, false);
+                    var jRt = jGo.GetComponent<RectTransform>();
+                    jRt.anchorMin = new Vector2(0.5f, 0.5f);
+                    jRt.anchorMax = new Vector2(0.5f, 0.5f);
+                    jRt.pivot     = new Vector2(0.5f, 0.5f);
+                    jRt.anchoredPosition = Vector2.zero;
+                    jRt.sizeDelta        = new Vector2(jSize, jSize);
+                    jRt.localRotation    = Quaternion.Euler(0f, 0f, 45f);
+                    jRt.localScale       = Vector3.one;
+
+                    var jImg = jGo.GetComponent<Image>();
+                    jImg.color         = GridLineColor;
+                    jImg.raycastTarget = false;
+                }
+            }
+        }
+    }
+    private void SpawnCellBg(int x, int y)
+    {
+        var go = Instantiate(cellBgPrefab, cellBgRoot);
+        var rt = go.GetComponent<RectTransform>();
+
+        rt.anchorMin = new Vector2(0, 1);
+        rt.anchorMax = new Vector2(0, 1);
+        rt.pivot = new Vector2(0, 1);
+
+        rt.anchoredPosition = new Vector2(x * tileSize, -y * tileSize);
+        rt.sizeDelta = new Vector2(tileSize, tileSize);
+
+        go.transform.SetAsFirstSibling();
+
+        int idx = resolvedLevel.Index(x, y);
+        cellBgByIndex[idx] = go;
+        if (go.TryGetComponent<Image>(out var image))
+        {
+            if (useLightBoardCells) image.color = lightCellBgColor;
+            cellBgImageByIndex[idx] = image;
+            baseCellBgColorByIndex[idx] = image.color;
+        }
+    }
+
+    private void SpawnTile(int x, int y, TileType type)
+    {
+        var tile = Instantiate(tilePrefab, tilesRoot);
+        var rt = tile.GetComponent<RectTransform>();
+        rt.anchorMin = new Vector2(0, 1);
+        rt.anchorMax = new Vector2(0, 1);
+        rt.pivot = new Vector2(0, 1);
+        rt.anchoredPosition = new Vector2(x * tileSize, -y * tileSize);
+        // Tile RectTransform tam hücre boyutunda; ikon boyutu ApplyTileSize ile ayarlanır.
+        rt.sizeDelta = new Vector2(tileSize, tileSize);
+
+        // Sıralama ApplySortingOrder() ile yapılacak, burada müdahale etmeye gerek yok.
+        var view = tile.GetComponent<TileView>();
+        if (view == null)
+        {
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogError("GridSpawner: TileView yok.");
+            Destroy(tile);
+            return;
+        }
+        view.SetIconScale(iconScale);
+        view.SetIconSize(iconSize);
+        view.SetUseFullCellIcon(fullCellIcons);
+        view.SetVisualLayout(TileView.TileVisualLayout.Centered);
+        view.ApplyTileSize(tileSize);
+        board.ApplyNormalVisualFillRatio(view);   // ilk board taşları da fill-ratio alsın (cascade spawn zaten alıyordu)
+
+        board.RegisterTile(view, x, y); // Init + coords + ilk SyncTileData (tipi henüz default olabilir)
+        view.SetType(type);             // Doğru tipi ata
+        board.SyncTileData(x, y);       // gridData'yı doğru tipte güncelle
+        board.RefreshTileObstacleVisual(view);
+        // Sıralama BuildInitialGrid sonunda toplu RefreshAllSortingOrders ile yapılacak
+    }
+
+    private void ApplyUnderTileCellBgTint()
+    {
+        if (resolvedLevel == null || resolvedLevel.obstacles == null || resolvedLevel.obstacleOrigins == null)
+            return;
+
+        foreach (var kv in cellBgImageByIndex)
+        {
+            var cellImage = kv.Value;
+            if (cellImage == null) continue;
+
+            int idx = kv.Key;
+            if (!baseCellBgColorByIndex.TryGetValue(idx, out var baseColor))
+                baseColor = cellImage.color;
+
+            bool tint = false;
+            if (idx >= 0 && idx < resolvedLevel.obstacles.Length)
+            {
+                int origin = idx < resolvedLevel.obstacleOrigins.Length ? resolvedLevel.obstacleOrigins[idx] : -1;
+                if (origin >= 0 && obstacleDefsByOrigin.TryGetValue(origin, out var def) && def != null)
+                {
+                    var behavior = ResolveBehaviorForOrigin(origin, def);
+                    tint = behavior == ObstacleBehaviorType.UnderTileLayered;
+                }
+            }
+
+            cellImage.color = tint ? UnderTileCellBgTint : baseColor;
+        }
+    }
+
+    private ObstacleBehaviorType ResolveBehaviorForOrigin(int originIndex, ObstacleDef fallbackDef)
+    {
+        if (originIndex < 0)
+            return fallbackDef != null && fallbackDef.IsUnderTileBehavior
+                ? ObstacleBehaviorType.UnderTileLayered
+                : ObstacleBehaviorType.OverTileBlocker;
+
+        if (board != null && board.ObstacleStateService != null)
+        {
+            int ox = originIndex % width;
+            int oy = originIndex / width;
+            if (board.ObstacleStateService.TryGetStageSnapshotAt(ox, oy, out var stage))
+                return stage.behavior;
+        }
+
+        if (fallbackDef == null)
+            return ObstacleBehaviorType.OverTileBlocker;
+
+        var stageRule = fallbackDef.GetStageRuleForRemainingHits(Mathf.Max(1, fallbackDef.hits));
+        return stageRule != null ? stageRule.behavior : ObstacleBehaviorType.OverTileBlocker;
+    }
+
+    private void MoveObstacleToBehaviorRoot(RectTransform obstacleRect, ObstacleBehaviorType behavior)
+    {
+        if (obstacleRect == null)
+            return;
+
+        var targetRoot = behavior == ObstacleBehaviorType.UnderTileLayered
+            ? underTilesObstaclesRoot
+            : overTilesObstaclesRoot;
+
+        if (targetRoot == null || obstacleRect.parent == targetRoot)
+            return;
+
+        obstacleRect.SetParent(targetRoot, false);
+    }
+
+    private void HandleChestOpened(int originIndex)
+    {
+        if (_chestViews.TryGetValue(originIndex, out var view) && view != null)
+            view.OpenCabinet();   // kapaklar düşer + iç görünür (eski ShowAll yerine)
+    }
+
+    private void HandleChestColorRemoved(int originIndex, ChestColorMask removedColor)
+    {
+        if (_chestViews.TryGetValue(originIndex, out var view) && view != null)
+        {
+            // İlk hit kapakları düşürür (HandleChestOpened); sonraki hit'lerde her renk objesi
+            // KENDİ sprite'ıyla STANDART break particle'a parçalanır. Renk ObstacleLibrary'den
+            // gelmiyor (runtime match rengine bağlı), o yüzden sprite'ı view'den alıp besliyoruz.
+            var brokenSprite = view.GetColorSprite(removedColor);
+            Vector3 worldPos = view.GetColorWorldCenter(removedColor);
+
+            view.HideColor(removedColor);
+            view.Shake();
+
+            if (brokenSprite != null && board != null && board.BreakFx != null && board.ObstacleBreakFxPrefab != null)
+                board.BreakFx.PlaySplashFx(
+                    board.ObstacleBreakFxPrefab,
+                    board.ObstacleBreakFxLifetime,
+                    worldPos,
+                    new[] { brokenSprite });
+        }
+    }
+
+    // ColorChest'i katmanli prefab olarak spawn eder.
+    // Pozisyon ve boyut hesabi DrawObstacleImage ile aynidir (2x2 = 2*tileSize).
+    private Image SpawnChestObstacleView(ObstacleDef def, int x, int y)
+    {
+        bool drawUnder = ResolveBehaviorForOrigin(resolvedLevel.Index(x, y), def) == ObstacleBehaviorType.UnderTileLayered;
+        var parent = drawUnder ? underTilesObstaclesRoot : overTilesObstaclesRoot;
+
+        int w = Mathf.Max(1, def.size.x);
+        int h = Mathf.Max(1, def.size.y);
+        float gridOverlap = Mathf.Max(1f, Mathf.Ceil(runtimeGridLineThickness * 0.5f));
+        int originIndex = resolvedLevel.Index(x, y);
+
+        // Her kenarda gridOverlap (yarım grid-çizgisi = 4px çizgide 2px) taşma. Chest sprite art'ı
+        // hücre sınırının biraz ötesine geçip aradaki grid çizgisini/dikişi örter. Bitişik chest'ler
+        // ikisi de aynı miktar taştığından blok kesintisiz görünür; aynı opak art olduğu için
+        // örtüşme GÖRÜNMEZ. (Eskiden bitişik obstacle'a doğru taşma 0'dı → aradaki çizgi/dikiş
+        // sprite kenar-payından sızıyordu. Kullanıcı isteği: chest başına +gridOverlap her kenar.)
+        float lo = gridOverlap, ro = gridOverlap, to = gridOverlap, bo = gridOverlap;
+
+        ChestObstacleView view;
+        Image rootImage;
+
+        if (chestObstacleViewPrefab != null)
+        {
+            view = Instantiate(chestObstacleViewPrefab, parent);
+            rootImage = view.GetComponent<Image>();
+            if (rootImage == null) rootImage = view.gameObject.AddComponent<Image>();
+        }
+        else
+        {
+            // Prefab atanmamissa plain Image ile devam et (sprite guncelleme calismaya devam eder)
+            var fallback = new GameObject($"Obs_ColorChest_{x}_{y}", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            fallback.transform.SetParent(parent, false);
+            rootImage = fallback.GetComponent<Image>();
+            view = null;
+        }
+
+        Sprite closedSprite = def.GetPreviewSprite();
+        if (rootImage != null && closedSprite != null)
+        {
+            rootImage.sprite = closedSprite;
+            rootImage.type = Image.Type.Simple;
+            rootImage.preserveAspect = false;
+        }
+
+        var rt = rootImage != null ? rootImage.GetComponent<RectTransform>() : null;
+        if (rt != null)
+        {
+            rt.anchorMin = new Vector2(0, 1);
+            rt.anchorMax = new Vector2(0, 1);
+            rt.pivot = new Vector2(0, 1);
+            rt.anchoredPosition = new Vector2(x * tileSize - lo, -y * tileSize + to);
+            rt.sizeDelta = new Vector2(w * tileSize + lo + ro, h * tileSize + to + bo);
+        }
+
+        if (rootImage != null)
+        {
+            var clickProxy = rootImage.gameObject.AddComponent<ObstacleClickProxy>();
+            clickProxy.Init(board, x, y, w, h, tileSize);
+        }
+
+        if (view != null)
+        {
+            view.ApplyLayout(); // parent RT boyutu kesinleştikten sonra icon konumlarını set et
+            view.HideAll();     // kapalı durum: renkli objeler gizli
+            _chestViews[originIndex] = view;
+        }
+
+        return rootImage;
+    }
+
+    // BatteryBox: ColorChest ile aynı layout, fakat piller baştan açık ve 3 state'e sahip.
+    private Image SpawnBatteryBoxView(ObstacleDef def, int x, int y)
+    {
+        bool drawUnder = ResolveBehaviorForOrigin(resolvedLevel.Index(x, y), def) == ObstacleBehaviorType.UnderTileLayered;
+        var parent = drawUnder ? underTilesObstaclesRoot : overTilesObstaclesRoot;
+
+        int w = Mathf.Max(1, def.size.x);
+        int h = Mathf.Max(1, def.size.y);
+        float gridOverlap = Mathf.Max(1f, Mathf.Ceil(runtimeGridLineThickness * 0.5f));
+        int originIndex = resolvedLevel.Index(x, y);
+
+        bool HasDifferentAt(int cx, int cy)
+        {
+            if (cx < 0 || cx >= width || cy < 0 || cy >= height) return false;
+            int idx = resolvedLevel.Index(cx, cy);
+            if (idx < 0 || idx >= resolvedLevel.obstacles.Length) return false;
+            if ((ObstacleId)resolvedLevel.obstacles[idx] == ObstacleId.None) return false;
+            return resolvedLevel.obstacleOrigins[idx] != originIndex;
+        }
+
+        bool dL = false, dR = false, dT = false, dB = false;
+        for (int yy = y; yy < y + h; yy++) { if (HasDifferentAt(x - 1, yy)) dL = true; if (HasDifferentAt(x + w, yy)) dR = true; }
+        for (int xx = x; xx < x + w; xx++) { if (HasDifferentAt(xx, y - 1)) dT = true; if (HasDifferentAt(xx, y + h)) dB = true; }
+
+        float lo = dL ? 0f : gridOverlap;
+        float ro = dR ? 0f : gridOverlap;
+        float to = dT ? 0f : gridOverlap;
+        float bo = dB ? 0f : gridOverlap;
+
+        BatteryBoxView view;
+        Image rootImage;
+
+        if (batteryBoxViewPrefab != null)
+        {
+            view = Instantiate(batteryBoxViewPrefab, parent);
+            rootImage = view.GetComponent<Image>();
+            if (rootImage == null) rootImage = view.gameObject.AddComponent<Image>();
+        }
+        else
+        {
+            var fallback = new GameObject($"Obs_BatteryBox_{x}_{y}", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            fallback.transform.SetParent(parent, false);
+            rootImage = fallback.GetComponent<Image>();
+            view = fallback.AddComponent<BatteryBoxView>();
+            CreateBatteryChildImages(view, fallback.transform);
+        }
+
+        Sprite boxSprite = def.GetPreviewSprite();
+        if (rootImage != null && boxSprite != null)
+        {
+            rootImage.sprite = boxSprite;
+            rootImage.type = Image.Type.Simple;
+            rootImage.preserveAspect = false;
+        }
+
+        var rt = rootImage != null ? rootImage.GetComponent<RectTransform>() : null;
+        if (rt != null)
+        {
+            rt.anchorMin = new Vector2(0, 1);
+            rt.anchorMax = new Vector2(0, 1);
+            rt.pivot     = new Vector2(0, 1);
+            rt.anchoredPosition = new Vector2(x * tileSize - lo, -y * tileSize + to);
+            rt.sizeDelta = new Vector2(w * tileSize + lo + ro, h * tileSize + to + bo);
+        }
+
+        if (rootImage != null)
+        {
+            var clickProxy = rootImage.gameObject.AddComponent<ObstacleClickProxy>();
+            clickProxy.Init(board, x, y, w, h, tileSize);
+            rootImage.raycastTarget = true;
+        }
+
+        if (view != null)
+        {
+            view.ApplyLayout();
+            // BatteryBox baştan açık — tüm piller gösterilir, tam dolu state ile
+            int hitsPerBattery = Mathf.Max(1, def.hits);
+            view.ApplyBatteryState(ChestColorMask.Gear,  hitsPerBattery, hitsPerBattery);
+            view.ApplyBatteryState(ChestColorMask.Core,  hitsPerBattery, hitsPerBattery);
+            view.ApplyBatteryState(ChestColorMask.Bolt,  hitsPerBattery, hitsPerBattery);
+            view.ApplyBatteryState(ChestColorMask.Plate, hitsPerBattery, hitsPerBattery);
+            _batteryBoxViews[originIndex] = view;
+        }
+
+        return rootImage;
+    }
+
+    private static void CreateBatteryChildImages(BatteryBoxView view, Transform parent)
+    {
+        ChestColorMask[] colors = { ChestColorMask.Gear, ChestColorMask.Core, ChestColorMask.Bolt, ChestColorMask.Plate };
+        foreach (var color in colors)
+        {
+            var go = new GameObject($"Battery_{color}", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            go.transform.SetParent(parent, false);
+            var img = go.GetComponent<Image>();
+            img.raycastTarget = false;
+            view.SetBatteryImage(color, img);
+        }
+    }
+
+    private void HandleBatteryHit(int originIndex, ChestColorMask color, int remaining)
+    {
+        if (!_batteryBoxViews.TryGetValue(originIndex, out var view) || view == null) return;
+        if (!obstacleDefsByOrigin.TryGetValue(originIndex, out var def) || def == null) return;
+        int maxHits = Mathf.Max(1, def.hits);
+        view.ApplyBatteryState(color, remaining, maxHits);
+        view.Shake();
+    }
+
+    private Image SpawnOverrideBatteryBoxView(ObstacleDef def, int x, int y)
+    {
+        bool drawUnder = ResolveBehaviorForOrigin(resolvedLevel.Index(x, y), def) == ObstacleBehaviorType.UnderTileLayered;
+        var parent = drawUnder ? underTilesObstaclesRoot : overTilesObstaclesRoot;
+
+        int w = Mathf.Max(1, def.size.x);
+        int h = Mathf.Max(1, def.size.y);
+        float gridOverlap = Mathf.Max(1f, Mathf.Ceil(runtimeGridLineThickness * 0.5f));
+        int originIndex = resolvedLevel.Index(x, y);
+
+        bool HasDifferentAt(int cx, int cy)
+        {
+            if (cx < 0 || cx >= width || cy < 0 || cy >= height) return false;
+            int idx = resolvedLevel.Index(cx, cy);
+            if (idx < 0 || idx >= resolvedLevel.obstacles.Length) return false;
+            if ((ObstacleId)resolvedLevel.obstacles[idx] == ObstacleId.None) return false;
+            return resolvedLevel.obstacleOrigins[idx] != originIndex;
+        }
+
+        bool dL = false, dR = false, dT = false, dB = false;
+        for (int yy = y; yy < y + h; yy++) { if (HasDifferentAt(x - 1, yy)) dL = true; if (HasDifferentAt(x + w, yy)) dR = true; }
+        for (int xx = x; xx < x + w; xx++) { if (HasDifferentAt(xx, y - 1)) dT = true; if (HasDifferentAt(xx, y + h)) dB = true; }
+
+        float lo = dL ? 0f : gridOverlap;
+        float ro = dR ? 0f : gridOverlap;
+        float to = dT ? 0f : gridOverlap;
+        float bo = dB ? 0f : gridOverlap;
+
+        OverrideBatteryBoxView view;
+        Image rootImage;
+
+        if (overrideBatteryBoxViewPrefab != null)
+        {
+            view = Instantiate(overrideBatteryBoxViewPrefab, parent);
+            rootImage = view.GetComponent<Image>();
+            if (rootImage == null) rootImage = view.gameObject.AddComponent<Image>();
+        }
+        else
+        {
+            var fallback = new GameObject($"Obs_OverrideBatteryBox_{x}_{y}", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            fallback.transform.SetParent(parent, false);
+            rootImage = fallback.GetComponent<Image>();
+            view = fallback.AddComponent<OverrideBatteryBoxView>();
+            CreateOverrideBatteryChildImages(view, fallback.transform, Mathf.Max(1, def.hits));
+        }
+
+        Sprite boxSprite = def.GetPreviewSprite();
+        if (rootImage != null)
+        {
+            rootImage.sprite = boxSprite;
+            rootImage.type = Image.Type.Simple;
+            rootImage.preserveAspect = false;
+            rootImage.color = boxSprite != null ? Color.white : new Color(0.02f, 0.55f, 0.58f, 0.95f);
+        }
+
+        var rt = rootImage != null ? rootImage.GetComponent<RectTransform>() : null;
+        if (rt != null)
+        {
+            rt.anchorMin = new Vector2(0, 1);
+            rt.anchorMax = new Vector2(0, 1);
+            rt.pivot     = new Vector2(0, 1);
+            rt.anchoredPosition = new Vector2(x * tileSize - lo, -y * tileSize + to);
+            rt.sizeDelta = new Vector2(w * tileSize + lo + ro, h * tileSize + to + bo);
+        }
+
+        if (rootImage != null)
+        {
+            var clickProxy = rootImage.gameObject.AddComponent<ObstacleClickProxy>();
+            clickProxy.Init(board, x, y, w, h, tileSize);
+            rootImage.raycastTarget = true;
+        }
+
+        if (view != null)
+        {
+            int hitsPerColor = Mathf.Max(1, def.hits);
+            view.ConfigureLayout(obbHorizontalBarWidthScale, obbHorizontalBarHeightScale,
+                obbRotatedBarWidthScale, obbRotatedBarHeightScale,
+                obbNeedleSize, obbGaugeSize, obbGaugeCenter, obbNeedlePivot,
+                obbNeedleStartAngle, obbNeedleEndAngle);
+            view.ApplyLayout();
+            view.Initialize(hitsPerColor);
+            _overrideBatteryBoxViews[originIndex] = view;
+        }
+
+        return rootImage;
+    }
+
+    private void CreateOverrideBatteryChildImages(OverrideBatteryBoxView view, Transform parent, int hitsPerColor)
+    {
+        int count = Mathf.Max(1, hitsPerColor);
+        AddBars(view, parent, ChestColorMask.Core,  "Red",    count, overrideBarRedSprite,    new Color(1.0f, 0.10f, 0.08f, 1f));
+        AddBars(view, parent, ChestColorMask.Gear,  "Yellow", count, overrideBarYellowSprite, new Color(1.0f, 0.78f, 0.05f, 1f));
+        AddBars(view, parent, ChestColorMask.Bolt,  "Blue",   count, overrideBarBlueSprite,   new Color(0.02f, 0.47f, 1.0f, 1f));
+        AddBars(view, parent, ChestColorMask.Plate, "Green",  count, overrideBarGreenSprite,  new Color(0.33f, 0.86f, 0.02f, 1f));
+
+        // Radial fill isteğe bağlı: varsayılan alfa=0 (kapalı); baked arc + ibre yeterli.
+        var progress = CreateUiImage("CenterProgress", parent, new Color(1f, 0.08f, 0.04f, 0.0f));
+        progress.type = Image.Type.Filled;
+        progress.fillMethod = Image.FillMethod.Radial360;
+        view.SetProgressImage(progress);
+
+        // Merkez gauge/dial: barların ÜSTÜNDE render edilir ki barlar onu ezmesin (ibrenin altında).
+        if (overrideGaugeSprite != null)
+        {
+            var gauge = CreateUiImage("CenterGauge", parent, Color.white);
+            gauge.sprite = overrideGaugeSprite;
+            gauge.preserveAspect = true;
+            view.SetCenterImage(gauge);
+        }
+
+        var pin = CreateUiImage("CenterPin", parent, overrideNeedleSprite != null ? Color.white : new Color(0.16f, 0.17f, 0.19f, 1f));
+        if (overrideNeedleSprite != null)
+        {
+            pin.sprite = overrideNeedleSprite;
+            pin.preserveAspect = true;
+        }
+        view.SetPinImage(pin);
+
+        view.SetSteamSprite(overrideSteamSprite);
+    }
+
+    private static void AddBars(OverrideBatteryBoxView view, Transform parent, ChestColorMask color, string label, int count, Sprite sprite, Color tint)
+    {
+        for (int i = 0; i < count; i++)
+        {
+            var img = CreateUiImage($"{label}_Bar_{i}", parent, sprite != null ? Color.white : tint);
+            if (sprite != null)
+            {
+                img.sprite = sprite;
+                img.preserveAspect = true;
+            }
+            view.SetBarImage(color, i, img);
+        }
+    }
+
+    private static Image CreateUiImage(string name, Transform parent, Color tint)
+    {
+        var go = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        go.transform.SetParent(parent, false);
+        var img = go.GetComponent<Image>();
+        img.raycastTarget = false;
+        img.color = tint;
+        return img;
+    }
+
+    private void HandleOverrideBatteryBoxHit(int originIndex, ChestColorMask color, int remaining, int progress, int total)
+    {
+        if (!_overrideBatteryBoxViews.TryGetValue(originIndex, out var view) || view == null) return;
+        if (!obstacleDefsByOrigin.TryGetValue(originIndex, out var def) || def == null) return;
+        int maxHits = Mathf.Max(1, def.hits);
+        view.ApplyColorState(color, remaining, maxHits);
+        view.ApplyProgress(progress, Mathf.Max(1, total));
+        view.Shake();
+    }
+
+    // Seri kuyruk: sırası gelen OBB'nin bekleyen detonasyon VIEW'ını şimdi oynat.
+    private void HandleRequestObbDetonationView(int originIndex)
+    {
+        if (_pendingObbDetonationViews.TryGetValue(originIndex, out var view))
+        {
+            _pendingObbDetonationViews.Remove(originIndex);
+            if (view != null)
+                view.PlayDetonationAndDestroy();
+        }
+    }
+
+    // ─── Wardrobe ───────────────────────────────────────────────────────────
+
+    private Image SpawnRocketBasketView(ObstacleDef def, int x, int y)
+    {
+        bool drawUnder = ResolveBehaviorForOrigin(resolvedLevel.Index(x, y), def) == ObstacleBehaviorType.UnderTileLayered;
+        var parent = drawUnder ? underTilesObstaclesRoot : overTilesObstaclesRoot;
+        int originIndex = resolvedLevel.Index(x, y);
+
+        var go = new GameObject($"Obs_RocketBasket_{x}_{y}",
+            typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(RocketBasketView));
+        go.transform.SetParent(parent, false);
+
+        var rootImage = go.GetComponent<Image>();
+        rootImage.sprite = def.GetPreviewSprite();
+        rootImage.type = Image.Type.Simple;
+        rootImage.preserveAspect = false;
+
+        var rt = rootImage.rectTransform;
+        rt.anchorMin = new Vector2(0, 1);
+        rt.anchorMax = new Vector2(0, 1);
+        rt.pivot = new Vector2(0, 1);
+        rt.anchoredPosition = new Vector2(x * tileSize, -y * tileSize);
+        rt.sizeDelta = new Vector2(tileSize, tileSize);
+
+        var clickProxy = rootImage.gameObject.AddComponent<ObstacleClickProxy>();
+        clickProxy.Init(board, x, y, 1, 1, tileSize);
+
+        if (rocketBasketService == null)
+            rocketBasketService = FindFirstObjectByType<RocketBasketService>();
+
+        var view = go.GetComponent<RocketBasketView>();
+        view.Init(rocketBasketService, rootImage, tileSize);
+        rocketBasketService?.RegisterView(originIndex, view);
+
+        return rootImage;
+    }
+
+    private Image SpawnWardrobeView(ObstacleDef def, int x, int y)
+    {
+        bool drawUnder = ResolveBehaviorForOrigin(resolvedLevel.Index(x, y), def) == ObstacleBehaviorType.UnderTileLayered;
+        var parent = drawUnder ? underTilesObstaclesRoot : overTilesObstaclesRoot;
+
+        int w = Mathf.Max(1, def.size.x);
+        int h = Mathf.Max(1, def.size.y);
+        float gridOverlap = Mathf.Max(1f, Mathf.Ceil(runtimeGridLineThickness * 0.5f));
+        int originIndex = resolvedLevel.Index(x, y);
+
+        bool HasDifferentAt(int cx, int cy)
+        {
+            if (cx < 0 || cx >= width || cy < 0 || cy >= height) return false;
+            int idx = resolvedLevel.Index(cx, cy);
+            if (idx < 0 || idx >= resolvedLevel.obstacles.Length) return false;
+            if ((ObstacleId)resolvedLevel.obstacles[idx] == ObstacleId.None) return false;
+            return resolvedLevel.obstacleOrigins[idx] != originIndex;
+        }
+
+        bool dL = false, dR = false, dT = false, dB = false;
+        for (int yy = y; yy < y + h; yy++) { if (HasDifferentAt(x - 1, yy)) dL = true; if (HasDifferentAt(x + w, yy)) dR = true; }
+        for (int xx = x; xx < x + w; xx++) { if (HasDifferentAt(xx, y - 1)) dT = true; if (HasDifferentAt(xx, y + h)) dB = true; }
+
+        float lo = dL ? 0f : gridOverlap;
+        float ro = dR ? 0f : gridOverlap;
+        float to = dT ? 0f : gridOverlap;
+        float bo = dB ? 0f : gridOverlap;
+
+        WardrobeObstacleView view;
+        Image rootImage;
+
+        if (wardrobeObstacleViewPrefab != null)
+        {
+            view = Instantiate(wardrobeObstacleViewPrefab, parent);
+            rootImage = view.GetComponent<Image>();
+            if (rootImage == null) rootImage = view.gameObject.AddComponent<Image>();
+        }
+        else
+        {
+            var fallback = new GameObject($"Obs_Wardrobe_{x}_{y}", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            fallback.transform.SetParent(parent, false);
+            rootImage = fallback.GetComponent<Image>();
+            view = fallback.AddComponent<WardrobeObstacleView>();
+        }
+
+        Sprite closedSprite = def.GetPreviewSprite();
+        if (rootImage != null)
+        {
+            rootImage.sprite = closedSprite;
+            rootImage.type = Image.Type.Simple;
+            rootImage.preserveAspect = false;
+        }
+
+        var rt = rootImage != null ? rootImage.GetComponent<RectTransform>() : null;
+        if (rt != null)
+        {
+            rt.anchorMin = new Vector2(0, 1);
+            rt.anchorMax = new Vector2(0, 1);
+            rt.pivot = new Vector2(0, 1);
+            rt.anchoredPosition = new Vector2(x * tileSize - lo, -y * tileSize + to);
+            rt.sizeDelta = new Vector2(w * tileSize + lo + ro, h * tileSize + to + bo);
+        }
+
+        if (rootImage != null)
+        {
+            var clickProxy = rootImage.gameObject.AddComponent<ObstacleClickProxy>();
+            clickProxy.Init(board, x, y, w, h, tileSize);
+        }
+
+        view.SetClosedSprite(closedSprite);
+        _wardrobeViews[originIndex] = view;
+        return rootImage;
+    }
+
+    private void HandleWardrobeOpened(int originIndex)
+    {
+        if (!_wardrobeViews.TryGetValue(originIndex, out var view) || view == null) return;
+        if (!obstacleDefsByOrigin.TryGetValue(originIndex, out var def) || def == null) return;
+
+        Sprite openBg = def.stages != null && def.stages.Count > 1 ? def.stages[1].sprite : null;
+        int shelfCount = Mathf.Max(1, def.size.y);
+        view.OpenDoor(openBg, def.wardrobeItemSprites, shelfCount);
+        view.Shake();
+    }
+
+    private void HandleWardrobeItemRemoved(int originIndex, int itemsRemaining)
+    {
+        if (!_wardrobeViews.TryGetValue(originIndex, out var view) || view == null) return;
+        view.RemoveFrontItem();
+        view.Shake();
+    }
+
+    private Image DrawObstacleImage(ObstacleDef def, int x, int y, int initialRemainingHits = 0)
+    {
+        if (def == null)
+            return null;
+
+        // Movable obstacle burada ASLA büyütülmez.
+        // O TileView üzerinden normal ikon gibi davranacak.
+        if (def.IsMovableObstacle)
+            return null;
+
+        // Grass artık chest1 gibi STANDART bir OverTileBlocker obstacle'dır: aşağıdaki generic
+        // per-origin Image yolundan çizilir ve HandleObstacleVisualChanged ile veriye 1:1 bağlı
+        // güvenilir temizlenir. (Eski ayrı GrassOverlayService registry'si veriyle desync olup
+        // "hit aldı ama ekranda kaldı" hayaletini üretiyordu — o yol tamamen bırakıldı.)
+
+        if (def.id == ObstacleId.ColorChest)
+            return SpawnChestObstacleView(def, x, y);
+
+        if (def.id == ObstacleId.BatteryBox)
+            return SpawnBatteryBoxView(def, x, y);
+
+        if (def.id == ObstacleId.OverrideBatteryBox)
+            return SpawnOverrideBatteryBoxView(def, x, y);
+
+        if (def.id == ObstacleId.Wardrobe)
+            return SpawnWardrobeView(def, x, y);
+
+        if (def.id == ObstacleId.RocketBasket)
+            return SpawnRocketBasketView(def, x, y);
+
+        // Grass: doğal görünüm için (x+y) parity ile A/B checkerboard sprite seçimi korunur.
+        // Sprite kaynağı GrassOverlayService (yalnız GetSpriteForCell — A/B mantığı); çizim +
+        // temizleme yine bu standart per-origin Image yolunda (güvenilir), overlay registry YOK.
+        Sprite sprite;
+        if (def.id == ObstacleId.Grass)
+        {
+            if (grassOverlayService == null)
+                grassOverlayService = FindFirstObjectByType<GrassOverlayService>();
+            sprite = grassOverlayService != null ? grassOverlayService.GetSpriteForCell(x, y) : null;
+            if (sprite == null) sprite = def.GetPreviewSprite();
+        }
+        else
+        {
+            // Authored damaged ColorCrates must show the same initial stage as their HP.
+            int remaining = 0;
+            if (StackedObstacleEntry.SupportsInitialHits(def.id))
+                remaining = initialRemainingHits > 0 ? initialRemainingHits
+                    : board?.ObstacleStateService != null ? board.ObstacleStateService.GetRemainingHitsAt(x, y) : 0;
+            sprite = remaining > 0 ? def.GetSpriteForRemainingHits(remaining) : def.GetPreviewSprite();
+        }
+        if (sprite == null) return null;
+
+        var foot = resolvedLevel != null
+            ? resolvedLevel.GetObstacleFootprint(def.id, resolvedLevel.Index(x, y), def)
+            : new Vector2Int(Mathf.Max(1, def.size.x), Mathf.Max(1, def.size.y));
+        int w = foot.x, h = foot.y;
+
+        var go = new GameObject($"Obs_{def.id}_{x}_{y}",
+            typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+
+        // Grass: eskiden olduğu gibi grassOverlayRoot'a çiz (BoardMask DIŞI + border ÜSTÜ, magnetin
+        // ÜSTÜNDE) — overhang yaprakları mask'a takılıp kesilmez ve magnet gibi üst renderer'lı
+        // obstacle'ların altından sızmaz. Çizim/temizleme yine standart per-origin Image yolunda.
+        RectTransform parent;
+        if (def.id == ObstacleId.Grass && grassOverlayRoot != null)
+        {
+            parent = grassOverlayRoot;
+        }
+        else
+        {
+            bool drawUnder = ResolveBehaviorForOrigin(resolvedLevel.Index(x, y), def) == ObstacleBehaviorType.UnderTileLayered;
+            parent = drawUnder ? underTilesObstaclesRoot : overTilesObstaclesRoot;
+        }
+        go.transform.SetParent(parent, false);
+        go.layer = parent.gameObject.layer;   // Screen Space Camera culling'i önle
+
+        // Sadece static obstacle için grid çizgisi payını kapatıyoruz.
+        // Static obstacle grid çizgisini kapatacak kadar büyür.
+        // Böylece obstacle ile board grid çizgisi arasında boşluk kalmaz.
+        // Obstacle dış kenarlarda grid çizgisini kapatsın,
+        // ama başka bir obstacle ile ortak kenarda üst üste binmesin.
+        float gridOverlap = Mathf.Max(1f, Mathf.Ceil(runtimeGridLineThickness * 0.5f));
+
+        int originIndex = resolvedLevel.Index(x, y);
+
+        bool HasDifferentObstacleAt(int cx, int cy)
+        {
+            if (cx < 0 || cx >= width || cy < 0 || cy >= height)
+                return false;
+
+            if (resolvedLevel == null ||
+                resolvedLevel.obstacles == null ||
+                resolvedLevel.obstacleOrigins == null)
+                return false;
+
+            int idx = resolvedLevel.Index(cx, cy);
+
+            if (idx < 0 || idx >= resolvedLevel.obstacles.Length)
+                return false;
+
+            if ((ObstacleId)resolvedLevel.obstacles[idx] == ObstacleId.None)
+                return false;
+
+            if (idx >= resolvedLevel.obstacleOrigins.Length)
+                return false;
+
+            // Aynı obstacle'ın kendi hücreleri değil,
+            // farklı origin'e sahip başka bir obstacle mı?
+            return resolvedLevel.obstacleOrigins[idx] != originIndex;
+        }
+
+        bool hasDifferentLeft = false;
+        bool hasDifferentRight = false;
+        bool hasDifferentTop = false;
+        bool hasDifferentBottom = false;
+
+        for (int yy = y; yy < y + h; yy++)
+        {
+            if (HasDifferentObstacleAt(x - 1, yy))
+                hasDifferentLeft = true;
+
+            if (HasDifferentObstacleAt(x + w, yy))
+                hasDifferentRight = true;
+        }
+
+        for (int xx = x; xx < x + w; xx++)
+        {
+            if (HasDifferentObstacleAt(xx, y - 1))
+                hasDifferentTop = true;
+
+            if (HasDifferentObstacleAt(xx, y + h))
+                hasDifferentBottom = true;
+        }
+
+        // Başka obstacle olmayan dış kenarlarda grid çizgisini kapat.
+        // Başka obstacle varsa o ortak kenarda taşma yapma.
+        float leftOverlap = hasDifferentLeft ? 0f : gridOverlap;
+        float rightOverlap = hasDifferentRight ? 0f : gridOverlap;
+        float topOverlap = hasDifferentTop ? 0f : gridOverlap;
+        float bottomOverlap = hasDifferentBottom ? 0f : gridOverlap;
+
+        var rt = go.GetComponent<RectTransform>();
+        rt.anchorMin = new Vector2(0, 1);
+        rt.anchorMax = new Vector2(0, 1);
+        rt.pivot = new Vector2(0, 1);
+
+        rt.anchoredPosition = new Vector2(
+            x * tileSize - leftOverlap,
+            -y * tileSize + topOverlap
+        );
+
+        rt.sizeDelta = new Vector2(
+            w * tileSize + leftOverlap + rightOverlap,
+            h * tileSize + topOverlap + bottomOverlap
+        );
+
+        // Grass: komşu grass ile dikişsiz binme + grid/board çizgilerini biraz örtme. Generic edge
+        // logic komşu grass'ı "farklı obstacle" (per-cell self-origin) sayıp taşmayı 0'lıyor → aralarda
+        // boşluk. Grass için HER yönde eşit overhang uygula (A/B farklı boy; B daha büyük A'nın boşluğunu örter).
+        if (def.id == ObstacleId.Grass)
+        {
+            float expand = grassOverlayService != null ? grassOverlayService.GetOverhangExpandPixels(x, y) : 15f;
+            float half = expand * 0.5f;
+            rt.anchoredPosition = new Vector2(x * tileSize - half, -y * tileSize + half);
+            rt.sizeDelta = new Vector2(w * tileSize + expand, h * tileSize + expand);
+        }
+
+        var img = go.GetComponent<Image>();
+        img.sprite = sprite;
+        img.type = Image.Type.Simple;
+        img.preserveAspect = def.id == ObstacleId.RhodesStatue;
+
+        // Grass dekoratiftir: raycast'i kapat + click proxy ekleme, alttaki taşın tıklaması engellenmesin.
+        bool isGrassDecor = def.id == ObstacleId.Grass;
+        img.raycastTarget = !isGrassDecor;
+        if (isGrassDecor && waterLilyService != null && waterLilyService.isActiveAndEnabled)
+            waterLilyService.BindGrassVisual(y * width + x, rt);
+
+        if (!isGrassDecor)
+        {
+            var clickProxy = go.AddComponent<ObstacleClickProxy>();
+            clickProxy.Init(board, x, y, w, h, tileSize);
+        }
+
+        // Boya kutusu piramidi: Image boş kasayı gösterir, kutular PaintCanBoxView child'larıdır.
+        if (def.id == ObstacleId.PaintCanBox)
+            AttachPaintCanBoxView(img, def, x, y);
+
+        // Lazer topu: Image tabanı gösterir; kule + cıvatalar LaserCannonView child'ları, davranış servisde.
+        if (def.id == ObstacleId.LaserCannon && board != null)
+        {
+            var state = board.ObstacleStateService;
+            // Örtü altında çizilirken hücrenin kalan vuruşu örtüye aittir → topu tam (gri cıvatalı) göster.
+            int remaining = state != null && state.GetObstacleIdAt(x, y) == ObstacleId.LaserCannon
+                ? state.GetRemainingHitsAt(x, y) : 0;
+            var view = LaserCannonView.Ensure(img, def, remaining > 0 ? remaining : def.hits);
+            LaserCannonService.Ensure(board).Register(y * width + x, view);
+        }
+
+        // Rodos heykeli: Image aşamanın tabanını gösterir; kılıç + kalkan RhodesStatueView child'ları.
+        if (def.id == ObstacleId.RhodesStatue && board != null)
+        {
+            var state = board.ObstacleStateService;
+            int remaining = state != null && state.GetObstacleIdAt(x, y) == ObstacleId.RhodesStatue
+                ? state.GetRemainingHitsAt(x, y) : 0;
+            RhodesStatueView.Ensure(img, remaining > 0 ? remaining : def.hits);
+        }
+
+        // Brandalı heykel: Image iç zemini gösterir; taş/branda/çerçeve/etiket TarpStatueView child'ları.
+        if (def.id == ObstacleId.TarpStatue && board != null)
+            TarpStatueService.Ensure(board).Register(y * width + x, img);
+
+        return img;
+    }
+
+    private void AttachPaintCanBoxView(Image img, ObstacleDef def, int x, int y)
+    {
+        if (def.auxiliarySprites != null && def.auxiliarySprites.Count > 0 && def.auxiliarySprites[0] != null)
+            img.sprite = def.auxiliarySprites[0];
+
+        var state = board != null ? board.ObstacleStateService : null;
+        int remaining = state != null ? state.GetRemainingHitsAt(x, y) : 0;
+        if (remaining <= 0) remaining = def.hits;
+        var color = resolvedLevel != null ? resolvedLevel.GetPaintCanBoxColor(resolvedLevel.Index(x, y)) : PaintCanColor.Auto;
+        if (color == PaintCanColor.Auto) color = PaintCanBoxView.AutoColorForRow(y);
+        PaintCanBoxView.Ensure(img, remaining, tileSize, color);
+    }
+
+    private void UpdatePaintCanBoxView(Image image, int remaining)
+    {
+        var view = image != null ? image.GetComponent<PaintCanBoxView>() : null;
+        if (view == null) return;
+        var root = board != null && board.BoardVfxPlayer != null ? board.BoardVfxPlayer.VfxRoot : null;
+        view.SetCount(remaining, this, root);
+    }
+    private void HandleObstacleCreatedDynamic(int x, int y)
+    {
+        if (resolvedLevel == null || resolvedLevel.obstacleLibrary == null) return;
+        int idx = resolvedLevel.Index(x, y);
+        if (resolvedLevel.obstacleOrigins[idx] != idx) return;
+
+        var obsId = (ObstacleId)resolvedLevel.obstacles[idx];
+        if (obsId == ObstacleId.None) return;
+
+        // Açığa çıkan katmanın ALTINDAKİ zemin (çamur/jel/su) de çizilir — örtü altında hiç kurulmamış olabilir
+        // (ör. mühür > porselen > çamur: mühür açılınca porselen çıkıyor, çamur görünmüyordu).
+        if (board?.ObstacleStateService != null && !board.ObstacleStateService.IsGroundLayer(obsId))
+        {
+            // Olay yalnız origin için gelir: çok hücreli cover'ın her hücresinin altına bak.
+            var foot = resolvedLevel.GetObstacleFootprint(obsId, idx, resolvedLevel.obstacleLibrary.Get(obsId));
+            for (int fy = y; fy < y + foot.y && fy < height; fy++)
+                for (int fx = x; fx < x + foot.x && fx < width; fx++)
+                    if (resolvedLevel.obstacleOrigins[resolvedLevel.Index(fx, fy)] == idx)
+                        EnsureGroundBeneath(fx, fy, obsId);
+        }
+
+        // Beneath baştan çizildiyse (overlay altında görünüyordu): yeni view çizme, mevcut olanı
+        // öne al ve obstacleViewsByOrigin'e promote et — böylece damage/visual event'leri çalışır.
+        if (beneathViewsByCell.TryGetValue(idx, out var pre) && pre != null)
+        {
+            beneathViewsByCell.Remove(idx);
+
+            // MudUnder generic bir preview Image'dır; gerçek Mud açıldığında onu promote etme.
+            // Preview'ı kaldırıp MudOverlay renderer'ına yeni topology hücresi ekle.
+            if (obsId == ObstacleId.Mud)
+            {
+                Destroy(pre.gameObject);
+                SpawnMudOverlayCell(x, y);
+                return;
+            }
+
+            // Jel de mud gibi: generic preview promote edilmez, jel servisine hücre eklenir.
+            if (obsId == ObstacleId.SpreadingGel)
+            {
+                Destroy(pre.gameObject);
+                RevealGelCell(x, y);
+                return;
+            }
+
+            // Özel view isteyen obstacle'larda generic beneath image promote edilmez.
+            // ön-çizilen generic beneath image'ı promote etme; sil ve normal spawn akışına düş.
+            if (obsId == ObstacleId.RocketBasket || obsId == ObstacleId.OverrideBatteryBox)
+            {
+                Destroy(pre.gameObject);
+            }
+            else
+            {
+                pre.raycastTarget = true;
+                pre.rectTransform.SetAsLastSibling();
+                obstacleViewsByOrigin[idx] = pre;
+                var preDef = resolvedLevel.obstacleLibrary.Get(obsId);
+                if (preDef != null) obstacleDefsByOrigin[idx] = preDef;
+                return;
+            }
+        }
+
+        // Mud ayrı overlay service'iyle çizilir; aynı origin'deki cover view henüz temizlenmemiş
+        // olsa bile Mud reveal view'ı skip'lenmemeli.
+        if (obsId == ObstacleId.Mud)
+        {
+            SpawnMudOverlayCell(x, y);
+            return;
+        }
+
+        // SpreadingGel ayrı overlay service'iyle çizilir (mud gibi); cover altından reveal edilince
+        // generic 1x1 image DEĞİL, jel hücresi eklenir — yoksa bevel/birleşim ve yayılma çalışmaz.
+        if (obsId == ObstacleId.SpreadingGel)
+        {
+            RevealGelCell(x, y);
+            return;
+        }
+
+        if (obstacleViewsByOrigin.ContainsKey(idx)) return;
+
+        if (obsId == ObstacleId.AncientSeal)
+        {
+            RevealCoveredAncientSealView(idx);
+            return;
+        }
+
+        if (obsId == ObstacleId.Safe)
+        {
+            RevealCoveredSafeView(idx);
+            return;
+        }
+
+        var def = resolvedLevel.obstacleLibrary.Get(obsId);
+        if (def == null) return;
+
+        // Magnet/Tube already have path-level renderers created from LevelData entries.
+        // When a cover such as Grass reveals one cell, do not spawn a generic 1x1
+        // obstacle image on top of that renderer; it has no path orientation and looks flipped.
+        if (obsId == ObstacleId.Magnet || obsId == ObstacleId.Tube || obsId == ObstacleId.WaterChannel)
+            return;
+
+        // Duvar: parça görseli + kalan vuruş WallObstacleService'te (OnObstacleViewRestored'ı o da dinler);
+        // generic 1x1 image çizilmez.
+        if (WallKind.For(obsId) != null)
+            return;
+
+        // Oil ayrı bir overlay renderer'ı kullanır (obstacleViewsByOrigin değil). Bir cover'ın
+        // (Chest vb.) altından oil reveal edilince, oil overlay'lerini yenile — yoksa generic
+        // DrawObstacleImage yolu oil'i yanlış çizerdi.
+        if (obsId == ObstacleId.Oil)
+        {
+            board?.RefreshOilOverlays();
+            return;
+        }
+
+        if (def.IsMovableObstacle)
+        {
+            if (board != null && board.GetTileViewAt(x, y) == null)
+                SpawnMovableObstacleTile(x, y);
+            return;
+        }
+
+        // Cover altından reveal edilen RocketBasket, ilk spawn'la aynı özel view'ı alır
+        // (RocketBasketView + service RegisterView) — generic image ateşleme görsellerini taşıyamaz.
+        if (def.id == ObstacleId.RocketBasket)
+        {
+            var basketImage = SpawnRocketBasketView(def, x, y);
+            if (basketImage != null)
+            {
+                obstacleViewsByOrigin[idx] = basketImage;
+                obstacleDefsByOrigin[idx] = def;
+            }
+            return;
+        }
+
+        var image = DrawObstacleImage(def, x, y);
+        if (image != null)
+        {
+            obstacleViewsByOrigin[idx] = image;
+            obstacleDefsByOrigin[idx] = def;
+        }
+    }
+
+    private IEnumerator DestroyGelBodyIfUnclaimed(int originIndex, Image image)
+    {
+        yield return new WaitForSeconds(2f);
+        if (image != null && GelLauncherFx.IsBodyPending(originIndex, image))
+        {
+            GelLauncherFx.TakeBody(originIndex);
+            Destroy(image.gameObject);
+        }
+    }
+
+    // Hücrede ortaya çıkan katmanın (cover) altındaki zemin katmanının görünümünü kurar. Cover hücreyi tam kapatıyorsa
+    // (ObstacleDef.coversCellFully) zemin gizli kalır; yuvarlak/boşluklu ya da hareketli cover'da görünür.
+    // Jel: sabit cover altında MÜHÜRLÜ kalır (yayılmaz, sayılmaz — cover kırılınca açılır); hareketli cover (porselen…)
+    // altında açıktır (porselen düşerek jele girdiğinde de böyle).
+    private void EnsureGroundBeneath(int x, int y, ObstacleId coverId)
+    {
+        var state = board.ObstacleStateService;
+        if (!state.TryGetGroundBeneathTopAt(x, y, out var groundId, out int groundOrigin)) return;
+        var coverDef = resolvedLevel.obstacleLibrary.Get(coverId);
+        bool hide = coverDef != null && coverDef.coversCellFully;
+        bool movableCover = coverDef != null && coverDef.IsMovableObstacle;
+        int idx = resolvedLevel.Index(x, y);
+
+        if (groundId == ObstacleId.Mud)
+        {
+            SpawnMudOverlayCell(x, y);
+            if (hide) mudOverlayService?.SetCellHidden(x, y, true);
+            return;
+        }
+
+        if (groundId == ObstacleId.SpreadingGel)
+        {
+            if (spreadingGelOverlayService == null) return;
+            if (movableCover) { RevealGelCell(x, y); return; }
+            spreadingGelOverlayService.AddGelImmediate(x, y);
+            spreadingGelOverlayService.SealCell(x, y, hideVisual: hide);
+            return;
+        }
+
+        // Su birikintisi vb.: cover'ın arkasına generic görsel (cover kalkınca HandleObstacleCreatedDynamic onu terfi ettirir).
+        if (hide || groundOrigin != idx || beneathViewsByCell.ContainsKey(idx)) return;
+        var groundDef = resolvedLevel.obstacleLibrary.Get(groundId);
+        if (groundDef == null) return;
+        int savedObs = resolvedLevel.obstacles[idx], savedOrg = resolvedLevel.obstacleOrigins[idx];
+        resolvedLevel.obstacles[idx] = (int)groundId;
+        resolvedLevel.obstacleOrigins[idx] = groundOrigin;
+        var image = DrawObstacleImage(groundDef, x, y);
+        resolvedLevel.obstacles[idx] = savedObs;
+        resolvedLevel.obstacleOrigins[idx] = savedOrg;
+        if (image == null) return;
+        image.rectTransform.SetAsFirstSibling();
+        image.raycastTarget = false;
+        beneathViewsByCell[idx] = image;
+    }
+
+    // Kırılan sabit engel kendi son görseliyle parçalanır (boyuna oranlı parçalar). Örtüler (çim) ve kendi kırılma
+    // animasyonu olanlar (yukarıdaki özel dallar + kutuları uçan PaintCanBox) hariç.
+    private void PlayObstacleShatter(ObstacleVisualChange change, Image image)
+    {
+        if (image == null || image.sprite == null || board == null) return;
+        if (change.obstacleId == ObstacleId.Grass || change.obstacleId == ObstacleId.GrassFlower
+            || change.obstacleId == ObstacleId.PaintCanBox)
+            return;
+        var def = obstacleDefsByOrigin.TryGetValue(change.originIndex, out var d) ? d
+            : resolvedLevel?.obstacleLibrary?.Get(change.obstacleId);
+        if (def == null || def.IsUnderTileBehavior) return;
+        var root = board.BoardVfxPlayer != null && board.BoardVfxPlayer.VfxRoot != null
+            ? (RectTransform)board.BoardVfxPlayer.VfxRoot : board.BreakFxParent;
+        int cells = resolvedLevel != null
+            ? resolvedLevel.GetObstacleFootprint(change.obstacleId, change.originIndex, def).x
+            : Mathf.Max(1, def.size.x);
+        ObstacleShatterFx.Play(this, root, image, cells);
+    }
+
+    private void HandleObstacleVisualChanged(ObstacleVisualChange change)
+    {
+        if (!obstacleViewsByOrigin.TryGetValue(change.originIndex, out var image) || image == null)
+            return;
+
+        if (!IsTrackedObstacleViewFor(change.originIndex, change.obstacleId))
+            return;
+
+        if (change.cleared)
+        {
+            StopObstacleHitShake(change.originIndex, image.rectTransform);
+
+            if (change.obstacleId == ObstacleId.EnergyContainer)
+            {
+                // Don't destroy — EnergyContainerFx takes over to show the exhausted state.
+                obstacleViewsByOrigin.Remove(change.originIndex);
+                obstacleDefsByOrigin.Remove(change.originIndex);
+                return;
+            }
+            // Boya kutusu: kalan son kutu(lar) kasadan uçarak düşer, kasa hemen kalkar.
+            if (change.obstacleId == ObstacleId.PaintCanBox)
+                UpdatePaintCanBoxView(image, 0);
+
+            if (change.obstacleId == ObstacleId.LaserCannon
+                && LaserCannonService.TryPlayBreak(board, change.originIndex, image))
+            {
+                // 4. cıvata yanar, top parçalanır; görünümü servis yok eder.
+            }
+            else if (change.obstacleId == ObstacleId.TarpStatue
+                && TarpStatueService.TryPlayFinale(board, change.originIndex, image))
+            {
+                // Heykel hedefe uçar, çerçeve parçalanır; görünümü servis yok eder.
+            }
+            else if (BoardController.IsGelLauncher(change.obstacleId))
+            {
+                // Ateşleme animasyonu gerçek görselde oynar (GelLauncherFireAction devralır).
+                GelLauncherFx.HandOverBody(change.originIndex, image);
+                StartCoroutine(DestroyGelBodyIfUnclaimed(change.originIndex, image));
+            }
+            else if (change.obstacleId == ObstacleId.Wardrobe)
+            {
+                float destroyDelay = WardrobeFinalItemDestroyDelay;
+                if (_wardrobeViews.TryGetValue(change.originIndex, out var wardrobeView) && wardrobeView != null)
+                    destroyDelay = Mathf.Max(destroyDelay, wardrobeView.RecommendedClearDestroyDelay);
+                Destroy(image.gameObject, destroyDelay);
+                _wardrobeViews.Remove(change.originIndex);
+            }
+            else
+            {
+                PlayObstacleShatter(change, image);
+                if (change.obstacleId != ObstacleId.Grass || waterLilyService == null
+                    || !waterLilyService.TryPlayGrassBreak(change.originIndex, image))
+                    Destroy(image.gameObject);
+            }
+
+            obstacleViewsByOrigin.Remove(change.originIndex);
+            obstacleDefsByOrigin.Remove(change.originIndex);
+            ApplyUnderTileCellBgTint();
+            return;
+        }
+
+        if (ShouldLetEnergyContainerOwnVisual(change.originIndex))
+            return;
+
+        // Grass: hit'te sprite'ı DEĞİŞTİRME — A/B checkerboard görseli (DrawObstacleImage'da
+        // seçilen) tüm hit'ler boyunca korunmalı; stage sprite'ı doğal görünümü bozmasın.
+        // Boya kutusu: kasa sprite'ı sabit; kutular sallanır, eksilenler düşer.
+        if (change.obstacleId == ObstacleId.PaintCanBox)
+        {
+            UpdatePaintCanBoxView(image, change.remainingHits);
+            return;
+        }
+
+        // Rodos heykeli: aşama değişir, kılıç savrulur, kalkan yalpalar + kısa sarsıntı.
+        if (change.obstacleId == ObstacleId.RhodesStatue && image.TryGetComponent<RhodesStatueView>(out var rhodes))
+        {
+            rhodes.OnHit(change.remainingHits);
+            PlayObstacleHitShake(change.originIndex, image.rectTransform);
+            return;
+        }
+
+        // Brandalı heykel: taş aşaması değişir, parçalar kopar + kısa sarsıntı.
+        if (change.obstacleId == ObstacleId.TarpStatue)
+        {
+            TarpStatueService.TryPlayHit(board, image, change.remainingHits);
+            PlayObstacleHitShake(change.originIndex, image.rectTransform);
+            return;
+        }
+
+        // Lazer topu: taban sabit; vuruşta bir cıvata daha yanar + kısa sarsıntı.
+        if (change.obstacleId == ObstacleId.LaserCannon)
+        {
+            if (image.TryGetComponent<LaserCannonView>(out var laserView))
+            {
+                var def = obstacleDefsByOrigin.TryGetValue(change.originIndex, out var d) ? d : null;
+                laserView.SetLit((def != null ? def.hits : 4) - change.remainingHits);
+            }
+            PlayObstacleHitShake(change.originIndex, image.rectTransform);
+            return;
+        }
+
+        if (change.sprite != null && change.obstacleId != ObstacleId.Grass)
+            image.sprite = change.sprite;
+
+        // Barrell_v2 + su deposu: ara vuruşta (sprite değişimi) kısa sarsıntı — "çatladı" hissi.
+        if (change.obstacleId == ObstacleId.Barrell_v2 || BoardController.IsWaterTank(change.obstacleId)
+            || BoardController.IsGelLauncher(change.obstacleId))
+            PlayObstacleHitShake(change.originIndex, image.rectTransform);
+
+        // Su deposu: çatlak kareleri (Bidon → Bidon2 → Bidon3) oynar + gövdeden parça sıçrar.
+        if (BoardController.IsWaterTank(change.obstacleId))
+            PlayWaterTankCrack(image, change.sprite);
+
+        // Jel fırlatıcı: çatlak hâlde ara ara şişip buhar çıkarır.
+        if (BoardController.IsGelLauncher(change.obstacleId))
+            GelLauncherIdleFx.Ensure(image, change.obstacleId, tileSize);
+    }
+
+    private void PlayWaterTankCrack(Image image, Sprite stageSprite)
+    {
+        var config = WaterTankConfig.Load();
+        StartCoroutine(WaterTankFx.PlayCrackFrames(image, config, stageSprite != null ? stageSprite : image.sprite));
+
+        int shardCount = config != null ? config.crackShardCount : 4;
+        var root = board != null && board.BoardVfxPlayer != null ? board.BoardVfxPlayer.VfxRoot : null;
+        if (shardCount > 0 && root != null
+            && WaterTankFx.TryGetLocalCenterAndWidth(image.rectTransform, root, out var center, out float width))
+        {
+            // Çatlarken yalnız birkaç küçük parça: menzil/boy deponun yarısı kadar.
+            WaterTankFx.SpawnShards(this, root, center, width * 0.6f,
+                stageSprite != null ? stageSprite : image.sprite, shardCount);
+        }
+    }
+
+    private void PlayObstacleHitShake(int originIndex, RectTransform target)
+    {
+        if (target == null)
+            return;
+
+        StopObstacleHitShake(originIndex, target);
+        obstacleHitShakeBasePositions[originIndex] = target.anchoredPosition;
+        obstacleHitShakeRoutines[originIndex] = StartCoroutine(ObstacleHitShakeRoutine(originIndex, target));
+    }
+
+    private IEnumerator ObstacleHitShakeRoutine(int originIndex, RectTransform target)
+    {
+        float elapsed = 0f;
+        float amplitude = Mathf.Clamp(tileSize * 0.095f, 7f, 14f);
+        Vector2 basePos = obstacleHitShakeBasePositions.TryGetValue(originIndex, out var storedBase)
+            ? storedBase
+            : target.anchoredPosition;
+
+        while (target != null && elapsed < BarrellV2HitShakeDuration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / BarrellV2HitShakeDuration);
+            float damp = 1f - t;
+            float x = Mathf.Sin(t * Mathf.PI * 2f * BarrellV2HitShakeCycles) * amplitude * damp;
+            target.anchoredPosition = basePos + new Vector2(x, 0f);
+            yield return null;
+        }
+
+        if (target != null)
+            target.anchoredPosition = basePos;
+
+        obstacleHitShakeRoutines.Remove(originIndex);
+        obstacleHitShakeBasePositions.Remove(originIndex);
+    }
+
+    private void StopObstacleHitShake(int originIndex, RectTransform target)
+    {
+        if (obstacleHitShakeRoutines.TryGetValue(originIndex, out var routine) && routine != null)
+            StopCoroutine(routine);
+
+        if (target != null && obstacleHitShakeBasePositions.TryGetValue(originIndex, out var basePos))
+            target.anchoredPosition = basePos;
+
+        obstacleHitShakeRoutines.Remove(originIndex);
+        obstacleHitShakeBasePositions.Remove(originIndex);
+    }
+
+    private void StopAllObstacleHitShakes()
+    {
+        foreach (var kvp in obstacleHitShakeBasePositions)
+        {
+            if (obstacleViewsByOrigin.TryGetValue(kvp.Key, out var image) && image != null)
+                image.rectTransform.anchoredPosition = kvp.Value;
+        }
+
+        foreach (var routine in obstacleHitShakeRoutines.Values)
+        {
+            if (routine != null)
+                StopCoroutine(routine);
+        }
+
+        obstacleHitShakeRoutines.Clear();
+        obstacleHitShakeBasePositions.Clear();
+    }
+
+    private bool IsTrackedObstacleViewFor(int originIndex, ObstacleId obstacleId)
+    {
+        if (!obstacleDefsByOrigin.TryGetValue(originIndex, out var trackedDef) || trackedDef == null)
+            return true;
+
+        return trackedDef.id == obstacleId;
+    }
+
+    private bool ShouldLetEnergyContainerOwnVisual(int originIndex)
+    {
+        if (originIndex < 0 || resolvedLevel == null || resolvedLevel.obstacles == null || originIndex >= resolvedLevel.obstacles.Length)
+            return false;
+
+        if ((ObstacleId)resolvedLevel.obstacles[originIndex] != ObstacleId.EnergyContainer)
+            return false;
+
+        if (energyContainerService == null)
+            energyContainerService = FindFirstObjectByType<EnergyContainerService>();
+
+        return energyContainerService != null && energyContainerService.IsExhausted(originIndex);
+    }
+    private void AutoFitTileSizeToMask()
+    {
+        if (spawnParent == null) return;
+
+        RectTransform maskRt = spawnParent.parent as RectTransform; // BoardMask
+        if (maskRt == null) return;
+
+        float borderExtent = GetBorderExtentPx();
+
+        float availableW = maskRt.rect.width - (boardPadding + borderExtent) * 2f - fitSafetyMarginPx * 2f;
+        float availableH = maskRt.rect.height - (boardPadding + borderExtent) * 2f - fitSafetyMarginPx * 2f;
+
+        int fitCols = useReferenceGridSizing ? referenceCols : width;
+        int fitRows = useReferenceGridSizing ? referenceRows : height;
+
+        int fit = Mathf.FloorToInt(Mathf.Min(availableW / fitCols, availableH / fitRows) * fitScale);
+        tileSize = Mathf.Max(40, fit);
+    }
+
+    private float GetIconDrivenTileRatio()
+    {
+        if (fullCellIcons)
+            return 1f;
+
+        float ratioX = iconSize.x / Mathf.Max(1f, IconReferenceSize.x);
+        float ratioY = iconSize.y / Mathf.Max(1f, IconReferenceSize.y);
+        return Mathf.Max(0.1f, Mathf.Max(ratioX, ratioY));
+    }
+
+    private Vector2 GetVisualCellRectSize()
+    {
+        if (fullCellIcons)
+            return new Vector2(tileSize, tileSize);
+
+        float ratioX = iconSize.x / Mathf.Max(1f, IconReferenceSize.x);
+        float ratioY = iconSize.y / Mathf.Max(1f, IconReferenceSize.y);
+        return new Vector2(
+            tileSize * Mathf.Max(0.1f, ratioX),
+            tileSize * Mathf.Max(0.1f, ratioY));
+    }
+
+    private float GetBorderExtentPx()
+    {
+        var drawer = GetComponent<DynamicBoardBorder>();
+        if (drawer == null) return 0f;
+
+        // Border’ın grid dışına taştığı mesafe:
+        // borderOutside + thickness/2
+        return Mathf.Max(0f, drawer.borderOutside + drawer.straightH_height * 0.5f);
+    }
+
+}

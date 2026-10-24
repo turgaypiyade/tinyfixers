@@ -1,0 +1,915 @@
+{
+  "candidate": 189,
+  "previousLevelsScanned": 188,
+  "limits": "Static authored geometry including valid tube paths, magnet paths, safes, seals and overlays. Custom data retained; no gameplay/dynamic spawning. IoU after normalization/reflection is a shortlist metric, never perceptual novelty percent. Crop score ignores size and placement. Opaque appearance/grass on movable objects require visual review.",
+  "geometryShortlist": [
+    {
+      "level": 38,
+      "name": "Heykeltıraşın Işığı",
+      "blockerOverlap": 0.4673,
+      "maskOverlap": 0.9175,
+      "orientation": "yatay ayna",
+      "sameDirectionOverlap": 0.0397,
+      "croppedShapeOverlap": 0.482,
+      "croppedShapeOrientation": "yatay ayna",
+      "sharedFamilies": [],
+      "familyOverlap": 0.0
+    },
+    {
+      "level": 21,
+      "name": "Kaygan Depo",
+      "blockerOverlap": 0.4474,
+      "maskOverlap": 0.9082,
+      "orientation": "aynı yön",
+      "sameDirectionOverlap": 0.4474,
+      "croppedShapeOverlap": 0.3759,
+      "croppedShapeOrientation": "yatay ayna",
+      "sharedFamilies": [],
+      "familyOverlap": 0.0
+    },
+    {
+      "level": 136,
+      "name": "Gözcü Kulesi",
+      "blockerOverlap": 0.3673,
+      "maskOverlap": 0.798,
+      "orientation": "aynı yön",
+      "sameDirectionOverlap": 0.3673,
+      "croppedShapeOverlap": 0.3696,
+      "croppedShapeOrientation": "aynı yön",
+      "sharedFamilies": [],
+      "familyOverlap": 0.0
+    },
+    {
+      "level": 68,
+      "name": "Fenerli Rıhtım",
+      "blockerOverlap": 0.3562,
+      "maskOverlap": 0.9091,
+      "orientation": "aynı yön",
+      "sameDirectionOverlap": 0.3562,
+      "croppedShapeOverlap": 0.3843,
+      "croppedShapeOrientation": "aynı yön",
+      "sharedFamilies": [],
+      "familyOverlap": 0.0
+    },
+    {
+      "level": 14,
+      "name": "Mavi Sandıklar",
+      "blockerOverlap": 0.3333,
+      "maskOverlap": 0.9697,
+      "orientation": "aynı yön",
+      "sameDirectionOverlap": 0.3333,
+      "croppedShapeOverlap": 0.3523,
+      "croppedShapeOrientation": "yatay ayna",
+      "sharedFamilies": [],
+      "familyOverlap": 0.0
+    },
+    {
+      "level": 34,
+      "name": "Mavi Geçiş",
+      "blockerOverlap": 0.3333,
+      "maskOverlap": 0.8903,
+      "orientation": "aynı yön",
+      "sameDirectionOverlap": 0.3333,
+      "croppedShapeOverlap": 0.3523,
+      "croppedShapeOrientation": "yatay ayna",
+      "sharedFamilies": [],
+      "familyOverlap": 0.0
+    },
+    {
+      "level": 99,
+      "name": "Fenerlerin Işığı",
+      "blockerOverlap": 0.3333,
+      "maskOverlap": 0.8557,
+      "orientation": "yatay ayna",
+      "sameDirectionOverlap": 0.1892,
+      "croppedShapeOverlap": 0.3351,
+      "croppedShapeOrientation": "yatay ayna",
+      "sharedFamilies": [],
+      "familyOverlap": 0.0
+    },
+    {
+      "level": 97,
+      "name": "Fıçı İskelesi",
+      "blockerOverlap": 0.3333,
+      "maskOverlap": 0.8182,
+      "orientation": "aynı yön",
+      "sameDirectionOverlap": 0.3333,
+      "croppedShapeOverlap": 0.3523,
+      "croppedShapeOrientation": "yatay ayna",
+      "sharedFamilies": [],
+      "familyOverlap": 0.0
+    },
+    {
+      "level": 139,
+      "name": "Üç Renkli Oyma",
+      "blockerOverlap": 0.3333,
+      "maskOverlap": 0.6465,
+      "orientation": "yatay ayna",
+      "sameDirectionOverlap": 0.2537,
+      "croppedShapeOverlap": 0.3982,
+      "croppedShapeOrientation": "dikey ayna",
+      "sharedFamilies": [],
+      "familyOverlap": 0.0
+    },
+    {
+      "level": 23,
+      "name": "Enerji Şöleni",
+      "blockerOverlap": 0.3288,
+      "maskOverlap": 0.9697,
+      "orientation": "yatay ayna",
+      "sameDirectionOverlap": 0.2278,
+      "croppedShapeOverlap": 0.4025,
+      "croppedShapeOrientation": "yatay ayna",
+      "sharedFamilies": [],
+      "familyOverlap": 0.0
+    },
+    {
+      "level": 41,
+      "name": "Taş Ustası",
+      "blockerOverlap": 0.3221,
+      "maskOverlap": 0.904,
+      "orientation": "aynı yön",
+      "sameDirectionOverlap": 0.3221,
+      "croppedShapeOverlap": 0.3945,
+      "croppedShapeOrientation": "aynı yön",
+      "sharedFamilies": [],
+      "familyOverlap": 0.0
+    },
+    {
+      "level": 13,
+      "name": "İki Renkli Onarım",
+      "blockerOverlap": 0.3182,
+      "maskOverlap": 0.9697,
+      "orientation": "aynı yön",
+      "sameDirectionOverlap": 0.3182,
+      "croppedShapeOverlap": 0.3963,
+      "croppedShapeOrientation": "yatay ayna",
+      "sharedFamilies": [],
+      "familyOverlap": 0.0
+    },
+    {
+      "level": 138,
+      "name": "Tuğla Geçidi",
+      "blockerOverlap": 0.3182,
+      "maskOverlap": 0.9091,
+      "orientation": "aynı yön",
+      "sameDirectionOverlap": 0.3182,
+      "croppedShapeOverlap": 0.3963,
+      "croppedShapeOrientation": "yatay ayna",
+      "sharedFamilies": [
+        55
+      ],
+      "familyOverlap": 0.1
+    },
+    {
+      "level": 27,
+      "name": "Depo Temizliği",
+      "blockerOverlap": 0.3179,
+      "maskOverlap": 0.9697,
+      "orientation": "dikey ayna",
+      "sameDirectionOverlap": 0.2839,
+      "croppedShapeOverlap": 0.3487,
+      "croppedShapeOrientation": "dikey ayna",
+      "sharedFamilies": [],
+      "familyOverlap": 0.0
+    },
+    {
+      "level": 22,
+      "name": "Şapkalı Atölye",
+      "blockerOverlap": 0.3164,
+      "maskOverlap": 0.8731,
+      "orientation": "180 derece",
+      "sameDirectionOverlap": 0.2969,
+      "croppedShapeOverlap": 0.3708,
+      "croppedShapeOrientation": "180 derece",
+      "sharedFamilies": [],
+      "familyOverlap": 0.0
+    },
+    {
+      "level": 39,
+      "name": "Porselen Vitrin",
+      "blockerOverlap": 0.3153,
+      "maskOverlap": 0.9588,
+      "orientation": "yatay ayna",
+      "sameDirectionOverlap": 0.277,
+      "croppedShapeOverlap": 0.3425,
+      "croppedShapeOrientation": "180 derece",
+      "sharedFamilies": [],
+      "familyOverlap": 0.0
+    },
+    {
+      "level": 124,
+      "name": "Renkli Palet",
+      "blockerOverlap": 0.3151,
+      "maskOverlap": 0.7552,
+      "orientation": "yatay ayna",
+      "sameDirectionOverlap": 0.3151,
+      "croppedShapeOverlap": 0.3352,
+      "croppedShapeOrientation": "aynı yön",
+      "sharedFamilies": [],
+      "familyOverlap": 0.0
+    },
+    {
+      "level": 118,
+      "name": "Su Kuleleri",
+      "blockerOverlap": 0.3143,
+      "maskOverlap": 0.9697,
+      "orientation": "aynı yön",
+      "sameDirectionOverlap": 0.3143,
+      "croppedShapeOverlap": 0.3963,
+      "croppedShapeOrientation": "yatay ayna",
+      "sharedFamilies": [],
+      "familyOverlap": 0.0
+    },
+    {
+      "level": 167,
+      "name": "Lazerli Restorasyon",
+      "blockerOverlap": 0.3117,
+      "maskOverlap": 0.9293,
+      "orientation": "aynı yön",
+      "sameDirectionOverlap": 0.3117,
+      "croppedShapeOverlap": 0.371,
+      "croppedShapeOrientation": "180 derece",
+      "sharedFamilies": [],
+      "familyOverlap": 0.0
+    },
+    {
+      "level": 51,
+      "name": "Pusulanın Işığı",
+      "blockerOverlap": 0.3117,
+      "maskOverlap": 0.8424,
+      "orientation": "aynı yön",
+      "sameDirectionOverlap": 0.3117,
+      "croppedShapeOverlap": 0.3995,
+      "croppedShapeOrientation": "dikey ayna",
+      "sharedFamilies": [],
+      "familyOverlap": 0.0
+    },
+    {
+      "level": 117,
+      "name": "Hamster'ın Kalesi",
+      "blockerOverlap": 0.3103,
+      "maskOverlap": 0.9697,
+      "orientation": "aynı yön",
+      "sameDirectionOverlap": 0.3103,
+      "croppedShapeOverlap": 0.4604,
+      "croppedShapeOrientation": "aynı yön",
+      "sharedFamilies": [
+        55
+      ],
+      "familyOverlap": 0.0769
+    },
+    {
+      "level": 88,
+      "name": "Jel Kanalları",
+      "blockerOverlap": 0.3095,
+      "maskOverlap": 0.7398,
+      "orientation": "aynı yön",
+      "sameDirectionOverlap": 0.3095,
+      "croppedShapeOverlap": 0.3276,
+      "croppedShapeOrientation": "dikey ayna",
+      "sharedFamilies": [],
+      "familyOverlap": 0.0
+    },
+    {
+      "level": 115,
+      "name": "Damalı Kale",
+      "blockerOverlap": 0.3088,
+      "maskOverlap": 0.9697,
+      "orientation": "aynı yön",
+      "sameDirectionOverlap": 0.3088,
+      "croppedShapeOverlap": 0.3641,
+      "croppedShapeOrientation": "yatay ayna",
+      "sharedFamilies": [],
+      "familyOverlap": 0.0
+    },
+    {
+      "level": 81,
+      "name": "Anahtar Yağmuru",
+      "blockerOverlap": 0.3074,
+      "maskOverlap": 0.817,
+      "orientation": "yatay ayna",
+      "sameDirectionOverlap": 0.2215,
+      "croppedShapeOverlap": 0.3565,
+      "croppedShapeOrientation": "yatay ayna",
+      "sharedFamilies": [],
+      "familyOverlap": 0.0
+    }
+  ],
+  "croppedShapeShortlist": [
+    {
+      "level": 38,
+      "name": "Heykeltıraşın Işığı",
+      "blockerOverlap": 0.4673,
+      "maskOverlap": 0.9175,
+      "orientation": "yatay ayna",
+      "sameDirectionOverlap": 0.0397,
+      "croppedShapeOverlap": 0.482,
+      "croppedShapeOrientation": "yatay ayna",
+      "sharedFamilies": [],
+      "familyOverlap": 0.0
+    },
+    {
+      "level": 117,
+      "name": "Hamster'ın Kalesi",
+      "blockerOverlap": 0.3103,
+      "maskOverlap": 0.9697,
+      "orientation": "aynı yön",
+      "sameDirectionOverlap": 0.3103,
+      "croppedShapeOverlap": 0.4604,
+      "croppedShapeOrientation": "aynı yön",
+      "sharedFamilies": [
+        55
+      ],
+      "familyOverlap": 0.0769
+    },
+    {
+      "level": 78,
+      "name": "Bahçe Vitrini",
+      "blockerOverlap": 0.2233,
+      "maskOverlap": 0.9082,
+      "orientation": "yatay ayna",
+      "sameDirectionOverlap": 0.115,
+      "croppedShapeOverlap": 0.4496,
+      "croppedShapeOrientation": "yatay ayna",
+      "sharedFamilies": [],
+      "familyOverlap": 0.0
+    },
+    {
+      "level": 94,
+      "name": "Yağmurlu Atölye",
+      "blockerOverlap": 0.2807,
+      "maskOverlap": 0.7938,
+      "orientation": "yatay ayna",
+      "sameDirectionOverlap": 0.2807,
+      "croppedShapeOverlap": 0.4424,
+      "croppedShapeOrientation": "aynı yön",
+      "sharedFamilies": [],
+      "familyOverlap": 0.0
+    },
+    {
+      "level": 33,
+      "name": "Kargo Tüneli",
+      "blockerOverlap": 0.2703,
+      "maskOverlap": 0.9697,
+      "orientation": "aynı yön",
+      "sameDirectionOverlap": 0.2703,
+      "croppedShapeOverlap": 0.4283,
+      "croppedShapeOrientation": "yatay ayna",
+      "sharedFamilies": [],
+      "familyOverlap": 0.0
+    },
+    {
+      "level": 43,
+      "name": "Kırılgan Kargo",
+      "blockerOverlap": 0.2703,
+      "maskOverlap": 0.8182,
+      "orientation": "aynı yön",
+      "sameDirectionOverlap": 0.2703,
+      "croppedShapeOverlap": 0.4283,
+      "croppedShapeOrientation": "yatay ayna",
+      "sharedFamilies": [],
+      "familyOverlap": 0.0
+    },
+    {
+      "level": 8,
+      "name": "Turuncu Şeritler",
+      "blockerOverlap": 0.2703,
+      "maskOverlap": 0.803,
+      "orientation": "aynı yön",
+      "sameDirectionOverlap": 0.2703,
+      "croppedShapeOverlap": 0.4283,
+      "croppedShapeOrientation": "yatay ayna",
+      "sharedFamilies": [],
+      "familyOverlap": 0.0
+    },
+    {
+      "level": 11,
+      "name": "Kargo Köprüsü",
+      "blockerOverlap": 0.2721,
+      "maskOverlap": 0.7803,
+      "orientation": "aynı yön",
+      "sameDirectionOverlap": 0.2721,
+      "croppedShapeOverlap": 0.4202,
+      "croppedShapeOrientation": "dikey ayna",
+      "sharedFamilies": [],
+      "familyOverlap": 0.0
+    },
+    {
+      "level": 103,
+      "name": "Mor Surlar",
+      "blockerOverlap": 0.25,
+      "maskOverlap": 0.8586,
+      "orientation": "aynı yön",
+      "sameDirectionOverlap": 0.25,
+      "croppedShapeOverlap": 0.4163,
+      "croppedShapeOrientation": "dikey ayna",
+      "sharedFamilies": [
+        55
+      ],
+      "familyOverlap": 0.1
+    },
+    {
+      "level": 18,
+      "name": "Renkli Kilitler",
+      "blockerOverlap": 0.2439,
+      "maskOverlap": 0.9697,
+      "orientation": "aynı yön",
+      "sameDirectionOverlap": 0.2439,
+      "croppedShapeOverlap": 0.4079,
+      "croppedShapeOrientation": "yatay ayna",
+      "sharedFamilies": [],
+      "familyOverlap": 0.0
+    },
+    {
+      "level": 131,
+      "name": "Gözcü Adaları",
+      "blockerOverlap": 0.1707,
+      "maskOverlap": 0.8485,
+      "orientation": "aynı yön",
+      "sameDirectionOverlap": 0.1707,
+      "croppedShapeOverlap": 0.4029,
+      "croppedShapeOrientation": "yatay ayna",
+      "sharedFamilies": [],
+      "familyOverlap": 0.0
+    },
+    {
+      "level": 23,
+      "name": "Enerji Şöleni",
+      "blockerOverlap": 0.3288,
+      "maskOverlap": 0.9697,
+      "orientation": "yatay ayna",
+      "sameDirectionOverlap": 0.2278,
+      "croppedShapeOverlap": 0.4025,
+      "croppedShapeOrientation": "yatay ayna",
+      "sharedFamilies": [],
+      "familyOverlap": 0.0
+    },
+    {
+      "level": 51,
+      "name": "Pusulanın Işığı",
+      "blockerOverlap": 0.3117,
+      "maskOverlap": 0.8424,
+      "orientation": "aynı yön",
+      "sameDirectionOverlap": 0.3117,
+      "croppedShapeOverlap": 0.3995,
+      "croppedShapeOrientation": "dikey ayna",
+      "sharedFamilies": [],
+      "familyOverlap": 0.0
+    },
+    {
+      "level": 139,
+      "name": "Üç Renkli Oyma",
+      "blockerOverlap": 0.3333,
+      "maskOverlap": 0.6465,
+      "orientation": "yatay ayna",
+      "sameDirectionOverlap": 0.2537,
+      "croppedShapeOverlap": 0.3982,
+      "croppedShapeOrientation": "dikey ayna",
+      "sharedFamilies": [],
+      "familyOverlap": 0.0
+    },
+    {
+      "level": 83,
+      "name": "Bahçe Dolabı",
+      "blockerOverlap": 0.2143,
+      "maskOverlap": 0.7879,
+      "orientation": "aynı yön",
+      "sameDirectionOverlap": 0.2143,
+      "croppedShapeOverlap": 0.3981,
+      "croppedShapeOrientation": "dikey ayna",
+      "sharedFamilies": [],
+      "familyOverlap": 0.0
+    },
+    {
+      "level": 13,
+      "name": "İki Renkli Onarım",
+      "blockerOverlap": 0.3182,
+      "maskOverlap": 0.9697,
+      "orientation": "aynı yön",
+      "sameDirectionOverlap": 0.3182,
+      "croppedShapeOverlap": 0.3963,
+      "croppedShapeOrientation": "yatay ayna",
+      "sharedFamilies": [],
+      "familyOverlap": 0.0
+    },
+    {
+      "level": 138,
+      "name": "Tuğla Geçidi",
+      "blockerOverlap": 0.3182,
+      "maskOverlap": 0.9091,
+      "orientation": "aynı yön",
+      "sameDirectionOverlap": 0.3182,
+      "croppedShapeOverlap": 0.3963,
+      "croppedShapeOrientation": "yatay ayna",
+      "sharedFamilies": [
+        55
+      ],
+      "familyOverlap": 0.1
+    },
+    {
+      "level": 118,
+      "name": "Su Kuleleri",
+      "blockerOverlap": 0.3143,
+      "maskOverlap": 0.9697,
+      "orientation": "aynı yön",
+      "sameDirectionOverlap": 0.3143,
+      "croppedShapeOverlap": 0.3963,
+      "croppedShapeOrientation": "yatay ayna",
+      "sharedFamilies": [],
+      "familyOverlap": 0.0
+    },
+    {
+      "level": 141,
+      "name": "Brandalı Atölye",
+      "blockerOverlap": 0.2549,
+      "maskOverlap": 0.9242,
+      "orientation": "aynı yön",
+      "sameDirectionOverlap": 0.2549,
+      "croppedShapeOverlap": 0.3963,
+      "croppedShapeOrientation": "yatay ayna",
+      "sharedFamilies": [],
+      "familyOverlap": 0.0
+    },
+    {
+      "level": 41,
+      "name": "Taş Ustası",
+      "blockerOverlap": 0.3221,
+      "maskOverlap": 0.904,
+      "orientation": "aynı yön",
+      "sameDirectionOverlap": 0.3221,
+      "croppedShapeOverlap": 0.3945,
+      "croppedShapeOrientation": "aynı yön",
+      "sharedFamilies": [],
+      "familyOverlap": 0.0
+    },
+    {
+      "level": 111,
+      "name": "Mühürlü Kale",
+      "blockerOverlap": 0.28,
+      "maskOverlap": 0.9697,
+      "orientation": "aynı yön",
+      "sameDirectionOverlap": 0.28,
+      "croppedShapeOverlap": 0.3906,
+      "croppedShapeOrientation": "yatay ayna",
+      "sharedFamilies": [
+        58
+      ],
+      "familyOverlap": 0.0909
+    },
+    {
+      "level": 149,
+      "name": "Mühürlü Dört Kule",
+      "blockerOverlap": 0.28,
+      "maskOverlap": 0.701,
+      "orientation": "aynı yön",
+      "sameDirectionOverlap": 0.28,
+      "croppedShapeOverlap": 0.3906,
+      "croppedShapeOrientation": "yatay ayna",
+      "sharedFamilies": [
+        45
+      ],
+      "familyOverlap": 0.0909
+    },
+    {
+      "level": 20,
+      "name": "Ustanın Sınavı",
+      "blockerOverlap": 0.2696,
+      "maskOverlap": 0.9697,
+      "orientation": "aynı yön",
+      "sameDirectionOverlap": 0.2696,
+      "croppedShapeOverlap": 0.3906,
+      "croppedShapeOrientation": "yatay ayna",
+      "sharedFamilies": [],
+      "familyOverlap": 0.0
+    },
+    {
+      "level": 172,
+      "name": "Boya İskelesi",
+      "blockerOverlap": 0.2812,
+      "maskOverlap": 0.9062,
+      "orientation": "aynı yön",
+      "sameDirectionOverlap": 0.2812,
+      "croppedShapeOverlap": 0.3903,
+      "croppedShapeOrientation": "dikey ayna",
+      "sharedFamilies": [],
+      "familyOverlap": 0.0
+    }
+  ],
+  "chestAndWardrobe": [
+    121,
+    181
+  ],
+  "chestLevels": [
+    18,
+    19,
+    21,
+    22,
+    24,
+    26,
+    27,
+    28,
+    38,
+    39,
+    42,
+    44,
+    47,
+    49,
+    50,
+    57,
+    60,
+    62,
+    64,
+    71,
+    78,
+    83,
+    90,
+    96,
+    98,
+    121,
+    127,
+    144,
+    147,
+    154,
+    181
+  ],
+  "wardrobeLevels": [
+    29,
+    36,
+    52,
+    54,
+    55,
+    66,
+    79,
+    82,
+    84,
+    87,
+    91,
+    94,
+    95,
+    99,
+    121,
+    148,
+    168,
+    176,
+    181,
+    186
+  ],
+  "geometryWarnings": [
+    {
+      "level": 19,
+      "issues": [
+        {
+          "obstacleId": 26,
+          "origin": 89,
+          "reason": "invalid tube path; runtime GetCellIndices returns null"
+        }
+      ]
+    },
+    {
+      "level": 32,
+      "issues": [
+        {
+          "obstacleId": 26,
+          "origin": 83,
+          "reason": "invalid tube path; runtime GetCellIndices returns null"
+        },
+        {
+          "obstacleId": 26,
+          "origin": 84,
+          "reason": "invalid tube path; runtime GetCellIndices returns null"
+        },
+        {
+          "obstacleId": 26,
+          "origin": 85,
+          "reason": "invalid tube path; runtime GetCellIndices returns null"
+        },
+        {
+          "obstacleId": 26,
+          "origin": 86,
+          "reason": "invalid tube path; runtime GetCellIndices returns null"
+        },
+        {
+          "obstacleId": 26,
+          "origin": 87,
+          "reason": "invalid tube path; runtime GetCellIndices returns null"
+        }
+      ]
+    },
+    {
+      "level": 71,
+      "issues": [
+        {
+          "obstacleId": 26,
+          "origin": 94,
+          "reason": "invalid tube path; runtime GetCellIndices returns null"
+        },
+        {
+          "obstacleId": 26,
+          "origin": 95,
+          "reason": "invalid tube path; runtime GetCellIndices returns null"
+        },
+        {
+          "obstacleId": 26,
+          "origin": 96,
+          "reason": "invalid tube path; runtime GetCellIndices returns null"
+        }
+      ]
+    },
+    {
+      "level": 72,
+      "issues": [
+        {
+          "obstacleId": 26,
+          "origin": 94,
+          "reason": "invalid tube path; runtime GetCellIndices returns null"
+        },
+        {
+          "obstacleId": 26,
+          "origin": 95,
+          "reason": "invalid tube path; runtime GetCellIndices returns null"
+        },
+        {
+          "obstacleId": 26,
+          "origin": 96,
+          "reason": "invalid tube path; runtime GetCellIndices returns null"
+        }
+      ]
+    },
+    {
+      "level": 73,
+      "issues": [
+        {
+          "obstacleId": 26,
+          "origin": 94,
+          "reason": "invalid tube path; runtime GetCellIndices returns null"
+        },
+        {
+          "obstacleId": 26,
+          "origin": 95,
+          "reason": "invalid tube path; runtime GetCellIndices returns null"
+        },
+        {
+          "obstacleId": 26,
+          "origin": 96,
+          "reason": "invalid tube path; runtime GetCellIndices returns null"
+        }
+      ]
+    },
+    {
+      "level": 74,
+      "issues": [
+        {
+          "obstacleId": 26,
+          "origin": 94,
+          "reason": "invalid tube path; runtime GetCellIndices returns null"
+        },
+        {
+          "obstacleId": 26,
+          "origin": 95,
+          "reason": "invalid tube path; runtime GetCellIndices returns null"
+        },
+        {
+          "obstacleId": 26,
+          "origin": 96,
+          "reason": "invalid tube path; runtime GetCellIndices returns null"
+        }
+      ]
+    },
+    {
+      "level": 78,
+      "issues": [
+        {
+          "obstacleId": 42,
+          "origin": 90,
+          "reason": "overlay footprint outside board; omitted from geometry"
+        },
+        {
+          "obstacleId": 42,
+          "origin": 91,
+          "reason": "overlay footprint outside board; omitted from geometry"
+        },
+        {
+          "obstacleId": 42,
+          "origin": 92,
+          "reason": "overlay footprint outside board; omitted from geometry"
+        },
+        {
+          "obstacleId": 42,
+          "origin": 93,
+          "reason": "overlay footprint outside board; omitted from geometry"
+        },
+        {
+          "obstacleId": 42,
+          "origin": 95,
+          "reason": "overlay footprint outside board; omitted from geometry"
+        },
+        {
+          "obstacleId": 42,
+          "origin": 96,
+          "reason": "overlay footprint outside board; omitted from geometry"
+        },
+        {
+          "obstacleId": 42,
+          "origin": 97,
+          "reason": "overlay footprint outside board; omitted from geometry"
+        },
+        {
+          "obstacleId": 42,
+          "origin": 98,
+          "reason": "overlay footprint outside board; omitted from geometry"
+        }
+      ]
+    },
+    {
+      "level": 79,
+      "issues": [
+        {
+          "obstacleId": 42,
+          "origin": 90,
+          "reason": "overlay footprint outside board; omitted from geometry"
+        },
+        {
+          "obstacleId": 42,
+          "origin": 91,
+          "reason": "overlay footprint outside board; omitted from geometry"
+        },
+        {
+          "obstacleId": 42,
+          "origin": 92,
+          "reason": "overlay footprint outside board; omitted from geometry"
+        },
+        {
+          "obstacleId": 42,
+          "origin": 93,
+          "reason": "overlay footprint outside board; omitted from geometry"
+        },
+        {
+          "obstacleId": 42,
+          "origin": 95,
+          "reason": "overlay footprint outside board; omitted from geometry"
+        },
+        {
+          "obstacleId": 42,
+          "origin": 96,
+          "reason": "overlay footprint outside board; omitted from geometry"
+        },
+        {
+          "obstacleId": 42,
+          "origin": 97,
+          "reason": "overlay footprint outside board; omitted from geometry"
+        },
+        {
+          "obstacleId": 42,
+          "origin": 98,
+          "reason": "overlay footprint outside board; omitted from geometry"
+        }
+      ]
+    },
+    {
+      "level": 81,
+      "issues": [
+        {
+          "obstacleId": 42,
+          "origin": 90,
+          "reason": "overlay footprint outside board; omitted from geometry"
+        },
+        {
+          "obstacleId": 42,
+          "origin": 91,
+          "reason": "overlay footprint outside board; omitted from geometry"
+        },
+        {
+          "obstacleId": 42,
+          "origin": 92,
+          "reason": "overlay footprint outside board; omitted from geometry"
+        },
+        {
+          "obstacleId": 42,
+          "origin": 93,
+          "reason": "overlay footprint outside board; omitted from geometry"
+        },
+        {
+          "obstacleId": 42,
+          "origin": 95,
+          "reason": "overlay footprint outside board; omitted from geometry"
+        },
+        {
+          "obstacleId": 42,
+          "origin": 96,
+          "reason": "overlay footprint outside board; omitted from geometry"
+        },
+        {
+          "obstacleId": 42,
+          "origin": 97,
+          "reason": "overlay footprint outside board; omitted from geometry"
+        },
+        {
+          "obstacleId": 42,
+          "origin": 98,
+          "reason": "overlay footprint outside board; omitted from geometry"
+        }
+      ]
+    }
+  ]
+}

@@ -66,6 +66,7 @@ public sealed class GelLauncherFireAction : BoardAction
         RectTransform cap = null;
         RectTransform body = null;
         bool pooledBody = false;
+        GelLauncherPressView press = null;
         Coroutine releaseRoutine = null;
         Coroutine gelRoutine = null;
         try
@@ -106,12 +107,19 @@ public sealed class GelLauncherFireAction : BoardAction
             }
             if (body != null)
             {
-                // Son hasar tek olayda iki stage'i geçmiş olsa da hazırlık kapaklı çatlak sprite ile oynar.
-                var cracked = CrackedSprite(level);
-                if (cracked != null) body.GetComponent<Image>().sprite = cracked;
-                yield return Pressure(body, bodyCenter, step, level);
-                if (!IsCurrent(level)) yield break;
-                yield return Lunge(body, bodyCenter, step, level);
+                press = body.GetComponent<GelLauncherPressView>();
+                if (press == null) press = GelLauncherPressView.Ensure(body.GetComponent<Image>(), launcherId, 1);
+                if (press != null)
+                    yield return press.CompressForFire();
+                else
+                {
+                    // Legacy presentation remains available if press resources are missing.
+                    var cracked = CrackedSprite(level);
+                    if (cracked != null) body.GetComponent<Image>().sprite = cracked;
+                    yield return Pressure(body, bodyCenter, step, level);
+                    if (!IsCurrent(level)) yield break;
+                    yield return Lunge(body, bodyCenter, step, level);
+                }
             }
             if (!IsCurrent(level)) yield break;
 
@@ -127,7 +135,7 @@ public sealed class GelLauncherFireAction : BoardAction
             if (body != null)
             {
                 var openSprite = GelLauncherFx.LoadOpenSprite(launcherId);
-                if (openSprite != null) body.GetComponent<Image>().sprite = openSprite;
+                if (press == null && openSprite != null) body.GetComponent<Image>().sprite = openSprite;
                 releaseRoutine = board.StartCoroutine(ReleaseAndFade(body, bodyCenter, step, level));
             }
             else
@@ -135,7 +143,7 @@ public sealed class GelLauncherFireAction : BoardAction
                 ReleaseBodyCells();   // gövde görseli yok: tutacak bir şey kalmadı
             }
 
-            cap = CreateCap(dir, step);
+            cap = CreateCap(dir, step, press != null ? press.HeadSprite : null);
             if (cap != null)
             {
                 cap.position = from;
@@ -396,6 +404,21 @@ public sealed class GelLauncherFireAction : BoardAction
     {
         try
         {
+            var press = body != null ? body.GetComponent<GelLauncherPressView>() : null;
+            if (press != null)
+            {
+                // Full pressure cracks the chamber, then the existing pooled shard/steam system takes over.
+                SpawnBreakShards(body, press.FrameSprite);
+                const float seconds = 0.24f;
+                for (float t = 0f; t < seconds && body != null && IsCurrent(level); t += Time.deltaTime)
+                {
+                    press.SetOpacity(1f - t / seconds);
+                    body.localScale = Vector3.one * Mathf.Lerp(1f, 0.94f, t / seconds);
+                    yield return null;
+                }
+                if (press != null) press.SetOpacity(0f);
+                yield break;
+            }
             // Kapak ayrıldığı karede hâlâ ileri hareket vardır; ağızda bekleyen ayrı bir pop evresi yoktur.
             for (float t = 0f; t < FollowThroughSeconds; t += Time.deltaTime)
             {
@@ -485,11 +508,12 @@ public sealed class GelLauncherFireAction : BoardAction
 
     // ── Kapak görseli ────────────────────────────────────────────────────────
 
-    private RectTransform CreateCap(Vector2Int dir, Vector3 worldStep)
+    private RectTransform CreateCap(Vector2Int dir, Vector3 worldStep, Sprite pressHead = null)
     {
         if (capSprite == null) capSprite = Resources.Load<Sprite>(CapSpritePath);
         var parent = board.BreakFxParent;
-        if (capSprite == null || parent == null) return null;
+        var source = pressHead != null ? pressHead : capSprite;
+        if (source == null || parent == null) return null;
 
         var img = UiVfxPool.RentImage(CapPoolKey, parent, "GelLauncherCap");
         if (img == null) return null;
@@ -500,12 +524,12 @@ public sealed class GelLauncherFireAction : BoardAction
         rt.SetAsLastSibling();
         float cell = parent.InverseTransformVector(worldStep).magnitude;
         if (cell <= 0.01f) cell = board.TileSize;
-        rt.sizeDelta = new Vector2(cell * 0.85f, cell * 0.85f);
+        rt.sizeDelta = pressHead != null ? new Vector2(cell * 0.60f, cell * 0.31f) : new Vector2(cell * 0.85f, cell * 0.85f);
         // Kapak sprite'ı yukarı bakar; atış yönüne döndür (z pozitif = saat yönü tersi).
         float angle = dir.y < 0 ? 0f : dir.y > 0 ? 180f : dir.x > 0 ? -90f : 90f;
         rt.localRotation = Quaternion.Euler(0f, 0f, angle);
 
-        img.sprite = capSprite;
+        img.sprite = source;
         img.preserveAspect = true;
         img.raycastTarget = false;
         return rt;

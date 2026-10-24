@@ -171,8 +171,11 @@ public sealed class KeyGeneratorService : MonoBehaviour
         if (committedKeys >= capacity)
             return false;
 
+        // Vuruş anında uygun hücre olmayabilir: Override+Override gibi tüm tahtayı temizleyen etkide o an hiçbir
+        // taş boşta değildir. Eskiden vuruş sessizce boşa gidiyordu (anahtar üretilmiyordu). Artık vuruş kabul
+        // edilir; CoProduceKey tahta sakinleşince hücre bulur (en fazla LandingWaitSeconds).
         if (!board.TryFindKeyLandingCell(out var targetCell))
-            return false;
+            targetCell = NoLandingCell;
 
         committedKeys++;
         inFlightKeys++;
@@ -198,6 +201,10 @@ public sealed class KeyGeneratorService : MonoBehaviour
         return true;
     }
 
+    private static readonly Vector2Int NoLandingCell = new Vector2Int(-1, -1);
+    private const float LandingWaitSeconds = 3f;
+    private static readonly WaitForSeconds LandingPoll = new WaitForSeconds(0.1f);
+
     private IEnumerator CoProduceKey(int originIndex, Vector2Int targetCell, float delay, System.Action onDone)
     {
         bool placed = false;
@@ -216,8 +223,17 @@ public sealed class KeyGeneratorService : MonoBehaviour
             if (board != null && !board.CanReplaceGeneratedKeyCell(targetCell))
             {
                 board.ReleaseKeyLandingReservation(targetCell);
-                if (!board.TryFindKeyLandingCell(out targetCell))
-                    yield break; // no valid normal cell right now → skip; finally cleans up
+                // Tahta meşgulse (büyük temizlik/akış) hücre açılana dek bekle; iş engellemeyen KeyFlight
+                // olduğu için tahta akmaya devam eder, yalnız level sonu bekler. Süre dolarsa üretim atlanır
+                // ve finally taahhüdü bırakır (sonraki vuruş yeniden dener).
+                float waited = 0f;
+                while (!board.TryFindKeyLandingCell(out targetCell))
+                {
+                    if (waited >= LandingWaitSeconds || completed) { targetCell = NoLandingCell; yield break; }
+                    yield return LandingPoll;
+                    waited += 0.1f;
+                    if (board == null) yield break;
+                }
             }
 
             // Katmanlı makine varsa: kol çekilir + yeşil tarama cam alanda yukarı süpürür + draft

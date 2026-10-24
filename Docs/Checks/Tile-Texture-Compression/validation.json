@@ -1,0 +1,31 @@
+{
+  "passed": true,
+  "onlyCompressionChanged": true,
+  "assets": [
+    {
+      "asset": "Assets/_Project/Art/Icons/Gems/AnimalStyle/V3/BlueStonev7.png",
+      "compression": "None",
+      "platformEntriesChanged": 3,
+      "pngSha256": "fe7469e364a95b43f29cd6b15cf5cc17c62dc826dcae07e5a92af77b2f244529"
+    },
+    {
+      "asset": "Assets/_Project/Art/Icons/Gems/AnimalStyle/V3/GreenStoneV9.png",
+      "compression": "None",
+      "platformEntriesChanged": 3,
+      "pngSha256": "ddc268b785cf30da07cd0c8cab4ba9a21870198f239fa22e6cf42dd9aa5d2156"
+    },
+    {
+      "asset": "Assets/_Project/Art/Icons/Gems/AnimalStyle/V3/YellowStoneV7.png",
+      "compression": "None",
+      "platformEntriesChanged": 3,
+      "pngSha256": "4406ad6e6e96bb26e9339307e05f99dc6a754bcd8cde68ff5cf0a71b3f760aba"
+    },
+    {
+      "asset": "Assets/_Project/Art/Icons/Gems/AnimalStyle/V3/RedStoneV5.png",
+      "compression": "None",
+      "platformEntriesChanged": 3,
+      "pngSha256": "f751c1480269bd47475cb94b091d44b16ddb7996c1bdef6d4d9953d4bb1caee1"
+    }
+  ],
+  "unityBuildRun": false
+}

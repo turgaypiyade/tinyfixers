@@ -9,7 +9,6 @@ public class GridSpawner : MonoBehaviour
     private static readonly Vector3[] RectWorldCorners = new Vector3[4];
     private const float BarrellV2HitShakeDuration = 0.18f;
     private const float BarrellV2HitShakeCycles = 3f;
-    private const float WardrobeFinalItemDestroyDelay = 0.75f;
 
     [Header("Level")]
     public LevelData level;
@@ -1339,7 +1338,7 @@ public class GridSpawner : MonoBehaviour
         // GEÇİCİ TEŞHİS: NRE'nin jel çiziminde olup olmadığını kesinleştirmek için try/catch.
         try
         {
-            spreadingGelOverlayService.Init(width, height, tileSize, spreadingGelOverlayRoot);
+            spreadingGelOverlayService.Init(width, height, tileSize, spreadingGelOverlayRoot, resolvedLevel);
             spreadingGelOverlayService.ClearAll();
             board?.SetSpreadingGelService(spreadingGelOverlayService);   // swap/özel yayılma hook'ları için
 
@@ -2570,7 +2569,7 @@ public class GridSpawner : MonoBehaviour
         for (int y = 0; y < height; y++)
             for (int x = 0; x < width; x++)
             {
-                if (state.GetObstacleIdAt(x, y) != id) continue;
+                if (state.GetHintObstacleId(y * width + x, state.GetObstacleIdAt(x, y)) != id) continue;
                 if (state.IsMovableObstacleAt(x, y))
                 {
                     var tile = board.GetTileViewAt(x, y);
@@ -2584,7 +2583,8 @@ public class GridSpawner : MonoBehaviour
             }
 
         foreach (var beneath in stampedBeneathVisuals)
-            if (beneath.beneathId == id && beneathViewsByCell.TryGetValue(beneath.cell, out var beneathImage)
+            if (state.GetHintObstacleId(beneath.cell, beneath.beneathId) == id
+                && beneathViewsByCell.TryGetValue(beneath.cell, out var beneathImage)
                 && beneathImage != null) AddRoot(beneathImage.transform);
 
         switch (id)
@@ -2600,8 +2600,9 @@ public class GridSpawner : MonoBehaviour
             case ObstacleId.Tube: AddRoot(tubeRoot); break;
             case ObstacleId.Magnet: AddRoot(magnetRoot); break;
             case ObstacleId.Mud: AddRoot(mudOverlayRoot); break;
-            case ObstacleId.Grass: AddRoot(grassOverlayRoot); break;
+            case ObstacleId.Grass: AddGrassCells(id); break;
             case ObstacleId.GrassWaterLily:
+                AddGrassCells(id);
                 if (waterLilyService != null) AddRoot(waterLilyService.transform);
                 break;
             case ObstacleId.GrassFlower:
@@ -2625,6 +2626,16 @@ public class GridSpawner : MonoBehaviour
                     AddRoot(parent.Find("OilTileSet"));
                 }
                 break;
+        }
+
+        void AddGrassCells(ObstacleId hintId)
+        {
+            if (grassOverlayService == null) return;
+            for (int y = 0; y < height; y++)
+                for (int x = 0; x < width; x++)
+                    if (state.GetHintObstacleId(y * width + x, ObstacleId.Grass) == hintId
+                        && grassOverlayService.TryGetView(x, y, out var view) && view != null)
+                        AddRoot(view.transform);
         }
 
         void AddRoot(Transform root)
@@ -3191,23 +3202,22 @@ public class GridSpawner : MonoBehaviour
     private void HandleChestOpened(int originIndex)
     {
         if (_chestViews.TryGetValue(originIndex, out var view) && view != null)
-            view.OpenCabinet();   // kapaklar düşer + iç görünür (eski ShowAll yerine)
+            view.OpenCabinet(board);   // kapaklar düşer + iç görünür (eski ShowAll yerine)
     }
 
     private void HandleChestColorRemoved(int originIndex, ChestColorMask removedColor)
     {
         if (_chestViews.TryGetValue(originIndex, out var view) && view != null)
         {
-            // İlk hit kapakları düşürür (HandleChestOpened); sonraki hit'lerde her renk objesi
-            // KENDİ sprite'ıyla STANDART break particle'a parçalanır. Renk ObstacleLibrary'den
-            // gelmiyor (runtime match rengine bağlı), o yüzden sprite'ı view'den alıp besliyoruz.
+            // Ampul önce bütün halde dışarı sıçrar; uçuş sonunda kendi sprite'ıyla parçalanır.
             var brokenSprite = view.GetColorSprite(removedColor);
             Vector3 worldPos = view.GetColorWorldCenter(removedColor);
 
+            bool flying = view.ThrowColor(removedColor, board);
             view.HideColor(removedColor);
             view.Shake();
 
-            if (brokenSprite != null && board != null && board.BreakFx != null && board.ObstacleBreakFxPrefab != null)
+            if (!flying && brokenSprite != null && board != null && board.BreakFx != null && board.ObstacleBreakFxPrefab != null)
                 board.BreakFx.PlaySplashFx(
                     board.ObstacleBreakFxPrefab,
                     board.ObstacleBreakFxLifetime,
@@ -3680,15 +3690,15 @@ public class GridSpawner : MonoBehaviour
 
         Sprite openBg = def.stages != null && def.stages.Count > 1 ? def.stages[1].sprite : null;
         int shelfCount = Mathf.Max(1, def.size.y);
-        view.OpenDoor(openBg, def.wardrobeItemSprites, shelfCount);
+        view.OpenDoor(openBg, def.wardrobeItemSprites, shelfCount, board);
         view.Shake();
     }
 
     private void HandleWardrobeItemRemoved(int originIndex, int itemsRemaining)
     {
         if (!_wardrobeViews.TryGetValue(originIndex, out var view) || view == null) return;
-        view.RemoveFrontItem();
-        view.Shake();
+        view.RemoveFrontItem(board, itemsRemaining);
+        if (itemsRemaining > 0) view.Shake();
     }
 
     private Image DrawObstacleImage(ObstacleDef def, int x, int y, int initialRemainingHits = 0)
@@ -3899,6 +3909,17 @@ public class GridSpawner : MonoBehaviour
             RhodesStatueView.Ensure(img, remaining > 0 ? remaining : def.hits);
         }
 
+        if (BoardController.IsGelLauncher(def.id) && board != null)
+        {
+            // The assembled press occupies exactly its two cells; generic edge overhang is omitted.
+            rt.anchoredPosition = new Vector2(x * tileSize, -y * tileSize);
+            rt.sizeDelta = new Vector2(w * tileSize, h * tileSize);
+            var state = board.ObstacleStateService;
+            int remaining = state != null && state.GetObstacleIdAt(x, y) == def.id
+                ? state.GetRemainingHitsAt(x, y) : def.hits;
+            GelLauncherPressView.Ensure(img, def.id, remaining > 0 ? remaining : def.hits);
+        }
+
         // Brandalı heykel: Image iç zemini gösterir; taş/branda/çerçeve/etiket TarpStatueView child'ları.
         if (def.id == ObstacleId.TarpStatue && board != null)
             TarpStatueService.Ensure(board).Register(y * width + x, img);
@@ -3923,8 +3944,8 @@ public class GridSpawner : MonoBehaviour
     {
         var view = image != null ? image.GetComponent<PaintCanBoxView>() : null;
         if (view == null) return;
-        var root = board != null && board.BoardVfxPlayer != null ? board.BoardVfxPlayer.VfxRoot : null;
-        view.SetCount(remaining, this, root);
+        var root = board != null ? board.UnclippedFxRoot : null;
+        view.SetCount(remaining, board, root);
     }
     private void HandleObstacleCreatedDynamic(int x, int y)
     {
@@ -4139,7 +4160,7 @@ public class GridSpawner : MonoBehaviour
         int cells = resolvedLevel != null
             ? resolvedLevel.GetObstacleFootprint(change.obstacleId, change.originIndex, def).x
             : Mathf.Max(1, def.size.x);
-        ObstacleShatterFx.Play(this, root, image, cells);
+        ObstacleShatterFx.Play(board, this, root, image, cells);
     }
 
     private void HandleObstacleVisualChanged(ObstacleVisualChange change)
@@ -4183,10 +4204,11 @@ public class GridSpawner : MonoBehaviour
             }
             else if (change.obstacleId == ObstacleId.Wardrobe)
             {
-                float destroyDelay = WardrobeFinalItemDestroyDelay;
                 if (_wardrobeViews.TryGetValue(change.originIndex, out var wardrobeView) && wardrobeView != null)
-                    destroyDelay = Mathf.Max(destroyDelay, wardrobeView.RecommendedClearDestroyDelay);
-                Destroy(image.gameObject, destroyDelay);
+                    wardrobeView.PlayFinalBreak(board);
+                // Flying items and cabinet quarters are independently owned by the board's FX pool.
+                image.gameObject.SetActive(false);
+                Destroy(image.gameObject);
                 _wardrobeViews.Remove(change.originIndex);
             }
             else
@@ -4218,7 +4240,7 @@ public class GridSpawner : MonoBehaviour
         // Rodos heykeli: aşama değişir, kılıç savrulur, kalkan yalpalar + kısa sarsıntı.
         if (change.obstacleId == ObstacleId.RhodesStatue && image.TryGetComponent<RhodesStatueView>(out var rhodes))
         {
-            rhodes.OnHit(change.remainingHits);
+            rhodes.OnHit(change.remainingHits, board);
             PlayObstacleHitShake(change.originIndex, image.rectTransform);
             return;
         }
@@ -4241,6 +4263,13 @@ public class GridSpawner : MonoBehaviour
             }
             PlayObstacleHitShake(change.originIndex, image.rectTransform);
             return;
+        }
+
+        if (BoardController.IsGelLauncher(change.obstacleId))
+        {
+            var press = image.GetComponent<GelLauncherPressView>();
+            if (press == null) press = GelLauncherPressView.Ensure(image, change.obstacleId, 2);
+            if (press != null) { press.FirstHit(); return; }
         }
 
         if (change.sprite != null && change.obstacleId != ObstacleId.Grass)

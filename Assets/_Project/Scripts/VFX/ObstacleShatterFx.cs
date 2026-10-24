@@ -24,7 +24,7 @@ public static class ObstacleShatterFx
     private static readonly Vector3[] corners = new Vector3[4];
 
     /// source: engelin tahtadaki Image'ı (çağıran hemen ardından yok edebilir — sprite + konum burada yakalanır).
-    public static void Play(MonoBehaviour host, RectTransform root, Image source, int footprintCells)
+    public static void Play(BoardController board, MonoBehaviour host, RectTransform root, Image source, int footprintCells)
     {
         if (host == null || root == null || source == null || source.sprite == null) return;
         int grid = Mathf.Clamp(footprintCells <= 1 ? 3 : footprintCells + 1, 3, 5);
@@ -35,11 +35,11 @@ public static class ObstacleShatterFx
         source.rectTransform.GetWorldCorners(corners);
         Vector2 bl = root.InverseTransformPoint(corners[0]);
         Vector2 tr = root.InverseTransformPoint(corners[2]);
-        host.StartCoroutine(Run(root, pieces, grid, pieceFrac, bl, tr - bl, source.color));
+        host.StartCoroutine(Run(root, pieces, grid, pieceFrac, bl, tr - bl, source.color, ObstacleDebrisBounds.For(board, root)));
     }
 
     private static IEnumerator Run(RectTransform root, Sprite[] pieces, int grid, float pieceFrac, Vector2 bl, Vector2 size,
-        Color tint)
+        Color tint, ObstacleDebrisBounds bounds)
     {
         int n = pieces.Length;
         var imgs = new Image[n];
@@ -65,6 +65,11 @@ public static class ObstacleShatterFx
             Vector2 dir = (off.sqrMagnitude > 1f ? off.normalized : Random.insideUnitCircle.normalized)
                           + Random.insideUnitCircle * 0.3f;
             vel[i] = (dir.normalized + Vector2.up * 0.6f) * span * Random.Range(1.1f, 1.9f);
+            Vector2 start = rt.localPosition;
+            Vector2 fittedSize = pieceSize;
+            bounds.Fit(ref start, ref vel[i], ref fittedSize, Life);
+            rt.localPosition = start;
+            rt.sizeDelta = fittedSize;
             spin[i] = Random.Range(-480f, 480f);
             imgs[i] = img;
         }
@@ -96,6 +101,7 @@ public static class ObstacleShatterFx
                 vel[i] *= 1f - 0.5f * dt;
                 var rt = img.rectTransform;
                 rt.localPosition += (Vector3)(vel[i] * dt);
+                rt.localPosition = bounds.ClampCenter(rt.localPosition, rt.sizeDelta);
                 rt.localRotation *= Quaternion.Euler(0f, 0f, spin[i] * dt);
                 rt.localScale = Vector3.one * Mathf.Lerp(1f, 0.7f, k);
                 var c = tint;

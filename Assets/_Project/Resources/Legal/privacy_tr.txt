@@ -48,6 +48,12 @@ Oyun isteğe bağlı ödüllü video reklamlar sunabilir (örneğin ek hamle iç
 
 Bize e-postayla ya da web sitemizdeki sohbet (tawk.to) üzerinden ulaşırsanız, gönderdiğiniz bilgileri (e-posta adresiniz ve mesajınızın içeriği gibi) alırız.
 
+<b>Çıkış bildirimi listesi</b>
+
+Web sitemizde izin vererek kaydolursanız, yalnızca Wonder Fixers çıkış duyurusunu göndermek için e-posta adresinizi, seçtiğiniz dili, kayıt zamanını ve izin metninin sürümünü saklarız. Katılım isteğe bağlıdır ve oyun hesabı oluşturmaz. Otomatik kayıtları sınırlamak için ağ adresinizin geçici, anahtarlı bir özetini kullanırız; liste veritabanında açık IP adresinizi saklamayız.
+
+Liste Cloudflare üzerinde özel olarak saklanır; yayımlanmaz ve düzenli haber bülteni için kullanılmaz. Kayıtlı adresinizden hello@wondigames.com adresine yazarak izninizi geri çekebilir ve kaydınızın silinmesini isteyebilirsiniz; oyun arkadaş kodu gerekmez. Kayıtlar 180 gün sonra sona erer ve günlük temizlikle silinir. Geçici istek sınırlama kayıtları da günlük temizlenir.
+
 <b>Bildirimler</b>
 
 Hatırlatmalar (örneğin "canların doldu") cihazınızda planlanan yerel bildirimlerdir. Oyunun ayarlarından ya da cihaz ayarlarından kapatabilirsiniz.
@@ -64,6 +70,8 @@ Hatırlatmalar (örneğin "canların doldu") cihazınızda planlanan yerel bildi
 
 • Destek taleplerinizi yanıtlamak.
 
+• İzninizle, talep ettiğiniz oyun çıkış duyurusunu göndermek.
+
 Kişisel verilerinizi satmayız.
 
 <size=120%><b>3. Kimlerle paylaşırız</b></size>
@@ -75,6 +83,8 @@ Kişisel verilerinizi satmayız.
 • <b>Google AdMob</b>: Gösterildiği durumlarda ödüllü reklamlar
 
 • <b>tawk.to</b>: Web sitesindeki destek sohbeti
+
+• <b>Cloudflare</b>: Web sitesi barındırma ve özel çıkış bildirimi listesi
 
 Diğer oyuncular oyuncu adınızı, avatarınızı, seviyenizi, takımınızı, sıralamadaki yerinizi ve takım sohbetine yazdığınız mesajları görebilir. Kanunen gerekli olduğunda bilgileri yetkili makamlarla paylaşabiliriz.
 

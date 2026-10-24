@@ -1,0 +1,10 @@
+{
+  "beforeChecks": 68,
+  "afterChecks": 72,
+  "protectedFiles": 1898,
+  "otherFilesUnchanged": 1897,
+  "changed": [
+    "Assets/_Project/Scripts/Grid/Board/Resolver/SpecialResolver.cs"
+  ],
+  "limits": "Production branch, ExplodePulse target collection and board gel methods with doubles; no Unity rendering, build, Play, performance measurement or board/cascade simulation."
+}

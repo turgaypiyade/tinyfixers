@@ -1,4 +1,4 @@
-# Level isimleri — 1–187
+# Level isimleri — 1–189
 
 Tek kaynak: [LevelNames.json](../../Assets/_Project/Resources/LevelNames.json). 61 mevcut tasarım ismi korundu, 119 isimsiz levele mevcut hedef/engel ve board kayıtlarına göre isim verildi. Parantez içindeki zorluk/revizyon/tanıtım açıklamaları görünen isme katılmadı. İsimler Türkçedir; oyun UI bağlantısı henüz eklenmedi. Her kayıt gerçek katalogdaki `level` ve `levelKey` ile eşleşir; asset numarası kullanılmaz.
 
@@ -193,3 +193,5 @@ Yeni level tasarlarken aynı JSON'a isim ekle, bu tabloyu ve ilgili not/önizlem
 | 185 | Işık Merdiveni |
 | 186 | Zümrüt Vitrin |
 | 187 | Boyalı Akarsu |
+| 188 | Üç Mühürlü Geçit |
+| 189 | İkiz Gölet Kalesi |

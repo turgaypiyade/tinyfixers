@@ -22,3 +22,6 @@ MonoBehaviour:
   - displayName: "Rumbo's Riot"
     clip: {fileID: 8300000, guid: 7dcc735726b4f421ab410e3a791e6a44, type: 3}
     volume: 0.7
+  - displayName: "Harbor Adventure"
+    clip: {fileID: 8300000, guid: 32cac7222435495984978f91db16ef43, type: 3}
+    volume: 0.7

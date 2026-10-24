@@ -413,13 +413,15 @@ public class JokerFocusOverlayController : MonoBehaviour
                 if (used >= holePanels.Count) holePanels.Add(panel);
                 used++;
 
+                // Shuffle confirmation also accepts holes; their overlay otherwise eats the tap.
+                bool acceptsTap = hasObstacle || board.ActiveBooster == BoardController.BoosterMode.Shuffle;
                 var proxy = panel.GetComponent<ObstacleClickProxy>();
-                if (hasObstacle)
+                if (acceptsTap)
                 {
                     if (proxy == null) proxy = panel.gameObject.AddComponent<ObstacleClickProxy>();
                     proxy.Init(board, x, y);
                 }
-                if (proxy != null) proxy.enabled = hasObstacle;
+                if (proxy != null) proxy.enabled = acceptsTap;
                 panel.color = hasObstacle ? Color.clear : new Color(0f, 0f, 0f, selectedOverlayAlpha);
 
                 var rt = panel.rectTransform;

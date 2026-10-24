@@ -1192,12 +1192,27 @@ public class BoosterService
     private const float ShuffleSwirlSeconds = 1.1f;
     private ShuffleWandFx shuffleWandFx;
 
+    internal void CancelShuffleFx() => shuffleWandFx?.Cancel();
+
+    public bool CanShuffleBoard()
+    {
+        int count = 0;
+        for (int y = 0; y < board.Height; y++)
+            for (int x = 0; x < board.Width; x++)
+                if (!IsShuffleCellLocked(x, y) && ++count >= 2) return true;
+        return false;
+    }
+
     public IEnumerator ShuffleBoardRoutine(ActionSequencer actionSequencer)
     {
-        PlayJokerSfx("shuffle1");
-        var wandFx = BeginShuffleWand();
-        yield return SafeShuffleBoardRoutine(board.BoardInitService, wandFx);
-        if (wandFx != null) board.StartCoroutine(wandFx.Exit(0.3f));
+        board.BeginBusy();
+        try
+        {
+            yield return SafeShuffleBoardRoutine(board.BoardInitService, playerShuffle: true);
+            // A fallback recolor can create a match. Finish it through the normal resolver.
+            yield return board.ResolveBoardPublic();
+        }
+        finally { board.EndBusy(); }
     }
 
     private ShuffleWandFx BeginShuffleWand()
@@ -1227,127 +1242,113 @@ public class BoosterService
 
     // BoosterService.cs
 
-    public IEnumerator SafeShuffleBoardRoutine(BoardInitService boardInitService, ShuffleWandFx wandFx = null)
+    public IEnumerator SafeShuffleBoardRoutine(BoardInitService boardInitService, bool playerShuffle = false)
     {
         board.BeginBusy();
-        // Shuffle tahtayı toptan yeniden yazar: bitene dek akış pompası yeni iş başlatmasın.
+        ShuffleWandFx wandFx = null;
+        var shuffleGrid = board.Tiles;
+        bool animationStarted = false, committed = false;
         using var flowPause = board.PauseFlowPump();
-
-        // Shuffle board.Tiles'ın TAMAMINI yeniden eşler → EXCLUSIVE çalışmalı. ResolveBoard'un
-        // settle kontrolü bilerek yalnız blocking job'ları bekliyor: uçuştaki PatchBot dash'i,
-        // goal-orb, detached action, spread hâlâ hücre temizleyip taş taşıyabilir. Bu iş ~1 sn
-        // sürdüğü için o pencerede board değişirse harita bayatlar ve commit bozuk referans yazar.
-        yield return board.WaitForExclusiveBoardAccess();
-
-        // "Hamle yok, board değişecek" hissi için kısa bekleme — artık harita kurulmadan ÖNCE.
-        // (Eskiden harita kurulduktan SONRA bekleniyordu; o 0.6 sn haritayı bayatlatan pencereydi.)
-        yield return new WaitForSeconds(0.6f);
-
-        var currentTypes = new TileType[board.Width, board.Height];
-        var lockedMask = new bool[board.Width, board.Height];
-
-        BuildSafeShuffleState(currentTypes, lockedMask);
-
-        int unlockedCount = 0;
-        for (int y = 0; y < board.Height; y++)
-            for (int x = 0; x < board.Width; x++)
-                if (!lockedMask[x, y]) unlockedCount++;
-
-        if (boardInitService == null)
+        try
         {
-            if (GameDiagnostics.CriticalErrors)
-                Debug.LogError("[Shuffle] boardInitService NULL! Shuffle çalışmaz.");
-            board.EndBusy();
-            yield break;
-        }
+            // A shuffle owns the whole grid. Wait for detached clears/falls before capturing it.
+            yield return board.WaitForExclusiveBoardAccess();
+            if (!ReferenceEquals(board.Tiles, shuffleGrid) || boardInitService == null || !CanShuffleBoard()) yield break;
+            // A timed-out exclusive wait is not permission to overwrite work still in flight.
+            if (board.ActiveBackgroundJobs > 0 || board.IsActionSequencePlaying
+                || board.DetachedSequencerActions > 0 || board.IsSpecialVisualInFlight) yield break;
 
-        // ÖNCE mevcut taşların PERMÜTASYONUNU dene (aynı taşlar → yeni yerler). Böylece
-        // BuildShuffleSourceMap eşleşir → taşlar GÖRÜNÜR şekilde hareket eder (kullanıcı değişimi
-        // izleyebilir). SimulateInitialTypes yeni tipler ürettiği için mapping tutmaz → anında/
-        // animasyonsuz else dalına düşülüyordu (auto-shuffle'da görülmezdi).
-        TileType[,] finalTypes;
-        bool ok;
+            var currentTypes = new TileType[board.Width, board.Height];
+            var lockedMask = new bool[board.Width, board.Height];
+            BuildSafeShuffleState(currentTypes, lockedMask);
 
-        if (TryBuildPermutationShuffleTypes(currentTypes, lockedMask, out var permuted))
-        {
-            finalTypes = permuted;
-            ok = true;
-        }
-        else
-        {
-            // Yedek: no-match + oynanabilir permütasyon bulunamadı → eski yol (yeni tipler, anında).
-            var simResult = boardInitService.SimulateInitialTypes(
-                board.Width, board.Height, lockedMask, board.RandomPool);
-
-            for (int y = 0; y < board.Height; y++)
-                for (int x = 0; x < board.Width; x++)
-                    if (lockedMask[x, y])
-                        simResult[x, y] = currentTypes[x, y];
-
-            finalTypes = simResult;
-            ok = finalTypes != null;
-        }
-
-        if (ok)
-        {
-            var sourceForDest = new Vector2Int[board.Width, board.Height];
-
-            bool hasMapping = BuildShuffleSourceMap(currentTypes, finalTypes, lockedMask, sourceForDest);
-
-            if (hasMapping)
+            TileType[,] finalTypes;
+            if (!TryBuildPermutationShuffleTypes(currentTypes, lockedMask, out finalTypes))
             {
-                // Harita KİMİ view'lara dayandığını da saklar: animasyon sürerken board
-                // değişirse (async clear/fall) bayat haritayı commit etmek yasak.
-                var mappedTiles = new TileView[board.Width, board.Height];
+                finalTypes = boardInitService.SimulateInitialTypes(
+                    board.Width, board.Height, lockedMask, board.RandomPool);
+                if (finalTypes == null) yield break;
                 for (int y = 0; y < board.Height; y++)
                     for (int x = 0; x < board.Width; x++)
-                        mappedTiles[x, y] = board.Tiles[x, y];
+                        if (lockedMask[x, y]) finalTypes[x, y] = currentTypes[x, y];
+            }
 
-                yield return AnimateShufflePreview(sourceForDest, lockedMask, wandFx);
+            var sourceForDest = new Vector2Int[board.Width, board.Height];
+            bool recolorAfterMove = !BuildShuffleSourceMap(currentTypes, finalTypes, lockedMask, sourceForDest);
+            if (recolorAfterMove)
+                BuildFallbackShuffleSourceMap(lockedMask, sourceForDest);
 
-                if (IsShuffleMapStale(mappedTiles))
+            var mappedTiles = new TileView[board.Width, board.Height];
+            var mappedLifetimes = new int[board.Width, board.Height];
+            for (int y = 0; y < board.Height; y++)
+                for (int x = 0; x < board.Width; x++)
                 {
-                    // Bayat harita commit edilirse hücreler null/çift referans alır → ekranda
-                    // boş hücre. Onun yerine: görsel-veri bütünlüğünü onar, sonra CANLI board
-                    // üzerinden yerinde (referans taşımadan) yeniden karıştır.
-                    if (GameDiagnostics.CriticalErrors)
-                        Debug.LogWarning("[Shuffle] Board shuffle sırasında değişti → harita iptal, yerinde karıştırılıyor.");
-
-                    board.RepairTileGridIntegrity("shuffle-stale-map", snapPositions: true);
-
-                    BuildSafeShuffleState(currentTypes, lockedMask);
-                    if (TryBuildPermutationShuffleTypes(currentTypes, lockedMask, out var freshTypes))
-                        ApplyShuffledTypes(freshTypes, lockedMask);
-                }
-                else
-                {
-                    CommitShuffleFromSourceMap(sourceForDest, lockedMask);
+                    mappedTiles[x, y] = board.Tiles[x, y];
+                    mappedLifetimes[x, y] = mappedTiles[x, y] != null ? mappedTiles[x, y].LifetimeVersion : -1;
                 }
 
-                // Yeni board'a da kısa bir hold — yerleşimi görsün.
-                yield return new WaitForSeconds(0.25f);
+            if (playerShuffle)
+            {
+                // Spend only after a valid plan exists, never for a board with <2 eligible stones.
+                BoosterAccessService.OnBoosterUsed(BoardController.BoosterMode.Shuffle);
+                PlayJokerSfx("shuffle1");
+                wandFx = BeginShuffleWand();
+                yield return new WaitForSeconds(0.45f);
+            }
+
+            // Even a generated-color fallback moves the existing views before applying new colors.
+            if (!ReferenceEquals(board.Tiles, shuffleGrid)) yield break;
+            animationStarted = true;
+            yield return AnimateShufflePreview(sourceForDest, lockedMask, mappedTiles, mappedLifetimes, shuffleGrid, wandFx, playerShuffle);
+            if (!ReferenceEquals(board.Tiles, shuffleGrid)) yield break;
+
+            if (IsShuffleMapStale(mappedTiles, mappedLifetimes))
+            {
+                // Never write a stale view map over a newly spawned/reused stone.
+                board.RepairTileGridIntegrity("shuffle-stale-map", snapPositions: true);
+                BuildSafeShuffleState(currentTypes, lockedMask);
+                if (TryBuildPermutationShuffleTypes(currentTypes, lockedMask, out var freshTypes))
+                    ApplyShuffledTypes(freshTypes, lockedMask);
             }
             else
             {
-                if (GameDiagnostics.CriticalErrors)
-                    Debug.LogWarning("[Shuffle] Mapping failed, applying types directly (no animation)");
-                ApplyShuffledTypes(finalTypes, lockedMask);
+                CommitShuffleFromSourceMap(sourceForDest, lockedMask);
+                if (recolorAfterMove) ApplyShuffledTypes(finalTypes, lockedMask);
             }
 
             board.SyncAllTilesToGridData();
-            // SyncAllTilesToGridData yalnız DOLU hücreleri yazar; boşalan hücrenin bayat
-            // gridData'sını temizlemek ve çift/deaktif referansları yakalamak buranın işi.
             board.RepairTileGridIntegrity("shuffle-commit");
             board.RefreshAllTileObstacleVisuals();
             board.RefreshAllSortingOrders();
+            committed = true;
+            if (wandFx != null) yield return wandFx.Exit(0.3f);
         }
-        else
+        finally
         {
-            if (GameDiagnostics.CriticalErrors)
-                Debug.LogWarning("[Shuffle] TryBuildSafeShuffleTypes FAILED — board değişmedi.");
+            wandFx?.Cancel();
+            if (animationStarted && !committed && ReferenceEquals(board.Tiles, shuffleGrid))
+                board.RepairTileGridIntegrity("shuffle-cancel", snapPositions: true);
+            board.EndBusy();
         }
+    }
 
-        board.EndBusy();
+    // A cyclic permutation is a bijection even when regenerated colors have different counts.
+    // Every eligible view moves; obstacles/specials/locked cells remain at their own indices.
+    private void BuildFallbackShuffleSourceMap(bool[,] lockedMask, Vector2Int[,] sourceForDest)
+    {
+        Vector2Int first = default, previous = default;
+        bool found = false;
+        for (int y = 0; y < board.Height; y++)
+            for (int x = 0; x < board.Width; x++)
+            {
+                var cell = new Vector2Int(x, y);
+                sourceForDest[x, y] = cell;
+                if (lockedMask[x, y]) continue;
+                if (!found) { first = cell; found = true; }
+                else sourceForDest[previous.x, previous.y] = cell;
+                previous = cell;
+            }
+        if (found) sourceForDest[previous.x, previous.y] = first;
     }
 
     // Mevcut taşların (unlocked) tiplerini karıştırıp yeni yerlere koyar — PERMÜTASYON.
@@ -1386,7 +1387,10 @@ public class BoosterService
             for (int i = 0; i < cells.Count; i++)
                 candidate[cells[i].x, cells[i].y] = types[i];
 
-            if (!HasImmediateMatchInTypes(candidate, lockedMask)
+            bool changed = false;
+            for (int i = 0; i < cells.Count && !changed; i++)
+                changed = candidate[cells[i].x, cells[i].y] != currentTypes[cells[i].x, cells[i].y];
+            if (changed && !HasImmediateMatchInTypes(candidate, lockedMask)
                 && HasPlayableSwapInTypes(candidate, lockedMask))
             {
                 result = candidate;
@@ -1495,11 +1499,12 @@ public class BoosterService
     // Harita kurulduktan sonra board'un tek bir hücresi bile el değiştirdiyse (async clear,
     // uçuştan gelen hasar, spawn) harita bayattır: commit ederse hücrelere null ya da başka
     // hücrenin view'ı yazılır. Referans karşılaştırması yeterli — tip yeterli değil.
-    private bool IsShuffleMapStale(TileView[,] mappedTiles)
+    private bool IsShuffleMapStale(TileView[,] mappedTiles, int[,] mappedLifetimes)
     {
         for (int y = 0; y < board.Height; y++)
             for (int x = 0; x < board.Width; x++)
-                if (!ReferenceEquals(board.Tiles[x, y], mappedTiles[x, y]))
+                if (!ReferenceEquals(board.Tiles[x, y], mappedTiles[x, y])
+                    || (mappedTiles[x, y] != null && !mappedTiles[x, y].IsCurrentLifetime(mappedLifetimes[x, y])))
                     return true;
 
         return false;
@@ -1507,10 +1512,14 @@ public class BoosterService
 
     // wandFx verildiyse (joker) taşlar düz kaymaz: tahta merkezi etrafında TAM bir tur sarmal döner, ortaya doğru
     // sıkışıp yerlerine açılır; yerinde kalan taşlar da tura katılır. Tam tur → k=1'de dönüş birim, taş tam hedefinde.
-    private IEnumerator AnimateShufflePreview(Vector2Int[,] sourceForDest, bool[,] lockedMask, ShuffleWandFx wandFx = null)
+    private IEnumerator AnimateShufflePreview(Vector2Int[,] sourceForDest, bool[,] lockedMask,
+        TileView[,] mappedTiles, int[,] mappedLifetimes, TileView[,] shuffleGrid,
+        ShuffleWandFx wandFx = null, bool playerShuffle = false)
     {
-        bool swirl = wandFx != null;
+        bool swirl = playerShuffle || wandFx != null;
         var movingTiles = new List<TileView>();
+        var lifetimes = new List<int>();
+        var sources = new List<Vector2Int>();
         var starts = new List<Vector2>();
         var ends = new List<Vector2>();
 
@@ -1525,11 +1534,13 @@ public class BoosterService
                 if (src.x == x && src.y == y && !swirl)
                     continue;
 
-                var tile = board.Tiles[src.x, src.y];
-                if (tile == null)
+                var tile = mappedTiles[src.x, src.y];
+                if (tile == null || !tile.IsCurrentLifetime(mappedLifetimes[src.x, src.y]))
                     continue;
 
                 movingTiles.Add(tile);
+                lifetimes.Add(mappedLifetimes[src.x, src.y]);
+                sources.Add(src);
                 starts.Add(tile.RectTransform.anchoredPosition);
                 ends.Add(new Vector2(x * board.TileSize, -y * board.TileSize));
 
@@ -1546,33 +1557,35 @@ public class BoosterService
         float duration = swirl ? ShuffleSwirlSeconds : Mathf.Max(0.35f, board.SwapDurationWithMultiplier * 2.6f);
         var curve = board.SwapMoveCurve;
         Vector2 swirlCenter = new Vector2((board.Width - 1) * 0.5f * board.TileSize, -(board.Height - 1) * 0.5f * board.TileSize);
-        if (swirl) board.StartCoroutine(wandFx.Mix(duration));
+        if (wandFx != null) board.StartCoroutine(wandFx.Mix(duration));
 
         float t = 0f;
         while (t < 1f)
         {
+            if (!ReferenceEquals(board.Tiles, shuffleGrid)) yield break;
             t += Time.deltaTime / duration;
             float k = Mathf.Clamp01(t);
             float s = (curve != null && curve.length > 0)
                 ? Mathf.Clamp01(curve.Evaluate(k))
                 : k;
+            float sm = k * k * (3f - 2f * k);
+            float squeeze = 1f - 0.4f * Mathf.Sin(Mathf.PI * k);
+            float ang = -2f * Mathf.PI * sm;
+            float cs = Mathf.Cos(ang), sn = Mathf.Sin(ang);
 
             for (int i = 0; i < movingTiles.Count; i++)
             {
                 var tile = movingTiles[i];
-                if (tile == null)
-                    continue;
+                var src = sources[i];
+                if (tile == null || !tile.IsCurrentLifetime(lifetimes[i])
+                    || !ReferenceEquals(board.Tiles[src.x, src.y], tile)) continue;
 
                 if (!swirl)
                 {
                     tile.RectTransform.anchoredPosition = Vector2.LerpUnclamped(starts[i], ends[i], s);
                     continue;
                 }
-                float sm = k * k * (3f - 2f * k);
-                float squeeze = 1f - 0.4f * Mathf.Sin(Mathf.PI * k);
-                float ang = -2f * Mathf.PI * sm;   // saat yönünde tam tur
                 Vector2 rel = Vector2.LerpUnclamped(starts[i] - swirlCenter, ends[i] - swirlCenter, s) * squeeze;
-                float cs = Mathf.Cos(ang), sn = Mathf.Sin(ang);
                 tile.RectTransform.anchoredPosition = swirlCenter + new Vector2(rel.x * cs - rel.y * sn, rel.x * sn + rel.y * cs);
             }
 
@@ -1582,8 +1595,9 @@ public class BoosterService
         for (int i = 0; i < movingTiles.Count; i++)
         {
             var tile = movingTiles[i];
-            if (tile == null)
-                continue;
+            var src = sources[i];
+            if (tile == null || !tile.IsCurrentLifetime(lifetimes[i])
+                || !ReferenceEquals(board.Tiles[src.x, src.y], tile)) continue;
 
             tile.RectTransform.anchoredPosition = ends[i];
         }
@@ -1674,42 +1688,26 @@ public class BoosterService
         return board.ObstacleStateService != null && board.ObstacleStateService.HasObstacleAt(x, y);
     }
 
+    private bool IsShuffleCellLocked(int x, int y)
+    {
+        if (board.Holes[x, y]) return true;
+        var tile = board.Tiles[x, y];
+        if (tile == null || !tile.gameObject.activeInHierarchy || tile.GetSpecial() != TileSpecial.None)
+            return true;
+        var obstacles = board.ObstacleStateService;
+        return obstacles != null && (obstacles.IsMovableObstacleAt(x, y)
+            || obstacles.IsInteractionLockedAt(x, y) || obstacles.IsOilAt(x, y));
+    }
+
     private void BuildSafeShuffleState(TileType[,] currentTypes, bool[,] lockedMask)
     {
         for (int y = 0; y < board.Height; y++)
-        {
             for (int x = 0; x < board.Width; x++)
             {
-                bool locked = false;
-
-                if (board.Holes[x, y])
-                {
-                    locked = true;
-                }
-                else
-                {
-                    var tile = board.Tiles[x, y];
-                    if (tile == null)
-                    {
-                        locked = true;
-                    }
-                    else if (tile.GetSpecial() != TileSpecial.None)
-                    {
-                        locked = true;
-                    }
-                    else if (board.ObstacleStateService != null &&
-                             board.ObstacleStateService.IsMovableObstacleAt(x, y))
-                    {
-                        locked = true;
-                    }
-                }
-
-                lockedMask[x, y] = locked;
-
-                var tv = board.Tiles[x, y];
-                currentTypes[x, y] = tv != null ? tv.GetTileType() : default;
+                lockedMask[x, y] = IsShuffleCellLocked(x, y);
+                var tile = board.Tiles[x, y];
+                currentTypes[x, y] = tile != null ? tile.GetTileType() : default;
             }
-        }
     }
 
     private void ApplyShuffledTypes(TileType[,] finalTypes, bool[,] lockedMask)

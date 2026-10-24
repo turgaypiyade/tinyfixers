@@ -1,0 +1,12 @@
+{
+  "asset": "Assets/_Project/Audio/Music/Harbor Adventure.wav",
+  "display_name": "Harbor Adventure",
+  "track_id": 3,
+  "count": 4,
+  "price_coins": 100,
+  "streaming_import": true,
+  "source_bytes_preserved": true,
+  "channels": 2,
+  "sample_rate": 48000,
+  "seconds": 178.8
+}

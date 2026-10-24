@@ -3,6 +3,7 @@
 
 Kaynak tek: index.html (İngilizce + TR sözlüğü). Çıktı .wrangler/site:
   index.html      — İngilizce (kök)
+  styles.css, main.js — ortak görünüm ve etkileşimler
   tr/index.html   — aynı sayfa, <html lang="tr" data-lang="tr"> + Türkçe başlık/açıklama/canonical
                     (arama motoru Türkçe içeriği ayrı adreste görsün; hreflang ile eşlenir)
   img/            — görseller
@@ -61,6 +62,8 @@ def main() -> None:
     html = (ROOT / "index.html").read_text(encoding="utf-8")
     (OUT / "index.html").write_text(html, encoding="utf-8")
     (OUT / "tr" / "index.html").write_text(turkish_page(html), encoding="utf-8")
+    shutil.copy2(ROOT / "styles.css", OUT / "styles.css")
+    shutil.copy2(ROOT / "main.js", OUT / "main.js")
     shutil.copytree(ROOT / "img", OUT / "img", ignore=shutil.ignore_patterns(".DS_Store"))
     # Instagram görselleri (API herkese açık JPEG adresi ister): yalnız .jpg, betik/metin yayınlanmaz.
     # Reels videoları: social/reels/*.mp4 (git'e girmez — .gitignore; make_reels.py çıktısından kopyalanır)

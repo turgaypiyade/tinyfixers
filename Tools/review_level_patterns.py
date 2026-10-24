@@ -54,8 +54,8 @@ def load():
                     if top[j]!=o or origins[j]!=origin:depth[j]+=1
                     top[j]=o;origins[j]=origin
             if valid:counts[o]=valid
-        # Channel goal counts whole paths. Only non-source cells are under-tile overlays;
-        # the source is pass-through and must not be counted as a solid blocker.
+        # Channel goal counts whole paths. The current spawner preserves authored 1x1
+        # covers above the channel; multi-cell overlaps are still invalid. Source is pass-through.
         channel_count=0
         for entry in custom['waterChannels']:
             path=entry['pathCellIndices']
@@ -65,8 +65,9 @@ def load():
             channel_count+=1
             top[path[0]]=0;origins[path[0]]=-1;depth[path[0]]=0
             for i in path[1:]:
+                cover=top[i] if top[i] not in (0,76) and origins[i]==i and footprint(top[i])==(1,1) else 0
                 if top[i]!=76:depth[i]+=1
-                top[i]=76;origins[i]=i
+                top[i]=cover or 76;origins[i]=i
         if channel_count:counts[76]=channel_count
         events=[(s.get('stackOrder',0),0,s['obstacleId'],s) for s in custom['stackedObstacles']]
         events += [(s.get('stackOrder',0),1,33,s) for s in custom['safes']]

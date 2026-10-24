@@ -1283,12 +1283,13 @@ public class BoardAnimator
     public IEnumerator PlayCreatedSpecialFormation(
         TileView createdTile,
         IReadOnlyList<TileView> sourceTiles,
-        float duration)
+        float duration,
+        ClearEffectPlaybackContext context = null)
     {
         if (createdTile == null)
             yield break;
 
-        yield return tileAnimator.PlaySpecialCreationMerge(createdTile, sourceTiles, duration);
+        yield return tileAnimator.PlaySpecialCreationMerge(createdTile, sourceTiles, duration, context);
     }
 
     public IEnumerator PlayClearPresentation(ClearPresentationPlan plan)
@@ -1302,30 +1303,21 @@ public class BoardAnimator
         System.Collections.Generic.Dictionary<TileType, int> clearedByType =
             new System.Collections.Generic.Dictionary<TileType, int>();
 
-        var ctx = new ClearEffectPlaybackContext();
+        plan.CaptureTileLifetimes(); // fallback for direct callers; queued plans are already captured
+        var ctx = new ClearEffectPlaybackContext { CurrentTileLifetime = plan.TryGetCurrentTileLifetime };
         var cleared = new System.Collections.Generic.HashSet<TileView>();
         var committedImpactCells = new System.Collections.Generic.HashSet<Vector2Int>();
         // Çok-hücreli engel (4x4 kasa, 2x2 sandık…) bir sunumdan TEK vuruş alır: hasar parti parti
         // (FlushPresentationResults, dalga ilerledikçe) uygulanıyor; her partide engelin başka hücreleri
         // girince PulseCore/Line tek başına 2-3 vuruş veriyordu. origin → ilk vurulan hücre.
         var presentationHitOrigins = new System.Collections.Generic.Dictionary<int, Vector2Int>();
-        var tileLifetimes = new Dictionary<TileView, int>();
-        foreach (var tile in plan.FinalClearTiles)
-            if (tile != null)
-                tileLifetimes[tile] = tile.LifetimeVersion;
-        foreach (var effect in plan.Effects)
-            if (effect?.TargetTiles != null)
-                foreach (var tile in effect.TargetTiles)
-                    if (tile != null)
-                        tileLifetimes[tile] = tile.LifetimeVersion;
-
         // Presentation path normal match ise, final clear tile'ların type bilgisini
         // merkezi plana yaz. Böylece effect impact'i sonradan geldiğinde obstacle damage
         // doğru TileType ile üretilebilir.
         if (plan.ObstacleHitContext == ObstacleHitContext.NormalMatch)
         {
             foreach (var tile in plan.FinalClearTiles)
-                plan.RegisterNormalMatchSource(tile);
+                if (ctx.IsCurrentTile(tile)) plan.RegisterNormalMatchSource(tile);
         }
 
         bool IsInteractionLocked(TileView tile)
@@ -1356,9 +1348,7 @@ public class BoardAnimator
 
         void FinalizePresentationTileClear(TileView tile)
         {
-            if (tile == null || cleared.Contains(tile)
-                || (tileLifetimes.TryGetValue(tile, out int lifetime)
-                    && !tile.IsCurrentLifetime(lifetime)))
+            if (!ctx.IsCurrentTile(tile) || cleared.Contains(tile))
                 return;
 
             var cell = new Vector2Int(tile.X, tile.Y);
@@ -1875,7 +1865,8 @@ public class BoardAnimator
     IReadOnlyList<TileView> sourceTiles,
     float duration,
     float clearAtNormalizedTime,
-    Action<TileView> onTileClear)
+    Action<TileView> onTileClear,
+    ClearEffectPlaybackContext context = null)
     {
         if (tileAnimator == null || sourceTiles == null || sourceTiles.Count == 0)
             yield break;
@@ -1885,6 +1876,7 @@ public class BoardAnimator
             sourceTiles,
             duration,
             clearAtNormalizedTime,
-            onTileClear);
+            onTileClear,
+            context);
     }
 }

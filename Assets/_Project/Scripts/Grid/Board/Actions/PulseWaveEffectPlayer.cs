@@ -25,7 +25,7 @@ public sealed class PulseWaveEffectPlayer : IClearEffectPlayer
         for (int i = 0; i < pulse.TargetTiles.Count; i++)
         {
             TileView tile = pulse.TargetTiles[i];
-            if (tile == null)
+            if (context == null || !context.TryGetCurrentTileLifetime(tile, out int lifetime))
                 continue;
 
             float delay = 0f;
@@ -35,8 +35,8 @@ public sealed class PulseWaveEffectPlayer : IClearEffectPlayer
                     maxDelay = delay;
             }
 
-            board.StartCoroutine(tile.RunForCurrentLifetime(
-                PlayTileImpact(tile, delay, pulse.ImpactAnimTime, pulse.ClearOnImpact, context, animator)));
+            board.StartCoroutine(tile.RunForLifetime(
+                PlayTileImpact(tile, delay, pulse.ImpactAnimTime, pulse.ClearOnImpact, context, animator), lifetime));
         }
 
         float tailHold = pulse.TailHoldSecondsOverride > 0f

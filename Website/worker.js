@@ -1,8 +1,13 @@
 // Statik dosyalar Cloudflare assets'ten doğrudan sunulur; bu Worker yalnız video yollarında çalışır
 // (wrangler.jsonc → assets.run_worker_first). Assets byte-range desteklemiyor, iPhone Safari ise MP4'ü
 // ancak 206 Partial Content yanıtıyla oynatıyor → Range isteğini burada dilimleyip cevaplıyoruz.
+import { routeWaitlist } from './waitlist.js';
+export { LaunchWaitlist } from './waitlist.js';
+
 export default {
   async fetch(request, env) {
+    const waitlist = await routeWaitlist(request, env);
+    if (waitlist) return waitlist;
     const range = request.headers.get("Range");
     const headers = new Headers(request.headers);
     headers.delete("Range");

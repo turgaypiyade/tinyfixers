@@ -449,7 +449,8 @@ public class LevelDataEditor : Editor
             level.refillSpecialGuard = EditorGUILayout.Slider("Engelleme Oranı", level.refillSpecialGuard, 0f, 1f);
         EditorGUILayout.HelpBox(
             "Yeni düşen taşın kendiliğinden Rocket/PulseCore/PatchBot şekli tamamlamasının engellenme oranı " +
-            "(0 = kapalı, 1 = hepsi). Otomatik: seviye 1-50 → 0.8, 51+ → seviyeye göre 0.4-0.9. " +
+            "(0 = kapalı, 1 = hepsi). Otomatik: seviye 1-50 → 0.8, 51-100 → 0.4-0.9, 101+ → 0.3-0.7. " +
+            "Değişken oran seviyeye göre belirlenir; aynı levelda her denemede korunur. " +
             "Düz 3'lü cascade ve gizli yardım etkilenmez.",
             MessageType.None);
     }
@@ -2525,6 +2526,7 @@ public class LevelDataEditor : Editor
     private void DrawObstaclePreview(ObstacleLibrary library, ObstacleDef def, Rect rect, float padding, int remainingHits = 0)
     {
         if (def == null) return;
+        if (GelLauncherPressPreview.TryDraw(def.id, rect, padding, remainingHits)) return;
         if (def.id == ObstacleId.GrassWaterLily)
         {
             DrawSpriteInRect(library != null ? library.Get(ObstacleId.Grass)?.GetPreviewSprite() : null, rect, padding);
