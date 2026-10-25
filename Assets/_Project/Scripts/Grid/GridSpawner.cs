@@ -51,6 +51,13 @@ public class GridSpawner : MonoBehaviour
     [SerializeField] private RectTransform overTilesObstaclesRoot;
     private WaterChannelService waterChannelService;   // su kanalı görünüm + akış (Docs/WaterChannel_Plan.md)
     [SerializeField] private RectTransform tilesRoot;
+    [Tooltip("Taşları YALNIZ sütun girişlerinden kırpar (TilesRoot'a stencil maske; sol/sağ/alt serbest). Yeni taşlar " +
+             "düşüş motoru gereği ızgaranın üstünde sıraya dizilir; tahta maskesi kaldırıldığı için büyük patlamada HUD'un " +
+             "üzerinde görünüyorlardı. Hareketi DEĞİŞTİRMEZ. Kapatınca eski davranış.")]
+    [SerializeField] private bool clipTilesAboveGrid = true;
+    [Tooltip("Kırpma sınırı ızgaranın üst kenarından kaç taş boyu yukarıda. 0 = tam üst kenar: yeni taş çerçeve hizasından " +
+             "içeri kayarak girer (0.35'te kesik kısım çerçevenin üstünde açıkta kalıp 'yarım taş' görünüyordu).")]
+    [SerializeField, Range(0f, 1f)] private float tilesTopClipMarginTiles = 0f;
 
     [Header("Mud Overlay")]
     [SerializeField] private MudOverlayService mudOverlayService;
@@ -455,6 +462,7 @@ public class GridSpawner : MonoBehaviour
         ApplyCellAnchoredRootPosition(grassOverlayRoot, inner);   // grass PlaceInCell top-left hizası (mud ile aynı)
         ApplyCellAnchoredRootPosition(gridLinesRoot, inner);
         ApplyCellAnchoredRootPosition(tilesRoot, inner);
+        ApplyTilesTopClip();
         ApplyCellAnchoredRootPosition(obstaclesRoot, inner);
         ApplyCellAnchoredRootPosition(underTilesObstaclesRoot, inner);
         ApplyCellAnchoredRootPosition(overTilesObstaclesRoot, inner);
@@ -560,6 +568,49 @@ public class GridSpawner : MonoBehaviour
     {
         rect.GetWorldCorners(RectWorldCorners);
         return RectWorldCorners[0].y;
+    }
+
+    // TilesRoot'a stencil maske (TilesTopClipShape + TilesTopClipMask). RectMask2D KULLANILMAZ: taş ikonlarındaki iç
+    // Canvas'larda dikdörtgen kırpma yanlış uzayda uygulanıyordu (yarım taş / hiç taş). Şekil sütun bazlı: her sütun
+    // kendi en üst oynanabilir hücresinin üst kenarından (+ pay) aşağısını gösterir.
+    private void ApplyTilesTopClip()
+    {
+        if (tilesRoot == null) return;
+        if (tilesRoot.TryGetComponent(out RectMask2D oldClip)) oldClip.enabled = false;   // önceki sürümden kalmışsa
+        tilesRoot.TryGetComponent(out TilesTopClipShape shape);
+        tilesRoot.TryGetComponent(out TilesTopClipMask mask);
+        if (!clipTilesAboveGrid)
+        {
+            if (mask != null) mask.enabled = false;
+            if (shape != null) shape.enabled = false;
+            return;
+        }
+        // Graphic'in CanvasRenderer'ı otomatik eklenmiyor (MissingComponentException) → önce elle ekle.
+        if (!tilesRoot.TryGetComponent(out CanvasRenderer _)) tilesRoot.gameObject.AddComponent<CanvasRenderer>();
+        if (shape == null) shape = tilesRoot.gameObject.AddComponent<TilesTopClipShape>();
+        if (mask == null) mask = tilesRoot.gameObject.AddComponent<TilesTopClipMask>();
+        shape.raycastTarget = false;
+        shape.enabled = true;
+        mask.showMaskGraphic = false;
+        mask.enabled = true;
+
+        float margin = tileSize * Mathf.Max(0f, tilesTopClipMarginTiles);
+        var tops = new float[width];
+        for (int x = 0; x < width; x++)
+        {
+            int topRow = 0;   // tamamen boş sütun: ızgara üst kenarı
+            for (int y = 0; y < height; y++)
+                if (!IsShapeEmptyCell(x, y)) { topRow = y; break; }
+            tops[x] = -topRow * tileSize + margin;
+        }
+        shape.SetShape(tops, tileSize);
+    }
+
+    private bool IsShapeEmptyCell(int x, int y)
+    {
+        if (resolvedLevel == null || resolvedLevel.cells == null) return false;
+        int idx = resolvedLevel.Index(x, y);
+        return idx >= 0 && idx < resolvedLevel.cells.Length && resolvedLevel.cells[idx] == (int)CellType.Empty;
     }
 
     private void ApplyCellAnchoredRootPosition(RectTransform root, Vector2 inner)
@@ -1117,7 +1168,7 @@ public class GridSpawner : MonoBehaviour
     private LevelData ResolveLevelData()
     {
         var sourceLevel = RuntimeSimulationSession.IsActive
-            ? RuntimeSimulationSession.CurrentLevel
+            ? (RuntimeSimulationSession.CurrentLevel != null ? RuntimeSimulationSession.CurrentLevel : ResolveSimLevelByNumber())
             : levelRuntimeSelector != null ? levelRuntimeSelector.ResolveLevelData() : null;
 
         sourceLevel ??= level;
@@ -1130,6 +1181,14 @@ public class GridSpawner : MonoBehaviour
             runtimeClone.moves = LevelRemoteTuning.MovesFor(CurrentLevel.Global, runtimeClone.moves);
 
         return runtimeClone;
+    }
+
+    // SIM build (arka plan simülasyonu): asset yolu yok, seviye katalogdan numarasıyla bulunur.
+    private LevelData ResolveSimLevelByNumber()
+    {
+        int n = RuntimeSimulationSession.CurrentLevelNumber;
+        var catalog = levelRuntimeSelector != null ? levelRuntimeSelector.Catalog : null;
+        return n > 0 && catalog != null && catalog.TryGetGlobalLevel(n, out var data) ? data : null;
     }
 
     // Runtime'da level üzerinde mutasyon yaparız (obstacle stamp'leme, hedef ilerlemesi vb.) ama

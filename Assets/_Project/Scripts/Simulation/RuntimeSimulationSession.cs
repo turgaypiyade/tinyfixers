@@ -6,8 +6,10 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 
 /// <summary>
-/// Editor-only automation of the REAL gameplay scene. No obstacle, cascade, refill,
-/// combo, or goal rules are implemented here. Player builds always see IsActive=false.
+/// Automation of the REAL gameplay scene. No obstacle, cascade, refill, combo, or goal rules are
+/// implemented here. Runs in the Editor (Play Mode) and in the headless SIM build (TF_SIM_BUILD,
+/// `-batchmode -nographics -tfsim config.json`) so batches run unattended in the background.
+/// Store builds never compile the runner: IsActive is always false there.
 /// </summary>
 public sealed class RuntimeSimulationSession : MonoBehaviour
 {
@@ -23,6 +25,9 @@ public sealed class RuntimeSimulationSession : MonoBehaviour
         {
 #if UNITY_EDITOR
             return UnityEditor.SessionState.GetBool(ActiveKey, false);
+#elif TF_SIM_BUILD
+            // Komut satırından okunur: BeforeSceneLoad kontrolleri (Firebase/Analytics kapatma) sıradan bağımsız.
+            return SimArgs.Active;
 #else
             return false;
 #endif
@@ -31,10 +36,32 @@ public sealed class RuntimeSimulationSession : MonoBehaviour
 
     public static LevelData CurrentLevel { get; private set; }
 
+    /// <summary>SIM build: oynanan katalog seviye numarası. Asset yolu build'de yok; GridSpawner katalogdan çözer.</summary>
+    public static int CurrentLevelNumber { get; private set; }
+
+#if TF_SIM_BUILD
+    private static class SimArgs
+    {
+        private static bool parsed;
+        private static string configPath;
+        public static bool Active { get { Parse(); return configPath != null; } }
+        public static string ConfigPath { get { Parse(); return configPath; } }
+        private static void Parse()
+        {
+            if (parsed) return;
+            parsed = true;
+            var args = Environment.GetCommandLineArgs();
+            for (int i = 0; i < args.Length - 1; i++)
+                if (args[i] == "-tfsim") configPath = args[i + 1];
+        }
+    }
+#endif
+
     [Serializable]
     public sealed class Config
     {
         public string[] levelPaths;
+        public int[] levelNumbers;      // SIM build: katalog seviye numaraları (levelPaths yerine)
         public string scenePath = "Assets/_Project/Scenes/01_Game.unity";
         public int gamesPerLevel = 20;
         public int seed = 42;
@@ -75,7 +102,7 @@ public sealed class RuntimeSimulationSession : MonoBehaviour
         public bool completed;
     }
 
-#if UNITY_EDITOR
+#if UNITY_EDITOR || TF_SIM_BUILD
     private Config _config;
     private Report _report;
     private bool _forcedFail;
@@ -89,16 +116,31 @@ public sealed class RuntimeSimulationSession : MonoBehaviour
     private float _gameStarted;
     private bool _finished;
     private bool _sceneLoadFailed;
+#if UNITY_EDITOR
     private RuntimeGameplayRecorder _recorder;
     private bool Recording => _recorder != null;
+#else
+    private bool Recording => false;
+#endif
+    private int LevelCount => _config.levelPaths != null && _config.levelPaths.Length > 0
+        ? _config.levelPaths.Length : _config.levelNumbers != null ? _config.levelNumbers.Length : 0;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     private static void Bootstrap()
     {
         CurrentLevel = null;
+        CurrentLevelNumber = 0;
         if (!IsActive) return;
+#if UNITY_EDITOR
         var config = JsonUtility.FromJson<Config>(UnityEditor.SessionState.GetString(ConfigKey, ""));
-        if (config == null || config.levelPaths == null || config.levelPaths.Length == 0) return;
+#else
+        Config config = null;
+        try { config = JsonUtility.FromJson<Config>(File.ReadAllText(SimArgs.ConfigPath)); }
+        catch (Exception ex) { Debug.LogError("[Sim] Config okunamadı: " + ex.Message); Application.Quit(2); return; }
+#endif
+        bool hasLevels = config != null && ((config.levelPaths != null && config.levelPaths.Length > 0)
+            || (config.levelNumbers != null && config.levelNumbers.Length > 0));
+        if (!hasLevels) return;
         var host = new GameObject("Runtime Level Simulation");
         DontDestroyOnLoad(host);
         var session = host.AddComponent<RuntimeSimulationSession>();
@@ -110,24 +152,47 @@ public sealed class RuntimeSimulationSession : MonoBehaviour
         Application.runInBackground = true;
         Time.timeScale = config.timeScale;
         // Before any scene Awake/Start: every real level consumer sees the selected asset.
-        CurrentLevel = UnityEditor.AssetDatabase.LoadAssetAtPath<LevelData>(config.levelPaths[0]);
+        session.SelectLevel(0);
         UnityEngine.Random.InitState(config.seed);
         Application.logMessageReceived += session.OnLog;
+#if UNITY_EDITOR
         if (!string.IsNullOrEmpty(config.recordDir))
             session._recorder = RuntimeGameplayRecorder.Create(config.ffmpegPath, config.recordFps);
+#endif
+    }
+
+    // Editör: asset yolu (davranış eskisi gibi). SIM build: katalog numarası — asset GridSpawner'da katalogdan
+    // çözülür ve CurrentLevel.Global oynanan seviyeye eşitlenir (seviye numarasına bağlı kurallar — refill special
+    // koruması vb. — doğru seviyeyle çalışsın). SIM build'in PlayerPrefs'i ayrı ürün adında, oyunun kaydına dokunmaz.
+    private string SelectLevel(int index)
+    {
+#if UNITY_EDITOR
+        if (_config.levelPaths != null && index < _config.levelPaths.Length)
+        {
+            CurrentLevel = UnityEditor.AssetDatabase.LoadAssetAtPath<LevelData>(_config.levelPaths[index]);
+            CurrentLevelNumber = 0;
+            return _config.levelPaths[index];
+        }
+#endif
+        CurrentLevel = null;
+        CurrentLevelNumber = _config.levelNumbers != null && index < _config.levelNumbers.Length ? _config.levelNumbers[index] : 0;
+#if TF_SIM_BUILD
+        if (CurrentLevelNumber > 0) PlayerPrefs.SetInt(global::CurrentLevel.PrefsKey, CurrentLevelNumber);
+#endif
+        return "L" + CurrentLevelNumber.ToString("000");
     }
 
     private IEnumerator Start()
     {
         if (_config == null) yield break;
         bool first = true;
-        foreach (var levelPath in _config.levelPaths)
+        for (int levelIndex = 0; levelIndex < LevelCount; levelIndex++)
         {
             for (int sample = 0; sample < _config.gamesPerLevel; sample++)
             {
                 if (Cancelled) { Finish(false); yield break; }
                 int seed = unchecked(_config.seed + sample * 7919);
-                CurrentLevel = UnityEditor.AssetDatabase.LoadAssetAtPath<LevelData>(levelPath);
+                string levelPath = SelectLevel(levelIndex);
                 var result = new GameResult { levelPath = levelPath, level = CurrentLevel != null ? CurrentLevel.name : levelPath,
                     sample = sample, seed = seed };
                 // Preserve errors emitted by Awake/Start in the first gameplay scene.
@@ -137,7 +202,7 @@ public sealed class RuntimeSimulationSession : MonoBehaviour
                 _activeBoard = null;
                 _gameStarted = Time.realtimeSinceStartup;
                 _report.games.Add(result);
-                if (CurrentLevel == null)
+                if (CurrentLevel == null && CurrentLevelNumber <= 0)
                 {
                     result.outcome = "Error"; result.detail = "Level asset not found.";
                 }
@@ -149,15 +214,19 @@ public sealed class RuntimeSimulationSession : MonoBehaviour
                         UnityEngine.Random.InitState(seed);
                         yield return LoadGameScene(result);
                     }
+#if UNITY_EDITOR
                     if (Recording)
                         _recorder.BeginClip(Path.Combine(_config.recordDir, $"{result.level}_s{sample:00}.mp4"));
+#endif
                     if (string.IsNullOrEmpty(result.outcome))
                         yield return GuardGame(PlayGame(result), result);
+#if UNITY_EDITOR
                     if (Recording)
                     {
                         yield return new WaitForSeconds(_config.tailSeconds);
                         _recorder.EndClip();
                     }
+#endif
                 }
                 first = false;
                 CaptureResult(result);
@@ -250,6 +319,8 @@ public sealed class RuntimeSimulationSession : MonoBehaviour
 
         _activeBoard = board;
         _movesAtStart = board.RemainingMoves;
+        if (CurrentLevel == null && board.ActiveLevelData != null)
+            result.level = $"L{CurrentLevelNumber:000} {board.ActiveLevelData.name}";
         board.OnLevelFailRequested += OnForcedFail;
         try
         {
@@ -425,8 +496,18 @@ public sealed class RuntimeSimulationSession : MonoBehaviour
     }
 
     private void OnForcedFail() => _forcedFail = true;
+#if UNITY_EDITOR
     private bool Cancelled => UnityEditor.SessionState.GetBool(CancelKey, false);
     private static void SetStatus(string text) => UnityEditor.SessionState.SetString(StatusKey, text);
+#else
+    // SIM build: çıktı klasörüne STOP dosyası koyunca durur; durum log'a ve status.txt'ye yazılır.
+    private bool Cancelled => _config != null && File.Exists(Path.Combine(Path.GetDirectoryName(_config.outputPath) ?? ".", "STOP"));
+    private void SetStatus(string text)
+    {
+        Debug.Log("[Sim] " + text);
+        try { File.WriteAllText(Path.ChangeExtension(_config.outputPath, ".status.txt"), text); } catch { }
+    }
+#endif
     private void OnLog(string condition, string stack, LogType type)
     {
         if (type == LogType.Exception || type == LogType.Assert || type == LogType.Error)
@@ -440,14 +521,18 @@ public sealed class RuntimeSimulationSession : MonoBehaviour
             Directory.CreateDirectory(Path.GetDirectoryName(_config.outputPath));
             File.WriteAllText(_config.outputPath, JsonUtility.ToJson(_report, true));
             File.WriteAllText(Path.ChangeExtension(_config.outputPath, ".csv"), RuntimeSimulationReport.ToCsv(_report));
+#if UNITY_EDITOR
             UnityEditor.SessionState.SetString(ReportKey, _config.outputPath);
+#endif
             return true;
         }
         catch (Exception ex)
         {
             if (GameDiagnostics.CriticalErrors)
                 Debug.LogError("[RuntimeSim] Report could not be written: " + ex.Message);
+#if UNITY_EDITOR
             UnityEditor.SessionState.SetBool(CancelKey, true);
+#endif
             SetStatus("Rapor kaydedilemedi: " + ex.Message);
             return false;
         }
@@ -459,14 +544,20 @@ public sealed class RuntimeSimulationSession : MonoBehaviour
         bool saved = SaveReport();
         _finished = true;
         if (saved) SetStatus(completed ? "Tamamlandı" : "Durduruldu — kısmi rapor kaydedildi");
+#if UNITY_EDITOR
         UnityEditor.EditorApplication.isPlaying = false;
+#else
+        Application.Quit(completed ? 0 : 1);
+#endif
     }
 
     private void OnDestroy()
     {
         if (_config == null) return;
         Application.logMessageReceived -= OnLog;
+#if UNITY_EDITOR
         if (_recorder != null) Destroy(_recorder.gameObject);
+#endif
         try
         {
             if (!_finished)
@@ -482,6 +573,7 @@ public sealed class RuntimeSimulationSession : MonoBehaviour
             UnityEngine.Random.state = _oldRandomState;
             Application.runInBackground = _oldRunInBackground;
             CurrentLevel = null;
+            CurrentLevelNumber = 0;
         }
     }
 #endif

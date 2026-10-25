@@ -48,13 +48,10 @@ public class FallAction : BoardAction
     internal void PrepareContinuousRoutes(BoardController board)
     {
         if (!board.UseContinuousFallMotion) return;
-        // Kesintisiz modda yeni taşlar YUKARI DİZİLMEZ (spacing = null): doğdukları satırdan başlarlar. Aralığı
-        // TileFallMotionSystem korur (sıralı kalkış + sütun aralığı + akışın arkasına dizilme). Dizme açıkken
-        // çok patlamada bir sütunun yeni taşları ızgaranın ~10 satır üstünden, HUD'un üzerinden geliyordu
-        // (taş ikonundaki iç Canvas tahta maskesinin kırpmasından kaçıyor).
+        var spacing = BuildMaxToYPerVerticalSpawnSource();
         foreach (var r in fallRecords)
             board.FallMotion.Prepare(r.tile, r.lifetimeVersion, r.planGeneration,
-                BuildPixelPath(r, null, board.TileSize), IsSpawnRecord(r),
+                BuildPixelPath(r, spacing, board.TileSize), IsSpawnRecord(r),
                 r.useSettle, r.settleDuration, r.settleStrength);
     }
 
@@ -1102,7 +1099,7 @@ public class FallAction : BoardAction
             r.tile,
             r.lifetimeVersion,
             r.planGeneration,
-            BuildPixelPath(r, null, tileSize),   // kesintisiz mod: yukarı dizme yok (bkz. PrepareContinuousRoutes)
+            BuildPixelPath(r, maxToYPerVerticalSpawnSource, tileSize),
             new Vector2Int(r.toX, r.toY),
             IsSpawnRecord(r),
             r.startDelay + r.phaseDelay,
