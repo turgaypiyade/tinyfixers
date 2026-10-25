@@ -3433,6 +3433,25 @@ public class BoardController : MonoBehaviour
         SetSelectedTile(tile);
     }
 
+    // Override partner'ına yazılamayan special için: aynı oluşum grubundan partner'a en yakın normal taş.
+    private TileView PickAltCreationWinner(HashSet<TileView> candidates, SpecialCreationService.CreationResult creation,
+        TileView partner)
+    {
+        var group = specialCreationService.GetConsumedTilesForCreation(candidates, creation);   // havuz tamponu: hemen tüket
+        TileView best = null;
+        int bestDist = int.MaxValue;
+        if (group != null)
+            foreach (var t in group)
+            {
+                if (t == null || t == partner || t.GetSpecial() != TileSpecial.None
+                    || t.RuntimeState == TileRuntimeState.Clearing) continue;
+                if (obstacleStateService != null && obstacleStateService.IsMovableObstacleAt(t.X, t.Y)) continue;
+                int d = Mathf.Abs(t.X - partner.X) + Mathf.Abs(t.Y - partner.Y);
+                if (d < bestDist) { bestDist = d; best = t; }
+            }
+        return best;
+    }
+
     bool AreNeighbors(TileView a, TileView b) => Mathf.Abs(a.X - b.X) + Mathf.Abs(a.Y - b.Y) == 1;
 
     private void SetSelectedTile(TileView tile)
@@ -4072,7 +4091,10 @@ public class BoardController : MonoBehaviour
             bool specialSideIsOverride =
                 originalSa == TileSpecial.SystemOverride || originalSb == TileSpecial.SystemOverride;
 
-            if (!bothOriginallySpecial && !specialSideIsOverride)
+            // Override + Normal'da da normal tarafın special'ı OLUŞUR (Pulse/Line/PatchBot'taki gibi). Önden temizleme
+            // ve birleşme animasyonu yine yok: gruptaki diğer taşlar Override'ın aynı renk süpürmesiyle gider; Override
+            // special'ları atladığı için (CollectAllOfType excludeSpecials) yeni special korunur.
+            if (!bothOriginallySpecial)
             {
                 var specialTile = (originalSa != TileSpecial.None) ? a : b;
                 var normalTile = (originalSa != TileSpecial.None) ? b : a;
@@ -4095,8 +4117,10 @@ public class BoardController : MonoBehaviour
 
                 if (normalMatches.Count >= 3)
                 {
-                    // Jel bulaşması: kaynak = eşleşen grup (ExecuteClearPass ile aynı kural).
-                    NoteGelSpreadParticipants(normalMatches);
+                    // Jel bulaşması: kaynak = eşleşen grup (ExecuteClearPass ile aynı kural). Override'da grup
+                    // Override süpürmesiyle temizlenir; o yolun kendi jel kuralı geçerli kalsın.
+                    if (!specialSideIsOverride)
+                        NoteGelSpreadParticipants(normalMatches);
                     var candidates = new HashSet<TileView>(normalMatches);
                     candidates.RemoveWhere(t => t == null || t.GetSpecial() != TileSpecial.None);
 
@@ -4122,7 +4146,16 @@ public class BoardController : MonoBehaviour
                                 && obstacleStateService.IsMovableObstacleAt(creation.winner.X, creation.winner.Y))
                                 continue;
 
-                            var created = specialResolver.ApplyCreatedSpecial(creation.winner, creation.special);
+                            // Override partner'ı (Override'la yer değiştiren normal taş) Override her durumda temizler ve
+                            // partner special olursa kombo moduna geçer → special partner'a yazılmaz; grubun partner'a
+                            // en yakın taşına yazılır.
+                            var winner = creation.winner;
+                            if (specialSideIsOverride && winner == normalTile)
+                                winner = PickAltCreationWinner(candidates, creation, normalTile);
+                            if (winner == null)
+                                continue;
+
+                            var created = specialResolver.ApplyCreatedSpecial(winner, creation.special);
                             if (created == null)
                                 continue;
 
@@ -4138,7 +4171,15 @@ public class BoardController : MonoBehaviour
                             candidates.Remove(created);
                         }
 
-                        if (boardAnimatorRef != null)
+                        if (specialSideIsOverride)
+                        {
+                            // Birleşme yok (katkı taşları Override süpürmesinde): special yalnız oluşum animasyonuyla belirir.
+                            foreach (var created in createdTiles)
+                                if (created != null && created.gameObject.activeInHierarchy)
+                                    created.PlaySpecialCreationReveal(created.GetSpecial(), tileSize);
+                            EmitCreatedSpecialSfx(createdTiles);
+                        }
+                        else if (boardAnimatorRef != null)
                         {
                             foreach (var created in createdTiles)
                             {
@@ -4154,7 +4195,7 @@ public class BoardController : MonoBehaviour
                     normalMatches.RemoveWhere(t => t == null || t.GetSpecial() != TileSpecial.None);
                     if (GameDiagnostics.BoardFlow) FlowLog($"special_creation({createdTiles.Count})");
 
-                    if (normalMatches.Count > 0)
+                    if (normalMatches.Count > 0 && !specialSideIsOverride)
                     {
                         actionSequencer.Enqueue(new MatchClearAction(
                             normalMatches,

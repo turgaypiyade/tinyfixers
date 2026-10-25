@@ -552,18 +552,34 @@ public class PatchBotTargetCoordinator
         }
 
         // Çok-hücreli engel = tek aday (4x4 kasa 16 aday değil): temsilci = footprint merkezine en yakın hücre.
+        // Duvar / metal duvar: aşama HÜCRE bazında ve en yüksek aşamadaki hücreye vuruş parçayı yıkar → temsilci
+        // yıkılmaya en yakın (en yüksek aşamalı) hücre; eşitlikte merkeze en yakın. Eskiden merkez hücre seçiliyordu,
+        // bot çatlamış hücre dururken sağlam hücreye gidebiliyordu.
+        WallObstacleService wallService = null;
+        bool wallLookupDone = false;
         foreach (var kv in obstacleUnitCells)
         {
             var cells = kv.Value;
             float cx = 0f, cy = 0f;
             foreach (var c in cells) { cx += c.x; cy += c.y; }
             cx /= cells.Count; cy /= cells.Count;
+
+            var unitId = board.ObstacleStateService.GetObstacleIdAt(cells[0].x, cells[0].y);
+            bool isWall = unitId == ObstacleId.Wall || unitId == ObstacleId.MetalWall;
+            if (isWall && !wallLookupDone)
+            {
+                wallLookupDone = true;
+                board.TryGetComponent(out wallService);
+            }
+
             var rep = cells[0];
             float best = float.MaxValue;
+            int bestStage = int.MinValue;
             foreach (var c in cells)
             {
+                int stage = isWall && wallService != null ? wallService.GetStageAt(c.x + c.y * board.Width) : 0;
                 float d = (c.x - cx) * (c.x - cx) + (c.y - cy) * (c.y - cy);
-                if (d < best) { best = d; rep = c; }
+                if (stage > bestStage || (stage == bestStage && d < best)) { bestStage = stage; best = d; rep = c; }
             }
             // Taş altı katman (su birikintisi, mud…) normal oyunda da üstündeki eşleşmeyle temizlenir;
             // bloklayan engel (bidon, sandık…) yalnız vuruşla gider ve çoğu zaman saçılımın KAYNAĞIDIR.

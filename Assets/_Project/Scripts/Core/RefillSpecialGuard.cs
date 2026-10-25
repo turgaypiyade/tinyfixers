@@ -20,7 +20,27 @@ public static class RefillSpecialGuard
     private const float SoftenedMin = 0.3f;
     private const float SoftenedMax = 0.7f;
 
+    // Zorlanan oyuncu (oyunu bırakmasın): o seviyede hamleleri bitip KAYBEDİLEN denemeler (LevelAttemptStats.
+    // StrugglesOn — erken çıkış sayılmaz) korumayı gevşetir → tahta kendiliğinden daha sık special üretir.
+    // Hazır special / ek hamle YOK; yalnız kısılan olasılık geri açılır. Sayaç seviye kazanılınca sıfırlanır,
+    // canı bitip giden oyuncu ne zaman dönerse dönsün bu seviyede gevşeme sürer. Simülasyon etkilenmez.
+    private const int ReliefMinMoves = 15;          // yalnız ≥15 hamlelik seviyelerde (gerçek emek)
+    private const int StrongReliefStruggles = 3;
+    private const float ReliefMultiplier = 0.5f;    // 1 kayıp: koruma yarıya
+    private const float StrongReliefMultiplier = 0.25f;   // 3+ kayıp: dörtte bir
+
     public static float Resolve(LevelData level, int globalLevel)
+        => Base(level, globalLevel) * Relief(level, globalLevel);
+
+    private static float Relief(LevelData level, int globalLevel)
+    {
+        if (RuntimeSimulationSession.IsActive || level == null || level.moves < ReliefMinMoves) return 1f;
+        int struggles = LevelAttemptStats.StrugglesOn(globalLevel);
+        return struggles >= StrongReliefStruggles ? StrongReliefMultiplier
+            : struggles >= 1 ? ReliefMultiplier : 1f;
+    }
+
+    private static float Base(LevelData level, int globalLevel)
     {
         float authored = level != null ? level.refillSpecialGuard : Auto;
         if (authored >= 0f) return Mathf.Clamp01(authored);
