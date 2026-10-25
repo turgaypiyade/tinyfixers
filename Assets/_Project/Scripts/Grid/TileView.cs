@@ -480,6 +480,21 @@ public class TileView : MonoBehaviour,
 
     internal bool IsMoveTokenCurrent(int token) => activeMoveToken == token;
 
+    /// <summary>
+    /// Yeni doğan taşın ızgaraya girerken belirmesi (TileFallMotionSystem). Tahta maskesi kaldırıldığı için ızgaranın
+    /// üstündeki taş görünüyordu. Kombo için gizlenmiş taşa dokunmaz; tamamen görünürken CanvasGroup eklemez.
+    /// </summary>
+    internal void SetSpawnEdgeAlpha(float alpha)
+    {
+        if (KeepHiddenForCombo) return;
+        if (!TryGetComponent(out CanvasGroup group))
+        {
+            if (alpha >= 1f) return;
+            group = gameObject.AddComponent<CanvasGroup>();
+        }
+        group.alpha = alpha;
+    }
+
     internal Vector2 GetFallCellPosition(int cellX, int cellY, int tileSize) =>
         GetFallCellAnchoredPosition(cellX, cellY, tileSize);
 

@@ -60,6 +60,10 @@ internal sealed class TileFallMotionSystem
         public float settleStrength;
         public bool arrivalRaised;
         public Ticket ticket;
+        // Tahta maskesi (RectMask2D) taşan animasyonlar için kaldırıldı → ızgaranın ÜSTÜNDEKİ yeni taş görünüyordu
+        // (çok patlamada HUD'un üzerinde). Yeni taş ızgaranın bir satır üstünde görünmez, en üst satıra inerken belirir.
+        public bool edgeFade;
+        public float fadeFromY, fadeToY;
     }
 
     // A turn owns only the cells it crosses, not its eventual destination column.
@@ -215,6 +219,7 @@ internal sealed class TileFallMotionSystem
             if (pair.Key != null && pair.Key.IsCurrentLifetime(pair.Value.lifetime)
                 && pair.Key.RuntimeState == TileRuntimeState.Falling)
                 pair.Key.SetRuntimeState(TileRuntimeState.Idle);
+        foreach (var m in active.Values) EndEdgeFade(m);   // yarıda kesilen yeni taş görünmez kalmasın
         active.Clear();
         parked.Clear();
         recentLandings.Clear();
@@ -380,6 +385,15 @@ internal sealed class TileFallMotionSystem
             tile.RectTransform.anchoredPosition = start;
             m.lastWritten = start;
             active[tile] = m;
+
+            if (isSpawn)
+            {
+                int ts = board.TileSize;
+                m.fadeFromY = tile.GetFallCellPosition(target.x, -1, ts).y;
+                m.fadeToY = tile.GetFallCellPosition(target.x, 0, ts).y;
+                m.edgeFade = m.fadeFromY > m.fadeToY && start.y > m.fadeToY;
+                if (m.edgeFade) ApplyEdgeFade(m);
+            }
         }
 
         m.target = target;
@@ -532,6 +546,7 @@ internal sealed class TileFallMotionSystem
 
             m.tile.RectTransform.anchoredPosition = m.pos;
             m.lastWritten = m.pos;
+            if (m.edgeFade) ApplyEdgeFade(m);
 
             bool vertical = IsNextSegmentVertical(m);
             // Include a stone waiting at a diagonal entrance, so its vertical followers
@@ -797,9 +812,26 @@ internal sealed class TileFallMotionSystem
         m.diagonal = null;
     }
 
+    // Izgaranın bir satır üstünde 0, en üst satırda 1. Tamamen göründüğünde bir daha yazılmaz (kare başına iş yok).
+    private static void ApplyEdgeFade(Motion m)
+    {
+        float span = m.fadeFromY - m.fadeToY;
+        float a = span > 0f ? Mathf.Clamp01((m.fadeFromY - m.pos.y) / span) : 1f;
+        m.tile.SetSpawnEdgeAlpha(a);
+        if (a >= 1f) m.edgeFade = false;
+    }
+
+    private static void EndEdgeFade(Motion m)
+    {
+        if (!m.edgeFade) return;
+        m.edgeFade = false;
+        if (m.tile != null) m.tile.SetSpawnEdgeAlpha(1f);
+    }
+
     private void Land(Motion m)
     {
         var tile = m.tile;
+        EndEdgeFade(m);
         active.Remove(tile);
         board.ClearReservedTileTargetCell(m.target);
         m.ticket.Done = true;
@@ -929,6 +961,7 @@ internal sealed class TileFallMotionSystem
 
     private void Drop(Motion m)
     {
+        EndEdgeFade(m);
         ReleaseDiagonal(m);
         active.Remove(m.tile);
         board.ClearReservedTileTargetCell(m.target);

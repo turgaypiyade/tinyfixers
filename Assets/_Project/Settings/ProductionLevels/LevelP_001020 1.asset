@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::LevelData
   width: 9
   height: 10
-  moves: 31
+  moves: 32
   baseCoinReward: 10
   goals:
   - targetType: 2
@@ -22,7 +22,7 @@ MonoBehaviour:
     obstacleId: 46
     collectibleId: 1
     iconOverride: {fileID: -4636114995939134412, guid: 3767602825f9446c0b26afbe4d9fb476, type: 3}
-    amount: 40
+    amount: 30
   - targetType: 1
     tileType: 0
     obstacleId: 52

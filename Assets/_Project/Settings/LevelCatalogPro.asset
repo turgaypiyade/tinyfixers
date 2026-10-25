@@ -392,7 +392,7 @@ MonoBehaviour:
   - chapter: 4
     level: 95
     levelKey: LevelCL_095
-    levelData: {fileID: 11400000, guid: 70954535950a34bbeb1f90f887ddae8b, type: 2}
+    levelData: {fileID: 11400000, guid: b3d5d8e824edb4c4b9db144c0ad1a75e, type: 2}
   - chapter: 4
     level: 96
     levelKey: LevelCL_096
@@ -400,7 +400,7 @@ MonoBehaviour:
   - chapter: 4
     level: 97
     levelKey: LevelCL_097
-    levelData: {fileID: 11400000, guid: b3d5d8e824edb4c4b9db144c0ad1a75e, type: 2}
+    levelData: {fileID: 11400000, guid: 70954535950a34bbeb1f90f887ddae8b, type: 2}
   - chapter: 4
     level: 98
     levelKey: LevelCL_098
