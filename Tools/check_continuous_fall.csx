@@ -35,6 +35,8 @@ using System.Collections.Generic;
  public static class Debug {public static void LogWarning(string s){} public static void LogException(Exception e){throw e;} }
 public static class GameDiagnostics {public static bool BoardFlow,CriticalErrors;}
 public enum TileRuntimeState {Idle,Falling,Clearing,Swapping}
+public enum TileSpecial {None,PulseCore,PatchBot,LineH,LineV,SystemOverride}
+public class TileModel {public TileSpecial special;}
 public class RectTransform {public Vector2 anchoredPosition;}
 public class GameObject {public bool activeInHierarchy=true;}
 public class TileView {
@@ -42,6 +44,9 @@ public class TileView {
  public GameObject gameObject=new GameObject();
  public int X,Y,LifetimeVersion=1,token,PlannedFallGeneration=1,resets,arrivals,settles;
  public bool IsPlannedToMoveThisFallPass;
+ public TileModel model=new TileModel();public TileSpecial special{get=>model.special;set=>model.special=value;}public TileSpecial GetSpecial()=>special;
+ public bool isMovableObstacleTile,useFullCellIcon=true;
+ public Vector2 iconSize=new Vector2(100,100);public static Vector2 IconReferenceSize=>new Vector2(100,100);
  public BoardController board=new BoardController();
  private int fallArrivedGeneration=-1;
  /* production arrival hooks */
@@ -56,8 +61,9 @@ public class TileView {
  public void ClearLandingPose(){} public int BeginLandingPose()=>1;
  public bool ApplyLandingPose(int generation,float squash,float widen,float sink)=>true;
  public void ResetFallStretch(){resets++;}public void ApplyFallStretch(float f){}
- public void SnapToGrid(int s){RectTransform.anchoredPosition=GetFallCellPosition(X,Y,s);}
- public Vector2 GetFallCellPosition(int x,int y,int s)=>new Vector2(x*s,-y*s);
+ public void SnapToGrid(int s){RectTransform.anchoredPosition=new Vector2(X*s,-Y*s);}
+ public Vector2 GetFallCellPosition(int x,int y,int s)=>GetFallCellAnchoredPosition(x,y,s);
+ /* production cell target */
  public void PlayLandingSettle(int s,float d,float a){settles++;}
 }
 public class BoardController {
@@ -312,6 +318,19 @@ public static class Checks {
   var readinessBoard=new BoardController();var readinessMotion=new TileFallMotionSystem(readinessBoard);readinessBoard.fallMotion=readinessMotion;
   var readyTile=Tile(2,6,6);readinessBoard.Tiles[2,6]=readyTile;
   Check(readinessBoard.IsTileReadyForContinuousMatch(readyTile),""A live idle on-grid tile is ready without an event"");
+  foreach(TileSpecial special in Enum.GetValues(typeof(TileSpecial))) {
+   readyTile.special=special;
+   foreach(bool full in new[]{true,false}) {
+    readyTile.useFullCellIcon=full;readyTile.iconSize=new Vector2(100,135);
+    readyTile.SnapToGrid(100);
+    Check(readinessBoard.IsTileReadyForContinuousMatch(readyTile),""SnapToGrid idle pose is valid for ""+special+"" full=""+full);
+    readyTile.RectTransform.anchoredPosition=readyTile.GetFallCellPosition(readyTile.X,readyTile.Y,100);
+    Check(readinessBoard.IsTileReadyForContinuousMatch(readyTile),""Movement endpoint idle pose is valid for ""+special);
+    readyTile.RectTransform.anchoredPosition=P(2,5);
+    Check(!readinessBoard.IsTileReadyForContinuousMatch(readyTile),""Airborne ""+special+"" is still rejected"");
+   }
+  }
+  readyTile.special=TileSpecial.None;
   readyTile.RectTransform.anchoredPosition=P(2,5);
   Check(!readinessBoard.IsTileReadyForContinuousMatch(readyTile),""Idle flag alone cannot accept an airborne tile"");
   readyTile.SnapToGrid(100);readinessMotion.Prepare(readyTile,1,1,new[]{P(2,5),P(2,6)},false);readyTile.RuntimeState=TileRuntimeState.Idle;
@@ -388,6 +407,12 @@ public static class Checks {
 }
 ";
 var tileRoot=CSharpSyntaxTree.ParseText(File.ReadAllText("Assets/_Project/Scripts/Grid/TileView.cs")).GetRoot();
+var cellTarget=tileRoot.DescendantNodes().OfType<MethodDeclarationSyntax>()
+ .Single(m=>m.Identifier.ValueText=="GetFallCellAnchoredPosition").ToFullString();
+var snapToGrid=tileRoot.DescendantNodes().OfType<MethodDeclarationSyntax>().Single(m=>m.Identifier.ValueText=="SnapToGrid").ToFullString();
+if(!snapToGrid.Contains("rt.anchoredPosition = new Vector2(X * tileSize, -Y * tileSize);"))
+ throw new Exception("Update the SnapToGrid pose fixture to match production.");
+harness=harness.Replace("/* production cell target */",cellTarget);
 var arrivalMethods=string.Join("\n",tileRoot.DescendantNodes().OfType<MethodDeclarationSyntax>()
  .Where(m=>new[]{"RaiseFallArrived","RaiseFallArrivedFromMotion"}.Contains(m.Identifier.ValueText)).Select(m=>m.ToFullString()));
 var arrivalProperty=tileRoot.DescendantNodes().OfType<PropertyDeclarationSyntax>()

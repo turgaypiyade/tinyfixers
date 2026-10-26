@@ -113,6 +113,8 @@ public sealed class RuntimeSimulationSession : MonoBehaviour
     private string _runtimeError;
     private float _oldTimeScale;
     private bool _oldRunInBackground;
+    private bool _oldAudioPause;
+    private float _oldAudioVolume;
     private UnityEngine.Random.State _oldRandomState;
     private GameResult _activeResult;
     private BoardController _activeBoard;
@@ -165,6 +167,7 @@ public sealed class RuntimeSimulationSession : MonoBehaviour
         session._oldTimeScale = Time.timeScale;
         session._oldRandomState = UnityEngine.Random.state;
         session._oldRunInBackground = Application.runInBackground;
+        session.SilenceAudio();
         Application.runInBackground = true;
         Time.timeScale = config.timeScale;
         // Before any scene Awake/Start: every real level consumer sees the selected asset.
@@ -175,6 +178,22 @@ public sealed class RuntimeSimulationSession : MonoBehaviour
         if (!string.IsNullOrEmpty(config.recordDir))
             session._recorder = RuntimeGameplayRecorder.Create(config.ffmpegPath, config.recordFps);
 #endif
+    }
+
+    private void SilenceAudio()
+    {
+        // Process-wide guard also catches already-playing sources and ignoresListenerPause sources.
+        // New central SFX/music requests are gated by GameSettings without writing PlayerPrefs.
+        _oldAudioPause = AudioListener.pause;
+        _oldAudioVolume = AudioListener.volume;
+        AudioListener.pause = true;
+        AudioListener.volume = 0f;
+    }
+
+    private void RestoreAudio()
+    {
+        AudioListener.volume = _oldAudioVolume;
+        AudioListener.pause = _oldAudioPause;
     }
 
     private static string ConfigError(Config config)
@@ -451,10 +470,10 @@ public sealed class RuntimeSimulationSession : MonoBehaviour
 
     private static bool IsBoardWorking(BoardController board, out string reason)
     {
-        if (board.Flow.IsSettling || board.ActiveBackgroundJobs > 0 || board.InputLocked)
+        if (board.Flow.IsSettling || board.HasContinuousFallWork || board.ActiveBackgroundJobs > 0 || board.InputLocked)
         {
             reason = $"flowSettling={board.Flow.IsSettling}, detached={board.DetachedSequencerActions}, "
-                + $"activities={board.Flow.BlockingActivityCount}, jobs={board.ActiveBackgroundJobs}, inputLocked={board.InputLocked}";
+                + $"activities={board.Flow.BlockingActivityCount}, falls={board.HasContinuousFallWork}, jobs={board.ActiveBackgroundJobs}, inputLocked={board.InputLocked}";
             return true;
         }
         for (int x = 0; x < board.Width; x++)
@@ -497,8 +516,16 @@ public sealed class RuntimeSimulationSession : MonoBehaviour
                 return $"({x},{y}) references inactive/misplaced tile ({tile.X},{tile.Y}).";
             if (data == null || data.Type != tile.GetTileType() || data.Special != tile.GetSpecial())
                 return $"({x},{y}) model/view colour or special mismatch.";
-            if (tile.KeepHiddenForCombo || !board.IsTileReadyForContinuousMatch(tile))
-                return $"({x},{y}) is hidden or has not reached its visual cell after settling.";
+            if (tile.KeepHiddenForCombo)
+                return $"({x},{y}) is hidden after settling; special={tile.GetSpecial()}.";
+            if (!board.IsTileReadyForContinuousMatch(tile))
+            {
+                Vector2 target = tile.GetFallCellPosition(x, y, board.TileSize);
+                Vector2 actual = tile.RectTransform.anchoredPosition;
+                return $"({x},{y}) has not reached its visual cell after settling; special={tile.GetSpecial()}, "
+                    + $"actual={actual}, fallTarget={target}, snapped=({x * board.TileSize},{-y * board.TileSize}), "
+                    + $"state={tile.RuntimeState}, pendingFalls={board.HasContinuousFallWork}.";
+            }
         }
         _sceneTiles.Clear();
         if (board.Parent != null) board.Parent.GetComponentsInChildren(false, _sceneTiles);
@@ -677,6 +704,7 @@ public sealed class RuntimeSimulationSession : MonoBehaviour
         }
         finally
         {
+            RestoreAudio();
             Time.timeScale = _oldTimeScale;
             UnityEngine.Random.state = _oldRandomState;
             Application.runInBackground = _oldRunInBackground;

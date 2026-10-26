@@ -27,8 +27,10 @@ public static class GameSettings
     private const int DefaultOn = 1;
 
     // ── Properties ───────────────────────────────────────────────────────────
-    public static bool MusicEnabled        { get => GetBool(KeyMusic);        set => SetBool(KeyMusic,        value, OnMusicChanged); }
-    public static bool SoundEnabled        { get => GetBool(KeySound);        set => SetBool(KeySound,        value, OnSoundChanged); }
+    // Simulation shares the real gameplay/audio APIs on Mac and Windows. A temporary read gate
+    // avoids audio work without changing saved player preferences (or racing parallel workers).
+    public static bool MusicEnabled        { get => !RuntimeSimulationSession.IsActive && GetBool(KeyMusic); set => SetBool(KeyMusic, value, OnMusicChanged); }
+    public static bool SoundEnabled        { get => !RuntimeSimulationSession.IsActive && GetBool(KeySound); set => SetBool(KeySound, value, OnSoundChanged); }
     public static bool VibrationEnabled    { get => GetBool(KeyVibration);    set => SetBool(KeyVibration,    value, OnVibrationChanged); }
     public static bool HintEnabled         { get => GetBool(KeyHint);         set => SetBool(KeyHint,         value, OnHintChanged); }
     public static bool NotificationEnabled { get => GetBool(KeyNotification); set => SetBool(KeyNotification, value, OnNotificationChanged); }

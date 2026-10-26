@@ -11,7 +11,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Microsoft.CodeAnalysis.Scripting;
 string root="Assets/_Project/Scripts/";
-string[] files={"VFX/ObstacleScatterFx.cs","VFX/UiVfxPool.cs","VFX/ObstacleDebrisBounds.cs","VFX/ObstacleShatterFx.cs","VFX/ChestObstacleView.cs","Grid/Board/PaintCanBoxView.cs","Grid/SafeObstacleView.cs","Grid/TarpStatue/TarpStatueView.cs","VFX/WardrobeObstacleView.cs","Grid/RhodesStatueView.cs","UI/WonderRevealView.cs","UI/WonderRestorationLayout.cs","UI/WonderRestorationPieceGraphic.cs","UI/WonderWeldSparkGraphic.cs"};
+string[] files={"VFX/ObstacleScatterFx.cs","VFX/UiVfxPool.cs","VFX/ObstacleDebrisBounds.cs","VFX/ObstacleShatterFx.cs","VFX/ChestObstacleView.cs","Grid/Board/PaintCanBoxView.cs","Grid/SafeObstacleView.cs","Grid/TarpStatue/TarpStatueView.cs","VFX/WardrobeObstacleView.cs","Grid/RhodesStatueView.cs","UI/WonderDefinition.cs","UI/WonderTaskRegions.cs","UI/WonderRevealView.cs","UI/WonderRestorationLayout.cs","UI/WonderRestorationPieceGraphic.cs","UI/WonderWeldSparkGraphic.cs"};
 var trees=files.Select(f=>CSharpSyntaxTree.ParseText(File.ReadAllText(root+f),path:f)).ToList();
 foreach(var f in new[]{"Grid/GridSpawner.cs","Grid/Board/BoardController.cs","Grid/Board/BoardBreakFxService.cs","Grid/TarpStatue/TarpStatueService.cs","Grid/LaserCannon/LaserCannonService.cs"}) {
  var errors=CSharpSyntaxTree.ParseText(File.ReadAllText(root+f)).GetDiagnostics().Where(d=>d.Severity==DiagnosticSeverity.Error);

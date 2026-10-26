@@ -18,26 +18,26 @@ MonoBehaviour:
   backgroundSprite: {fileID: 21300000, guid: 85430392c02e14202abc451668ac9fcc, type: 3}
   totalStages: 8
   tasks:
-  - name: "Zemini Hazırla"
-    icon: {fileID: 21300000, guid: 1fb0f30def2d4caca47e0accfe5ab2ea, type: 3}
+  - name: "\u00c7al\u0131\u015fma Alan\u0131n\u0131 Temizle"
+    icon: {fileID: 21300000, guid: ad205e8cea27452285ac767f010c8d44, type: 3}
     starCost: 0
     action: 4
-    regions: []
+    regions:
+    - serializedVersion: 2
+      x: 0.02
+      y: 0
+      width: 0.42
+      height: 0.15
   - name: "Temeli Güçlendir"
     icon: {fileID: 21300000, guid: 164c417e2cf5453ab447915656e66848, type: 3}
     starCost: 0
     action: 0
     regions:
     - serializedVersion: 2
-      x: 0.52
-      y: 0.0
-      width: 0.48
-      height: 0.3
-    - serializedVersion: 2
-      x: 0.0
-      y: 0.0
-      width: 0.52
-      height: 0.17
+      x: 0.45
+      y: 0.1
+      width: 0.55
+      height: 0.2
   - name: "Duvarları Yükselt"
     icon: {fileID: 21300000, guid: 164c417e2cf5453ab447915656e66848, type: 3}
     starCost: 0
@@ -103,7 +103,7 @@ MonoBehaviour:
       y: 0.6
       width: 0.03
       height: 0.02
-  - name: "Çatıları Yenile"
+  - name: "Kiremitleri Yenile"
     icon: {fileID: 21300000, guid: ad205e8cea27452285ac767f010c8d44, type: 3}
     starCost: 0
     action: 2
@@ -118,10 +118,10 @@ MonoBehaviour:
       y: 0.575
       width: 0.12
       height: 0.015
-  - name: "Pati Bayraklarını Dik"
+  - name: "Bayraklar\u0131 Yenile"
     icon: {fileID: 21300000, guid: 365a7eb126eb4ce5af2c91c86f6ad07d, type: 3}
     starCost: 0
-    action: 1
+    action: 2
     regions:
     - serializedVersion: 2
       x: 0.73

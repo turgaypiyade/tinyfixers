@@ -27,7 +27,7 @@ public sealed class JourneyScreenController : MonoBehaviour
     [SerializeField] private WorldMapController worldMap;
 
     [Header("Wonder Modu (atanırsa harikalar liste olur)")]
-    [Tooltip("Atanırsa: açılan harikalar tam, açılmamışlar hologram (reveal shader).")]
+    [Tooltip("Atanırsa: harika kartları görevlerde bırakılan son onarım durumunu gösterir.")]
     [SerializeField] private WonderCatalog wonderCatalog;
 
     [Header("Ada Listesi (procedural)")]
@@ -110,7 +110,7 @@ public sealed class JourneyScreenController : MonoBehaviour
 
     // ─── Ada listesi ─────────────────────────────────────────────────────────
 
-    // Wonder modu: catalog'daki tüm harikalar; açılan tam, açılmamış hologram.
+    // Wonder modu: catalog'daki tüm harikalar; görevlerle aynı kayıtlı onarım durumu.
     private bool TryBuildWonderList()
     {
         if (wonderCatalog == null || wonderCatalog.Count == 0) return false;
@@ -121,7 +121,11 @@ public sealed class JourneyScreenController : MonoBehaviour
         var content = EnsureListContent();
         if (content == null) return false;
         for (int i = content.childCount - 1; i >= 0; i--)
-            Destroy(content.GetChild(i).gameObject);
+        {
+            var oldCard = content.GetChild(i).gameObject;
+            oldCard.SetActive(false);
+            Destroy(oldCard);
+        }
         useButtons.Clear();
 
         // Kartın alt kenarından yarı taşan "Kullan" butonu + alttaki kartın üstten yarı taşan plaketi
@@ -155,11 +159,11 @@ public sealed class JourneyScreenController : MonoBehaviour
         return true;
     }
 
-    // Harikanın açılma oranı: tamamlanan=1, aktif=stage/count, gelecek=0 (hologram).
+    // Harikanın açılma oranı: tamamlanan=1, aktif=stage/count, başlanmamış=0.
     private float WonderRevealFor(int index)
     {
         // Her event'in ilerlemesi BAĞIMSIZ: doğrudan o event'in stage oranı.
-        // (Kilitli event'ler stage 0 → hologram.)
+        // Kilitli event'ler de görevlerdeki başlangıç görüntüsünü kullanır.
         return WonderProgress.RevealNormalized(wonderCatalog, index);
     }
 
@@ -187,13 +191,12 @@ public sealed class JourneyScreenController : MonoBehaviour
         img.enabled = sprite != null;
         img.preserveAspect = true;
 
-        // Reveal shader: açılma oranına göre (açılmamış = hologram)
-        var shader = Shader.Find("UI/WonderReveal");
-        if (shader != null && sprite != null)
+        // Use the same regions, weathering and surrounding-scene progress as Missions.
+        // The view owns and disposes its material when the card is destroyed.
+        if (sprite != null)
         {
-            var mat = new Material(shader) { name = "JourneyWonderReveal" };
-            mat.SetFloat("_Reveal", WonderRevealFor(index));
-            img.material = mat;
+            var preview = imgRt.gameObject.AddComponent<WonderRevealView>();
+            preview.ShowRestorationSnapshot(wonder, WonderRevealFor(index));
         }
 
         string name = wonder.LocalizedName;

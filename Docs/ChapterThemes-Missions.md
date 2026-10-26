@@ -27,7 +27,7 @@ Oyun ekranı ve standart menü görselleri `Settings/ChapterThemeSet/ChapterThem
 
 MainMenu'deki Mission popup'ı aynı anda üç satır gösterir. Açık ve bitmemiş harikaların sıradaki görevleri katalog sırasıyla bu alanı doldurur; önceki harikalar bitmemişse mis5/mis6 görevleri henüz üç satıra sığmayabilir. Bu mevcut sıralama ve satır sınırı değiştirilmedi.
 
-Journey bütün katalog kayıtlarını önizleme olarak listeler. Yapılmamış harikalar hologramdır; görevi chapter ile açılır. **Kullan** butonu ancak harika tamamen onarıldığında görünür. Seçilen tamamlanmış harika veya son tamamlanan harika, ana menüde `WonderBackgroundView` üzerinden gösterilir.
+Journey bütün katalog kayıtlarını önizleme olarak listeler. Harika kartları, Missions ile aynı görev bölgeleri ve restorasyon görünümüyle kaydedilmiş son aşamayı gösterir; başlanmamış kartlar başlangıçtaki paslı görünümü, bitmiş kartlar tam resmi kullanır. Görev chapter ile açılır. **Kullan** butonu ancak harika tamamen onarıldığında görünür. Seçilen tamamlanmış harika veya son tamamlanan harika, ana menüde `WonderBackgroundView` üzerinden gösterilir.
 
 İlk dört katalog kaydı aynı sırada tutuldu; yeni ikisi sona eklendi. Mevcut `wonder_stage_0…3` ilerlemelerinin anlamı değişmedi. Sahne referansları değiştirilmedi.
 

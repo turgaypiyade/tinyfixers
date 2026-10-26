@@ -22,7 +22,7 @@ Shader "UI/WonderReveal"
         _Torch ("Torch UV, active", Vector) = (0, 0, 0, 0)
         [HideInInspector] _TaskRegions ("Task regions active", Float) = 0
         [HideInInspector] _TaskRectCount ("Task rect count", Float) = 0
-        [HideInInspector] _RemainderTask ("Task owning uncovered pixels", Float) = 0
+        [HideInInspector] _ContextReveal ("Gradual surrounding scene restoration", Range(0,1)) = 1
         [HideInInspector] _TaskBounds ("Animating task bounds", Vector) = (0, 0, 1, 1)
         [HideInInspector] _TaskAnim ("Task, progress, action, active", Vector) = (0, 0, 0, 0)
         [HideInInspector] _PieceTask ("Falling sheet task", Float) = -1
@@ -115,7 +115,7 @@ Shader "UI/WonderReveal"
             // Görev bölgeleri (WonderTaskRegions ile aynı kural): en küçük içeren dikdörtgen kazanır.
             float4 _TaskRects[24];
             float _TaskRectOwners[24];
-            float _TaskRegions, _TaskRectCount, _RemainderTask, _PieceTask;
+            float _TaskRegions, _TaskRectCount, _ContextReveal, _PieceTask;
             float4 _TaskBounds, _TaskAnim;
             float  _EdgeWidth;
             fixed4 _EdgeColor;
@@ -194,12 +194,33 @@ Shader "UI/WonderReveal"
                 return weathered;
             }
 
-            // Hangi görev bu pikseli açar. Kenarlar hafif dalgalı: düz dikdörtgen çizgisi görünmesin.
-            float taskOwner(float2 uv)
+            // Curved patch layout retained only for legacy, un-authored wonders.
+            float contextRegion(float2 uv, out float4 bounds)
+            {
+                float count = max(1.0, _RegionCount);
+                float rows = ceil(count * 0.5);
+                float row = clamp(floor(uv.y * rows), 0.0, rows - 1.0);
+                float lower = regionBoundary(row, rows, uv.x);
+                float upper = regionBoundary(row + 1.0, rows, uv.x);
+                row = clamp(row - step(uv.y, lower) + step(upper, uv.y), 0.0, rows - 1.0);
+                lower = regionBoundary(row, rows, uv.x);
+                upper = regionBoundary(row + 1.0, rows, uv.x);
+                float split = regionSplit(uv.y);
+                float fullWidth = step(count - 1.0, row * 2.0);
+                float column = step(split, uv.x) * (1.0 - fullWidth);
+                float left = column * split;
+                float right = fullWidth > 0.5 ? 1.0 : lerp(split, 1.0, column);
+                bounds = float4(left, lower, right, upper);
+                return fmod((row * 2.0 + column) * _RegionStride, count);
+            }
+
+            // Authored subject parts take priority over their surrounding scene.
+            float taskOwner(float2 uv, out float rectangle)
             {
                 float2 w = uv + (float2(patinaNoise(uv * float2(9.0, 13.0)), patinaNoise(uv * float2(13.0, 9.0) + 7.0)) - 0.5) * 0.014;
                 float best = 1e5;
-                float owner = _RemainderTask;
+                float owner = -1.0;
+                rectangle = -1.0;
                 [loop] for (int k = 0; k < 24; k++)
                 {
                     if ((float)k >= _TaskRectCount) break;
@@ -207,10 +228,16 @@ Shader "UI/WonderReveal"
                     if (w.x >= r.x && w.y >= r.y && w.x <= r.z && w.y <= r.w)
                     {
                         float area = (r.z - r.x) * (r.w - r.y);
-                        if (area < best) { best = area; owner = _TaskRectOwners[k]; }
+                        if (area < best) { best = area; owner = _TaskRectOwners[k]; rectangle = (float)k; }
                     }
                 }
                 return owner;
+            }
+
+            float taskOwner(float2 uv)
+            {
+                float rectangle;
+                return taskOwner(uv, rectangle);
             }
 
             // Onarma dışındaki eylemler: bölge içinde ilerleyen bir cephe paslıyı temize çevirir.
@@ -272,7 +299,7 @@ Shader "UI/WonderReveal"
             }
 
             // Onarma: torç bölge çevresini keser, paslı tabaka (ayrı mesh) kıvrılıp düşer.
-            float3 repairCut(float2 uv, float3 photo, float3 weathered, float rank, float left, float right, float lower, float upper)
+            float3 repairCut(float2 uv, float3 photo, float3 weathered, float rank, float left, float right, float lower, float upper, float rectangle)
             {
                 float count = max(1.0, _RegionCount);
                 float clean = saturate(_Reveal * count - rank);
@@ -284,6 +311,8 @@ Shader "UI/WonderReveal"
                 if (finishing > 0.5) clean = 1.0;
                 float3 c = lerp(weathered, photo, clean);
                 float cutting = _RegionCut.z * (1.0 - step(0.5, abs(rank - _RegionCut.x)));
+                if (_TaskRegions > 0.5 && _RegionCut.w > 0.5)
+                    cutting *= 1.0 - step(0.5, abs(rectangle - (_RegionCut.w - 1.0)));
                 if (cutting > 0.5)
                 {
                     float2 size = max(_RestorationRect.zw, float2(1, 1));
@@ -314,40 +343,46 @@ Shader "UI/WonderReveal"
                 float count = max(1.0, _RegionCount);
                 if (_TaskRegions > 0.5)
                 {
-                    float task = taskOwner(uv);
+                    if (_Reveal >= 0.999 && _TaskAnim.w < 0.5) return photo;
+                    float rectangle;
+                    float task = taskOwner(uv, rectangle);
+                    if (rectangle < 0.0)
+                    {
+                        // Background quietly regains colour alongside the actual repair.
+                        // Paint/welding effects remain confined to the subject part.
+                        float contextClean = saturate(_ContextReveal);
+                        if (contextClean >= 0.999) return photo;
+                        float3 context = lerp(weatheredImage(uv, photo), photo, contextClean);
+                        if (_TaskAnim.w > 1.5 && _TaskAnim.z > 2.5 && _TaskAnim.z < 3.5)
+                            context += photo * float3(1.0, 0.78, 0.38) * 0.12 * sin(3.14159265 * _TaskAnim.y);
+                        return context;
+                    }
+                    float clean = saturate(_Reveal * count - task);
                     float3 ct = photo;
-                    if (saturate(_Reveal * count - task) < 0.999)
+                    if (clean < 0.999)
                     {
                         float3 weatheredT = weatheredImage(uv, photo);
                         if (_TaskAnim.w > 0.5 && abs(task - _TaskAnim.x) < 0.5 && _TaskAnim.z > 0.5 && _TaskAnim.z < 4.5)
                             ct = sweepTask(uv, photo, weatheredT, _TaskAnim.z, _TaskAnim.y);
                         else
-                            ct = repairCut(uv, photo, weatheredT, task, _TaskBounds.x, _TaskBounds.z, _TaskBounds.y, _TaskBounds.w);
+                        {
+                            float4 bounds = rectangle >= 0.0 ? _TaskRects[(int)max(0.0, rectangle)] : _TaskBounds;
+                            ct = repairCut(uv, photo, weatheredT, task, bounds.x, bounds.z, bounds.y, bounds.w, rectangle);
+                        }
                     }
-                    if (_TaskAnim.w > 0.5 && _TaskAnim.z > 4.5) ct = shineOverlay(uv, ct, photo, _TaskAnim.y);
+                    // Polishing acts on completed surfaces, never future crowns, roofs or bells.
+                    if (_TaskAnim.w > 0.5 && _TaskAnim.z > 4.5 && clean >= 0.999)
+                        ct = shineOverlay(uv, ct, photo, _TaskAnim.y);
                     return ct;
                 }
-                float rows = ceil(count * 0.5);
-                float row = clamp(floor(uv.y * rows), 0.0, rows - 1.0);
-                float lower = regionBoundary(row, rows, uv.x);
-                float upper = regionBoundary(row + 1.0, rows, uv.x);
-                // Boundary displacement is less than half a row; only one neighbor is possible.
-                row = clamp(row - step(uv.y, lower) + step(upper, uv.y), 0.0, rows - 1.0);
-                lower = regionBoundary(row, rows, uv.x);
-                upper = regionBoundary(row + 1.0, rows, uv.x);
-                float split = regionSplit(uv.y);
-                float fullWidth = step(count - 1.0, row * 2.0);
-                float column = step(split, uv.x) * (1.0 - fullWidth);
-                float left = column * split;
-                float right = fullWidth > 0.5 ? 1.0 : lerp(split, 1.0, column);
-                float cell = row * 2.0 + column;
-                float rank = fmod(cell * _RegionStride, count);
+                float4 bounds;
+                float rank = contextRegion(uv, bounds);
                 float clean = saturate(_Reveal * count - rank);
                 // The complete reward is exactly the original image and skips all patina work.
                 if (clean >= 0.999) return photo;
 
                 float3 weathered = weatheredImage(uv, photo);
-                return repairCut(uv, photo, weathered, rank, left, right, lower, upper);
+                return repairCut(uv, photo, weathered, rank, bounds.x, bounds.z, bounds.y, bounds.w, -1.0);
             }
 
             // RodosDevi.png's painted flame: localized motion, warm flicker and two drifting embers.
@@ -400,7 +435,12 @@ Shader "UI/WonderReveal"
                     rgb = weatheredImage(uv, textureColor.rgb) * i.color.rgb;
                     a = i.color.a;
                     // Görev bölgesinde tabaka yalnız o görevin piksellerini taşır (iç içe bölgeler açık kalır).
-                    if (_TaskRegions > 0.5 && abs(taskOwner(uv) - _PieceTask) > 0.5) a = 0.0;
+                    if (_TaskRegions > 0.5)
+                    {
+                        float rectangle;
+                        float owner = taskOwner(uv, rectangle);
+                        if (rectangle < 0.0 || abs(owner - _PieceTask) > 0.5) a = 0.0;
+                    }
                 }
                 else if (_Restoration > 0.5)
                 {

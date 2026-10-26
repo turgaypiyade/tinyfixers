@@ -116,3 +116,32 @@ başarısızlık ve iptal temizliğini sınar. C# kontrolleri üretim metotları
 Unity doubles ile çalıştırır; mağaza/editor/sim derleme dalları syntax açısından
 kontrol edilir. Unity build, yeni gerçek oyun koşusu ve Windows üzerinde
 çalıştırma bu kontrolde yapılmadı.
+
+## Mac / Windows ortak sessiz çalışma ve special konum kontrolü
+
+- İki platform da aynı `RuntimeSimulationSession`, `RuntimeSimulationBot` ve gerçek
+  BoardController akışını kullanır. İş başlatıcısında platform yalnız çalıştırılabilir
+  dosyanın yerini değiştirir; aynı seçenekler aynı simülasyon konfigürasyonunu üretir.
+- Simülasyon sırasında merkezi `GameSettings.SoundEnabled` ve `MusicEnabled`
+  okumaları false döner. Kaydedilmiş ses tercihleri değiştirilmez. Oturum ayrıca
+  `AudioListener.pause=true` ve `volume=0` uygular; önceden başlayan veya pause'u
+  yok sayan kaynaklar da duyulmaz. Çıkış/iptalde eski listener değerleri geri yüklenir.
+- `SnapToGrid` special kökünü tam hücre köşesine koyarken düşüş hareketi special
+  resminin yüksekliğine göre küçük bir Y ofseti kullanır. Eski hazır olma kontrolü
+  yalnız ikinci konumu kabul ettiğinden yerine oturmuş special için yanlış
+  “has not reached its visual cell” hatası üretebiliyordu. Ortak hazır olma kontrolü
+  artık her iki kesin duruşu aynı 1 piksel toleransla tanır. Aktif/planlı düşüş,
+  idle olmayan taş ve gerçekten havada kalmış konum kabul edilmez. Taş taşınmaz veya silinmez.
+- Bot, flow sayaçları boş olsa bile düşüş motorunun devam eden işini bekler.
+  Gerçek konum hatası raporunda taş türü, mevcut konum, düşüş hedefi, grid duruşu,
+  runtime durumu ve bekleyen düşüş bilgisi bulunur.
+- Bu düzeltme yeni nesne, coroutine, ses kaynağı veya kare başına tahta taraması
+  eklemez. Performans cihazda ölçülmedi.
+
+Doğrulama: 125 düşüş kontrolü (gerçek special hedef hesabı, iki duruş ve havada
+kalma senaryoları), 47 simülasyon/ayar/rapor kontrolü ve 17 Python iş başlatma testi
+geçti. Windows ve Mac için aynı konfigürasyon üretimi de test edildi. Bunlar
+izole kaynak testleridir; Windows hatasının kesin kaynağı için ilgili oyunun
+`report.json/detail` kaydı gerekir. Yeni Unity build veya gerçek masaüstü koşusu
+yapılmadı. Değişikliklerin mevcut `.exe`/`.app` dosyalarına geçmesi için simülatör
+build'lerinin yenilenmesi gerekir.

@@ -1,0 +1,1070 @@
+[
+  {
+    "id": "mis1",
+    "name": "Eğik Pati Kulesi",
+    "guid": "f69762ed99b49469199809df14925220",
+    "tasks": [
+      {
+        "name": "Zemini Sağlamlaştır",
+        "action": 4,
+        "regions": [],
+        "iconGuid": "15a70c3da3064945bb4bb74af25bb7e5",
+        "icon": "Assets/_Project/Art/UI/Missions/TaskIcons/Task_Crane.png"
+      },
+      {
+        "name": "İskeleyi Kur",
+        "action": 0,
+        "regions": [
+          {
+            "x": 0.69,
+            "y": 0.31,
+            "width": 0.11,
+            "height": 0.4
+          }
+        ],
+        "iconGuid": "0149ac3d2ba142c49e79a8b44c7c4301",
+        "icon": "Assets/_Project/Art/UI/Missions/TaskIcons/Task_Scaffold.png"
+      },
+      {
+        "name": "Temel Taşlarını Onar",
+        "action": 0,
+        "regions": [
+          {
+            "x": 0.38,
+            "y": 0.27,
+            "width": 0.34,
+            "height": 0.13
+          }
+        ],
+        "iconGuid": "164c417e2cf5453ab447915656e66848",
+        "icon": "Assets/_Project/Art/UI/Missions/TaskIcons/Task_Bricks.png"
+      },
+      {
+        "name": "Sütunları Kaynakla",
+        "action": 0,
+        "regions": [
+          {
+            "x": 0.4,
+            "y": 0.4,
+            "width": 0.31,
+            "height": 0.16
+          }
+        ],
+        "iconGuid": "6b497708e5124ea79b4a79473300d4af",
+        "icon": "Assets/_Project/Art/UI/Missions/TaskIcons/Task_Weld.png"
+      },
+      {
+        "name": "Kemerleri Yenile",
+        "action": 0,
+        "regions": [
+          {
+            "x": 0.43,
+            "y": 0.56,
+            "width": 0.29,
+            "height": 0.17
+          }
+        ],
+        "iconGuid": "1fb0f30def2d4caca47e0accfe5ab2ea",
+        "icon": "Assets/_Project/Art/UI/Missions/TaskIcons/Task_Hammer.png"
+      },
+      {
+        "name": "Mermeri Parlat",
+        "action": 5,
+        "regions": [
+          {
+            "x": 0.38,
+            "y": 0.27,
+            "width": 0.34,
+            "height": 0.55
+          }
+        ],
+        "iconGuid": "ad205e8cea27452285ac767f010c8d44",
+        "icon": "Assets/_Project/Art/UI/Missions/TaskIcons/Task_Polish.png"
+      },
+      {
+        "name": "Çan Katını Onar",
+        "action": 0,
+        "regions": [
+          {
+            "x": 0.47,
+            "y": 0.73,
+            "width": 0.23,
+            "height": 0.09
+          }
+        ],
+        "iconGuid": "c379b8fd59ef4cefaa152197af4525a3",
+        "icon": "Assets/_Project/Art/UI/Missions/TaskIcons/Task_Bell.png"
+      },
+      {
+        "name": "Bayrağı Dik",
+        "action": 0,
+        "regions": [
+          {
+            "x": 0.57,
+            "y": 0.82,
+            "width": 0.08,
+            "height": 0.05
+          }
+        ],
+        "iconGuid": "365a7eb126eb4ce5af2c91c86f6ad07d",
+        "icon": "Assets/_Project/Art/UI/Missions/TaskIcons/Task_Flag.png"
+      }
+    ],
+    "image": "Assets/_Project/Art/UI/Missions/ND_M001/1/PissaV1.png",
+    "outsideTasksSha256": "9d45747ccf989b5f5d3659f6d1aa72c4e19455fe8b319138a32610bdd8f81094"
+  },
+  {
+    "id": "mis2",
+    "name": "Altın Kuyruk Köprüsü",
+    "guid": "09250cfce5e754351a5403a2dc671f99",
+    "tasks": [
+      {
+        "name": "Ayakları Güçlendir",
+        "action": 0,
+        "regions": [
+          {
+            "x": 0.47,
+            "y": 0.37,
+            "width": 0.22,
+            "height": 0.04
+          },
+          {
+            "x": 0.21,
+            "y": 0.47,
+            "width": 0.11,
+            "height": 0.03
+          }
+        ],
+        "iconGuid": "164c417e2cf5453ab447915656e66848",
+        "icon": "Assets/_Project/Art/UI/Missions/TaskIcons/Task_Bricks.png"
+      },
+      {
+        "name": "Kuleleri Kaynakla",
+        "action": 0,
+        "regions": [
+          {
+            "x": 0.24,
+            "y": 0.5,
+            "width": 0.06,
+            "height": 0.17
+          },
+          {
+            "x": 0.51,
+            "y": 0.41,
+            "width": 0.14,
+            "height": 0.25
+          }
+        ],
+        "iconGuid": "6b497708e5124ea79b4a79473300d4af",
+        "icon": "Assets/_Project/Art/UI/Missions/TaskIcons/Task_Weld.png"
+      },
+      {
+        "name": "Çelik Halatları Ger",
+        "action": 0,
+        "regions": [
+          {
+            "x": 0.62,
+            "y": 0.6,
+            "width": 0.38,
+            "height": 0.24
+          },
+          {
+            "x": 0.3,
+            "y": 0.62,
+            "width": 0.22,
+            "height": 0.16
+          }
+        ],
+        "iconGuid": "94bb05b98c6f41c7a455018760fe4087",
+        "icon": "Assets/_Project/Art/UI/Missions/TaskIcons/Task_Rope.png"
+      },
+      {
+        "name": "Askı Tellerini Bağla",
+        "action": 0,
+        "regions": [
+          {
+            "x": 0.65,
+            "y": 0.53,
+            "width": 0.35,
+            "height": 0.07
+          },
+          {
+            "x": 0.31,
+            "y": 0.56,
+            "width": 0.2,
+            "height": 0.06
+          }
+        ],
+        "iconGuid": "94bb05b98c6f41c7a455018760fe4087",
+        "icon": "Assets/_Project/Art/UI/Missions/TaskIcons/Task_Rope.png"
+      },
+      {
+        "name": "Yolu Döşe",
+        "action": 0,
+        "regions": [
+          {
+            "x": 0.2,
+            "y": 0.46,
+            "width": 0.8,
+            "height": 0.07
+          }
+        ],
+        "iconGuid": "c66edef96c29464ab529d546c266276c",
+        "icon": "Assets/_Project/Art/UI/Missions/TaskIcons/Task_Road.png"
+      },
+      {
+        "name": "Perçinleri Sabitle",
+        "action": 0,
+        "regions": [
+          {
+            "x": 0.51,
+            "y": 0.41,
+            "width": 0.14,
+            "height": 0.06
+          }
+        ],
+        "iconGuid": "861895ed49f64747b1b994c9efd78928",
+        "icon": "Assets/_Project/Art/UI/Missions/TaskIcons/Task_Bolt.png"
+      },
+      {
+        "name": "Turuncu Boyayı Sür",
+        "action": 2,
+        "regions": [
+          {
+            "x": 0.51,
+            "y": 0.66,
+            "width": 0.14,
+            "height": 0.19
+          }
+        ],
+        "iconGuid": "602f822ec3b84f4e9f837f644784df19",
+        "icon": "Assets/_Project/Art/UI/Missions/TaskIcons/Task_Paint.png"
+      },
+      {
+        "name": "Işıkları Yak",
+        "action": 3,
+        "regions": [],
+        "iconGuid": "3b929942fbef4f1081d53ef3f7ed1084",
+        "icon": "Assets/_Project/Art/UI/Missions/TaskIcons/Task_Light.png"
+      }
+    ],
+    "image": "Assets/_Project/Art/UI/Missions/ND_M001/1/GoldenGateV1.png",
+    "outsideTasksSha256": "4b6337d0859038ff42c5166b6d25edae270df608a85fdb28eb1a75d17f71a6c5"
+  },
+  {
+    "id": "mis3",
+    "name": "Eyfil Kulesi",
+    "guid": "cd5727f500381464e8bc956b991932e6",
+    "tasks": [
+      {
+        "name": "Dört Ayağı Sabitle",
+        "action": 0,
+        "regions": [
+          {
+            "x": 0.31,
+            "y": 0.27,
+            "width": 0.44,
+            "height": 0.13
+          }
+        ],
+        "iconGuid": "861895ed49f64747b1b994c9efd78928",
+        "icon": "Assets/_Project/Art/UI/Missions/TaskIcons/Task_Bolt.png"
+      },
+      {
+        "name": "İlk Katı Kaynakla",
+        "action": 0,
+        "regions": [
+          {
+            "x": 0.32,
+            "y": 0.4,
+            "width": 0.35,
+            "height": 0.07
+          }
+        ],
+        "iconGuid": "6b497708e5124ea79b4a79473300d4af",
+        "icon": "Assets/_Project/Art/UI/Missions/TaskIcons/Task_Weld.png"
+      },
+      {
+        "name": "Demir Kafesi Ör",
+        "action": 0,
+        "regions": [
+          {
+            "x": 0.4,
+            "y": 0.47,
+            "width": 0.2,
+            "height": 0.13
+          }
+        ],
+        "iconGuid": "94bb05b98c6f41c7a455018760fe4087",
+        "icon": "Assets/_Project/Art/UI/Missions/TaskIcons/Task_Rope.png"
+      },
+      {
+        "name": "İkinci Katı Yükselt",
+        "action": 0,
+        "regions": [
+          {
+            "x": 0.4,
+            "y": 0.57,
+            "width": 0.19,
+            "height": 0.04
+          }
+        ],
+        "iconGuid": "15a70c3da3064945bb4bb74af25bb7e5",
+        "icon": "Assets/_Project/Art/UI/Missions/TaskIcons/Task_Crane.png"
+      },
+      {
+        "name": "Asansörleri Onar",
+        "action": 0,
+        "regions": [
+          {
+            "x": 0.44,
+            "y": 0.61,
+            "width": 0.11,
+            "height": 0.17
+          }
+        ],
+        "iconGuid": "861895ed49f64747b1b994c9efd78928",
+        "icon": "Assets/_Project/Art/UI/Missions/TaskIcons/Task_Bolt.png"
+      },
+      {
+        "name": "Zirveyi Tamamla",
+        "action": 0,
+        "regions": [
+          {
+            "x": 0.46,
+            "y": 0.78,
+            "width": 0.07,
+            "height": 0.08
+          }
+        ],
+        "iconGuid": "365a7eb126eb4ce5af2c91c86f6ad07d",
+        "icon": "Assets/_Project/Art/UI/Missions/TaskIcons/Task_Flag.png"
+      },
+      {
+        "name": "Boyayı Yenile",
+        "action": 2,
+        "regions": [
+          {
+            "x": 0.45,
+            "y": 0.48,
+            "width": 0.1,
+            "height": 0.11
+          },
+          {
+            "x": 0.03,
+            "y": 0.38,
+            "width": 0.19,
+            "height": 0.15
+          },
+          {
+            "x": 0.75,
+            "y": 0.4,
+            "width": 0.25,
+            "height": 0.14
+          }
+        ],
+        "iconGuid": "602f822ec3b84f4e9f837f644784df19",
+        "icon": "Assets/_Project/Art/UI/Missions/TaskIcons/Task_Paint.png"
+      },
+      {
+        "name": "Işık Şovunu Başlat",
+        "action": 3,
+        "regions": [],
+        "iconGuid": "3b929942fbef4f1081d53ef3f7ed1084",
+        "icon": "Assets/_Project/Art/UI/Missions/TaskIcons/Task_Light.png"
+      }
+    ],
+    "image": "Assets/_Project/Art/UI/Missions/ND_M001/1/EyfelV1.png",
+    "outsideTasksSha256": "c5d31676215584f79d0d1a4bd8a9a01171a9931bdaad25d195690dbba2d444fa"
+  },
+  {
+    "id": "mis4",
+    "name": "Miyav Piramidi",
+    "guid": "1ae149420bdbb442ea753a52bcb2fe61",
+    "tasks": [
+      {
+        "name": "Kumu Temizle",
+        "action": 4,
+        "regions": [],
+        "iconGuid": "15a70c3da3064945bb4bb74af25bb7e5",
+        "icon": "Assets/_Project/Art/UI/Missions/TaskIcons/Task_Crane.png"
+      },
+      {
+        "name": "Temeli Düzle",
+        "action": 0,
+        "regions": [
+          {
+            "x": 0.13,
+            "y": 0.4,
+            "width": 0.82,
+            "height": 0.07
+          }
+        ],
+        "iconGuid": "15a70c3da3064945bb4bb74af25bb7e5",
+        "icon": "Assets/_Project/Art/UI/Missions/TaskIcons/Task_Crane.png"
+      },
+      {
+        "name": "Rampayı Kur",
+        "action": 0,
+        "regions": [
+          {
+            "x": 0.55,
+            "y": 0.4,
+            "width": 0.2,
+            "height": 0.05
+          }
+        ],
+        "iconGuid": "0149ac3d2ba142c49e79a8b44c7c4301",
+        "icon": "Assets/_Project/Art/UI/Missions/TaskIcons/Task_Scaffold.png"
+      },
+      {
+        "name": "Taş Blokları Taşı",
+        "action": 0,
+        "regions": [
+          {
+            "x": 0.18,
+            "y": 0.46,
+            "width": 0.64,
+            "height": 0.06
+          },
+          {
+            "x": 0.24,
+            "y": 0.52,
+            "width": 0.52,
+            "height": 0.06
+          }
+        ],
+        "iconGuid": "164c417e2cf5453ab447915656e66848",
+        "icon": "Assets/_Project/Art/UI/Missions/TaskIcons/Task_Bricks.png"
+      },
+      {
+        "name": "Katları Diz",
+        "action": 0,
+        "regions": [
+          {
+            "x": 0.33,
+            "y": 0.58,
+            "width": 0.34,
+            "height": 0.06
+          },
+          {
+            "x": 0.4,
+            "y": 0.64,
+            "width": 0.2,
+            "height": 0.06
+          }
+        ],
+        "iconGuid": "164c417e2cf5453ab447915656e66848",
+        "icon": "Assets/_Project/Art/UI/Missions/TaskIcons/Task_Bricks.png"
+      },
+      {
+        "name": "Geçitleri Aç",
+        "action": 0,
+        "regions": [
+          {
+            "x": 0.5,
+            "y": 0.44,
+            "width": 0.19,
+            "height": 0.15
+          }
+        ],
+        "iconGuid": "1fb0f30def2d4caca47e0accfe5ab2ea",
+        "icon": "Assets/_Project/Art/UI/Missions/TaskIcons/Task_Hammer.png"
+      },
+      {
+        "name": "Kireç Taşını Parlat",
+        "action": 5,
+        "regions": [
+          {
+            "x": 0.18,
+            "y": 0.4,
+            "width": 0.69,
+            "height": 0.36
+          }
+        ],
+        "iconGuid": "ad205e8cea27452285ac767f010c8d44",
+        "icon": "Assets/_Project/Art/UI/Missions/TaskIcons/Task_Polish.png"
+      },
+      {
+        "name": "Altın Tepeyi Yerleştir",
+        "action": 0,
+        "regions": [
+          {
+            "x": 0.48,
+            "y": 0.7,
+            "width": 0.11,
+            "height": 0.06
+          }
+        ],
+        "iconGuid": "365a7eb126eb4ce5af2c91c86f6ad07d",
+        "icon": "Assets/_Project/Art/UI/Missions/TaskIcons/Task_Flag.png"
+      }
+    ],
+    "image": "Assets/_Project/Art/UI/Missions/ND_M001/1/PyramidV11.png",
+    "outsideTasksSha256": "75c5700375bdd97c3086420bef2e9c30d76c138decfc576764fce906882af45d"
+  },
+  {
+    "id": "mis5",
+    "name": "Büyük Pati Seddi",
+    "guid": "85430392c02e14202abc451668ac9fcc",
+    "tasks": [
+      {
+        "name": "Zemini Hazırla",
+        "action": 4,
+        "regions": [],
+        "iconGuid": "1fb0f30def2d4caca47e0accfe5ab2ea",
+        "icon": "Assets/_Project/Art/UI/Missions/TaskIcons/Task_Hammer.png"
+      },
+      {
+        "name": "Temeli Güçlendir",
+        "action": 0,
+        "regions": [
+          {
+            "x": 0.52,
+            "y": 0.0,
+            "width": 0.48,
+            "height": 0.3
+          },
+          {
+            "x": 0.0,
+            "y": 0.0,
+            "width": 0.52,
+            "height": 0.17
+          }
+        ],
+        "iconGuid": "164c417e2cf5453ab447915656e66848",
+        "icon": "Assets/_Project/Art/UI/Missions/TaskIcons/Task_Bricks.png"
+      },
+      {
+        "name": "Duvarları Yükselt",
+        "action": 0,
+        "regions": [
+          {
+            "x": 0.64,
+            "y": 0.3,
+            "width": 0.3,
+            "height": 0.22
+          },
+          {
+            "x": 0.5,
+            "y": 0.48,
+            "width": 0.16,
+            "height": 0.06
+          }
+        ],
+        "iconGuid": "164c417e2cf5453ab447915656e66848",
+        "icon": "Assets/_Project/Art/UI/Missions/TaskIcons/Task_Bricks.png"
+      },
+      {
+        "name": "Merdivenleri Onar",
+        "action": 0,
+        "regions": [
+          {
+            "x": 0.8,
+            "y": 0.33,
+            "width": 0.15,
+            "height": 0.17
+          }
+        ],
+        "iconGuid": "c66edef96c29464ab529d546c266276c",
+        "icon": "Assets/_Project/Art/UI/Missions/TaskIcons/Task_Road.png"
+      },
+      {
+        "name": "Geçitleri Aç",
+        "action": 0,
+        "regions": [
+          {
+            "x": 0.77,
+            "y": 0.5,
+            "width": 0.08,
+            "height": 0.05
+          }
+        ],
+        "iconGuid": "1fb0f30def2d4caca47e0accfe5ab2ea",
+        "icon": "Assets/_Project/Art/UI/Missions/TaskIcons/Task_Hammer.png"
+      },
+      {
+        "name": "Gözetleme Kulelerini Onar",
+        "action": 0,
+        "regions": [
+          {
+            "x": 0.65,
+            "y": 0.5,
+            "width": 0.24,
+            "height": 0.12
+          },
+          {
+            "x": 0.3,
+            "y": 0.69,
+            "width": 0.1,
+            "height": 0.04
+          },
+          {
+            "x": 0.44,
+            "y": 0.54,
+            "width": 0.12,
+            "height": 0.05
+          },
+          {
+            "x": 0.47,
+            "y": 0.62,
+            "width": 0.05,
+            "height": 0.03
+          },
+          {
+            "x": 0.57,
+            "y": 0.6,
+            "width": 0.03,
+            "height": 0.02
+          }
+        ],
+        "iconGuid": "0149ac3d2ba142c49e79a8b44c7c4301",
+        "icon": "Assets/_Project/Art/UI/Missions/TaskIcons/Task_Scaffold.png"
+      },
+      {
+        "name": "Çatıları Yenile",
+        "action": 2,
+        "regions": [
+          {
+            "x": 0.64,
+            "y": 0.585,
+            "width": 0.26,
+            "height": 0.04
+          },
+          {
+            "x": 0.44,
+            "y": 0.575,
+            "width": 0.12,
+            "height": 0.015
+          }
+        ],
+        "iconGuid": "ad205e8cea27452285ac767f010c8d44",
+        "icon": "Assets/_Project/Art/UI/Missions/TaskIcons/Task_Polish.png"
+      },
+      {
+        "name": "Pati Bayraklarını Dik",
+        "action": 1,
+        "regions": [
+          {
+            "x": 0.73,
+            "y": 0.62,
+            "width": 0.11,
+            "height": 0.08
+          },
+          {
+            "x": 0.34,
+            "y": 0.73,
+            "width": 0.03,
+            "height": 0.02
+          },
+          {
+            "x": 0.49,
+            "y": 0.59,
+            "width": 0.04,
+            "height": 0.02
+          }
+        ],
+        "iconGuid": "365a7eb126eb4ce5af2c91c86f6ad07d",
+        "icon": "Assets/_Project/Art/UI/Missions/TaskIcons/Task_Flag.png"
+      }
+    ],
+    "image": "Assets/_Project/Art/UI/Missions/ND_M001/1/GreatWall.png",
+    "outsideTasksSha256": "04974084bc215e566313ab542cfb5b9016de51a7bc9f2e83fd537e47a82b9816"
+  },
+  {
+    "id": "mis6",
+    "name": "Kuyruk Kanyonu",
+    "guid": "994fa905be9ae44c482ec00470c997c8",
+    "tasks": [
+      {
+        "name": "Patikayı Temizle",
+        "action": 4,
+        "regions": [
+          {
+            "x": 0.0,
+            "y": 0.0,
+            "width": 1.0,
+            "height": 0.25
+          }
+        ],
+        "iconGuid": "1fb0f30def2d4caca47e0accfe5ab2ea",
+        "icon": "Assets/_Project/Art/UI/Missions/TaskIcons/Task_Hammer.png"
+      },
+      {
+        "name": "Basamakları Sağlamlaştır",
+        "action": 0,
+        "regions": [
+          {
+            "x": 0.15,
+            "y": 0.33,
+            "width": 0.3,
+            "height": 0.07
+          }
+        ],
+        "iconGuid": "164c417e2cf5453ab447915656e66848",
+        "icon": "Assets/_Project/Art/UI/Missions/TaskIcons/Task_Bricks.png"
+      },
+      {
+        "name": "Seyir Alanını Düzenle",
+        "action": 0,
+        "regions": [
+          {
+            "x": 0.0,
+            "y": 0.25,
+            "width": 0.45,
+            "height": 0.08
+          }
+        ],
+        "iconGuid": "c66edef96c29464ab529d546c266276c",
+        "icon": "Assets/_Project/Art/UI/Missions/TaskIcons/Task_Road.png"
+      },
+      {
+        "name": "Ahşap Direkleri Sabitle",
+        "action": 0,
+        "regions": [
+          {
+            "x": 0.03,
+            "y": 0.37,
+            "width": 0.16,
+            "height": 0.18
+          }
+        ],
+        "iconGuid": "861895ed49f64747b1b994c9efd78928",
+        "icon": "Assets/_Project/Art/UI/Missions/TaskIcons/Task_Bolt.png"
+      },
+      {
+        "name": "Korkulukları Onar",
+        "action": 0,
+        "regions": [
+          {
+            "x": 0.38,
+            "y": 0.25,
+            "width": 0.35,
+            "height": 0.17
+          }
+        ],
+        "iconGuid": "94bb05b98c6f41c7a455018760fe4087",
+        "icon": "Assets/_Project/Art/UI/Missions/TaskIcons/Task_Rope.png"
+      },
+      {
+        "name": "Yön Tabelasını Yerleştir",
+        "action": 0,
+        "regions": [
+          {
+            "x": 0.74,
+            "y": 0.25,
+            "width": 0.22,
+            "height": 0.24
+          }
+        ],
+        "iconGuid": "365a7eb126eb4ce5af2c91c86f6ad07d",
+        "icon": "Assets/_Project/Art/UI/Missions/TaskIcons/Task_Flag.png"
+      },
+      {
+        "name": "Alet Kutusunu Hazırla",
+        "action": 1,
+        "regions": [
+          {
+            "x": 0.06,
+            "y": 0.31,
+            "width": 0.16,
+            "height": 0.06
+          }
+        ],
+        "iconGuid": "1fb0f30def2d4caca47e0accfe5ab2ea",
+        "icon": "Assets/_Project/Art/UI/Missions/TaskIcons/Task_Hammer.png"
+      },
+      {
+        "name": "Manzara Noktasını Tamamla",
+        "action": 3,
+        "regions": [],
+        "iconGuid": "ad205e8cea27452285ac767f010c8d44",
+        "icon": "Assets/_Project/Art/UI/Missions/TaskIcons/Task_Polish.png"
+      }
+    ],
+    "image": "Assets/_Project/Art/UI/Missions/ND_M001/1/GrandKanyonV1.png",
+    "outsideTasksSha256": "1a8b0843fa81fd6f8f2861d6d4b35f40c7c0be653d590f25a24bd63b998717ec"
+  },
+  {
+    "id": "mis7",
+    "name": "Ayasofya",
+    "guid": "c5dcc23830324b72b0e969cd0997804c",
+    "tasks": [
+      {
+        "name": "İskeleyi Kur",
+        "action": 0,
+        "regions": [
+          {
+            "x": 0.79,
+            "y": 0.55,
+            "width": 0.09,
+            "height": 0.11
+          }
+        ],
+        "iconGuid": "1fb0f30def2d4caca47e0accfe5ab2ea",
+        "icon": "Assets/_Project/Art/UI/Missions/TaskIcons/Task_Hammer.png"
+      },
+      {
+        "name": "Temeli Güçlendir",
+        "action": 0,
+        "regions": [
+          {
+            "x": 0.38,
+            "y": 0.4,
+            "width": 0.44,
+            "height": 0.1
+          }
+        ],
+        "iconGuid": "164c417e2cf5453ab447915656e66848",
+        "icon": "Assets/_Project/Art/UI/Missions/TaskIcons/Task_Bricks.png"
+      },
+      {
+        "name": "Duvarları Onar",
+        "action": 0,
+        "regions": [
+          {
+            "x": 0.28,
+            "y": 0.5,
+            "width": 0.54,
+            "height": 0.16
+          }
+        ],
+        "iconGuid": "c66edef96c29464ab529d546c266276c",
+        "icon": "Assets/_Project/Art/UI/Missions/TaskIcons/Task_Road.png"
+      },
+      {
+        "name": "Pencereleri Yenile",
+        "action": 1,
+        "regions": [
+          {
+            "x": 0.45,
+            "y": 0.58,
+            "width": 0.15,
+            "height": 0.05
+          },
+          {
+            "x": 0.45,
+            "y": 0.52,
+            "width": 0.15,
+            "height": 0.05
+          }
+        ],
+        "iconGuid": "861895ed49f64747b1b994c9efd78928",
+        "icon": "Assets/_Project/Art/UI/Missions/TaskIcons/Task_Bolt.png"
+      },
+      {
+        "name": "Yarım Kubbeleri Onar",
+        "action": 0,
+        "regions": [
+          {
+            "x": 0.49,
+            "y": 0.45,
+            "width": 0.15,
+            "height": 0.05
+          },
+          {
+            "x": 0.65,
+            "y": 0.47,
+            "width": 0.17,
+            "height": 0.05
+          },
+          {
+            "x": 0.3,
+            "y": 0.57,
+            "width": 0.1,
+            "height": 0.05
+          }
+        ],
+        "iconGuid": "94bb05b98c6f41c7a455018760fe4087",
+        "icon": "Assets/_Project/Art/UI/Missions/TaskIcons/Task_Rope.png"
+      },
+      {
+        "name": "Ana Kubbeyi Kapla",
+        "action": 0,
+        "regions": [
+          {
+            "x": 0.38,
+            "y": 0.645,
+            "width": 0.28,
+            "height": 0.085
+          }
+        ],
+        "iconGuid": "365a7eb126eb4ce5af2c91c86f6ad07d",
+        "icon": "Assets/_Project/Art/UI/Missions/TaskIcons/Task_Flag.png"
+      },
+      {
+        "name": "Minareyi Restore Et",
+        "action": 0,
+        "regions": [
+          {
+            "x": 0.17,
+            "y": 0.55,
+            "width": 0.07,
+            "height": 0.28
+          },
+          {
+            "x": 0.27,
+            "y": 0.59,
+            "width": 0.04,
+            "height": 0.14
+          },
+          {
+            "x": 0.71,
+            "y": 0.6,
+            "width": 0.04,
+            "height": 0.13
+          },
+          {
+            "x": 0.8,
+            "y": 0.66,
+            "width": 0.07,
+            "height": 0.17
+          }
+        ],
+        "iconGuid": "1fb0f30def2d4caca47e0accfe5ab2ea",
+        "icon": "Assets/_Project/Art/UI/Missions/TaskIcons/Task_Hammer.png"
+      },
+      {
+        "name": "Meydanı Düzenle",
+        "action": 4,
+        "regions": [],
+        "iconGuid": "ad205e8cea27452285ac767f010c8d44",
+        "icon": "Assets/_Project/Art/UI/Missions/TaskIcons/Task_Polish.png"
+      }
+    ],
+    "image": "Assets/_Project/Art/UI/Missions/ND_M001/1/Ayasofya.png",
+    "outsideTasksSha256": "ddb65b5f2b953551e620a6c85daa18e601543ee12a15f52aa96549b4d03c5833"
+  },
+  {
+    "id": "mis8",
+    "name": "Rodos Devi",
+    "guid": "bbc8e883205c4319b35dccdf13d9564e",
+    "tasks": [
+      {
+        "name": "İskeleyi Kur",
+        "action": 4,
+        "regions": [],
+        "iconGuid": "0149ac3d2ba142c49e79a8b44c7c4301",
+        "icon": "Assets/_Project/Art/UI/Missions/TaskIcons/Task_Scaffold.png"
+      },
+      {
+        "name": "Kaideleri Sağlamlaştır",
+        "action": 0,
+        "regions": [
+          {
+            "x": 0.08,
+            "y": 0.33,
+            "width": 0.25,
+            "height": 0.15
+          },
+          {
+            "x": 0.55,
+            "y": 0.33,
+            "width": 0.23,
+            "height": 0.15
+          }
+        ],
+        "iconGuid": "164c417e2cf5453ab447915656e66848",
+        "icon": "Assets/_Project/Art/UI/Missions/TaskIcons/Task_Bricks.png"
+      },
+      {
+        "name": "Bronz Bacakları Kaynakla",
+        "action": 0,
+        "regions": [
+          {
+            "x": 0.22,
+            "y": 0.47,
+            "width": 0.16,
+            "height": 0.15
+          },
+          {
+            "x": 0.55,
+            "y": 0.47,
+            "width": 0.15,
+            "height": 0.15
+          }
+        ],
+        "iconGuid": "6b497708e5124ea79b4a79473300d4af",
+        "icon": "Assets/_Project/Art/UI/Missions/TaskIcons/Task_Weld.png"
+      },
+      {
+        "name": "Perçinleri Sabitle",
+        "action": 0,
+        "regions": [
+          {
+            "x": 0.33,
+            "y": 0.68,
+            "width": 0.25,
+            "height": 0.12
+          }
+        ],
+        "iconGuid": "861895ed49f64747b1b994c9efd78928",
+        "icon": "Assets/_Project/Art/UI/Missions/TaskIcons/Task_Bolt.png"
+      },
+      {
+        "name": "Pelerini Onar",
+        "action": 0,
+        "regions": [
+          {
+            "x": 0.32,
+            "y": 0.55,
+            "width": 0.4,
+            "height": 0.15
+          }
+        ],
+        "iconGuid": "1fb0f30def2d4caca47e0accfe5ab2ea",
+        "icon": "Assets/_Project/Art/UI/Missions/TaskIcons/Task_Hammer.png"
+      },
+      {
+        "name": "Bronzu Parlat",
+        "action": 5,
+        "regions": [
+          {
+            "x": 0.2,
+            "y": 0.47,
+            "width": 0.52,
+            "height": 0.45
+          }
+        ],
+        "iconGuid": "ad205e8cea27452285ac767f010c8d44",
+        "icon": "Assets/_Project/Art/UI/Missions/TaskIcons/Task_Polish.png"
+      },
+      {
+        "name": "Güneş Tacını Tak",
+        "action": 0,
+        "regions": [
+          {
+            "x": 0.38,
+            "y": 0.79,
+            "width": 0.18,
+            "height": 0.11
+          }
+        ],
+        "iconGuid": "365a7eb126eb4ce5af2c91c86f6ad07d",
+        "icon": "Assets/_Project/Art/UI/Missions/TaskIcons/Task_Flag.png"
+      },
+      {
+        "name": "Meşaleyi Yak",
+        "action": 3,
+        "regions": [
+          {
+            "x": 0.2,
+            "y": 0.89,
+            "width": 0.12,
+            "height": 0.11
+          },
+          {
+            "x": 0.22,
+            "y": 0.76,
+            "width": 0.15,
+            "height": 0.13
+          }
+        ],
+        "iconGuid": "3b929942fbef4f1081d53ef3f7ed1084",
+        "icon": "Assets/_Project/Art/UI/Missions/TaskIcons/Task_Light.png"
+      }
+    ],
+    "image": "Assets/_Project/Art/UI/Missions/ND_M001/1/RodosDevi.png",
+    "outsideTasksSha256": "a4d8a8fb7bc9558e007c762c4bb4a9f2383123ccc0007c9cf4d9c875ebccbc95"
+  }
+]

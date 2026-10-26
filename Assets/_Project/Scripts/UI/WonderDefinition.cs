@@ -108,8 +108,8 @@ public class WonderTask
              "Boya=yukarıdan boya akışı, Işık=merkezden ışıma, Temizle=yandan süpürme, Parlama=açık bölgenin üstünden cila parıltısı " +
              "(bölge sahiplenmez; önceki görevlerin açtığı yerin üstünden geçer).")]
     public WonderTaskAction action = WonderTaskAction.Repair;
-    [Tooltip("Görevin resimde açtığı yer(ler): normalize, sol-alt köşe (0,0). İç içe bölgelerde KÜÇÜK olan kazanır " +
-             "(kubbe duvarın içinde ayrı açılır). Bölgesiz görev = hiçbir bölgeye girmeyen kalan alan (birden çoksa sonuncusu).")]
+    [Tooltip("Görevin resimde açtığı hedef parça(lar): normalize, sol-alt köşe (0,0). İç içe bölgelerde KÜÇÜK olan kazanır. " +
+             "Çevre bütün adımlar boyunca yumuşakça renk kazanır; boş bölge bütün çevreyi tek görevde açmaz.")]
     public Rect[] regions;
 }
 

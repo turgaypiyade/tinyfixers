@@ -405,7 +405,13 @@ public class BoardController : MonoBehaviour
         // A cancelled/replaced movement may finish without FallArrived. Accept an actual
         // settled board tile, never a stale planning flag or an airborne logical target.
         Vector2 target = tile.GetFallCellPosition(tile.X, tile.Y, TileSize);
-        return (tile.RectTransform.anchoredPosition - target).sqrMagnitude <= 1f;
+        Vector2 position = tile.RectTransform.anchoredPosition;
+        if ((position - target).sqrMagnitude <= 1f) return true;
+        // SnapToGrid places the root at the exact cell corner. Special movement uses
+        // a small art-height offset instead; both are legitimate idle presentations.
+        // Keep the same one-pixel tolerance around each pose, not a wider fall tolerance.
+        Vector2 snapped = new Vector2(tile.X * TileSize, -tile.Y * TileSize);
+        return tile.GetSpecial() != TileSpecial.None && (position - snapped).sqrMagnitude <= 1f;
     }
 
     [Tooltip("Sadece test: dynamic board input penceresini gözle yakalamak için fall sürelerini geçici uzatır. Kapalı=prod davranış.")]

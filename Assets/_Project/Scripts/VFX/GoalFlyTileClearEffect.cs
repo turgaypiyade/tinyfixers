@@ -41,7 +41,9 @@ public sealed class GoalFlyTileClearEffect : ITileClearEffect
             yield break;
         }
 
-        board.StartCoroutine(fx.Play(tile, target, duration));
+        // Pooled gather-then-fly; its timing is independent of the (short) clear duration.
+        if (!fx.TileFlight.Launch(board, fx.OverlayRoot, tile, target))
+            board.StartCoroutine(fx.Play(tile, target, duration));
 
         if (tileAnimator != null)
             yield return tileAnimator.PlayPop(tile, duration);

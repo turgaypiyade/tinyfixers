@@ -14,8 +14,9 @@ foreach(var symbols in new[]{new string[0],new[]{"UNITY_EDITOR"},new[]{"TF_SIM_B
 }
 var root=CSharpSyntaxTree.ParseText(File.ReadAllText(file),CSharpParseOptions.Default.WithPreprocessorSymbols("TF_SIM_BUILD")).GetRoot();
 string nested=string.Join("\n",root.DescendantNodes().OfType<ClassDeclarationSyntax>().Where(c=>new[]{"Config","GameResult","Report"}.Contains(c.Identifier.ValueText)).Select(c=>c.ToString()));
-string methods=string.Join("\n",root.DescendantNodes().OfType<MethodDeclarationSyntax>().Where(m=>new[]{"ConfigError","BoardIntegrityError","Finish"}.Contains(m.Identifier.ValueText)).Select(m=>m.ToFullString()))
- .Replace("private static string ConfigError","public static string ConfigError").Replace("private string BoardIntegrityError","public string BoardIntegrityError").Replace("private void Finish","public void Finish");
+string methods=string.Join("\n",root.DescendantNodes().OfType<MethodDeclarationSyntax>().Where(m=>new[]{"ConfigError","BoardIntegrityError","Finish","SilenceAudio","RestoreAudio","IsBoardWorking"}.Contains(m.Identifier.ValueText)).Select(m=>m.ToFullString()))
+ .Replace("private static string ConfigError","public static string ConfigError").Replace("private string BoardIntegrityError","public string BoardIntegrityError").Replace("private void Finish","public void Finish")
+ .Replace("private void SilenceAudio","public void SilenceAudio").Replace("private void RestoreAudio","public void RestoreAudio").Replace("private static bool IsBoardWorking","public static bool IsBoardWorking");
 string resolve=CSharpSyntaxTree.ParseText(File.ReadAllText("Assets/_Project/Scripts/Grid/GridSpawner.cs")).GetRoot().DescendantNodes()
  .OfType<MethodDeclarationSyntax>().Single(m=>m.Identifier.ValueText=="ResolveLevelData").ToString().Replace("private LevelData ResolveLevelData","public LevelData ResolveLevelData");
 var source=@"
@@ -23,10 +24,21 @@ using System;using System.IO;using System.Collections.Generic;using System.Globa
 public enum RuntimeBotPolicy {Random,GoalAware,Greedy}
 public enum TileSpecial {None,PulseCore}
 public enum TileType {Red,Blue}
+public enum TileRuntimeState {Idle,Falling,Clearing}
+public struct Vector2 {public float x,y;public Vector2(float x,float y){this.x=x;this.y=y;}public override string ToString()=>x+"",""+y;}
+public class RectTransform {public Vector2 anchoredPosition;}
+public static class AudioListener {public static bool pause;public static float volume;}
+public static class PlayerPrefs {
+ public static Dictionary<string,int> values=new Dictionary<string,int>();public static int writes;
+ public static int GetInt(string key,int fallback)=>values.TryGetValue(key,out var value)?value:fallback;
+ public static void SetInt(string key,int value){writes++;values[key]=value;}public static void Save(){}
+}
 public class GameObject {public bool activeInHierarchy=true;}
 public class TileView {
  public GameObject gameObject=new GameObject();public int X,Y;public BoardController Board;
  public TileSpecial special;public TileType type;public bool IsRuntimeIdle=true,KeepHiddenForCombo,settled=true;
+ public RectTransform RectTransform=new RectTransform();public TileRuntimeState RuntimeState;
+ public Vector2 GetFallCellPosition(int x,int y,int size)=>new Vector2(x*size,-y*size);
  public TileSpecial GetSpecial()=>special;public TileType GetTileType()=>type;
 }
 public class TileData {public TileType Type;public TileSpecial Special;}
@@ -35,6 +47,11 @@ public class Transform {
  public void GetComponentsInChildren(bool inactive,List<TileView> output){output.Clear();output.AddRange(children.Where(t=>inactive||t.gameObject.activeInHierarchy));}
 }
 public class BoardController {
+ public class FlowState {public bool IsSettling;public int BlockingActivityCount;public bool IsInputColumnBlocked(int x)=>false;}
+ public struct Cell {public bool isReservedForTile,hasTile;public TileRuntimeState tileRuntimeState;}
+ public FlowState Flow=new FlowState();public bool HasContinuousFallWork,InputLocked;public int ActiveBackgroundJobs,DetachedSequencerActions,TileSize=100;
+ public bool IsColumnFallVisualInFlight(int x)=>false;public bool TryGetCellState(int x,int y,out Cell cell){cell=new Cell();return false;}
+ public bool HasPendingAutoResolveForLevelEnd()=>false;
  public int Width=1,Height=1;public Transform Parent=new Transform();public TileView[,] tiles=new TileView[1,1];public TileData[,] GridData=new TileData[1,1];
  public TileView GetTileViewAt(int x,int y)=>x<0||y<0||x>=Width||y>=Height?null:tiles[x,y];
  public bool IsTileReadyForContinuousMatch(TileView tile)=>tile.settled;
@@ -52,11 +69,13 @@ public class GridSpawner {
 public class RuntimeSimulationSession {
  public static bool IsActive;public static LevelData CurrentLevel;public static int CurrentLevelNumber;
  public Report _report=new Report();public bool saved=true,_finished;readonly List<TileView> _sceneTiles=new List<TileView>();
+ bool _oldAudioPause;float _oldAudioVolume;
  bool SaveReport()=>saved;void SetStatus(string s){}
  /* NESTED */
  /* METHODS */
 }
 ".Replace("/* NESTED */",nested).Replace("/* METHODS */",methods).Replace("/* RESOLVE */",resolve);
+source+=File.ReadAllText("Assets/_Project/Scripts/Core/Settings/GameSettings.cs").Replace("using System;", "").Replace("using UnityEngine;", "");
 source+=File.ReadAllText("Assets/_Project/Scripts/Simulation/RuntimeSimulationReport.cs").Replace("using System.Collections.Generic;","").Replace("using System.Globalization;","").Replace("using System.Linq;","").Replace("using System.Text;","");
 source+=@"
 public static class Checks {
@@ -78,6 +97,9 @@ public static class Checks {
   c=Config();c.scenePath="""";Check(RuntimeSimulationSession.ConfigError(c)!=null,""missing scene rejected"");
   c=Config();c.outputPath=""bad\0path"";Check(RuntimeSimulationSession.ConfigError(c)!=null,""invalid output rejected"");
   var session=new RuntimeSimulationSession();var b=Board();Check(session.BoardIntegrityError(b)==null,""registered settled board valid"");
+  b.HasContinuousFallWork=true;
+  Check(RuntimeSimulationSession.IsBoardWorking(b,out var reason)&&reason.Contains(""falls=True""),""untracked-by-flow pending fall still blocks bot input"");
+  b.HasContinuousFallWork=false;Check(!RuntimeSimulationSession.IsBoardWorking(b,out reason),""idle board resumes"");
   b=Board();b.tiles[0,0]=null;Check(session.BoardIntegrityError(b)!=null,""orphan data detected"");
   b=Board();b.tiles[0,0].gameObject.activeInHierarchy=false;Check(session.BoardIntegrityError(b)!=null,""inactive pooled tile cannot occupy a cell"");
   b=Board();b.tiles[0,0].X=1;Check(session.BoardIntegrityError(b)!=null,""wrong coordinates detected"");
@@ -103,6 +125,18 @@ public static class Checks {
   var requested=new LevelData();RuntimeSimulationSession.CurrentLevel=requested;
   Check(spawner.ResolveLevelData()==requested,""selected simulation asset retained"");
   RuntimeSimulationSession.IsActive=false;Check(spawner.ResolveLevelData()==spawner.level,""normal gameplay scene fallback preserved"");
+  GameSettings.SoundEnabled=true;GameSettings.MusicEnabled=true;int writes=PlayerPrefs.writes;
+  Check(GameSettings.SoundEnabled&&GameSettings.MusicEnabled,""saved audio settings apply outside sim"");
+  RuntimeSimulationSession.IsActive=true;
+  Check(!GameSettings.SoundEnabled&&!GameSettings.MusicEnabled,""both platforms gate central SFX and music during simulation"");
+  Check(PlayerPrefs.writes==writes,""muting does not write shared prefs"");
+  AudioListener.volume=.37f;AudioListener.pause=false;session.SilenceAudio();
+  Check(AudioListener.pause&&AudioListener.volume==0,""active sources and ignore-pause sources silenced"");
+  session.RestoreAudio();Check(!AudioListener.pause&&AudioListener.volume==.37f,""listener settings restored after teardown"");
+  AudioListener.pause=true;AudioListener.volume=0;session.SilenceAudio();session.RestoreAudio();
+  Check(AudioListener.pause&&AudioListener.volume==0,""pre-existing mute preserved"");
+  RuntimeSimulationSession.IsActive=false;
+  Check(GameSettings.SoundEnabled&&GameSettings.MusicEnabled,""saved audio preferences intact after sim"");
   Console.WriteLine(""PASS: ""+count+"" simulator config/integrity/report checks; retail/editor/sim branches parsed. No Unity build/run."");
  }
 }

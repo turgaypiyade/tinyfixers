@@ -1,0 +1,1062 @@
+[
+  {
+    "id": "mis1",
+    "tasks": [
+      {
+        "name": "Çevreyi Temizle",
+        "action": 4,
+        "iconGuid": "ad205e8cea27452285ac767f010c8d44",
+        "regions": []
+      },
+      {
+        "name": "İskeleyi Onar",
+        "action": 0,
+        "iconGuid": "0149ac3d2ba142c49e79a8b44c7c4301",
+        "regions": [
+          {
+            "x": 0.69,
+            "y": 0.31,
+            "width": 0.11,
+            "height": 0.4
+          }
+        ]
+      },
+      {
+        "name": "Temel Taşlarını Onar",
+        "action": 0,
+        "iconGuid": "164c417e2cf5453ab447915656e66848",
+        "regions": [
+          {
+            "x": 0.38,
+            "y": 0.27,
+            "width": 0.34,
+            "height": 0.13
+          }
+        ]
+      },
+      {
+        "name": "Sütunları Onar",
+        "action": 0,
+        "iconGuid": "1fb0f30def2d4caca47e0accfe5ab2ea",
+        "regions": [
+          {
+            "x": 0.4,
+            "y": 0.4,
+            "width": 0.31,
+            "height": 0.16
+          }
+        ]
+      },
+      {
+        "name": "Kemerleri Yenile",
+        "action": 0,
+        "iconGuid": "1fb0f30def2d4caca47e0accfe5ab2ea",
+        "regions": [
+          {
+            "x": 0.43,
+            "y": 0.56,
+            "width": 0.29,
+            "height": 0.17
+          }
+        ]
+      },
+      {
+        "name": "Mermeri Parlat",
+        "action": 5,
+        "iconGuid": "ad205e8cea27452285ac767f010c8d44",
+        "regions": [
+          {
+            "x": 0.38,
+            "y": 0.27,
+            "width": 0.34,
+            "height": 0.55
+          }
+        ]
+      },
+      {
+        "name": "Çan Katını Onar",
+        "action": 0,
+        "iconGuid": "c379b8fd59ef4cefaa152197af4525a3",
+        "regions": [
+          {
+            "x": 0.47,
+            "y": 0.73,
+            "width": 0.23,
+            "height": 0.09
+          }
+        ]
+      },
+      {
+        "name": "Bayrağı Yenile",
+        "action": 2,
+        "iconGuid": "365a7eb126eb4ce5af2c91c86f6ad07d",
+        "regions": [
+          {
+            "x": 0.57,
+            "y": 0.82,
+            "width": 0.08,
+            "height": 0.05
+          }
+        ]
+      }
+    ],
+    "outsideTasksSha256": "9d45747ccf989b5f5d3659f6d1aa72c4e19455fe8b319138a32610bdd8f81094",
+    "approximateCoveragePercent": [
+      79.83,
+      4.4,
+      4.2,
+      4.71,
+      4.44,
+      0.0,
+      2.01,
+      0.4
+    ]
+  },
+  {
+    "id": "mis2",
+    "tasks": [
+      {
+        "name": "Ayakları Güçlendir",
+        "action": 0,
+        "iconGuid": "164c417e2cf5453ab447915656e66848",
+        "regions": [
+          {
+            "x": 0.47,
+            "y": 0.37,
+            "width": 0.22,
+            "height": 0.04
+          },
+          {
+            "x": 0.21,
+            "y": 0.47,
+            "width": 0.11,
+            "height": 0.03
+          }
+        ]
+      },
+      {
+        "name": "Kuleleri Kaynakla",
+        "action": 0,
+        "iconGuid": "6b497708e5124ea79b4a79473300d4af",
+        "regions": [
+          {
+            "x": 0.24,
+            "y": 0.5,
+            "width": 0.06,
+            "height": 0.17
+          },
+          {
+            "x": 0.51,
+            "y": 0.41,
+            "width": 0.14,
+            "height": 0.25
+          }
+        ]
+      },
+      {
+        "name": "Çelik Halatları Ger",
+        "action": 0,
+        "iconGuid": "94bb05b98c6f41c7a455018760fe4087",
+        "regions": [
+          {
+            "x": 0.62,
+            "y": 0.6,
+            "width": 0.38,
+            "height": 0.24
+          },
+          {
+            "x": 0.3,
+            "y": 0.62,
+            "width": 0.22,
+            "height": 0.16
+          }
+        ]
+      },
+      {
+        "name": "Askı Tellerini Bağla",
+        "action": 0,
+        "iconGuid": "94bb05b98c6f41c7a455018760fe4087",
+        "regions": [
+          {
+            "x": 0.65,
+            "y": 0.53,
+            "width": 0.35,
+            "height": 0.07
+          },
+          {
+            "x": 0.31,
+            "y": 0.56,
+            "width": 0.2,
+            "height": 0.06
+          }
+        ]
+      },
+      {
+        "name": "Yolu Döşe",
+        "action": 0,
+        "iconGuid": "c66edef96c29464ab529d546c266276c",
+        "regions": [
+          {
+            "x": 0.2,
+            "y": 0.46,
+            "width": 0.8,
+            "height": 0.07
+          }
+        ]
+      },
+      {
+        "name": "Perçinleri Sabitle",
+        "action": 0,
+        "iconGuid": "861895ed49f64747b1b994c9efd78928",
+        "regions": [
+          {
+            "x": 0.51,
+            "y": 0.41,
+            "width": 0.14,
+            "height": 0.06
+          }
+        ]
+      },
+      {
+        "name": "Kule Başlığını Boya",
+        "action": 2,
+        "iconGuid": "602f822ec3b84f4e9f837f644784df19",
+        "regions": [
+          {
+            "x": 0.51,
+            "y": 0.66,
+            "width": 0.14,
+            "height": 0.19
+          }
+        ]
+      },
+      {
+        "name": "Köprü Çevresini Temizle",
+        "action": 4,
+        "iconGuid": "ad205e8cea27452285ac767f010c8d44",
+        "regions": []
+      }
+    ],
+    "outsideTasksSha256": "4b6337d0859038ff42c5166b6d25edae270df608a85fdb28eb1a75d17f71a6c5",
+    "approximateCoveragePercent": [
+      1.31,
+      3.73,
+      11.72,
+      3.53,
+      4.01,
+      0.79,
+      2.62,
+      72.29
+    ]
+  },
+  {
+    "id": "mis3",
+    "tasks": [
+      {
+        "name": "Dört Ayağı Sabitle",
+        "action": 0,
+        "iconGuid": "861895ed49f64747b1b994c9efd78928",
+        "regions": [
+          {
+            "x": 0.31,
+            "y": 0.27,
+            "width": 0.44,
+            "height": 0.13
+          }
+        ]
+      },
+      {
+        "name": "İlk Katı Kaynakla",
+        "action": 0,
+        "iconGuid": "6b497708e5124ea79b4a79473300d4af",
+        "regions": [
+          {
+            "x": 0.32,
+            "y": 0.4,
+            "width": 0.35,
+            "height": 0.07
+          }
+        ]
+      },
+      {
+        "name": "Demir Kafesi Ör",
+        "action": 0,
+        "iconGuid": "94bb05b98c6f41c7a455018760fe4087",
+        "regions": [
+          {
+            "x": 0.4,
+            "y": 0.47,
+            "width": 0.2,
+            "height": 0.13
+          }
+        ]
+      },
+      {
+        "name": "İkinci Katı Yükselt",
+        "action": 0,
+        "iconGuid": "15a70c3da3064945bb4bb74af25bb7e5",
+        "regions": [
+          {
+            "x": 0.4,
+            "y": 0.57,
+            "width": 0.19,
+            "height": 0.04
+          }
+        ]
+      },
+      {
+        "name": "Üst Kafesi Onar",
+        "action": 0,
+        "iconGuid": "861895ed49f64747b1b994c9efd78928",
+        "regions": [
+          {
+            "x": 0.44,
+            "y": 0.61,
+            "width": 0.11,
+            "height": 0.17
+          }
+        ]
+      },
+      {
+        "name": "Zirveyi Tamamla",
+        "action": 0,
+        "iconGuid": "365a7eb126eb4ce5af2c91c86f6ad07d",
+        "regions": [
+          {
+            "x": 0.46,
+            "y": 0.78,
+            "width": 0.07,
+            "height": 0.08
+          }
+        ]
+      },
+      {
+        "name": "Flamaları Yenile",
+        "action": 2,
+        "iconGuid": "602f822ec3b84f4e9f837f644784df19",
+        "regions": [
+          {
+            "x": 0.45,
+            "y": 0.48,
+            "width": 0.1,
+            "height": 0.11
+          },
+          {
+            "x": 0.03,
+            "y": 0.38,
+            "width": 0.19,
+            "height": 0.15
+          },
+          {
+            "x": 0.75,
+            "y": 0.4,
+            "width": 0.25,
+            "height": 0.14
+          }
+        ]
+      },
+      {
+        "name": "Meydanı ve Çevreyi Temizle",
+        "action": 4,
+        "iconGuid": "ad205e8cea27452285ac767f010c8d44",
+        "regions": []
+      }
+    ],
+    "outsideTasksSha256": "c5d31676215584f79d0d1a4bd8a9a01171a9931bdaad25d195690dbba2d444fa",
+    "approximateCoveragePercent": [
+      5.78,
+      2.41,
+      1.16,
+      0.83,
+      1.86,
+      0.57,
+      7.16,
+      80.24
+    ]
+  },
+  {
+    "id": "mis4",
+    "tasks": [
+      {
+        "name": "Kazı Alanını Temizle",
+        "action": 4,
+        "iconGuid": "ad205e8cea27452285ac767f010c8d44",
+        "regions": []
+      },
+      {
+        "name": "Temeli Düzle",
+        "action": 0,
+        "iconGuid": "15a70c3da3064945bb4bb74af25bb7e5",
+        "regions": [
+          {
+            "x": 0.13,
+            "y": 0.4,
+            "width": 0.82,
+            "height": 0.07
+          }
+        ]
+      },
+      {
+        "name": "Basamakları Onar",
+        "action": 0,
+        "iconGuid": "1fb0f30def2d4caca47e0accfe5ab2ea",
+        "regions": [
+          {
+            "x": 0.55,
+            "y": 0.4,
+            "width": 0.2,
+            "height": 0.05
+          }
+        ]
+      },
+      {
+        "name": "Alt Sıra Taşlarını Onar",
+        "action": 0,
+        "iconGuid": "164c417e2cf5453ab447915656e66848",
+        "regions": [
+          {
+            "x": 0.18,
+            "y": 0.46,
+            "width": 0.64,
+            "height": 0.06
+          },
+          {
+            "x": 0.24,
+            "y": 0.52,
+            "width": 0.52,
+            "height": 0.06
+          }
+        ]
+      },
+      {
+        "name": "Üst Katları Onar",
+        "action": 0,
+        "iconGuid": "164c417e2cf5453ab447915656e66848",
+        "regions": [
+          {
+            "x": 0.33,
+            "y": 0.58,
+            "width": 0.34,
+            "height": 0.06
+          },
+          {
+            "x": 0.4,
+            "y": 0.64,
+            "width": 0.2,
+            "height": 0.06
+          }
+        ]
+      },
+      {
+        "name": "Girişi Yenile",
+        "action": 0,
+        "iconGuid": "1fb0f30def2d4caca47e0accfe5ab2ea",
+        "regions": [
+          {
+            "x": 0.5,
+            "y": 0.44,
+            "width": 0.19,
+            "height": 0.15
+          }
+        ]
+      },
+      {
+        "name": "Kireç Taşını Parlat",
+        "action": 5,
+        "iconGuid": "ad205e8cea27452285ac767f010c8d44",
+        "regions": [
+          {
+            "x": 0.18,
+            "y": 0.4,
+            "width": 0.69,
+            "height": 0.36
+          }
+        ]
+      },
+      {
+        "name": "Tepe Taşını Parlat",
+        "action": 1,
+        "iconGuid": "ad205e8cea27452285ac767f010c8d44",
+        "regions": [
+          {
+            "x": 0.48,
+            "y": 0.7,
+            "width": 0.11,
+            "height": 0.06
+          }
+        ]
+      }
+    ],
+    "outsideTasksSha256": "75c5700375bdd97c3086420bef2e9c30d76c138decfc576764fce906882af45d",
+    "approximateCoveragePercent": [
+      84.05,
+      3.94,
+      1.0,
+      4.59,
+      3.16,
+      2.57,
+      0.0,
+      0.69
+    ]
+  },
+  {
+    "id": "mis5",
+    "tasks": [
+      {
+        "name": "Çalışma Alanını Temizle",
+        "action": 4,
+        "iconGuid": "ad205e8cea27452285ac767f010c8d44",
+        "regions": []
+      },
+      {
+        "name": "Temeli Güçlendir",
+        "action": 0,
+        "iconGuid": "164c417e2cf5453ab447915656e66848",
+        "regions": [
+          {
+            "x": 0.52,
+            "y": 0.0,
+            "width": 0.48,
+            "height": 0.3
+          },
+          {
+            "x": 0.0,
+            "y": 0.0,
+            "width": 0.52,
+            "height": 0.17
+          }
+        ]
+      },
+      {
+        "name": "Duvarları Yükselt",
+        "action": 0,
+        "iconGuid": "164c417e2cf5453ab447915656e66848",
+        "regions": [
+          {
+            "x": 0.64,
+            "y": 0.3,
+            "width": 0.3,
+            "height": 0.22
+          },
+          {
+            "x": 0.5,
+            "y": 0.48,
+            "width": 0.16,
+            "height": 0.06
+          }
+        ]
+      },
+      {
+        "name": "Merdivenleri Onar",
+        "action": 0,
+        "iconGuid": "c66edef96c29464ab529d546c266276c",
+        "regions": [
+          {
+            "x": 0.8,
+            "y": 0.33,
+            "width": 0.15,
+            "height": 0.17
+          }
+        ]
+      },
+      {
+        "name": "Geçitleri Aç",
+        "action": 0,
+        "iconGuid": "1fb0f30def2d4caca47e0accfe5ab2ea",
+        "regions": [
+          {
+            "x": 0.77,
+            "y": 0.5,
+            "width": 0.08,
+            "height": 0.05
+          }
+        ]
+      },
+      {
+        "name": "Gözetleme Kulelerini Onar",
+        "action": 0,
+        "iconGuid": "0149ac3d2ba142c49e79a8b44c7c4301",
+        "regions": [
+          {
+            "x": 0.65,
+            "y": 0.5,
+            "width": 0.24,
+            "height": 0.12
+          },
+          {
+            "x": 0.3,
+            "y": 0.69,
+            "width": 0.1,
+            "height": 0.04
+          },
+          {
+            "x": 0.44,
+            "y": 0.54,
+            "width": 0.12,
+            "height": 0.05
+          },
+          {
+            "x": 0.47,
+            "y": 0.62,
+            "width": 0.05,
+            "height": 0.03
+          },
+          {
+            "x": 0.57,
+            "y": 0.6,
+            "width": 0.03,
+            "height": 0.02
+          }
+        ]
+      },
+      {
+        "name": "Kiremitleri Yenile",
+        "action": 2,
+        "iconGuid": "ad205e8cea27452285ac767f010c8d44",
+        "regions": [
+          {
+            "x": 0.64,
+            "y": 0.585,
+            "width": 0.26,
+            "height": 0.04
+          },
+          {
+            "x": 0.44,
+            "y": 0.575,
+            "width": 0.12,
+            "height": 0.015
+          }
+        ]
+      },
+      {
+        "name": "Bayrakları Yenile",
+        "action": 2,
+        "iconGuid": "365a7eb126eb4ce5af2c91c86f6ad07d",
+        "regions": [
+          {
+            "x": 0.73,
+            "y": 0.62,
+            "width": 0.11,
+            "height": 0.08
+          },
+          {
+            "x": 0.34,
+            "y": 0.73,
+            "width": 0.03,
+            "height": 0.02
+          },
+          {
+            "x": 0.49,
+            "y": 0.59,
+            "width": 0.04,
+            "height": 0.02
+          }
+        ]
+      }
+    ],
+    "outsideTasksSha256": "04974084bc215e566313ab542cfb5b9016de51a7bc9f2e83fd537e47a82b9816",
+    "approximateCoveragePercent": [
+      64.43,
+      23.18,
+      4.59,
+      2.53,
+      0.4,
+      2.76,
+      1.06,
+      1.05
+    ]
+  },
+  {
+    "id": "mis6",
+    "tasks": [
+      {
+        "name": "Patikayı Temizle",
+        "action": 4,
+        "iconGuid": "1fb0f30def2d4caca47e0accfe5ab2ea",
+        "regions": [
+          {
+            "x": 0.0,
+            "y": 0.0,
+            "width": 1.0,
+            "height": 0.25
+          }
+        ]
+      },
+      {
+        "name": "Basamakları Sağlamlaştır",
+        "action": 0,
+        "iconGuid": "164c417e2cf5453ab447915656e66848",
+        "regions": [
+          {
+            "x": 0.15,
+            "y": 0.33,
+            "width": 0.3,
+            "height": 0.07
+          }
+        ]
+      },
+      {
+        "name": "Seyir Alanını Temizle",
+        "action": 4,
+        "iconGuid": "ad205e8cea27452285ac767f010c8d44",
+        "regions": [
+          {
+            "x": 0.0,
+            "y": 0.25,
+            "width": 0.45,
+            "height": 0.08
+          }
+        ]
+      },
+      {
+        "name": "Ahşap Direkleri Sabitle",
+        "action": 0,
+        "iconGuid": "861895ed49f64747b1b994c9efd78928",
+        "regions": [
+          {
+            "x": 0.03,
+            "y": 0.37,
+            "width": 0.16,
+            "height": 0.18
+          }
+        ]
+      },
+      {
+        "name": "Korkulukları Onar",
+        "action": 0,
+        "iconGuid": "94bb05b98c6f41c7a455018760fe4087",
+        "regions": [
+          {
+            "x": 0.38,
+            "y": 0.25,
+            "width": 0.35,
+            "height": 0.17
+          }
+        ]
+      },
+      {
+        "name": "Yön Tabelasını Yerleştir",
+        "action": 0,
+        "iconGuid": "365a7eb126eb4ce5af2c91c86f6ad07d",
+        "regions": [
+          {
+            "x": 0.74,
+            "y": 0.25,
+            "width": 0.22,
+            "height": 0.24
+          }
+        ]
+      },
+      {
+        "name": "Alet Kutusunu Parlat",
+        "action": 1,
+        "iconGuid": "ad205e8cea27452285ac767f010c8d44",
+        "regions": [
+          {
+            "x": 0.06,
+            "y": 0.31,
+            "width": 0.16,
+            "height": 0.06
+          }
+        ]
+      },
+      {
+        "name": "Kanyon Manzarasını Canlandır",
+        "action": 3,
+        "iconGuid": "ad205e8cea27452285ac767f010c8d44",
+        "regions": []
+      }
+    ],
+    "outsideTasksSha256": "1a8b0843fa81fd6f8f2861d6d4b35f40c7c0be653d590f25a24bd63b998717ec",
+    "approximateCoveragePercent": [
+      25.0,
+      1.8,
+      3.36,
+      2.77,
+      4.86,
+      5.22,
+      0.9,
+      56.09
+    ]
+  },
+  {
+    "id": "mis7",
+    "tasks": [
+      {
+        "name": "İskeleyi Onar",
+        "action": 0,
+        "iconGuid": "1fb0f30def2d4caca47e0accfe5ab2ea",
+        "regions": [
+          {
+            "x": 0.79,
+            "y": 0.55,
+            "width": 0.09,
+            "height": 0.11
+          }
+        ]
+      },
+      {
+        "name": "Alt Cepheyi Onar",
+        "action": 0,
+        "iconGuid": "164c417e2cf5453ab447915656e66848",
+        "regions": [
+          {
+            "x": 0.38,
+            "y": 0.4,
+            "width": 0.44,
+            "height": 0.1
+          }
+        ]
+      },
+      {
+        "name": "Duvarları Onar",
+        "action": 0,
+        "iconGuid": "c66edef96c29464ab529d546c266276c",
+        "regions": [
+          {
+            "x": 0.28,
+            "y": 0.5,
+            "width": 0.54,
+            "height": 0.16
+          }
+        ]
+      },
+      {
+        "name": "Pencereleri Yenile",
+        "action": 1,
+        "iconGuid": "861895ed49f64747b1b994c9efd78928",
+        "regions": [
+          {
+            "x": 0.45,
+            "y": 0.58,
+            "width": 0.15,
+            "height": 0.05
+          },
+          {
+            "x": 0.45,
+            "y": 0.52,
+            "width": 0.15,
+            "height": 0.05
+          }
+        ]
+      },
+      {
+        "name": "Yarım Kubbeleri Onar",
+        "action": 0,
+        "iconGuid": "94bb05b98c6f41c7a455018760fe4087",
+        "regions": [
+          {
+            "x": 0.49,
+            "y": 0.45,
+            "width": 0.15,
+            "height": 0.05
+          },
+          {
+            "x": 0.65,
+            "y": 0.47,
+            "width": 0.17,
+            "height": 0.05
+          },
+          {
+            "x": 0.3,
+            "y": 0.57,
+            "width": 0.1,
+            "height": 0.05
+          }
+        ]
+      },
+      {
+        "name": "Ana Kubbeyi Kapla",
+        "action": 0,
+        "iconGuid": "365a7eb126eb4ce5af2c91c86f6ad07d",
+        "regions": [
+          {
+            "x": 0.38,
+            "y": 0.645,
+            "width": 0.28,
+            "height": 0.085
+          }
+        ]
+      },
+      {
+        "name": "Minareleri Onar",
+        "action": 0,
+        "iconGuid": "1fb0f30def2d4caca47e0accfe5ab2ea",
+        "regions": [
+          {
+            "x": 0.17,
+            "y": 0.55,
+            "width": 0.07,
+            "height": 0.28
+          },
+          {
+            "x": 0.27,
+            "y": 0.59,
+            "width": 0.04,
+            "height": 0.14
+          },
+          {
+            "x": 0.71,
+            "y": 0.6,
+            "width": 0.04,
+            "height": 0.13
+          },
+          {
+            "x": 0.8,
+            "y": 0.66,
+            "width": 0.07,
+            "height": 0.17
+          }
+        ]
+      },
+      {
+        "name": "Meydanı Düzenle",
+        "action": 4,
+        "iconGuid": "ad205e8cea27452285ac767f010c8d44",
+        "regions": []
+      }
+    ],
+    "outsideTasksSha256": "ddb65b5f2b953551e620a6c85daa18e601543ee12a15f52aa96549b4d03c5833",
+    "approximateCoveragePercent": [
+      1.01,
+      3.12,
+      5.15,
+      1.5,
+      2.1,
+      2.45,
+      4.22,
+      80.45
+    ]
+  },
+  {
+    "id": "mis8",
+    "tasks": [
+      {
+        "name": "Limanı Temizle",
+        "action": 4,
+        "iconGuid": "ad205e8cea27452285ac767f010c8d44",
+        "regions": []
+      },
+      {
+        "name": "Kaideleri Sağlamlaştır",
+        "action": 0,
+        "iconGuid": "164c417e2cf5453ab447915656e66848",
+        "regions": [
+          {
+            "x": 0.08,
+            "y": 0.33,
+            "width": 0.25,
+            "height": 0.15
+          },
+          {
+            "x": 0.55,
+            "y": 0.33,
+            "width": 0.23,
+            "height": 0.15
+          }
+        ]
+      },
+      {
+        "name": "Bronz Bacakları Kaynakla",
+        "action": 0,
+        "iconGuid": "6b497708e5124ea79b4a79473300d4af",
+        "regions": [
+          {
+            "x": 0.22,
+            "y": 0.47,
+            "width": 0.16,
+            "height": 0.15
+          },
+          {
+            "x": 0.55,
+            "y": 0.47,
+            "width": 0.15,
+            "height": 0.15
+          }
+        ]
+      },
+      {
+        "name": "Gövdeyi ve Kolu Onar",
+        "action": 0,
+        "iconGuid": "6b497708e5124ea79b4a79473300d4af",
+        "regions": [
+          {
+            "x": 0.33,
+            "y": 0.68,
+            "width": 0.25,
+            "height": 0.12
+          },
+          {
+            "x": 0.2,
+            "y": 0.75,
+            "width": 0.19,
+            "height": 0.2
+          }
+        ]
+      },
+      {
+        "name": "Pelerini Onar",
+        "action": 0,
+        "iconGuid": "1fb0f30def2d4caca47e0accfe5ab2ea",
+        "regions": [
+          {
+            "x": 0.32,
+            "y": 0.55,
+            "width": 0.4,
+            "height": 0.15
+          }
+        ]
+      },
+      {
+        "name": "Bronzu Parlat",
+        "action": 5,
+        "iconGuid": "ad205e8cea27452285ac767f010c8d44",
+        "regions": [
+          {
+            "x": 0.2,
+            "y": 0.47,
+            "width": 0.52,
+            "height": 0.45
+          }
+        ]
+      },
+      {
+        "name": "Başı ve Tacı Parlat",
+        "action": 1,
+        "iconGuid": "ad205e8cea27452285ac767f010c8d44",
+        "regions": [
+          {
+            "x": 0.38,
+            "y": 0.79,
+            "width": 0.18,
+            "height": 0.11
+          }
+        ]
+      },
+      {
+        "name": "Meşaleyi Yak",
+        "action": 3,
+        "iconGuid": "3b929942fbef4f1081d53ef3f7ed1084",
+        "regions": [
+          {
+            "x": 0.2,
+            "y": 0.94,
+            "width": 0.12,
+            "height": 0.06
+          }
+        ]
+      }
+    ],
+    "outsideTasksSha256": "a4d8a8fb7bc9558e007c762c4bb4a9f2383123ccc0007c9cf4d9c875ebccbc95",
+    "approximateCoveragePercent": [
+      75.62,
+      6.88,
+      4.65,
+      5.99,
+      4.09,
+      0.0,
+      2.02,
+      0.75
+    ]
+  }
+]

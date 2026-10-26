@@ -2598,11 +2598,11 @@
         },
         {
           "key": "wonder_mis1_task_1",
-          "value": "Zemini Sağlamlaştır"
+          "value": "Çevreyi Temizle"
         },
         {
           "key": "wonder_mis1_task_2",
-          "value": "İskeleyi Kur"
+          "value": "İskeleyi Onar"
         },
         {
           "key": "wonder_mis1_task_3",
@@ -2610,7 +2610,7 @@
         },
         {
           "key": "wonder_mis1_task_4",
-          "value": "Sütunları Kaynakla"
+          "value": "Sütunları Onar"
         },
         {
           "key": "wonder_mis1_task_5",
@@ -2626,7 +2626,7 @@
         },
         {
           "key": "wonder_mis1_task_8",
-          "value": "Bayrağı Dik"
+          "value": "Bayrağı Yenile"
         },
         {
           "key": "wonder_mis2_task_1",
@@ -2654,11 +2654,11 @@
         },
         {
           "key": "wonder_mis2_task_7",
-          "value": "Turuncu Boyayı Sür"
+          "value": "Kule Başlığını Boya"
         },
         {
           "key": "wonder_mis2_task_8",
-          "value": "Işıkları Yak"
+          "value": "Köprü Çevresini Temizle"
         },
         {
           "key": "wonder_mis3_task_1",
@@ -2678,7 +2678,7 @@
         },
         {
           "key": "wonder_mis3_task_5",
-          "value": "Asansörleri Onar"
+          "value": "Üst Kafesi Onar"
         },
         {
           "key": "wonder_mis3_task_6",
@@ -2686,15 +2686,15 @@
         },
         {
           "key": "wonder_mis3_task_7",
-          "value": "Boyayı Yenile"
+          "value": "Flamaları Yenile"
         },
         {
           "key": "wonder_mis3_task_8",
-          "value": "Işık Şovunu Başlat"
+          "value": "Meydanı ve Çevreyi Temizle"
         },
         {
           "key": "wonder_mis4_task_1",
-          "value": "Kumu Temizle"
+          "value": "Kazı Alanını Temizle"
         },
         {
           "key": "wonder_mis4_task_2",
@@ -2702,19 +2702,19 @@
         },
         {
           "key": "wonder_mis4_task_3",
-          "value": "Rampayı Kur"
+          "value": "Basamakları Onar"
         },
         {
           "key": "wonder_mis4_task_4",
-          "value": "Taş Blokları Taşı"
+          "value": "Alt Sıra Taşlarını Onar"
         },
         {
           "key": "wonder_mis4_task_5",
-          "value": "Katları Diz"
+          "value": "Üst Katları Onar"
         },
         {
           "key": "wonder_mis4_task_6",
-          "value": "Geçitleri Aç"
+          "value": "Girişi Yenile"
         },
         {
           "key": "wonder_mis4_task_7",
@@ -2722,7 +2722,7 @@
         },
         {
           "key": "wonder_mis4_task_8",
-          "value": "Altın Tepeyi Yerleştir"
+          "value": "Tepe Taşını Parlat"
         },
         {
           "key": "wonder_mis1_name",
@@ -2750,7 +2750,7 @@
         },
         {
           "key": "wonder_mis5_task_1",
-          "value": "Zemini Hazırla"
+          "value": "Çalışma Alanını Temizle"
         },
         {
           "key": "wonder_mis5_task_2",
@@ -2774,11 +2774,11 @@
         },
         {
           "key": "wonder_mis5_task_7",
-          "value": "Çatıları Yenile"
+          "value": "Kiremitleri Yenile"
         },
         {
           "key": "wonder_mis5_task_8",
-          "value": "Pati Bayraklarını Dik"
+          "value": "Bayrakları Yenile"
         },
         {
           "key": "wonder_mis6_task_1",
@@ -2790,7 +2790,7 @@
         },
         {
           "key": "wonder_mis6_task_3",
-          "value": "Seyir Alanını Düzenle"
+          "value": "Seyir Alanını Temizle"
         },
         {
           "key": "wonder_mis6_task_4",
@@ -2806,11 +2806,11 @@
         },
         {
           "key": "wonder_mis6_task_7",
-          "value": "Alet Kutusunu Hazırla"
+          "value": "Alet Kutusunu Parlat"
         },
         {
           "key": "wonder_mis6_task_8",
-          "value": "Manzara Noktasını Tamamla"
+          "value": "Kanyon Manzarasını Canlandır"
         },
         {
           "key": "wonder_mis7_name",
@@ -2818,11 +2818,11 @@
         },
         {
           "key": "wonder_mis7_task_1",
-          "value": "İskeleyi Kur"
+          "value": "İskeleyi Onar"
         },
         {
           "key": "wonder_mis7_task_2",
-          "value": "Temeli Güçlendir"
+          "value": "Alt Cepheyi Onar"
         },
         {
           "key": "wonder_mis7_task_3",
@@ -2842,7 +2842,7 @@
         },
         {
           "key": "wonder_mis7_task_7",
-          "value": "Minareyi Restore Et"
+          "value": "Minareleri Onar"
         },
         {
           "key": "wonder_mis7_task_8",
@@ -2854,7 +2854,7 @@
         },
         {
           "key": "wonder_mis8_task_1",
-          "value": "İskeleyi Kur"
+          "value": "Limanı Temizle"
         },
         {
           "key": "wonder_mis8_task_2",
@@ -2866,7 +2866,7 @@
         },
         {
           "key": "wonder_mis8_task_4",
-          "value": "Perçinleri Sabitle"
+          "value": "Gövdeyi ve Kolu Onar"
         },
         {
           "key": "wonder_mis8_task_5",
@@ -2878,7 +2878,7 @@
         },
         {
           "key": "wonder_mis8_task_7",
-          "value": "Güneş Tacını Tak"
+          "value": "Başı ve Tacı Parlat"
         },
         {
           "key": "wonder_mis8_task_8",
@@ -5775,11 +5775,11 @@
         },
         {
           "key": "wonder_mis1_task_1",
-          "value": "Reinforce the Ground"
+          "value": "Clean the Surroundings"
         },
         {
           "key": "wonder_mis1_task_2",
-          "value": "Set Up the Scaffolding"
+          "value": "Repair the Scaffolding"
         },
         {
           "key": "wonder_mis1_task_3",
@@ -5787,7 +5787,7 @@
         },
         {
           "key": "wonder_mis1_task_4",
-          "value": "Weld the Columns"
+          "value": "Repair the Columns"
         },
         {
           "key": "wonder_mis1_task_5",
@@ -5803,7 +5803,7 @@
         },
         {
           "key": "wonder_mis1_task_8",
-          "value": "Raise the Flag"
+          "value": "Restore the Flag"
         },
         {
           "key": "wonder_mis2_task_1",
@@ -5831,11 +5831,11 @@
         },
         {
           "key": "wonder_mis2_task_7",
-          "value": "Apply the Orange Paint"
+          "value": "Paint the Tower Top"
         },
         {
           "key": "wonder_mis2_task_8",
-          "value": "Turn On the Lights"
+          "value": "Clean Around the Bridge"
         },
         {
           "key": "wonder_mis3_task_1",
@@ -5855,7 +5855,7 @@
         },
         {
           "key": "wonder_mis3_task_5",
-          "value": "Fix the Elevators"
+          "value": "Repair the Upper Framework"
         },
         {
           "key": "wonder_mis3_task_6",
@@ -5863,15 +5863,15 @@
         },
         {
           "key": "wonder_mis3_task_7",
-          "value": "Refresh the Paint"
+          "value": "Restore the Banners"
         },
         {
           "key": "wonder_mis3_task_8",
-          "value": "Start the Light Show"
+          "value": "Clean the Square and Surroundings"
         },
         {
           "key": "wonder_mis4_task_1",
-          "value": "Clear the Sand"
+          "value": "Clean the Dig Site"
         },
         {
           "key": "wonder_mis4_task_2",
@@ -5879,19 +5879,19 @@
         },
         {
           "key": "wonder_mis4_task_3",
-          "value": "Build the Ramp"
+          "value": "Repair the Steps"
         },
         {
           "key": "wonder_mis4_task_4",
-          "value": "Haul the Stone Blocks"
+          "value": "Repair the Lower Stone Courses"
         },
         {
           "key": "wonder_mis4_task_5",
-          "value": "Stack the Layers"
+          "value": "Repair the Upper Tiers"
         },
         {
           "key": "wonder_mis4_task_6",
-          "value": "Open the Passages"
+          "value": "Restore the Entrance"
         },
         {
           "key": "wonder_mis4_task_7",
@@ -5899,7 +5899,7 @@
         },
         {
           "key": "wonder_mis4_task_8",
-          "value": "Place the Golden Capstone"
+          "value": "Polish the Capstone"
         },
         {
           "key": "wonder_mis1_name",
@@ -5927,7 +5927,7 @@
         },
         {
           "key": "wonder_mis5_task_1",
-          "value": "Prepare the Ground"
+          "value": "Clean the Work Site"
         },
         {
           "key": "wonder_mis5_task_2",
@@ -5951,11 +5951,11 @@
         },
         {
           "key": "wonder_mis5_task_7",
-          "value": "Restore the Roofs"
+          "value": "Restore the Roof Tiles"
         },
         {
           "key": "wonder_mis5_task_8",
-          "value": "Raise the Paw Flags"
+          "value": "Restore the Flags"
         },
         {
           "key": "wonder_mis6_task_1",
@@ -5967,7 +5967,7 @@
         },
         {
           "key": "wonder_mis6_task_3",
-          "value": "Restore the Lookout"
+          "value": "Clean the Viewing Platform"
         },
         {
           "key": "wonder_mis6_task_4",
@@ -5983,11 +5983,11 @@
         },
         {
           "key": "wonder_mis6_task_7",
-          "value": "Prepare the Toolbox"
+          "value": "Polish the Toolbox"
         },
         {
           "key": "wonder_mis6_task_8",
-          "value": "Complete the Scenic Lookout"
+          "value": "Bring the Canyon View to Life"
         },
         {
           "key": "wonder_mis7_name",
@@ -5995,11 +5995,11 @@
         },
         {
           "key": "wonder_mis7_task_1",
-          "value": "Set Up the Scaffolding"
+          "value": "Repair the Scaffolding"
         },
         {
           "key": "wonder_mis7_task_2",
-          "value": "Reinforce the Foundation"
+          "value": "Restore the Lower Facade"
         },
         {
           "key": "wonder_mis7_task_3",
@@ -6019,7 +6019,7 @@
         },
         {
           "key": "wonder_mis7_task_7",
-          "value": "Restore the Minaret"
+          "value": "Repair the Minarets"
         },
         {
           "key": "wonder_mis7_task_8",
@@ -6031,7 +6031,7 @@
         },
         {
           "key": "wonder_mis8_task_1",
-          "value": "Set Up the Scaffold"
+          "value": "Clean the Harbor"
         },
         {
           "key": "wonder_mis8_task_2",
@@ -6043,7 +6043,7 @@
         },
         {
           "key": "wonder_mis8_task_4",
-          "value": "Fix the Rivets"
+          "value": "Repair the Torso and Arm"
         },
         {
           "key": "wonder_mis8_task_5",
@@ -6055,7 +6055,7 @@
         },
         {
           "key": "wonder_mis8_task_7",
-          "value": "Fit the Sun Crown"
+          "value": "Polish the Head and Crown"
         },
         {
           "key": "wonder_mis8_task_8",

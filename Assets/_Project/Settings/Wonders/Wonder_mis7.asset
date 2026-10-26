@@ -18,7 +18,7 @@ MonoBehaviour:
   backgroundSprite: {fileID: 21300000, guid: c5dcc23830324b72b0e969cd0997804c, type: 3}
   totalStages: 8
   tasks:
-  - name: "İskeleyi Kur"
+  - name: "\u0130skeleyi Onar"
     icon: {fileID: 21300000, guid: 1fb0f30def2d4caca47e0accfe5ab2ea, type: 3}
     starCost: 0
     action: 0
@@ -28,7 +28,7 @@ MonoBehaviour:
       y: 0.55
       width: 0.09
       height: 0.11
-  - name: "Temeli Güçlendir"
+  - name: "Alt Cepheyi Onar"
     icon: {fileID: 21300000, guid: 164c417e2cf5453ab447915656e66848, type: 3}
     starCost: 0
     action: 0
@@ -93,7 +93,7 @@ MonoBehaviour:
       y: 0.645
       width: 0.28
       height: 0.085
-  - name: "Minareyi Restore Et"
+  - name: "Minareleri Onar"
     icon: {fileID: 21300000, guid: 1fb0f30def2d4caca47e0accfe5ab2ea, type: 3}
     starCost: 0
     action: 0
@@ -122,7 +122,12 @@ MonoBehaviour:
     icon: {fileID: 21300000, guid: ad205e8cea27452285ac767f010c8d44, type: 3}
     starCost: 0
     action: 4
-    regions: []
+    regions:
+    - serializedVersion: 2
+      x: 0.45
+      y: 0
+      width: 0.55
+      height: 0.16
   starCosts: 050000000600000007000000070000000800000008000000090000000a000000
   starCostBase: 5
   starCostStep: 5

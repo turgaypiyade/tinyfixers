@@ -90,6 +90,7 @@ public class WonderRevealView : MonoBehaviour
     static readonly int TaskRegionsId = Shader.PropertyToID("_TaskRegions");
     static readonly int TaskBoundsId = Shader.PropertyToID("_TaskBounds");
     static readonly int TaskAnimId = Shader.PropertyToID("_TaskAnim");
+    static readonly int ContextRevealId = Shader.PropertyToID("_ContextReveal");
 
     Image WelderImage
     {
@@ -209,6 +210,18 @@ public class WonderRevealView : MonoBehaviour
         ApplyReveal(Mathf.Clamp01(normalized));
     }
 
+    /// Read-only card preview of the same completed restoration state as Missions.
+    /// This configures the owned material without replaying effects or saving progress.
+    public void ShowRestorationSnapshot(WonderDefinition wonder, float progress)
+    {
+        if (wonder == null) return;
+        wonderId = wonder.wonderId;
+        totalStages = Mathf.Max(1, wonder.TaskCount);
+        useRustRestoration = true;
+        SetTaskRegions(WonderTaskRegions.From(wonder));
+        SetRevealImmediate(progress);
+    }
+
     /// <summary>Mevcut _Reveal'den hedefe kaynaklayarak açar (yield edilebilir). Overlay kullanır.</summary>
     public IEnumerator PlayRevealRoutine(float targetNormalized)
     {
@@ -324,7 +337,9 @@ public class WonderRevealView : MonoBehaviour
                         if (!AnimationIsCurrent(version)) yield break;
                         t += Time.deltaTime;
                         float p = ease.Evaluate(Mathf.Clamp01(t / sweepDuration));
-                        _mat.SetVector(TaskAnimId, new Vector4(stage, p, (int)action, 1f));
+                        float mode = regionsOn && !_regions.HasOwnedSurface(stage) && action != WonderTaskAction.Shine ? 2f : 1f;
+                        _mat.SetVector(TaskAnimId, new Vector4(stage, p, (int)action, mode));
+                        SetContextProgress(stage, p, count);
                         yield return null;
                     }
                     if (!AnimationIsCurrent(version)) yield break;
@@ -360,8 +375,8 @@ public class WonderRevealView : MonoBehaviour
                     if (!AnimationIsCurrent(version)) yield break;
                     t += Time.deltaTime;
                     float p = Mathf.Clamp01(t / duration);
-                    UpdateRestorationWelder(cell, p);
-                    _mat.SetVector(RegionCutId, new Vector4(stage, p, 1f, 0f));
+                    UpdateRestorationWelder(cell, p, cutting: true);
+                    SetContextProgress(stage, p * 0.65f, count);
                     UpdateWeldEmitter();
                     UpdateWeldLight(t);
                     yield return null;
@@ -381,6 +396,7 @@ public class WonderRevealView : MonoBehaviour
                     float p = Mathf.Clamp01(t / settleDuration);
                     _mat.SetVector(RegionFinishId, new Vector4(stage, p, 1f, 0f));
                     _fallingPiece.SetProgress(p);
+                    SetContextProgress(stage, 0.65f + p * 0.35f, count);
                     yield return null;
                 }
                 if (!AnimationIsCurrent(version)) yield break;
@@ -492,6 +508,12 @@ public class WonderRevealView : MonoBehaviour
         _mat.SetVector(RegionFinishId, Vector4.zero);
         _mat.SetVector(TorchId, Vector4.zero);
         _mat.SetVector(TaskAnimId, Vector4.zero);
+        _mat.SetFloat(ContextRevealId, _reveal);
+    }
+
+    void SetContextProgress(int stage, float progress, int count)
+    {
+        _mat.SetFloat(ContextRevealId, (stage + Mathf.Clamp01(progress)) / count);
     }
 
     void CancelAnimation()
@@ -529,6 +551,7 @@ public class WonderRevealView : MonoBehaviour
         _reveal = Mathf.Clamp01(r);
         if (_mat == null) return;
         _mat.SetFloat(RevealId, _reveal);
+        _mat.SetFloat(ContextRevealId, _reveal);
         if (_mat.HasProperty(RhodesTorchId))
             _mat.SetFloat(RhodesTorchId, HasRhodesTorch(_image.sprite) ? 1f : 0f);
         _mat.SetFloat(RestorationId, useRustRestoration ? 1f : 0f);
@@ -551,10 +574,14 @@ public class WonderRevealView : MonoBehaviour
         _mat.SetVector(RestorationRectId, new Vector4(rect.xMin, rect.yMin, rect.width, rect.height));
     }
 
-    void UpdateRestorationWelder(int cell, float progress)
+    void UpdateRestorationWelder(int cell, float progress, bool cutting = false)
     {
-        Vector2 uv = _regions != null ? _regions.Point(cell, progress)
+        int rectangle = -1;
+        float localProgress = progress;
+        Vector2 uv = _regions != null ? _regions.TracePoint(cell, progress, out rectangle, out localProgress)
             : WonderRestorationLayout.Point(cell, Mathf.Max(1, totalStages), progress);
+        if (cutting)
+            _mat.SetVector(RegionCutId, new Vector4(cell, localProgress, 1f, rectangle + 1f));
         // Map follows the photo's local rect, independent of sprite atlas packing.
         Rect rect = _rt.rect;
         Vector3 local = new Vector3(Mathf.Lerp(rect.xMin, rect.xMax, uv.x),

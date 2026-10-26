@@ -18,11 +18,16 @@ MonoBehaviour:
   backgroundSprite: {fileID: 21300000, guid: bbc8e883205c4319b35dccdf13d9564e, type: 3}
   totalStages: 8
   tasks:
-  - name: "İskeleyi Kur"
-    icon: {fileID: 21300000, guid: 0149ac3d2ba142c49e79a8b44c7c4301, type: 3}
+  - name: "Liman\u0131 Temizle"
+    icon: {fileID: 21300000, guid: ad205e8cea27452285ac767f010c8d44, type: 3}
     starCost: 0
     action: 4
-    regions: []
+    regions:
+    - serializedVersion: 2
+      x: 0
+      y: 0
+      width: 1
+      height: 0.1
   - name: "Kaideleri Sağlamlaştır"
     icon: {fileID: 21300000, guid: 164c417e2cf5453ab447915656e66848, type: 3}
     starCost: 0
@@ -53,8 +58,8 @@ MonoBehaviour:
       y: 0.47
       width: 0.15
       height: 0.15
-  - name: "Perçinleri Sabitle"
-    icon: {fileID: 21300000, guid: 861895ed49f64747b1b994c9efd78928, type: 3}
+  - name: "G\u00f6vdeyi ve Kolu Onar"
+    icon: {fileID: 21300000, guid: 6b497708e5124ea79b4a79473300d4af, type: 3}
     starCost: 0
     action: 0
     regions:
@@ -63,6 +68,11 @@ MonoBehaviour:
       y: 0.68
       width: 0.25
       height: 0.12
+    - serializedVersion: 2
+      x: 0.2
+      y: 0.75
+      width: 0.19
+      height: 0.2
   - name: "Pelerini Onar"
     icon: {fileID: 21300000, guid: 1fb0f30def2d4caca47e0accfe5ab2ea, type: 3}
     starCost: 0
@@ -83,10 +93,10 @@ MonoBehaviour:
       y: 0.47
       width: 0.52
       height: 0.45
-  - name: "Güneş Tacını Tak"
-    icon: {fileID: 21300000, guid: 365a7eb126eb4ce5af2c91c86f6ad07d, type: 3}
+  - name: "Ba\u015f\u0131 ve Tac\u0131 Parlat"
+    icon: {fileID: 21300000, guid: ad205e8cea27452285ac767f010c8d44, type: 3}
     starCost: 0
-    action: 0
+    action: 1
     regions:
     - serializedVersion: 2
       x: 0.38
@@ -100,14 +110,9 @@ MonoBehaviour:
     regions:
     - serializedVersion: 2
       x: 0.2
-      y: 0.89
+      y: 0.94
       width: 0.12
-      height: 0.11
-    - serializedVersion: 2
-      x: 0.22
-      y: 0.76
-      width: 0.15
-      height: 0.13
+      height: 0.06
   starCosts: 050000000600000007000000070000000800000008000000090000000a000000
   starCostBase: 5
   starCostStep: 5

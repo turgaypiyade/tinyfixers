@@ -17,6 +17,19 @@ public class GoalFlyFx : MonoBehaviour
     [SerializeField] private float punchScale = 1.12f;
     [SerializeField] private float punchTime = 0.10f;
     public void SetOverlayRoot(RectTransform root) => overlayRoot = root;
+    public RectTransform OverlayRoot => overlayRoot;
+
+    private GoalTileFlightFx tileFlight;
+    /// <summary>Normal goal tiles: pooled gather-then-fly driver living on this same object.</summary>
+    public GoalTileFlightFx TileFlight
+    {
+        get
+        {
+            if (tileFlight == null && !TryGetComponent(out tileFlight))
+                tileFlight = gameObject.AddComponent<GoalTileFlightFx>();
+            return tileFlight;
+        }
+    }
 
     public IEnumerator Play(TileView fromTile, RectTransform targetSlot, float baseDuration)
     {
@@ -438,18 +451,23 @@ public class GoalFlyFx : MonoBehaviour
     private static readonly System.Collections.Generic.Dictionary<int, Vector3> _baseScales
         = new System.Collections.Generic.Dictionary<int, Vector3>();
 
-    private IEnumerator PunchSafe(RectTransform target)
+    /// <summary>Slot'un ilk görülen ölçeği; tüm punch/pulse'lar buna döner (birikmeyi engeller).</summary>
+    internal Vector3 BaseScaleOf(RectTransform target)
     {
-        if (target == null) yield break;
-
         int id = target.GetInstanceID();
-
-        // baseScale'i sabitle (ilk gördüğümüz scale)
         if (!_baseScales.TryGetValue(id, out var baseScale) || baseScale == Vector3.zero)
         {
             baseScale = target.localScale;
             _baseScales[id] = baseScale;
         }
+        return baseScale;
+    }
+
+    private IEnumerator PunchSafe(RectTransform target)
+    {
+        if (target == null) yield break;
+
+        var baseScale = BaseScaleOf(target);
 
         // Her punch öncesi kesin reset (birikmeyi engeller)
         target.localScale = baseScale;

@@ -82,6 +82,20 @@ class RunnerTests(unittest.TestCase):
             self.assertEqual(raised.exception.code, 2)
         self.assertEqual(self.commands, [])
 
+    def test_mac_windows_use_identical_simulation_config(self):
+        configs = []
+        for platform in ("darwin", "win32"):
+            self.out = self.root / platform
+            with patch.object(sim.sys, "platform", platform):
+                self.assertEqual(self.run_jobs("--speed", "1", "--seed", "42"), 0)
+            workers = []
+            for i in range(2):
+                cfg = json.loads((self.out / f"job{i:02}" / "config.json").read_text())
+                cfg.pop("outputPath")
+                workers.append(cfg)
+            configs.append(workers)
+        self.assertEqual(configs[0], configs[1])
+
     def test_nonempty_output_is_preserved(self):
         self.out.mkdir()
         sentinel = self.out / "STOP"
