@@ -31,7 +31,9 @@ public static class RuntimeSimulationReport
     {
         var text = new StringBuilder();
         text.AppendLine(report.completed ? "Koşu tamamlandı." : "Kısmi rapor — koşu henüz tamamlanmadı veya durduruldu.");
-        long planned = (long)(report.config.levelPaths?.Length ?? 0) * report.config.gamesPerLevel;
+        int levels = report.config.levelPaths != null && report.config.levelPaths.Length > 0
+            ? report.config.levelPaths.Length : report.config.levelNumbers?.Length ?? 0;
+        long planned = (long)levels * report.config.gamesPerLevel;
         text.AppendLine($"Kaydedilen oyun: {report.games.Count}/{planned}");
         text.AppendLine($"Motor: {report.engine}; bot: {report.config.policy}; hız: {report.config.timeScale:F1}×");
         text.AppendLine("Oranlar insan zorluğu için kalibre edilmemiştir. Hata/timeout/hamlesizlik kayıp sayılmaz.");

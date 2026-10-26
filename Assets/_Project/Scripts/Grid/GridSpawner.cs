@@ -1171,6 +1171,9 @@ public class GridSpawner : MonoBehaviour
             ? (RuntimeSimulationSession.CurrentLevel != null ? RuntimeSimulationSession.CurrentLevel : ResolveSimLevelByNumber())
             : levelRuntimeSelector != null ? levelRuntimeSelector.ResolveLevelData() : null;
 
+        if (RuntimeSimulationSession.IsActive && sourceLevel == null)
+            throw new System.InvalidOperationException(
+                $"Simulation level could not be resolved: {RuntimeSimulationSession.CurrentLevelNumber}. Refusing scene fallback.");
         sourceLevel ??= level;
         var runtimeClone = CloneLevelDataForRuntime(sourceLevel);
         ownsResolvedLevelInstance = runtimeClone != null;

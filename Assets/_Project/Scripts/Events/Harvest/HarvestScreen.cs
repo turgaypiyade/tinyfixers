@@ -553,7 +553,12 @@ public sealed class HarvestScreen : MonoBehaviour, IPointerClickHandler
 
         // Kürek sayaçtan uçar, hücreye saplanır; kare çarpma anında toprağa döner.
         yield return TrowelStrike(rt);
-        EventSfx.Play(l => l.stepPop);
+        // Toprak kazma sesi (EventSfxLibrary.soilDig); klip atanmamışsa eski pop.
+        var lib = EventSfx.Library;
+        if (lib != null && lib.soilDig != null && lib.soilDig.clips != null && lib.soilDig.clips.Length > 0)
+            EventSfx.Play(l => l.soilDig);
+        else
+            EventSfx.Play(l => l.stepPop);
         float t = 0f, half = digDuration * 0.5f;
         bool swapped = false;
         while (t < digDuration)

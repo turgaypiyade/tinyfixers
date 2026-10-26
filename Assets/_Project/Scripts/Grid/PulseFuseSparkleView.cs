@@ -65,6 +65,12 @@ public sealed class PulseFuseSparkleView : MonoBehaviour
     private Coroutine idleSpinRoutine;
     private Image spinImage;
     private Image haloImage;
+    private TileView ownerTile;
+    private int ownerLifetime;
+    private RectTransform externalFuseTarget;
+    private const string SpinPoolKey = "PulseCore:spin";
+    private const string HaloPoolKey = "PulseCore:halo";
+    private static readonly WaitForSeconds IdleSpinWait = new WaitForSeconds(3f);
 
     private void Awake()
     {
@@ -84,6 +90,8 @@ public sealed class PulseFuseSparkleView : MonoBehaviour
 
     private void OnEnable()
     {
+        ownerTile = GetComponentInParent<TileView>();
+        ownerLifetime = ownerTile != null ? ownerTile.LifetimeVersion : -1;
         transform.SetAsLastSibling();
         Play();
         if (breathTarget != null)
@@ -92,6 +100,13 @@ public sealed class PulseFuseSparkleView : MonoBehaviour
     }
 
     private void OnDisable() => StopAndClear();
+    private void OnDestroy() => StopAndClear();
+
+    private bool HasCurrentPulseOwner() => ownerTile != null
+        && ownerTile.IsCurrentLifetime(ownerLifetime)
+        && ownerTile.GetSpecial() == TileSpecial.PulseCore;
+
+    private bool CanShowTileEffects() => HasCurrentPulseOwner() && !ownerTile.KeepHiddenForCombo;
 
     public void Play()
     {
@@ -107,21 +122,64 @@ public sealed class PulseFuseSparkleView : MonoBehaviour
 
     private void StopAndClear()
     {
-        if (emitRoutine   != null) { StopCoroutine(emitRoutine);   emitRoutine   = null; }
-        if (breathRoutine != null) { StopCoroutine(breathRoutine); breathRoutine = null; }
-        if (spinRoutine   != null) { StopCoroutine(spinRoutine);   spinRoutine   = null; }
-        if (idleSpinRoutine != null) { StopCoroutine(idleSpinRoutine); idleSpinRoutine = null; }
-        if (externalFuseRoutine != null) { StopCoroutine(externalFuseRoutine); externalFuseRoutine = null; }
+        // Stop this lifetime's emitters before returning its detached overlays.
+        StopAllCoroutines();
+        emitRoutine = breathRoutine = spinRoutine = idleSpinRoutine = externalFuseRoutine = null;
+        externalFuseTarget = null;
         emitIntensity = 1f;
-        if (breathTarget  != null) breathTarget.localScale = Vector3.one;
+        if (breathTarget != null && ownerTile != null && ownerTile.IsCurrentLifetime(ownerLifetime))
+            breathTarget.localScale = Vector3.one;
         SetIconVisible(true);   // spin yarıda kesildiyse statik ikon gizli kalmasın
-        // Dönme görselleri tahtanın TilesTopOverlay katmanında (bu objenin çocuğu değil) → ayrıca yık.
-        if (spinImage != null) Destroy(spinImage.gameObject);
-        if (haloImage != null) Destroy(haloImage.gameObject);
+        ClearSparks(transform);
+        // These live outside the tile hierarchy, so disabling the tile does not hide
+        // them. Hide synchronously, then return them to the shared VFX pool.
+        if (spinImage != null)
+        {
+            ClearSparks(spinImage.transform);
+            spinImage.gameObject.SetActive(false);
+            UiVfxPool.Return(SpinPoolKey, spinImage.gameObject);
+        }
+        if (haloImage != null)
+        {
+            haloImage.gameObject.SetActive(false);
+            UiVfxPool.Return(HaloPoolKey, haloImage.gameObject);
+        }
         spinImage = null;
         haloImage = null;
-        for (int i = transform.childCount - 1; i >= 0; i--)
-            Destroy(transform.GetChild(i).gameObject);
+    }
+
+    private void StopRoutine(ref Coroutine routine)
+    {
+        if (routine != null) StopCoroutine(routine);
+        routine = null;
+    }
+
+    private static void ClearSparks(Transform parent)
+    {
+        for (int i = parent.childCount - 1; i >= 0; i--)
+        {
+            var child = parent.GetChild(i).gameObject;
+            child.SetActive(false);
+            // The shared spark driver returns inactive sparks on its next tick.
+            // Keep them inactive if the overlay is rented again in this frame.
+        }
+    }
+
+    private void StopLocalTileEffects()
+    {
+        StopRoutine(ref emitRoutine);
+        StopRoutine(ref breathRoutine);
+        StopRoutine(ref spinRoutine);
+        StopRoutine(ref idleSpinRoutine);
+        // A Line+Pulse orbit can use this component to light a separate combo
+        // image. Hiding the consumed source must preserve that external fuse.
+        if (spinImage != null && externalFuseTarget == spinImage.rectTransform)
+        {
+            StopRoutine(ref externalFuseRoutine);
+            externalFuseTarget = null;
+        }
+        if (spinImage != null) spinImage.gameObject.SetActive(false);
+        if (haloImage != null) haloImage.gameObject.SetActive(false);
     }
 
     // ── Y-ekseni flipbook dönme (PulseCore oluşumu) ─────────────────────────────
@@ -129,7 +187,7 @@ public sealed class PulseFuseSparkleView : MonoBehaviour
     // göstererek Y ekseninde dönme illüzyonu verir (düz/kağıt görünmesin diye).
     public void PlayCreationSpin(int tileSize)
     {
-        if (!isActiveAndEnabled || !HasSpinFrames()) return;
+        if (!isActiveAndEnabled || !CanShowTileEffects() || !HasSpinFrames()) return;
         if (spinRoutine != null) { StopCoroutine(spinRoutine); spinRoutine = null; }
         if (spinHaloEnabled) EnsureHalo(tileSize);   // ÖNCE hale (arkada)
         EnsureSpinImage(tileSize);                   // SONRA core (önde)
@@ -139,7 +197,8 @@ public sealed class PulseFuseSparkleView : MonoBehaviour
     /// <summary>Idle sırasında LineV/LineH ile birebir aynı ölçekte (1.12x) hafif pop ile küre dönüşü yapar.</summary>
     public void PlayIdleSpin(int tileSize, float peakScale = 1.12f, float duration = 0.38f)
     {
-        if (!isActiveAndEnabled || !HasSpinFrames()) return;
+        if (!isActiveAndEnabled || !CanShowTileEffects() || !HasSpinFrames()
+            || ownerTile.Board == null || !ownerTile.Board.IsTileReadyForContinuousMatch(ownerTile)) return;
         if (spinRoutine != null) { StopCoroutine(spinRoutine); spinRoutine = null; }
         EnsureSpinImage(tileSize);
         spinRoutine = StartCoroutine(CoIdleSpin(peakScale, duration));
@@ -188,9 +247,9 @@ public sealed class PulseFuseSparkleView : MonoBehaviour
     {
         if (haloImage == null)
         {
-            var go = new GameObject("_CoreHalo",
-                typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-            go.transform.SetParent(ResolveOverlayParent(), false);
+            haloImage = UiVfxPool.RentImage(HaloPoolKey, ResolveOverlayParent(), "_CoreHalo");
+            if (haloImage == null) return;
+            var go = haloImage.gameObject;
             go.layer = gameObject.layer;
 
             var irt = go.GetComponent<RectTransform>();
@@ -198,7 +257,6 @@ public sealed class PulseFuseSparkleView : MonoBehaviour
             irt.anchoredPosition = Vector2.zero;
             irt.localScale = Vector3.one;
 
-            haloImage = go.GetComponent<Image>();
             haloImage.raycastTarget  = false;
             haloImage.preserveAspect = true;
             haloImage.sprite = TileClearBurstVfx.SoftCircleHaloSprite;   // match ring'iyle aynı
@@ -223,9 +281,9 @@ public sealed class PulseFuseSparkleView : MonoBehaviour
     {
         if (spinImage == null)
         {
-            var go = new GameObject("_CoreSpin",
-                typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-            go.transform.SetParent(ResolveOverlayParent(), false);
+            spinImage = UiVfxPool.RentImage(SpinPoolKey, ResolveOverlayParent(), "_CoreSpin");
+            if (spinImage == null) return;
+            var go = spinImage.gameObject;
             go.layer = gameObject.layer;
 
             var irt = go.GetComponent<RectTransform>();
@@ -233,7 +291,6 @@ public sealed class PulseFuseSparkleView : MonoBehaviour
             irt.anchoredPosition = Vector2.zero;
             irt.localScale = Vector3.one;
 
-            spinImage = go.GetComponent<Image>();
             spinImage.raycastTarget  = false;
             spinImage.preserveAspect = true;
         }
@@ -355,7 +412,7 @@ public sealed class PulseFuseSparkleView : MonoBehaviour
     // (ayrı Canvas + overrideSorting grass'ın ve aynı Canvas'taki level-end popup'ının da üstüne çıkıyordu).
     private Transform ResolveOverlayParent()
     {
-        var tile = GetComponentInParent<TileView>();
+        var tile = ownerTile;
         var overlay = tile != null && tile.Board != null ? tile.Board.TilesTopOverlayRoot : null;
         return overlay != null ? overlay : transform;
     }
@@ -370,6 +427,16 @@ public sealed class PulseFuseSparkleView : MonoBehaviour
     // Overlay katmanındaki görseller taşın çocuğu değil → taş düşerse/sallanırsa peşinden gelsin.
     private void LateUpdate()
     {
+        if (!HasCurrentPulseOwner())
+        {
+            gameObject.SetActive(false); // OnDisable clears only this visual component.
+            return;
+        }
+        if (ownerTile.KeepHiddenForCombo)
+        {
+            StopLocalTileEffects();
+            return;
+        }
         if (spinImage != null) FollowTile(spinImage);
         if (haloImage != null && haloImage.transform.parent != transform) haloImage.rectTransform.position = transform.position;
     }
@@ -377,7 +444,7 @@ public sealed class PulseFuseSparkleView : MonoBehaviour
     // Statik PulseCore ikonunu (breathTarget üstündeki Image) gizle/göster.
     private void SetIconVisible(bool visible)
     {
-        if (breathTarget == null) return;
+        if (breathTarget == null || !CanShowTileEffects()) return;
         var img = breathTarget.GetComponent<Image>();
         if (img == null) return;
         var c = img.color;
@@ -412,16 +479,17 @@ public sealed class PulseFuseSparkleView : MonoBehaviour
     // Fitil kıvılcımını verilen parent'a, ölçekli offset/boyutla basar. Idle örneği (fuseLocalOffset,
     // tileSize) baz alınır; combo pulse görselinde sizeScale = comboIkonBoyu / TileSize ile aynı
     // ORAN korunur → doğru koordinat kendiliğinden gelir.
-    internal void SpawnSparkAt(RectTransform parent, Vector2 baseOffset, float sizeScale, float intensity, MonoBehaviour coroutineOwner = null)
+    internal void SpawnSparkAt(RectTransform parent, Vector2 baseOffset, float sizeScale, float intensity)
     {
         if (sparkleSprite == null || parent == null) 
             return;
 
-        var sparkGO = new GameObject("_Spark");
-        sparkGO.transform.SetParent(parent, false);
+        var img = UiVfxPool.RentImage(UiFxPool.PulseFuseSparkKey, parent, "_Spark");
+        if (img == null) return;
+        var sparkGO = img.gameObject;
         sparkGO.transform.SetAsLastSibling();
 
-        var sparkRt = sparkGO.AddComponent<RectTransform>();
+        var sparkRt = img.rectTransform;
         // Yoğunlukta kıvılcım biraz büyür + biraz daha yayılır → dolgun alev.
         float intensityBoost = Mathf.Lerp(1f, 1.35f, Mathf.Clamp01(intensity - 1f));
         float size = Random.Range(sparkSizeMin, sparkSizeMax) * intensityBoost * sizeScale;
@@ -429,12 +497,11 @@ public sealed class PulseFuseSparkleView : MonoBehaviour
         sparkRt.anchoredPosition = baseOffset + Random.insideUnitCircle * spreadRadius * intensityBoost * sizeScale;
         sparkRt.localScale = Vector3.one;
 
-        var img = sparkGO.AddComponent<Image>();
         img.sprite = sparkleSprite;
         img.color = Color.Lerp(sparkColorA, sparkColorB, Random.value);
         img.raycastTarget = false;
 
-        (coroutineOwner != null ? coroutineOwner : this).StartCoroutine(CoAnimateSpark(sparkRt, img, size));
+        UiFxPool.TrackPulseFuseSpark(img, sparkLifetime, size);
     }
 
     private Coroutine externalFuseRoutine;
@@ -451,61 +518,30 @@ public sealed class PulseFuseSparkleView : MonoBehaviour
         var routine = owner.StartCoroutine(CoExternalFuse(target, Mathf.Max(0.1f, sizeScale),
             Mathf.Clamp(intensity, 0.25f, 6f), duration, owner));
         if (owner == this)
+        {
             externalFuseRoutine = routine;
+            externalFuseTarget = target;
+        }
     }
 
     private IEnumerator CoExternalFuse(RectTransform target, float sizeScale, float intensity, float duration, MonoBehaviour coroutineOwner)
     {
         Vector2 offset = fuseLocalOffset * sizeScale;
         float elapsed = 0f;
-        while (target != null && (duration <= 0f || elapsed < duration))
+        while (target != null && target.gameObject.activeInHierarchy && (duration <= 0f || elapsed < duration))
         {
             int count = Mathf.Max(1, Mathf.RoundToInt(intensity));
             for (int i = 0; i < count; i++)
-                SpawnSparkAt(target, offset, sizeScale, intensity, coroutineOwner);
+                SpawnSparkAt(target, offset, sizeScale, intensity);
             float wait = emitInterval / Mathf.Max(0.5f, intensity);
             elapsed += wait;
             yield return new WaitForSeconds(wait);
         }
         if (coroutineOwner == this)
-            externalFuseRoutine = null;
-    }
-
-    private IEnumerator CoAnimateSpark(RectTransform sparkRt, Image img, float baseSize)
-    {
-        if (sparkRt == null || img == null) yield break;
-
-        Vector2 startPos = sparkRt.anchoredPosition;
-        Vector2 drift    = Random.insideUnitCircle.normalized * Random.Range(6f, 14f);
-        float   elapsed  = 0f;
-
-        while (elapsed < sparkLifetime)
         {
-            if (sparkRt == null) yield break;
-
-            elapsed += Time.deltaTime;
-            float k = elapsed / sparkLifetime;
-
-            sparkRt.anchoredPosition = startPos + drift * k;
-
-            // Fade: hızlı fade-in, yavaş fade-out
-            float alpha = k < 0.25f
-                ? k / 0.25f
-                : 1f - (k - 0.25f) / 0.75f;
-
-            var c = img.color;
-            c.a = alpha;
-            img.color = c;
-
-            // Scale: orta noktada en büyük
-            float scale = Mathf.Sin(k * Mathf.PI);
-            sparkRt.sizeDelta = Vector2.one * (baseSize * Mathf.Lerp(0.4f, 1f, scale));
-
-            yield return null;
+            externalFuseRoutine = null;
+            externalFuseTarget = null;
         }
-
-        if (sparkRt != null)
-            Destroy(sparkRt.gameObject);
     }
 
     // ── Breath idle ────────────────────────────────────────────────────────────
@@ -546,13 +582,13 @@ public sealed class PulseFuseSparkleView : MonoBehaviour
     // ── 3sn Periyodik Idle Spin ────────────────────────────────────────────────
     private IEnumerator CoIdleSpinWatch()
     {
-        yield return new WaitForSeconds(3.0f);
+        yield return IdleSpinWait;
 
         while (true)
         {
-            if (spinRoutine == null && isActiveAndEnabled && HasSpinFrames())
+            if (spinRoutine == null && isActiveAndEnabled && CanShowTileEffects() && HasSpinFrames())
             {
-                var tile = GetComponentInParent<TileView>();
+                var tile = ownerTile;
                 bool isTileBusy = tile != null && (tile.WasDragging || (tile.Board != null && (tile.Board.IsBusy || tile.Board.InputLocked)));
                 if (!isTileBusy)
                 {
@@ -561,7 +597,7 @@ public sealed class PulseFuseSparkleView : MonoBehaviour
                 }
             }
 
-            yield return new WaitForSeconds(3.0f);
+            yield return IdleSpinWait;
         }
     }
 }

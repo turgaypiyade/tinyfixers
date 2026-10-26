@@ -31,7 +31,7 @@ public class GhostFx {
 public class PoolProbe {
  public bool useTilePool=true;public int tilePoolWarmCount=24,width=3,height=3,created,destroyed,holds,flights,releases;
  public GameObject tilePrefab=new GameObject();public Transform parent=new Transform();public GhostFx GoalFlyFx=new GhostFx();
- public TileView live;public IEnumerator child;
+ public TileView live,selected;public IEnumerator child;
  public Queue<TileView> _tilePool=new Queue<TileView>();public HashSet<TileView> gelCleanMatchTiles=new HashSet<TileView>();
  GameObject Instantiate(GameObject prefab,Transform parent){created++;var tile=new TileView();tile.transform.SetParent(parent,false);return tile.gameObject;}
  void Destroy(GameObject go){destroyed++;go.destroyed=true;}

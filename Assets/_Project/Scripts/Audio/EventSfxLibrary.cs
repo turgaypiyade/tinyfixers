@@ -34,6 +34,8 @@ public sealed class EventSfxLibrary : ScriptableObject
     public AudioClip ambientLoop;
     [Range(0f, 1f)] public float ambientVolume = 0.35f;
     public EventSfxCue plankPlace = new();
+    [Tooltip("Bostan Hasadı: kürek toprağa saplanıp kazar (birkaç varyasyon önerilir). Boşsa stepPop çalar.")]
+    public EventSfxCue soilDig = new();
     public EventSfxCue hammerTap = new();
     public EventSfxCue footstep = new();
     public EventSfxCue rankBadge = new();

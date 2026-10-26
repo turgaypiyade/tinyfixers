@@ -99,6 +99,7 @@ public sealed class RuntimeSimulationSession : MonoBehaviour
     {
         public string engine = "Live BoardController / gameplay scene";
         public string unityVersion;
+        public string buildGuid;
         public string note = "Bot performance, not a calibrated human win rate. Unity seed is diagnostic; frame timing can affect replay.";
         public Config config;
         public List<GameResult> games = new();
@@ -119,6 +120,7 @@ public sealed class RuntimeSimulationSession : MonoBehaviour
     private float _gameStarted;
     private bool _finished;
     private bool _sceneLoadFailed;
+    private readonly List<TileView> _sceneTiles = new();
 #if UNITY_EDITOR
     private RuntimeGameplayRecorder _recorder;
     private bool Recording => _recorder != null;
@@ -141,14 +143,25 @@ public sealed class RuntimeSimulationSession : MonoBehaviour
         try { config = JsonUtility.FromJson<Config>(File.ReadAllText(SimArgs.ConfigPath)); }
         catch (Exception ex) { Debug.LogError("[Sim] Config okunamadı: " + ex.Message); Application.Quit(2); return; }
 #endif
-        bool hasLevels = config != null && ((config.levelPaths != null && config.levelPaths.Length > 0)
-            || (config.levelNumbers != null && config.levelNumbers.Length > 0));
-        if (!hasLevels) return;
+        string configError = ConfigError(config);
+        if (configError != null)
+        {
+            Debug.LogError("[Sim] " + configError);
+#if UNITY_EDITOR
+            UnityEditor.SessionState.SetString(StatusKey, configError);
+            UnityEditor.SessionState.SetBool(ActiveKey, false);
+            UnityEditor.EditorApplication.isPlaying = false;
+#else
+            Application.Quit(2);
+#endif
+            return;
+        }
+        config.outputPath = Path.GetFullPath(config.outputPath);
         var host = new GameObject("Runtime Level Simulation");
         DontDestroyOnLoad(host);
         var session = host.AddComponent<RuntimeSimulationSession>();
         session._config = config;
-        session._report = new Report { config = config, unityVersion = Application.unityVersion };
+        session._report = new Report { config = config, unityVersion = Application.unityVersion, buildGuid = Application.buildGUID };
         session._oldTimeScale = Time.timeScale;
         session._oldRandomState = UnityEngine.Random.state;
         session._oldRunInBackground = Application.runInBackground;
@@ -162,6 +175,27 @@ public sealed class RuntimeSimulationSession : MonoBehaviour
         if (!string.IsNullOrEmpty(config.recordDir))
             session._recorder = RuntimeGameplayRecorder.Create(config.ffmpegPath, config.recordFps);
 #endif
+    }
+
+    private static string ConfigError(Config config)
+    {
+        if (config == null) return "Simulation config is missing.";
+        if ((config.levelPaths == null || config.levelPaths.Length == 0)
+            && (config.levelNumbers == null || config.levelNumbers.Length == 0))
+            return "At least one level is required.";
+        if (config.levelNumbers != null)
+            foreach (int level in config.levelNumbers)
+                if (level < 1) return "Level numbers must be positive.";
+        if (config.gamesPerLevel < 1) return "gamesPerLevel must be positive.";
+        if (float.IsNaN(config.timeScale) || float.IsInfinity(config.timeScale) || config.timeScale <= 0f
+            || float.IsNaN(config.stepTimeoutSeconds) || float.IsInfinity(config.stepTimeoutSeconds) || config.stepTimeoutSeconds <= 0f)
+            return "Speed and step timeout must be finite and positive.";
+        if (!Enum.IsDefined(typeof(RuntimeBotPolicy), config.policy)) return "Unknown bot policy.";
+        if (string.IsNullOrWhiteSpace(config.outputPath) || string.IsNullOrWhiteSpace(config.scenePath))
+            return "Output and scene paths are required.";
+        try { Path.GetFullPath(config.outputPath); }
+        catch (Exception ex) { return "Invalid output path: " + ex.Message; }
+        return null;
     }
 
     // Editör: asset yolu (davranış eskisi gibi). SIM build: katalog numarası — asset GridSpawner'da katalogdan
@@ -235,7 +269,7 @@ public sealed class RuntimeSimulationSession : MonoBehaviour
                 CaptureResult(result);
                 _activeResult = null;
                 _activeBoard = null;
-                SaveReport();
+                if (!SaveReport()) { Finish(false); yield break; }
                 if (Cancelled) { Finish(false); yield break; }
                 // A failed scene load may still be running; never start another load over it.
                 if (_sceneLoadFailed) { Finish(false); yield break; }
@@ -355,6 +389,13 @@ public sealed class RuntimeSimulationSession : MonoBehaviour
                     yield return null;
                     continue;
                 }
+                string integrityError = BoardIntegrityError(board);
+                if (integrityError != null)
+                {
+                    result.outcome = "Error";
+                    result.detail = "Board integrity: " + integrityError;
+                    break;
+                }
                 if (board.TopHud.AreAllGoalsCompleted) { result.outcome = "Won"; break; }
                 if (_forcedFail || board.RemainingMoves <= 0) { result.outcome = "Lost"; break; }
 
@@ -436,6 +477,39 @@ public sealed class RuntimeSimulationSession : MonoBehaviour
         bool pending = board.HasPendingAutoResolveForLevelEnd();
         reason = pending ? "Automatic board resolution pending." : null;
         return pending;
+    }
+
+    // Only after the board has settled. Pool entries are inactive and excluded;
+    // legitimate in-flight views are left to their own clear/flight jobs.
+    private string BoardIntegrityError(BoardController board)
+    {
+        for (int y = 0; y < board.Height; y++)
+        for (int x = 0; x < board.Width; x++)
+        {
+            var tile = board.GetTileViewAt(x, y);
+            var data = board.GridData[x, y];
+            if (tile == null)
+            {
+                if (data != null) return $"({x},{y}) has data without a tile view.";
+                continue;
+            }
+            if (!tile.gameObject.activeInHierarchy || tile.X != x || tile.Y != y)
+                return $"({x},{y}) references inactive/misplaced tile ({tile.X},{tile.Y}).";
+            if (data == null || data.Type != tile.GetTileType() || data.Special != tile.GetSpecial())
+                return $"({x},{y}) model/view colour or special mismatch.";
+            if (tile.KeepHiddenForCombo || !board.IsTileReadyForContinuousMatch(tile))
+                return $"({x},{y}) is hidden or has not reached its visual cell after settling.";
+        }
+        _sceneTiles.Clear();
+        if (board.Parent != null) board.Parent.GetComponentsInChildren(false, _sceneTiles);
+        for (int i = 0; i < _sceneTiles.Count; i++)
+        {
+            var tile = _sceneTiles[i];
+            if (tile != null && tile.Board == board && tile.IsRuntimeIdle
+                && board.GetTileViewAt(tile.X, tile.Y) != tile)
+                return $"Orphan active {tile.GetSpecial()} view at ({tile.X},{tile.Y}).";
+        }
+        return null;
     }
 
     private static string DescribeEmptyCells(BoardController board)
@@ -581,7 +655,7 @@ public sealed class RuntimeSimulationSession : MonoBehaviour
 #if UNITY_EDITOR
         UnityEditor.EditorApplication.isPlaying = false;
 #else
-        Application.Quit(completed ? 0 : 1);
+        Application.Quit(!saved ? 2 : completed ? 0 : 1);
 #endif
     }
 

@@ -12,6 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 406ccfed272f74ba3b500617ff634ac3, type: 3}
   m_Name: WonderCatalog
   m_EditorClassIdentifier: Assembly-CSharp::WonderCatalog
+  firstWonderTotalStars: 60
+  secondWonderTotalStars: 75
+  lastWonderTotalStars: 110
   defaultBackground: {fileID: 21300000, guid: 7590a0dcb9c8240b5b719823ce570a5e, type: 3}
   wonders:
   - {fileID: 11400000, guid: 7ff1a68e5900443989eec0d4fd4175b8, type: 2}

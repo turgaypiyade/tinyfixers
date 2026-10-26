@@ -19,9 +19,9 @@ MonoBehaviour:
   debugForceAvailable: 0
   wonderCatalog: {fileID: 11400000, guid: 34474c506de9f46a2be88c1bd1801853, type: 2}
   gridSize: 5
-  trowelsPerWin: 2
+  trowelsPerWin: 1
   firstTryBonus: 1
-  bossWinTrowels: 3
+  bossWinTrowels: 2
   trowelGoldValue: 10
   crops:
   - id: carrot
@@ -58,7 +58,7 @@ MonoBehaviour:
       origin: {x: 0, y: 4}
     rewards:
     - type: 0
-      amount: 100
+      amount: 200
       icon: {fileID: 0}
       nameLocalizationKey: 
       fallbackName: 
@@ -78,7 +78,7 @@ MonoBehaviour:
       fallbackName: 
       weight: 10
     - type: 0
-      amount: 150
+      amount: 250
       icon: {fileID: 0}
       nameLocalizationKey: 
       fallbackName: 
@@ -100,7 +100,7 @@ MonoBehaviour:
       fallbackName: 
       weight: 10
     - type: 0
-      amount: 200
+      amount: 300
       icon: {fileID: 0}
       nameLocalizationKey: 
       fallbackName: 
@@ -118,7 +118,7 @@ MonoBehaviour:
       origin: {x: 2, y: 2}
     rewards:
     - type: 0
-      amount: 300
+      amount: 400
       icon: {fileID: 0}
       nameLocalizationKey: 
       fallbackName: 
@@ -150,19 +150,19 @@ MonoBehaviour:
       fallbackName: 
       weight: 10
     - type: 20
-      amount: 2
+      amount: 4
       icon: {fileID: 0}
       nameLocalizationKey: 
       fallbackName: 
       weight: 10
     - type: 11
-      amount: 1
+      amount: 2
       icon: {fileID: 0}
       nameLocalizationKey: 
       fallbackName: 
       weight: 10
     - type: 12
-      amount: 1
+      amount: 2
       icon: {fileID: 0}
       nameLocalizationKey: 
       fallbackName: 

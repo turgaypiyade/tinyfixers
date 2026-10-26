@@ -6,7 +6,7 @@ using UnityEngine;
 ///
 /// MODEL:
 /// • WonderCatalog'daki her kayıt bir EVENT'tir; her event'in kendi görev listesi vardır
-///   (WonderDefinition.tasks). Her görev WonderDefinition.GetStarCost kadar yıldız harcar.
+///   (WonderDefinition.tasks). Her görev oyuncunun sırasına göre WonderCatalog.GetStarCost kadar yıldız harcar.
 /// • Her event'in ilerlemesi BAĞIMSIZ tutulur (wonder_stage_{index}) → bir event bitmeden
 ///   diğerinde de görev yapılabilir.
 /// • EVENT KİLİDİ = BÖLÜM (chapter): kaç event açık olduğu oyuncunun bulunduğu bölüme eşittir
@@ -126,7 +126,7 @@ public static class WonderProgress
         var w = cat != null ? cat.Get(index) : null;
         if (w == null) return 0;
         int stage = StageOf(index);
-        return stage >= w.TaskCount ? 0 : w.GetStarCost(stage);
+        return stage >= w.TaskCount ? 0 : cat.GetStarCost(index, stage);
     }
 
     public static bool CanAffordNextTask(WonderCatalog cat, int index)
@@ -162,7 +162,7 @@ public static class WonderProgress
         int stage = StageOf(index);
         if (stage >= w.TaskCount) return false;
 
-        int cost = w.GetStarCost(stage);
+        int cost = cat.GetStarCost(index, stage);
         if (!PlayerWallet.SpendStars(cost)) return false;
 
         SetStage(index, stage + 1);

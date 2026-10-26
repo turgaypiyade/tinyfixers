@@ -44,6 +44,12 @@ MonoBehaviour:
     volume: 1
     pitchJitter: 0.05
     maxDuration: 0.5
+  soilDig:
+    clips:
+    - {fileID: 8300000, guid: 57969017f6324f4d9a93115b9d0946e8, type: 3}
+    volume: 0.9
+    pitchJitter: 0.06
+    maxDuration: 0.7
   hammerTap:
     clips:
     - {fileID: 8300000, guid: e57ac2676011045a1a4495249093f06e, type: 3}

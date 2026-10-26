@@ -313,13 +313,13 @@ public sealed class RegionUnlockListPanel : MonoBehaviour
             string title = RowTitle(w, w.GetTaskName(row.stage), multiEvent);
 
             if (w.HasExplicitTaskIcon(row.stage))
-                item.BindTask(title, w.GetTaskIcon(row.stage), w.GetStarCost(row.stage),
+                item.BindTask(title, w.GetTaskIcon(row.stage), wonderCatalog.GetStarCost(row.eventIndex, row.stage),
                               this, isActive: row.isEventNext, wonderEventIndex: row.eventIndex);
             else
             {
                 // İkon yok → harika imajının (stage+1)/toplam kadar kaynaklanmış mini önizlemesi
                 float reveal = w.TaskCount > 0 ? (row.stage + 1f) / w.TaskCount : 1f;
-                item.BindTaskRevealIcon(title, w.backgroundSprite, reveal, w.GetStarCost(row.stage),
+                item.BindTaskRevealIcon(title, w.backgroundSprite, reveal, wonderCatalog.GetStarCost(row.eventIndex, row.stage),
                                         this, isActive: row.isEventNext, wonderEventIndex: row.eventIndex);
             }
 
@@ -334,7 +334,7 @@ public sealed class RegionUnlockListPanel : MonoBehaviour
                 var item = Instantiate(itemPrefab, itemsContainer);
                 item.SetInstantY(SlotY(slot));
                 item.BindTaskRevealIcon(RowTitle(locked, locked.GetTaskName(0), multiEvent),
-                                        locked.backgroundSprite, 0f, locked.GetStarCost(0),
+                                        locked.backgroundSprite, 0f, wonderCatalog.GetStarCost(unlocked, 0),
                                         this, isActive: false, wonderEventIndex: unlocked);
                 item.ApplyChapterLock(ChapterLockText());
                 items.Add(item);

@@ -2692,8 +2692,9 @@ public class TileView : MonoBehaviour,
 
         if (board != null)
         {
-            var sprite = board.GetIcon(type);
-            SetIcon(sprite);
+            // SetType changes the base colour, not the special. Keep its icon and
+            // child effects in sync with the model, including pooled normal tiles.
+            RefreshIcon();
         }
     }
 

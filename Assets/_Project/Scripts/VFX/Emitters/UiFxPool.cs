@@ -6,6 +6,7 @@ using UnityEngine.UI;
 /// LineV/LineH roket izi (after-image ghost) ve çarpma efekti için havuz SÜRÜCÜSÜ.
 /// Depolama tek yerde: UiVfxPool. Bu sınıf yalnız prefab'tan üretimi, ghost sönmesini (tek Update
 /// döngüsü) ve süreli efektin geri dönüşünü yönetir.
+/// PulseCore fitil kıvılcımları da aynı döngüde söner; taş/overlay kapanınca havuza döner.
 ///
 /// Neden: roket her hücre adımında 12 ghost + 2 impact üretiyordu; her biri yeni GameObject +
 /// AddComponent + kendi coroutine'i ile doğup ~0.3 sn sonra Destroy ediliyordu. Bonus turunda
@@ -20,6 +21,16 @@ public sealed class UiFxPool : MonoBehaviour
     private const int MaxGhostsPerKey = 512;   // bonus turunda aynı anda yüzlerce ghost sönüyor
     private const int MaxTimedPerKey = 128;
     private const string DefaultGhostKey = "LineTravelGhost:default";
+    internal const string PulseFuseSparkKey = "PulseCore:fuseSpark";
+    private const int MaxPulseSparksPerKey = 512;
+
+    private struct PulseFuseSpark
+    {
+        public Image image;
+        public RectTransform rect;
+        public Vector2 start, drift;
+        public float age, life, size;
+    }
 
     private struct Ghost
     {
@@ -43,6 +54,7 @@ public sealed class UiFxPool : MonoBehaviour
 
     private readonly List<Ghost> ghosts = new(256);
     private readonly List<Timed> timed = new(64);
+    private readonly List<PulseFuseSpark> pulseFuseSparks = new(128);
 
     private static UiFxPool Instance
     {
@@ -145,9 +157,53 @@ public sealed class UiFxPool : MonoBehaviour
 
     // ── Döngü ──────────────────────────────────────────────────────────────
 
+    internal static void TrackPulseFuseSpark(Image image, float life, float size)
+    {
+        var color = image.color;
+        color.a = 0f; // No full-opacity frame before the shared driver first advances it.
+        image.color = color;
+        Instance.pulseFuseSparks.Add(new PulseFuseSpark
+        {
+            image = image,
+            rect = image.rectTransform,
+            start = image.rectTransform.anchoredPosition,
+            drift = Random.insideUnitCircle.normalized * Random.Range(6f, 14f),
+            life = Mathf.Max(0.0001f, life),
+            size = size
+        });
+    }
+
+    private void UpdatePulseFuseSparks(float dt)
+    {
+        for (int i = pulseFuseSparks.Count - 1; i >= 0; i--)
+        {
+            var spark = pulseFuseSparks[i];
+            if (spark.image == null || spark.rect == null)
+            {
+                RemoveAtSwap(pulseFuseSparks, i);
+                continue;
+            }
+            spark.age += dt;
+            if (!spark.image.gameObject.activeInHierarchy || spark.age >= spark.life)
+            {
+                UiVfxPool.Return(PulseFuseSparkKey, spark.image.gameObject, MaxPulseSparksPerKey);
+                RemoveAtSwap(pulseFuseSparks, i);
+                continue;
+            }
+            float k = spark.age / spark.life;
+            spark.rect.anchoredPosition = spark.start + spark.drift * k;
+            var color = spark.image.color;
+            color.a = k < 0.25f ? k / 0.25f : 1f - (k - 0.25f) / 0.75f;
+            spark.image.color = color;
+            spark.rect.sizeDelta = Vector2.one * (spark.size * Mathf.Lerp(0.4f, 1f, Mathf.Sin(k * Mathf.PI)));
+            pulseFuseSparks[i] = spark;
+        }
+    }
+
     private void Update()
     {
         float dt = Time.deltaTime;   // eski FadeOnly ile aynı zaman kaynağı
+        UpdatePulseFuseSparks(dt);
 
         for (int i = ghosts.Count - 1; i >= 0; i--)
         {
