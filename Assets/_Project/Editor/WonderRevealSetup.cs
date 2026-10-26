@@ -23,7 +23,10 @@ public static class WonderRevealSetup
     static void PreviewRustRestoration()
     {
         var overlay = Object.FindFirstObjectByType<WonderRevealOverlay>(FindObjectsInactive.Include);
-        var wonder = AssetDatabase.LoadAssetAtPath<WonderDefinition>("Assets/_Project/Settings/Wonders/Wonder_mis1.asset");
+        // Project'te seçili harika (her çağrı bir sonraki görevi oynatır); seçim yoksa Wonder_mis1.
+        var wonder = Selection.activeObject as WonderDefinition;
+        if (wonder == null)
+            wonder = AssetDatabase.LoadAssetAtPath<WonderDefinition>("Assets/_Project/Settings/Wonders/Wonder_mis1.asset");
         if (overlay == null || wonder == null)
         {
             if (GameDiagnostics.EditorTools)

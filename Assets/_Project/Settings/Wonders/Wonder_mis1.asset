@@ -21,27 +21,78 @@ MonoBehaviour:
   - name: "Zemini Sa\u011Flamla\u015Ft\u0131r"
     icon: {fileID: 21300000, guid: 15a70c3da3064945bb4bb74af25bb7e5, type: 3}
     starCost: 0
+    action: 4
+    regions: []
   - name: "\u0130skeleyi Kur"
     icon: {fileID: 21300000, guid: 0149ac3d2ba142c49e79a8b44c7c4301, type: 3}
     starCost: 0
+    action: 0
+    regions:
+    - serializedVersion: 2
+      x: 0.69
+      y: 0.31
+      width: 0.11
+      height: 0.4
   - name: "Temel Ta\u015Flar\u0131n\u0131 Onar"
     icon: {fileID: 21300000, guid: 164c417e2cf5453ab447915656e66848, type: 3}
     starCost: 0
+    action: 0
+    regions:
+    - serializedVersion: 2
+      x: 0.38
+      y: 0.27
+      width: 0.34
+      height: 0.13
   - name: "S\xFCtunlar\u0131 Kaynakla"
     icon: {fileID: 21300000, guid: 6b497708e5124ea79b4a79473300d4af, type: 3}
     starCost: 0
+    action: 0
+    regions:
+    - serializedVersion: 2
+      x: 0.4
+      y: 0.4
+      width: 0.31
+      height: 0.16
   - name: "Kemerleri Yenile"
     icon: {fileID: 21300000, guid: 1fb0f30def2d4caca47e0accfe5ab2ea, type: 3}
     starCost: 0
+    action: 0
+    regions:
+    - serializedVersion: 2
+      x: 0.43
+      y: 0.56
+      width: 0.29
+      height: 0.17
   - name: "Mermeri Parlat"
     icon: {fileID: 21300000, guid: ad205e8cea27452285ac767f010c8d44, type: 3}
     starCost: 0
+    action: 5
+    regions:
+    - serializedVersion: 2
+      x: 0.38
+      y: 0.27
+      width: 0.34
+      height: 0.55
   - name: "\xC7an Kat\u0131n\u0131 Onar"
     icon: {fileID: 21300000, guid: c379b8fd59ef4cefaa152197af4525a3, type: 3}
     starCost: 0
+    action: 0
+    regions:
+    - serializedVersion: 2
+      x: 0.47
+      y: 0.73
+      width: 0.23
+      height: 0.09
   - name: "Bayra\u011F\u0131 Dik"
     icon: {fileID: 21300000, guid: 365a7eb126eb4ce5af2c91c86f6ad07d, type: 3}
     starCost: 0
+    action: 0
+    regions:
+    - serializedVersion: 2
+      x: 0.57
+      y: 0.82
+      width: 0.08
+      height: 0.05
   starCosts: 0300000003000000030000000200000003000000020000000300000005000000
   starCostBase: 5
   starCostStep: 5

@@ -1790,11 +1790,43 @@
         },
         {
           "key": "team_life_request_tag",
-          "value": "Can İsteği!"
+          "value": "Can İstiyor!"
         },
         {
           "key": "team_help",
           "value": "Yardım"
+        },
+        {
+          "key": "team_life_progress_label",
+          "value": "Alınan Can:"
+        },
+        {
+          "key": "team_life_request_mine",
+          "value": "Can İstedin"
+        },
+        {
+          "key": "team_quick_title",
+          "value": "Hızlı Mesaj"
+        },
+        {
+          "key": "team_quick_body",
+          "value": "Takımına tek dokunuşla yaz:"
+        },
+        {
+          "key": "team_quick_1",
+          "value": "Teşekkürler!"
+        },
+        {
+          "key": "team_quick_2",
+          "value": "Can lazım!"
+        },
+        {
+          "key": "team_quick_3",
+          "value": "Harika gidiyoruz!"
+        },
+        {
+          "key": "team_quick_4",
+          "value": "Hadi takım!"
         },
         {
           "key": "team_help_out",
@@ -4935,11 +4967,43 @@
         },
         {
           "key": "team_life_request_tag",
-          "value": "Life Request!"
+          "value": "Needs Lives!"
         },
         {
           "key": "team_help",
           "value": "Help"
+        },
+        {
+          "key": "team_life_progress_label",
+          "value": "Lives received:"
+        },
+        {
+          "key": "team_life_request_mine",
+          "value": "You asked"
+        },
+        {
+          "key": "team_quick_title",
+          "value": "Quick Message"
+        },
+        {
+          "key": "team_quick_body",
+          "value": "Message your team with one tap:"
+        },
+        {
+          "key": "team_quick_1",
+          "value": "Thanks!"
+        },
+        {
+          "key": "team_quick_2",
+          "value": "Need lives!"
+        },
+        {
+          "key": "team_quick_3",
+          "value": "Great job, team!"
+        },
+        {
+          "key": "team_quick_4",
+          "value": "Let's go, team!"
         },
         {
           "key": "team_help_out",

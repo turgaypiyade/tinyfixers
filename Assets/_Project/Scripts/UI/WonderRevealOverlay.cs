@@ -23,6 +23,7 @@ public class WonderRevealOverlay : MonoBehaviour
 
     WonderScene _scene;
     int _previewStage;
+    WonderDefinition _previewWonder;   // önizlenen harika değişince ilk görevden başla
     public bool IsPlaying { get; private set; }
 
     /// <summary>Editor preview uses the real overlay without spending stars or saving progress.</summary>
@@ -40,6 +41,7 @@ public class WonderRevealOverlay : MonoBehaviour
         try
         {
             int stages = Mathf.Max(1, wonder.TaskCount);
+            if (_previewWonder != wonder) { _previewWonder = wonder; _previewStage = 0; }
             float from = (_previewStage++ % stages) / (float)stages;
             yield return PrepareReveal(wonder, from, true);
             var view = _scene.View;

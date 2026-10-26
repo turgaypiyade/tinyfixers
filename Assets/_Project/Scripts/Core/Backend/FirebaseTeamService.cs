@@ -27,6 +27,9 @@ public sealed class FirebaseTeamService : ITeamService, IDisposable
     private readonly List<TeamChatMessage> botChat = new();
     private readonly List<TeamChatMessage> realChat = new();
     private ListenerRegistration chatListener;
+    private ListenerRegistration lifeListener;
+    // Takım arkadaşlarının son 24 saatteki can istekleri (Firestore; kendi isteğim hariç — o yerel kartta).
+    private readonly List<TeamLifeRequest> realLifeRequests = new();
 
     // Lokalizasyon anahtarları (bot mesajı oyuncunun dilinde).
     private static readonly string[] BotChatPool =
@@ -80,6 +83,11 @@ public sealed class FirebaseTeamService : ITeamService, IDisposable
             OnChanged?.Invoke();
         });
 
+        // Can istekleri: takım arkadaşlarınınki kart olarak; kendi dokümanımdaki yardımcılar → "Kabul Et" cevapları.
+        lifeListener = FirebaseTeamCloud.LifeRequests(teamId)
+            .WhereGreaterThan("createdAt", Timestamp.FromDateTime(DateTime.UtcNow.AddHours(-24)))
+            .Listen(OnLifeRequests);
+
         // Canlı sohbet dinleyicisi (local-cache yazımları da anında düşer).
         chatListener = FirebaseTeamCloud.TeamDoc(teamId).Collection("chat")
             .OrderByDescending("sentAt").Limit(ChatLimit)
@@ -106,6 +114,48 @@ public sealed class FirebaseTeamService : ITeamService, IDisposable
                 }
                 OnChanged?.Invoke();
             });
+    }
+
+    private void OnLifeRequests(QuerySnapshot snapshot)
+    {
+        if (disposed) return;
+        string me = FirebaseAuthService.UserId;
+        realLifeRequests.Clear();
+        foreach (var doc in snapshot.Documents)
+        {
+            var helpers = doc.ContainsField("helpers") ? doc.GetValue<Dictionary<string, object>>("helpers") : null;
+            long created = doc.ContainsField("createdAt") ? SafeTicks(doc, "createdAt") : DateTime.UtcNow.Ticks;
+            if (doc.Id == me)
+            {
+                if (helpers != null && helpers.Count > 0) LifeInbox.ReceiveRealHelpers(created, HelperNames(helpers));
+                continue;
+            }
+            if (ChatModeration.IsBlocked(doc.Id)) continue;
+            int needed = doc.ContainsField("needed") ? (int)doc.GetValue<long>("needed") : 5;
+            realLifeRequests.Add(new TeamLifeRequest
+            {
+                requesterId = doc.Id,
+                requesterName = ChatModeration.Filter(doc.ContainsField("requesterName")
+                    ? doc.GetValue<string>("requesterName") : GameLocalization.Get("team_player")),
+                createdTicks = created,
+                current = helpers?.Count ?? 0,
+                needed = Mathf.Max(1, needed),
+                helpedByMe = helpers != null && me != null && helpers.ContainsKey(me),
+            });
+        }
+        OnChanged?.Invoke();
+    }
+
+    private static IEnumerable<KeyValuePair<string, string>> HelperNames(Dictionary<string, object> helpers)
+    {
+        foreach (var kv in helpers)
+            yield return new KeyValuePair<string, string>(kv.Key, ChatModeration.Filter(kv.Value as string ?? ""));
+    }
+
+    private static long SafeTicks(DocumentSnapshot doc, string field)
+    {
+        try { return doc.GetValue<Timestamp>(field).ToDateTime().Ticks; }
+        catch { return DateTime.UtcNow.Ticks; }   // sunucu zamanı henüz yazılmadı (yerel önbellek)
     }
 
     // Bot takımın "yaşayan" sohbeti: takım seed'inden deterministik birkaç mesaj.
@@ -162,12 +212,25 @@ public sealed class FirebaseTeamService : ITeamService, IDisposable
         return merged;
     }
 
-    public List<TeamLifeRequest> GetLifeRequests() => new();
-    public bool Help(TeamLifeRequest request) => false;
+    public List<TeamLifeRequest> GetLifeRequests() => realLifeRequests;
 
+    /// Takım arkadaşının isteğine 1 can (ücretsiz yardım kuralı; kendi canımdan düşmez). İyimser: kart hemen "Gönderildi".
+    public bool Help(TeamLifeRequest request)
+    {
+        if (disposed || request == null || request.helpedByMe || string.IsNullOrEmpty(request.requesterId)
+            || request.current >= request.needed) return false;
+        FirebaseTeamCloud.HelpLife(teamId, request.requesterId);
+        request.helpedByMe = true;
+        request.current++;
+        OnChanged?.Invoke();
+        return true;
+    }
+
+    // İstek Firestore'a yazılır (takım arkadaşları kartı görür); botlar yerel kutudan cevap vermeye devam eder.
     public void RequestLife()
     {
-        if (!disposed && LifeInbox.Request(DateTime.UtcNow)) SendMessage(GameLocalization.Get("team_chat_life_requested"));
+        if (!disposed && LifeInbox.Request(DateTime.UtcNow))
+            FirebaseTeamCloud.RequestLife(teamId, LifeInbox.RequestTotal);
     }
 
     public void SendMessage(string text)
@@ -191,6 +254,8 @@ public sealed class FirebaseTeamService : ITeamService, IDisposable
         ChatModeration.OnBlockedChanged -= HandleBlockedChanged;
         chatListener?.Stop();
         chatListener = null;
+        lifeListener?.Stop();
+        lifeListener = null;
         FirebaseAuthService.OnReady -= Connect;
     }
 }

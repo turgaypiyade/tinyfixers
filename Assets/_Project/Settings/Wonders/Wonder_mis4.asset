@@ -21,27 +21,88 @@ MonoBehaviour:
   - name: "Kumu Temizle"
     icon: {fileID: 21300000, guid: 15a70c3da3064945bb4bb74af25bb7e5, type: 3}
     starCost: 0
+    action: 4
+    regions: []
   - name: "Temeli D\xFCzle"
     icon: {fileID: 21300000, guid: 15a70c3da3064945bb4bb74af25bb7e5, type: 3}
     starCost: 0
+    action: 0
+    regions:
+    - serializedVersion: 2
+      x: 0.13
+      y: 0.4
+      width: 0.82
+      height: 0.07
   - name: "Rampay\u0131 Kur"
     icon: {fileID: 21300000, guid: 0149ac3d2ba142c49e79a8b44c7c4301, type: 3}
     starCost: 0
+    action: 0
+    regions:
+    - serializedVersion: 2
+      x: 0.55
+      y: 0.4
+      width: 0.2
+      height: 0.05
   - name: "Ta\u015F Bloklar\u0131 Ta\u015F\u0131"
     icon: {fileID: 21300000, guid: 164c417e2cf5453ab447915656e66848, type: 3}
     starCost: 0
+    action: 0
+    regions:
+    - serializedVersion: 2
+      x: 0.18
+      y: 0.46
+      width: 0.64
+      height: 0.06
+    - serializedVersion: 2
+      x: 0.24
+      y: 0.52
+      width: 0.52
+      height: 0.06
   - name: "Katlar\u0131 Diz"
     icon: {fileID: 21300000, guid: 164c417e2cf5453ab447915656e66848, type: 3}
     starCost: 0
+    action: 0
+    regions:
+    - serializedVersion: 2
+      x: 0.33
+      y: 0.58
+      width: 0.34
+      height: 0.06
+    - serializedVersion: 2
+      x: 0.4
+      y: 0.64
+      width: 0.2
+      height: 0.06
   - name: "Ge\xE7itleri A\xE7"
     icon: {fileID: 21300000, guid: 1fb0f30def2d4caca47e0accfe5ab2ea, type: 3}
     starCost: 0
+    action: 0
+    regions:
+    - serializedVersion: 2
+      x: 0.5
+      y: 0.44
+      width: 0.19
+      height: 0.15
   - name: "Kire\xE7 Ta\u015F\u0131n\u0131 Parlat"
     icon: {fileID: 21300000, guid: ad205e8cea27452285ac767f010c8d44, type: 3}
     starCost: 0
+    action: 5
+    regions:
+    - serializedVersion: 2
+      x: 0.18
+      y: 0.4
+      width: 0.69
+      height: 0.36
   - name: "Alt\u0131n Tepeyi Yerle\u015Ftir"
     icon: {fileID: 21300000, guid: 365a7eb126eb4ce5af2c91c86f6ad07d, type: 3}
     starCost: 0
+    action: 0
+    regions:
+    - serializedVersion: 2
+      x: 0.48
+      y: 0.7
+      width: 0.11
+      height: 0.06
   starCosts: 0300000003000000030000000200000003000000030000000200000005000000
   starCostBase: 5
   starCostStep: 5

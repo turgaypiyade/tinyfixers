@@ -21,27 +21,93 @@ MonoBehaviour:
   - name: "İskeleyi Kur"
     icon: {fileID: 21300000, guid: 0149ac3d2ba142c49e79a8b44c7c4301, type: 3}
     starCost: 0
+    action: 4
+    regions: []
   - name: "Kaideleri Sağlamlaştır"
     icon: {fileID: 21300000, guid: 164c417e2cf5453ab447915656e66848, type: 3}
     starCost: 0
+    action: 0
+    regions:
+    - serializedVersion: 2
+      x: 0.08
+      y: 0.33
+      width: 0.25
+      height: 0.15
+    - serializedVersion: 2
+      x: 0.55
+      y: 0.33
+      width: 0.23
+      height: 0.15
   - name: "Bronz Bacakları Kaynakla"
     icon: {fileID: 21300000, guid: 6b497708e5124ea79b4a79473300d4af, type: 3}
     starCost: 0
+    action: 0
+    regions:
+    - serializedVersion: 2
+      x: 0.22
+      y: 0.47
+      width: 0.16
+      height: 0.15
+    - serializedVersion: 2
+      x: 0.55
+      y: 0.47
+      width: 0.15
+      height: 0.15
   - name: "Perçinleri Sabitle"
     icon: {fileID: 21300000, guid: 861895ed49f64747b1b994c9efd78928, type: 3}
     starCost: 0
+    action: 0
+    regions:
+    - serializedVersion: 2
+      x: 0.33
+      y: 0.68
+      width: 0.25
+      height: 0.12
   - name: "Pelerini Onar"
     icon: {fileID: 21300000, guid: 1fb0f30def2d4caca47e0accfe5ab2ea, type: 3}
     starCost: 0
+    action: 0
+    regions:
+    - serializedVersion: 2
+      x: 0.32
+      y: 0.55
+      width: 0.4
+      height: 0.15
   - name: "Bronzu Parlat"
     icon: {fileID: 21300000, guid: ad205e8cea27452285ac767f010c8d44, type: 3}
     starCost: 0
+    action: 5
+    regions:
+    - serializedVersion: 2
+      x: 0.2
+      y: 0.47
+      width: 0.52
+      height: 0.45
   - name: "Güneş Tacını Tak"
     icon: {fileID: 21300000, guid: 365a7eb126eb4ce5af2c91c86f6ad07d, type: 3}
     starCost: 0
+    action: 0
+    regions:
+    - serializedVersion: 2
+      x: 0.38
+      y: 0.79
+      width: 0.18
+      height: 0.11
   - name: "Meşaleyi Yak"
     icon: {fileID: 21300000, guid: 3b929942fbef4f1081d53ef3f7ed1084, type: 3}
     starCost: 0
+    action: 3
+    regions:
+    - serializedVersion: 2
+      x: 0.2
+      y: 0.89
+      width: 0.12
+      height: 0.11
+    - serializedVersion: 2
+      x: 0.22
+      y: 0.76
+      width: 0.15
+      height: 0.13
   starCosts: 0300000003000000030000000200000003000000030000000200000005000000
   starCostBase: 5
   starCostStep: 5

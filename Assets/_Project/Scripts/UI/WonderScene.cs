@@ -60,6 +60,7 @@ public class WonderScene : MonoBehaviour
         view.welderFrames = def.welderFrames;
         view.welderFps = def.welderFps;
         view.previewReveal = 0f;
+        view.SetTaskRegions(WonderTaskRegions.From(def));   // görev metni = resimde açılan yer
         var bgRt = (RectTransform)bg.transform;
 
         // --- Kaynakçı -------------------------------------------------

@@ -121,6 +121,17 @@ public class FortuneWheelController : MonoBehaviour
         if (spinButton  != null) spinButton.onClick.AddListener(OnSpinClicked);
         if (claimButton != null) claimButton.onClick.AddListener(OnClaimClicked);
         if (panelRoot   != null) panelRoot.SetActive(false);
+        RemoveFauxBold();
+    }
+
+    // Çarktaki yazıların fontu zaten ExtraBold; sahnede açık kalan "Bold" işareti sahte kalınlık ekleyip harf
+    // kenarlarını yumuşatıyordu (bulanık görünüm). Kalın font asset'inde Bold kapalı olmalı.
+    private void RemoveFauxBold()
+    {
+        if (panelRoot == null) return;
+        foreach (var text in panelRoot.GetComponentsInChildren<TMP_Text>(true))
+            if (text.font != null && text.font.name.Contains("Bold"))
+                text.fontStyle &= ~FontStyles.Bold;
     }
 
     // ── Public API ───────────────────────────────────────────────────────────
@@ -244,6 +255,9 @@ public class FortuneWheelController : MonoBehaviour
 
         for (int i = innerWheel.childCount - 1; i >= 0; i--)
             Destroy(innerWheel.GetChild(i).gameObject);
+        // Önceki kazanmada çerçevenin üstüne taşınan dilim çarkın dışında kaldı: o da gitsin.
+        if (liftedWinner != null) Destroy(liftedWinner.gameObject);
+        liftedWinner = null;
 
         int count = Mathf.Min(config.rewards.Count, 8);
         if (count <= 0) return;
@@ -325,7 +339,7 @@ public class FortuneWheelController : MonoBehaviour
             if (amountFont != null) tmp.font = amountFont;
             // Ödül yazısı ortak stili (altın outline + gölge); stil yoksa eski görünüm.
             TextAlignmentOptions segmentAlign = tmp.alignment;
-            RewardTextStyle.Apply(tmp, Mathf.Max(amountFontSize, tmp.fontSize) * 1.3f);
+            RewardTextStyle.ApplySharp(tmp, Mathf.Max(amountFontSize, tmp.fontSize) * 1.3f);   // küçük yazı: dar, net gölge
             tmp.alignment = segmentAlign;
             tmp.textWrappingMode = TMPro.TextWrappingModes.NoWrap;
             tmp.overflowMode = TextOverflowModes.Overflow;
@@ -457,24 +471,26 @@ public class FortuneWheelController : MonoBehaviour
         isSpinning = false;
     }
 
+    // Zıplama kazanan dilimde (çerçevenin üstünde); bütün çark büyüyünce kenarı çerçevenin altına giriyordu.
     private IEnumerator PlayWinPunch()
     {
-        if (innerWheel == null) yield break;
-        Vector3 start = innerWheel.localScale;
+        Transform target = liftedWinner != null ? liftedWinner : innerWheel;
+        if (target == null) yield break;
+        Vector3 start = target.localScale;
         Vector3 peak  = start * winPunchScale;
         float   half  = winPunchDuration * 0.5f;
 
         for (float t = 0f; t < half; t += Time.unscaledDeltaTime)
         {
-            innerWheel.localScale = Vector3.Lerp(start, peak, Mathf.SmoothStep(0f, 1f, t / half));
+            target.localScale = Vector3.Lerp(start, peak, Mathf.SmoothStep(0f, 1f, t / half));
             yield return null;
         }
         for (float t = 0f; t < half; t += Time.unscaledDeltaTime)
         {
-            innerWheel.localScale = Vector3.Lerp(peak, start, Mathf.SmoothStep(0f, 1f, t / half));
+            target.localScale = Vector3.Lerp(peak, start, Mathf.SmoothStep(0f, 1f, t / half));
             yield return null;
         }
-        innerWheel.localScale = start;
+        target.localScale = start;
     }
 
     // ── Config Helpers ───────────────────────────────────────────────────────
@@ -581,7 +597,7 @@ public class FortuneWheelController : MonoBehaviour
             winnerText.text = $"+{selectedReward.amount} {selectedReward.DisplayName}";
 
             // Büyük, altın outline'lı ödül yazısı; ikonun (200px) altında nefes payıyla, geniş kutuda.
-            RewardTextStyle.Apply(winnerText, winnerTextSize);
+            RewardTextStyle.ApplySharp(winnerText, winnerTextSize);
             var textRt = winnerText.rectTransform;
             textRt.sizeDelta = new Vector2(winnerTextWidth, winnerTextSize * 1.5f);
             textRt.anchoredPosition = new Vector2(textRt.anchoredPosition.x, winnerTextOffsetY);
@@ -622,12 +638,26 @@ public class FortuneWheelController : MonoBehaviour
         rt.localScale = Vector3.one;
     }
 
+    // Kazanan dilim büyüyünce dış çerçevenin (OuterFrame, çarkın üstünde çizilir) altında kalıyordu: dilim
+    // aynı yerinde kalarak çarkın dışına, çerçeve/okun ÜSTÜNE ama karartma ve ödül penceresinin ALTINA taşınır.
+    private Transform liftedWinner;
+
     private IEnumerator HighlightWinner()
     {
         if (innerWheel == null || selectedIndex < 0 || selectedIndex >= innerWheel.childCount)
             yield break;
 
         var winner    = innerWheel.GetChild(selectedIndex);
+        var layer     = innerWheel.parent;
+        if (layer != null)
+        {
+            winner.SetParent(layer, worldPositionStays: true);
+            int above = dimOverlay != null && dimOverlay.transform.parent == layer
+                ? dimOverlay.transform.GetSiblingIndex()
+                : (winnerDisplay != null && winnerDisplay.transform.parent == layer ? winnerDisplay.transform.GetSiblingIndex() : layer.childCount - 1);
+            winner.SetSiblingIndex(above);
+            liftedWinner = winner;
+        }
         Vector3 base_ = winner.localScale;
         Vector3 peak  = base_ * winnerHighlightScale;
         float   dur   = 0.25f;

@@ -40,6 +40,14 @@ public sealed class ButtonShine : MonoBehaviour
     /// <summary>Kodla kurulan butonlar için: nefes almayı aç/kapa (yalnız birincil buton nefes alsın).</summary>
     public void Configure(bool breathing) => breathe = breathing;
 
+    /// Temel ölçeği dışarıdan ver (ör. sarı çerçeve içinde küçültülen buton) — nefes alma bu ölçekten.
+    public void SetBaseScale(Vector3 scale)
+    {
+        baseScale = scale;
+        baseScaleCaptured = true;
+        transform.localScale = scale;
+    }
+
     private void Awake()
     {
         target = GetComponent<Image>();

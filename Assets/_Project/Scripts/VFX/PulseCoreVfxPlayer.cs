@@ -16,6 +16,9 @@ public class PulseCoreVfxPlayer : MonoBehaviour
 
     public RectTransform VfxRoot => vfxRoot;
 
+    private readonly System.Collections.Generic.Stack<PulseCoreExplosionFX> pulsePool = new();
+    private System.Action<PulseCoreExplosionFX> returnToPool;
+
     [Header("Teleport VFX")]
     public RectTransform TeleportMarkerPrefab; // VFX_TeleportMarker_UI prefab (RectTransform)
 
@@ -43,15 +46,27 @@ public class PulseCoreVfxPlayer : MonoBehaviour
             return;
         }
 
-        // Yeni prefab sistemini kullan
-        var go = Instantiate(pulsePrefab, vfxRoot);
-        var rt = go.GetComponent<RectTransform>();
+        // Havuz: zincirde art arda onlarca patlama — Instantiate + 12 Shadow AddComponent + Destroy yerine yeniden kullan.
+        PulseCoreExplosionFX fx = null;
+        while (fx == null && pulsePool.Count > 0) fx = pulsePool.Pop();
+        RectTransform rt;
+        if (fx != null)
+        {
+            rt = (RectTransform)fx.transform;
+            fx.ResetTimingForReuse();
+        }
+        else
+        {
+            rt = Instantiate(pulsePrefab, vfxRoot);
+            rt.gameObject.SetActive(false);   // ayarlar OnEnable'dan önce verilsin
+            fx = rt.GetComponent<PulseCoreExplosionFX>();
+            if (fx != null) fx.ReturnToPool = returnToPool ??= f => pulsePool.Push(f);
+        }
         rt.anchoredPosition = centerLocalPos;
         rt.localScale = Vector3.one;
         rt.SetAsLastSibling();
 
         // Yeni script'in boyutunu hücre sayısına göre ayarla
-        var fx = go.GetComponent<PulseCoreExplosionFX>();
         if (fx != null)
         {
             fx.SetRadiusCells(radiusCells, tileSize);
@@ -62,8 +77,7 @@ public class PulseCoreVfxPlayer : MonoBehaviour
         {
             onRadiusPx?.Invoke(float.MaxValue);
         }
-
-        // Eski coroutine'e gerek yok, prefab kendi OnEnable'ında başlıyor
+        rt.gameObject.SetActive(true);   // prefab kendi OnEnable'ında başlar
     }
 
     public void PlayLightningAtTile(TileView tile, float duration)

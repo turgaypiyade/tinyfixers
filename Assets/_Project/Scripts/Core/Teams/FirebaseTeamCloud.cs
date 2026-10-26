@@ -184,6 +184,36 @@ public static class FirebaseTeamCloud
         });
     }
 
+    // ── Can isteği ──────────────────────────────────────────────────
+    //   teams/{id}/lifeRequests/{uid}: requesterId, requesterName, needed (1-5),
+    //   helpers {uid: ad} (her takım arkadaşı en fazla 1 can), createdAt
+    // Her oyuncunun takımda tek aktif isteği (doküman id = uid); yeni istek eskisinin üstüne yazar.
+
+    public static CollectionReference LifeRequests(string teamId) => TeamDoc(teamId).Collection("lifeRequests");
+
+    public static void RequestLife(string teamId, int needed)
+    {
+        if (string.IsNullOrWhiteSpace(teamId) || !FirebaseAuthService.IsReady) return;
+        LifeRequests(teamId).Document(FirebaseAuthService.UserId).SetAsync(new Dictionary<string, object>
+        {
+            { "requesterId", FirebaseAuthService.UserId },
+            { "requesterName", ChatModeration.Filter(PlayerProfile.PlayerName) },
+            { "needed", (long)Mathf.Clamp(needed, 1, 5) },
+            { "helpers", new Dictionary<string, object>() },
+            { "createdAt", FieldValue.ServerTimestamp },
+        }).ContinueWithOnMainThread(LogIfFailed("life-request"));
+    }
+
+    /// <summary>Takım arkadaşının isteğine 1 can: yalnız kendi uid'imi helpers'a eklerim (kurallar doğrular).</summary>
+    public static void HelpLife(string teamId, string requesterId)
+    {
+        if (string.IsNullOrWhiteSpace(teamId) || string.IsNullOrWhiteSpace(requesterId) || !FirebaseAuthService.IsReady) return;
+        LifeRequests(teamId).Document(requesterId).UpdateAsync(new Dictionary<string, object>
+        {
+            { "helpers." + FirebaseAuthService.UserId, ChatModeration.Filter(PlayerProfile.PlayerName) },
+        }).ContinueWithOnMainThread(LogIfFailed("life-help"));
+    }
+
     // ── yardımcılar ─────────────────────────────────────────────────
 
     private static void AddSelfMember(DocumentReference teamDoc)

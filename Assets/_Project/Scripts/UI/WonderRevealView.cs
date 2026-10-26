@@ -76,6 +76,7 @@ public class WonderRevealView : MonoBehaviour
     bool _welding;
     int _animationVersion;
     float _reveal;
+    WonderTaskRegions _regions;   // null → eski eğri parça düzeni
     static readonly int RevealId = Shader.PropertyToID("_Reveal");
     static readonly int RestorationId = Shader.PropertyToID("_Restoration");
     static readonly int RestorationRectId = Shader.PropertyToID("_RestorationRect");
@@ -86,6 +87,9 @@ public class WonderRevealView : MonoBehaviour
     static readonly int TorchId = Shader.PropertyToID("_Torch");
     static readonly int RhodesTorchId = Shader.PropertyToID("_RhodesTorch");
     static readonly int RegionFinishId = Shader.PropertyToID("_RegionFinish");
+    static readonly int TaskRegionsId = Shader.PropertyToID("_TaskRegions");
+    static readonly int TaskBoundsId = Shader.PropertyToID("_TaskBounds");
+    static readonly int TaskAnimId = Shader.PropertyToID("_TaskAnim");
 
     Image WelderImage
     {
@@ -181,6 +185,18 @@ public class WonderRevealView : MonoBehaviour
             return;
         }
         _anim = StartCoroutine(AnimateTo(target, _animationVersion));
+    }
+
+    /// <summary>
+    /// Görev bölgeleri: her görev resimde metninin söylediği yeri açar (WonderDefinition.tasks[].regions).
+    /// null → eski eğri parça düzeni. Yalnız paslı restorasyon modunda etkili.
+    /// </summary>
+    public void SetTaskRegions(WonderTaskRegions regions)
+    {
+        _regions = regions;
+        EnsureMaterial();
+        _regions?.ApplyTo(_mat);
+        ApplyReveal(_reveal);
     }
 
     /// <summary>Ham _Reveal önizleme (animasyonsuz, test slider'ı için).</summary>
@@ -291,8 +307,31 @@ public class WonderRevealView : MonoBehaviour
             for (int stage = first; stage < end; stage++)
             {
                 if (!AnimationIsCurrent(version)) yield break;
-                int cell = WonderRestorationLayout.CellForStage(stage, count);
+                bool regionsOn = _regions != null;
+                // Görev bölgesi varsa sıra = görev sırası (metindeki parça açılır); yoksa eski karışık parça sırası.
+                int cell = regionsOn ? stage : WonderRestorationLayout.CellForStage(stage, count);
                 ApplyReveal((float)stage / count);
+                var action = regionsOn ? _regions.Action(stage) : WonderTaskAction.Repair;
+                if (regionsOn) _mat.SetVector(TaskBoundsId, _regions.BoundsVector(stage));
+                if (action != WonderTaskAction.Repair)
+                {
+                    // Parlat / Boya / Işık / Temizle: kaynakçı yok, bölgede ilerleyen cephe.
+                    StopWeldingEffects(true);
+                    if (welderRobot != null) welderRobot.gameObject.SetActive(false);
+                    float sweepDuration = Mathf.Max(0.3f, animateDuration);
+                    for (float t = 0f; t < sweepDuration;)
+                    {
+                        if (!AnimationIsCurrent(version)) yield break;
+                        t += Time.deltaTime;
+                        float p = ease.Evaluate(Mathf.Clamp01(t / sweepDuration));
+                        _mat.SetVector(TaskAnimId, new Vector4(stage, p, (int)action, 1f));
+                        yield return null;
+                    }
+                    if (!AnimationIsCurrent(version)) yield break;
+                    _mat.SetVector(TaskAnimId, Vector4.zero);
+                    ApplyReveal((float)(stage + 1) / count);
+                    continue;
+                }
                 StopWeldingEffects(true);
                 ResetWelderFrame();
                 if (welderRobot != null) welderRobot.gameObject.SetActive(true);
@@ -331,7 +370,8 @@ public class WonderRevealView : MonoBehaviour
                 StopWeldingEffects(false);
                 _mat.SetVector(TorchId, Vector4.zero);
                 EnsureFallingPiece();
-                _fallingPiece.Begin(_image.sprite, _mat, _rt.rect, cell, count);
+                if (regionsOn) _fallingPiece.BeginTask(_image.sprite, _mat, _rt.rect, _regions, stage);
+                else _fallingPiece.Begin(_image.sprite, _mat, _rt.rect, cell, count);
                 _mat.SetVector(RegionFinishId, new Vector4(stage, 0f, 1f, 0f));
                 float settleDuration = Mathf.Max(0.1f, restorationDuration);
                 for (float t = 0f; t < settleDuration;)
@@ -451,6 +491,7 @@ public class WonderRevealView : MonoBehaviour
         _mat.SetVector(RegionCutId, Vector4.zero);
         _mat.SetVector(RegionFinishId, Vector4.zero);
         _mat.SetVector(TorchId, Vector4.zero);
+        _mat.SetVector(TaskAnimId, Vector4.zero);
     }
 
     void CancelAnimation()
@@ -491,6 +532,7 @@ public class WonderRevealView : MonoBehaviour
         if (_mat.HasProperty(RhodesTorchId))
             _mat.SetFloat(RhodesTorchId, HasRhodesTorch(_image.sprite) ? 1f : 0f);
         _mat.SetFloat(RestorationId, useRustRestoration ? 1f : 0f);
+        _mat.SetFloat(TaskRegionsId, useRustRestoration && _regions != null ? 1f : 0f);
         _mat.SetFloat(RegionCountId, Mathf.Max(1, totalStages));
         _mat.SetFloat(RegionStrideId, WonderRestorationLayout.Stride(totalStages));
         _mat.SetVector(SpriteUVRectId, _image.sprite != null
@@ -511,7 +553,8 @@ public class WonderRevealView : MonoBehaviour
 
     void UpdateRestorationWelder(int cell, float progress)
     {
-        Vector2 uv = WonderRestorationLayout.Point(cell, Mathf.Max(1, totalStages), progress);
+        Vector2 uv = _regions != null ? _regions.Point(cell, progress)
+            : WonderRestorationLayout.Point(cell, Mathf.Max(1, totalStages), progress);
         // Map follows the photo's local rect, independent of sprite atlas packing.
         Rect rect = _rt.rect;
         Vector3 local = new Vector3(Mathf.Lerp(rect.xMin, rect.xMax, uv.x),

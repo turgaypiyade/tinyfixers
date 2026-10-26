@@ -61,13 +61,37 @@ public sealed class CommonPopupView : MonoBehaviour
 
     private void LateUpdate() => Fit();
 
+    // PreLevel / Gear Cup gibi: kök tam ekran, panel GÜVENLİ ALANIN genişliğini doldurur (eskiden en fazla 900 px
+    // kalıyordu, PreLevel'den küçük görünüyordu); uzun ekranda değil kısa ekranda yüksekliğe göre küçülür.
+    private Canvas rootCanvas;
+
     private void Fit()
     {
         if (host == null || panel == null || host.rect.width <= 0 || host.rect.height <= 0) return;
-        float scale = Mathf.Min(1, (host.rect.width - 32) / panel.sizeDelta.x,
-            (host.rect.height - 48) / panel.sizeDelta.y);
+        Vector2 viewport = SafeViewport();
+        float scale = Mathf.Min(viewport.x / panel.sizeDelta.x, (viewport.y - 48) / panel.sizeDelta.y);
         float anim = entrance != null ? entrance.ScaleFactor : 1f;
         panel.localScale = Vector3.one * Mathf.Max(0.01f, scale) * anim;
+    }
+
+    // Host dikdörtgeninin Screen.safeArea ile kesişimi (host yerel birimi). Host zaten güvenli alan içindeyse kendisi.
+    private Vector2 SafeViewport()
+    {
+        Rect r = host.rect;
+        if (Screen.width <= 0 || Screen.height <= 0) return r.size;
+        if (rootCanvas == null)
+        {
+            var c = host.GetComponentInParent<Canvas>();   // ?. kullanma: Unity sahte-null tuzağı
+            if (c != null) rootCanvas = c.rootCanvas;
+        }
+        Camera cam = rootCanvas != null && rootCanvas.renderMode != RenderMode.ScreenSpaceOverlay ? rootCanvas.worldCamera : null;
+        Rect safe = Screen.safeArea;
+        if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(host, safe.min, cam, out var min)
+            || !RectTransformUtility.ScreenPointToLocalPointInRectangle(host, safe.max, cam, out var max))
+            return r.size;
+        float w = Mathf.Min(r.xMax, max.x) - Mathf.Max(r.xMin, min.x);
+        float h = Mathf.Min(r.yMax, max.y) - Mathf.Max(r.yMin, min.y);
+        return w > 0f && h > 0f ? new Vector2(w, h) : r.size;
     }
 
     public static RectTransform NewRect(Transform parent, string name, Vector2 size)
@@ -87,7 +111,9 @@ public sealed class CommonPopupView : MonoBehaviour
         rt.anchorMax = region.max;
         rt.pivot = new Vector2(0.5f, 0.5f);
         rt.offsetMin = rt.offsetMax = Vector2.zero;
-        rt.localScale = Vector3.one;
+        // Sarı çerçeveli buton çerçevenin içinde küçük durur; yerleştirme bu ölçeği sıfırlamasın
+        // (aksi halde buton tam boya döner ve çerçeve tamamen arkasında kalır).
+        rt.localScale = rt.TryGetComponent(out ButtonFrameBacking framed) ? framed.ButtonScale : Vector3.one;
     }
 
     public static void Place(Component item, Transform parent, Rect region)
@@ -229,6 +255,12 @@ public sealed class CommonPopupView : MonoBehaviour
                 shine = button.gameObject.AddComponent<ButtonShine>();
             shine.Configure(isFooterAction);
         }
+
+        // Alttaki yeşil/mavi butonlar: PreLevel'deki gibi sarı çerçeve, butonun eski boyunda (buton içeride küçülür).
+        // Kendi "Actions" alanını kuran popup'lar (Gear Cup) dahil.
+        if (labelMaterial != null
+            && (isFooterAction || (button.transform.parent != null && button.transform.parent.name == "Actions")))
+            ButtonFrameBacking.Attach(button, CommonPopupSkin.Shared.continueButtonFrame);
     }
 
     /// Başlık/buton gösterim fontu: font değişirse punto büyük harf yüksekliği oranında telafi edilir

@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Arka plan level simülasyonu — gerçek oyunu penceresiz (headless) oynatır.
+r"""Arka plan level simülasyonu — gerçek oyunu penceresiz (headless) oynatır.
 
-Önce sim build'i alınmış olmalı: Unity ▸ TinyFixers ▸ Sim ▸ Build Headless Sim (Mac)
-(çıktı: Builds/Sim/TinyFixersSim.app).
+Önce sim build'i alınmış olmalı: Unity ▸ TinyFixers ▸ Sim ▸ Build Headless Sim (Mac / Windows)
+(çıktı: Builds/Sim/TinyFixersSim.app  ya da  Builds/Sim/Win/TinyFixersSim.exe).
+Windows: py Tools\Sim\run_sim.py --levels 1-200 --games 30 --jobs 12
 
 Örnek:
   python3 Tools/Sim/run_sim.py --levels 90-110 --games 20 --speed 10 --jobs 4
@@ -16,6 +17,7 @@ import argparse, csv, datetime, json, os, signal, subprocess, sys, time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 APP = os.path.join(ROOT, "Builds", "Sim", "TinyFixersSim.app")
+WIN_EXE = os.path.join(ROOT, "Builds", "Sim", "Win", "TinyFixersSim.exe")
 POLICIES = {"Random": 0, "GoalAware": 1, "Greedy": 2}   # RuntimeBotPolicy (JsonUtility enum = int)
 
 
@@ -32,6 +34,10 @@ def parse_levels(spec):
 
 
 def find_binary():
+    if sys.platform.startswith("win"):
+        if not os.path.isfile(WIN_EXE):
+            sys.exit(f"Sim build bulunamadı: {WIN_EXE}\nUnity ▸ TinyFixers ▸ Sim ▸ Build Headless Sim (Windows) ile al.")
+        return WIN_EXE
     macos = os.path.join(APP, "Contents", "MacOS")
     if not os.path.isdir(macos):
         sys.exit(f"Sim build bulunamadı: {APP}\nUnity ▸ TinyFixers ▸ Sim ▸ Build Headless Sim (Mac) ile al.")
@@ -106,7 +112,8 @@ def summarize(out, job_dirs):
             continue
         for g in report.get("games", []):
             key = g.get("levelPath") or g.get("level")
-            r = rows.setdefault(key, {"name": g.get("level"), "won": 0, "lost": 0, "other": 0, "moves_left": [], "goals_left": []})
+            r = rows.setdefault(key, {"name": g.get("level"), "won": 0, "lost": 0, "other": 0, "moves_left": [], "goals_left": [],
+                                      "per_goal": {}, "start": g.get("goalsStart") or ""})
             o = g.get("outcome")
             if o == "Won":
                 r["won"] += 1
@@ -114,19 +121,36 @@ def summarize(out, job_dirs):
             elif o == "Lost":
                 r["lost"] += 1
                 r["goals_left"].append(g.get("remainingGoalUnits", 0))
+                for name, left in parse_goals(g.get("goalsLeft")).items():
+                    r["per_goal"].setdefault(name, []).append(left)
             else:
                 r["other"] += 1
     path = os.path.join(out, "summary.csv")
     with open(path, "w", newline="") as f:
         w = csv.writer(f)
-        w.writerow(["Level", "Name", "Games", "Win%", "AvgMovesLeftOnWin", "AvgGoalsLeftOnLoss", "Errors/Timeouts"])
+        w.writerow(["Level", "Name", "Games", "Win%", "AvgMovesLeftOnWin", "AvgGoalsLeftOnLoss", "Errors/Timeouts",
+                    "GoalsLeftOnLoss (ort. kalan / başlangıç)"])
         for key in sorted(rows, key=lambda k: (len(k), k)):
             r = rows[key]
             n = r["won"] + r["lost"]
             avg = lambda v: round(sum(v) / len(v), 1) if v else ""
+            start = parse_goals(r["start"])
+            per_goal = "; ".join(f"{name} {avg(v)}/{start.get(name, '?')}" for name, v in r["per_goal"].items())
             w.writerow([key, r["name"], n, round(100.0 * r["won"] / n, 1) if n else "", avg(r["moves_left"]),
-                        avg(r["goals_left"]), r["other"]])
+                        avg(r["goals_left"]), r["other"], per_goal])
     print("Özet:", path)
+
+
+def parse_goals(text):
+    out = {}
+    for part in (text or "").split(";"):
+        if "=" in part:
+            name, value = part.split("=", 1)
+            try:
+                out[name.strip()] = int(value)
+            except ValueError:
+                pass
+    return out
 
 
 if __name__ == "__main__":

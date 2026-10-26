@@ -12,6 +12,8 @@ public sealed class CommonPopupSkin : ScriptableObject
     public Sprite secondaryButton;
     public Material saveProgressBackgroundMaterial;
     public Sprite saveProgressContinueButton;
+    [Tooltip("Alttaki yeşil ana butonun arkasındaki sarı çerçeve (PreLevel ButtonFrame ile aynı görsel/oran).")]
+    public Sprite continueButtonFrame;
     public Sprite closeButton;
     public TMP_FontAsset font;
     [Tooltip("Başlık fontu (gösterim: Baloo 2 ExtraBold). Boşsa 'font'.")]

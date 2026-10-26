@@ -61,6 +61,7 @@ public static class AccountDeletionService
             var team = FirebaseTeamCloud.TeamDoc(teamId);
             var mine = await team.Collection("chat").WhereEqualTo("senderId", uid).GetSnapshotAsync();
             await DeleteAll(db, mine.Documents);
+            await team.Collection("lifeRequests").Document(uid).DeleteAsync();   // can isteğim
             var member = team.Collection("members").Document(uid);
             var memberSnap = await member.GetSnapshotAsync();
             if (memberSnap.Exists)

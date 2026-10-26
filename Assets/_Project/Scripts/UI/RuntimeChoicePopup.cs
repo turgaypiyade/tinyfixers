@@ -335,7 +335,9 @@ public sealed class RuntimeChoicePopup : MonoBehaviour
         CommonPopupView.StyleText(label, 48, Color.white);
         label.fontSizeMin = 32;
         label.textWrappingMode = TMPro.TextWrappingModes.NoWrap;
-        CommonPopupView.Region(label.rectTransform, new Rect(0.08f, 0.39f, 0.84f, 0.46f));
+        // Alt yazısız kart (ör. hızlı mesaj): başlık dikeyde ortada.
+        CommonPopupView.Region(label.rectTransform, string.IsNullOrEmpty(option.Subtitle)
+            ? new Rect(0.08f, 0.15f, 0.84f, 0.70f) : new Rect(0.08f, 0.39f, 0.84f, 0.46f));
 
         var subtitle = CommonPopupView.Text(label.transform.parent, "OfferSubtitle", option.Subtitle ?? "", 26,
             new Color(0.88f, 0.95f, 1f));

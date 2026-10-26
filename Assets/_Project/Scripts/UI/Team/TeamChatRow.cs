@@ -42,8 +42,11 @@ public sealed class TeamChatRow : MonoBehaviour
 
         // Keep the message and its action together on the same line inside the bubble.
         const float buttonWidth = 240f;
-        float aspect = acceptLifeGreenSprite != null
-            ? acceptLifeGreenSprite.rect.width / Mathf.Max(1f, acceptLifeGreenSprite.rect.height) : 770f / 172f;
+        // Kabul / Yardım: popup'ların yeşil ana butonu (GreenButonwoStroke); yoksa eski sprite.
+        var greenSprite = CommonPopupSkin.Shared.continueButton;
+        if (greenSprite == null) greenSprite = acceptLifeGreenSprite;
+        float aspect = greenSprite != null
+            ? greenSprite.rect.width / Mathf.Max(1f, greenSprite.rect.height) : 770f / 172f;
         float buttonHeight = buttonWidth / aspect;
         var slot = new GameObject("LifeMessageAction", typeof(RectTransform), typeof(LayoutElement), typeof(HorizontalLayoutGroup));
         slot.layer = gameObject.layer;
@@ -78,7 +81,7 @@ public sealed class TeamChatRow : MonoBehaviour
         buttonLayout.minWidth = buttonLayout.preferredWidth = buttonWidth;
         buttonLayout.minHeight = buttonLayout.preferredHeight = buttonHeight;
         var image = action.GetComponent<Image>();
-        image.sprite = acceptLifeGreenSprite;
+        image.sprite = greenSprite;
         image.color = Color.white;
         image.preserveAspect = true;
         acceptLifeButton = action.GetComponent<Button>();
@@ -94,6 +97,7 @@ public sealed class TeamChatRow : MonoBehaviour
         acceptLifeLabel.alignment = TextAlignmentOptions.Center;
         acceptLifeLabel.color = Color.white;
         acceptLifeLabel.raycastTarget = false;
+        UiButtons.StyleLabel(acceptLifeLabel, UiButtons.Kind.GreenPlain);   // beyaz + koyu yeşil kontur
         var labelRect = acceptLifeLabel.rectTransform;
         labelRect.anchorMin = Vector2.zero;
         labelRect.anchorMax = Vector2.one;

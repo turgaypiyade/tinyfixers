@@ -22,6 +22,8 @@ public sealed class TeamScreenController : MonoBehaviour
     [Header("Akış")]
     [SerializeField] private RectTransform contentContainer;
     [SerializeField] private TeamChatRow chatRowPrefab;
+    [Tooltip("Can isteği kartı (takım arkadaşının isteği + kendi isteğim). Boşsa istekler sohbet satırı olarak kalır.")]
+    [SerializeField] private TeamLifeRequestRow lifeRequestRowPrefab;
     [SerializeField] private ScrollRect scrollRect;      // yeni mesajda alta kaydırmak için
 
     [Header("Alt butonlar")]
@@ -129,23 +131,131 @@ public sealed class TeamScreenController : MonoBehaviour
         wired = true;
     }
 
-    // Alt butonlar: büyük, ikonlu (kalp / konuşma balonu); geri sayım ikinci satırda küçük.
+    // Alt bar (RM düzeni): solda büyük yeşil "Can İste" (kalp ikonlu, geri sayım 2. satırda), sağda iki kare buton:
+    // hızlı mesaj (turkuaz, gülen yüz) ve mesaj yaz (mavi, konuşma balonu).
+    private const float BarButtonHeight = 112f;
+    private const float RequestLifeWidth = 440f;
+    private static readonly Color QuickTint = new Color(0.62f, 1f, 0.95f, 1f);   // mavi kapsül → turkuaz
+    private static readonly string[] QuickMessageKeys = { "team_quick_1", "team_quick_2", "team_quick_3", "team_quick_4" };
+    // Yalnız EmojiOne setinde gerçekten olanlar (1f60a yok → "?" kutusu çıkıyordu).
+    private static readonly string[] QuickMessageEmoji = { "1f604", "1f605", "1f60e", "1f601" };
+    private Button quickButton;
+
     private void StyleBottomButtons()
     {
-        UiButtons.Apply(requestLifeButton, UiButtons.Kind.Green);
+        UiButtons.Apply(requestLifeButton, UiButtons.Kind.GreenPlain);   // popup'ların yeşil ana butonu
         UiButtons.Apply(messageButton, UiButtons.Kind.Blue);
-        UiButtons.Apply(messagePostButton, UiButtons.Kind.Green);
+        UiButtons.Apply(messagePostButton, UiButtons.Kind.GreenPlain);
         UiIcons.SetLeadingIcon(requestLifeButton, UiIcons.Heart);
-        UiIcons.SetLeadingIcon(messageButton, UiIcons.Chat);
 
         var bar = requestLifeButton != null ? requestLifeButton.transform.parent : null;
-        if (bar != null && bar.TryGetComponent(out HorizontalLayoutGroup h))
+        if (bar == null) return;
+        if (bar.TryGetComponent(out HorizontalLayoutGroup h))
         {
-            h.padding = new RectOffset(24, 24, 6, 6);
-            h.spacing = 24f;
+            h.padding = new RectOffset(28, 28, 4, 4);
+            h.spacing = 20f;
+            h.childAlignment = TextAnchor.MiddleLeft;
             h.childControlWidth = h.childControlHeight = true;
-            h.childForceExpandWidth = h.childForceExpandHeight = true;
+            h.childForceExpandWidth = h.childForceExpandHeight = false;
         }
+        SetBarSize(requestLifeButton, RequestLifeWidth, 0f);
+
+        // Esnek boşluk: kare butonlar sağa yaslanır.
+        var spacer = new GameObject("Spacer", typeof(RectTransform), typeof(LayoutElement));
+        spacer.layer = bar.gameObject.layer;
+        spacer.transform.SetParent(bar, false);
+        spacer.GetComponent<LayoutElement>().flexibleWidth = 1f;
+
+        quickButton = BuildQuickButton(bar);
+        if (messageButton != null)
+        {
+            messageButton.transform.SetAsLastSibling();
+            SetBarSize(messageButton, BarButtonHeight, 0f);
+            SetIconOnly(messageButton, UiIcons.Chat);
+        }
+    }
+
+    private static void SetBarSize(Button button, float width, float flexible)
+    {
+        if (button == null) return;
+        if (!button.TryGetComponent(out LayoutElement le)) le = button.gameObject.AddComponent<LayoutElement>();
+        le.minWidth = le.preferredWidth = width;
+        le.flexibleWidth = flexible;
+        le.minHeight = le.preferredHeight = BarButtonHeight;
+    }
+
+    // Kare buton: yalnız ortada ikon (yazı gizli).
+    private static void SetIconOnly(Button button, Sprite icon)
+    {
+        var label = button.GetComponentInChildren<TMP_Text>(true);
+        if (label != null) label.gameObject.SetActive(false);
+        if (icon == null) return;
+        var t = button.transform.Find("CenterIcon");
+        Image img;
+        if (t != null) img = t.GetComponent<Image>();
+        else
+        {
+            var go = new GameObject("CenterIcon", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            go.layer = button.gameObject.layer;
+            go.transform.SetParent(button.transform, false);
+            img = go.GetComponent<Image>();
+        }
+        img.sprite = icon;
+        img.preserveAspect = true;
+        img.raycastTarget = false;
+        var rt = img.rectTransform;
+        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.sizeDelta = new Vector2(BarButtonHeight * 0.62f, BarButtonHeight * 0.62f);
+        rt.anchoredPosition = Vector2.zero;
+    }
+
+    // Hızlı mesaj butonu (turkuaz kare, gülen yüz): hazır kısa mesajlardan birini seçip gönderir.
+    private Button BuildQuickButton(Transform bar)
+    {
+        var go = new GameObject("Btn_QuickMessage", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button));
+        go.layer = bar.gameObject.layer;
+        go.transform.SetParent(bar, false);
+        var button = go.GetComponent<Button>();
+        var image = go.GetComponent<Image>();
+        button.targetGraphic = image;
+        UiButtons.Apply(image, UiButtons.Kind.Blue);
+        image.color = QuickTint;
+        SetBarSize(button, BarButtonHeight, 0f);
+
+        var labelGo = new GameObject("Emoji", typeof(RectTransform), typeof(TextMeshProUGUI));
+        labelGo.layer = go.layer;
+        labelGo.transform.SetParent(go.transform, false);
+        var label = labelGo.GetComponent<TextMeshProUGUI>();
+        label.richText = true;
+        label.text = "<sprite name=\"1f604\">";   // TMP varsayılan sprite seti (EmojiOne)
+        label.fontSize = 62f;
+        label.alignment = TextAlignmentOptions.Center;
+        label.raycastTarget = false;
+        var lrt = label.rectTransform;
+        lrt.anchorMin = Vector2.zero; lrt.anchorMax = Vector2.one;
+        lrt.offsetMin = lrt.offsetMax = Vector2.zero;
+
+        button.onClick.AddListener(ShowQuickMessages);
+        return button;
+    }
+
+    private void ShowQuickMessages()
+    {
+        if (service == null) return;
+        // Save Progress düzeni: seçenekler gövdede tam genişlik kartlar, altta tek "Kapat".
+        var options = new RuntimeChoicePopup.OfferButton[QuickMessageKeys.Length];
+        for (int i = 0; i < options.Length; i++)
+        {
+            string text = GameLocalization.Get(QuickMessageKeys[i]) + " <sprite name=\"" + QuickMessageEmoji[i] + "\">";
+            options[i] = new RuntimeChoicePopup.OfferButton(text, "", () =>
+            {
+                if (this == null || service == null) return;
+                service.SendMessage(text);
+                BuildFeed();
+            });
+        }
+        RuntimeChoicePopup.ShowOffer(GameLocalization.Get("team_quick_title"), GameLocalization.Get("team_quick_body"),
+            options, GameLocalization.Get("common_close"), null, defaultFrame: true);
     }
 
     // Başlığın sağında yuvarlak (i) ikonu → takım bilgisi penceresi.
@@ -237,6 +347,7 @@ public sealed class TeamScreenController : MonoBehaviour
         feed.Clear();
         lifeReplyRows.Clear();
         if (contentContainer == null) return;
+        if (contentContainer.TryGetComponent(out VerticalLayoutGroup feedLayout)) feedLayout.spacing = 24f;   // ferah akış
 
         if (chatRowPrefab != null)
         {
@@ -248,6 +359,11 @@ public sealed class TeamScreenController : MonoBehaviour
                     m.avatar = m.isMine
                         ? (PlayerAvatarProvider.Current ?? PickAvatar(m.senderName))
                         : PickAvatar(m.senderName);
+                }
+                if (lifeRequestRowPrefab != null && (m.botLifeRequest != null || m.myLifeRequest || m.realLifeRequest != null))
+                {
+                    feed.Add(BuildLifeCard(m).gameObject);
+                    continue;
                 }
                 var row = Instantiate(chatRowPrefab, contentContainer);
                 row.Bind(m, theme);
@@ -270,6 +386,35 @@ public sealed class TeamScreenController : MonoBehaviour
         SnapToBottom();
     }
 
+    // Can isteği kartı: takım arkadaşının isteği (Yardım → 1 can) ya da kendi aktif isteğim (toplanan/istenen).
+    private TeamLifeRequestRow BuildLifeCard(TeamChatMessage m)
+    {
+        var inbox = service.LifeInbox;
+        var card = Instantiate(lifeRequestRowPrefab, contentContainer);
+        if (m.realLifeRequest != null)
+        {
+            // Gerçek takım arkadaşı (Firestore): Yardım → helpers'a kendi uid'im, isteyene "Kabul Et" cevabı düşer.
+            card.Bind(m.realLifeRequest, theme, r => service.Help(r), helped: m.realLifeRequest.helpedByMe);
+        }
+        else if (m.myLifeRequest)
+        {
+            var mine = new TeamLifeRequest
+            {
+                requesterName = m.senderName,
+                current = inbox.RequestReceived,
+                needed = Mathf.Max(1, inbox.RequestTotal)
+            };
+            card.Bind(mine, theme, null, mine: true);
+        }
+        else
+        {
+            var bot = m.botLifeRequest;
+            var request = new TeamLifeRequest { requesterName = bot.sender, current = bot.helped ? 1 : 0, needed = 1 };
+            card.Bind(request, theme, _ => inbox.HelpBot(bot.id), helped: bot.helped);
+        }
+        return card;
+    }
+
     private IEnumerable<TeamChatMessage> GetFeedMessages()
     {
         foreach (var message in service.GetChat()) yield return message;
@@ -284,6 +429,29 @@ public sealed class TeamScreenController : MonoBehaviour
                 sentTicks = reply.sentTicks,
                 lifeReply = reply,
                 isMine = false
+            };
+        }
+        foreach (var request in service.GetLifeRequests())
+        {
+            if (string.IsNullOrEmpty(request.requesterId)) continue;   // yalnız gerçek (Firestore) istekler
+            yield return new TeamChatMessage
+            {
+                senderName = request.requesterName,
+                sentTicks = request.createdTicks,
+                realLifeRequest = request,
+            };
+        }
+        // Kendi isteğim: 24 saatlik istek süresi boyunca kart olarak (kaç can geldi).
+        var inboxMine = service.LifeInbox;
+        if (inboxMine.LastRequestTicks > 0 && inboxMine.RequestTotal > 0
+            && System.DateTime.UtcNow.Ticks - inboxMine.LastRequestTicks < System.TimeSpan.TicksPerDay)
+        {
+            yield return new TeamChatMessage
+            {
+                senderName = PlayerProfile.PlayerName,
+                sentTicks = inboxMine.LastRequestTicks,
+                myLifeRequest = true,
+                isMine = true
             };
         }
         foreach (var request in service.LifeInbox.BotRequests)

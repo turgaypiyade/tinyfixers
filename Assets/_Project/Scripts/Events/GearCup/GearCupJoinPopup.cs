@@ -91,8 +91,9 @@ public sealed class GearCupJoinPopup : MonoBehaviour
         safeArea.anchorMax = new Vector2(safe.xMax / Screen.width, safe.yMax / Screen.height);
         safeArea.offsetMin = safeArea.offsetMax = Vector2.zero;
         var viewport = safeArea.rect.size;
-        float scale = Mathf.Min(1f, (viewport.x - 40f) / panel.sizeDelta.x,
-            (viewport.y - 48f) / panel.sizeDelta.y);
+        // Çerçeve güvenli alanın iki yanına tam dayanır (PreLevel gibi); içerik panel ölçeğiyle aynı oranda büyür.
+        // Kısa/geniş ekranda yüksekliğe sığacak kadar küçülür.
+        float scale = Mathf.Min(viewport.x / panel.sizeDelta.x, (viewport.y - 48f) / panel.sizeDelta.y);
         panel.localScale = Vector3.one * Mathf.Max(0.01f, scale);
     }
 

@@ -18,7 +18,36 @@ public sealed class WonderRestorationPieceGraphic : MaskableGraphic
 
     public override Texture mainTexture => texture != null ? texture : Texture2D.whiteTexture;
 
+    static readonly int TaskRegionsId = Shader.PropertyToID("_TaskRegions");
+    static readonly int PieceTaskId = Shader.PropertyToID("_PieceTask");
+    WonderTaskRegions regions;
+    int surfaceCell, surfaceCount;
+
+    /// Görev bölgesi tabakası: bölgeyi saran dikdörtgen kıvrılır; shader yalnız o görevin piksellerini çizer.
+    public void BeginTask(Sprite sprite, Material sourceMaterial, Rect rect, WonderTaskRegions taskRegions, int task)
+    {
+        regions = taskRegions;
+        surfaceCell = task;
+        BeginCore(sprite, sourceMaterial, rect);
+        regions.ApplyTo(ownedMaterial);
+        ownedMaterial.SetFloat(TaskRegionsId, 1f);
+        ownedMaterial.SetFloat(PieceTaskId, task);
+    }
+
     public void Begin(Sprite sprite, Material sourceMaterial, Rect rect, int cell, int count)
+    {
+        regions = null;
+        surfaceCell = cell;
+        surfaceCount = count;
+        BeginCore(sprite, sourceMaterial, rect);
+        ownedMaterial.SetFloat(TaskRegionsId, 0f);
+    }
+
+    Vector2 Surface(float u, float v) => regions != null
+        ? regions.SurfacePoint(surfaceCell, u, v)
+        : WonderRestorationLayout.SurfacePoint(surfaceCell, surfaceCount, u, v);
+
+    void BeginCore(Sprite sprite, Material sourceMaterial, Rect rect)
     {
         if (ownedMaterial == null)
         {
@@ -38,14 +67,14 @@ public sealed class WonderRestorationPieceGraphic : MaskableGraphic
         for (int x = 0; x <= Columns; x++)
         {
             float u = (float)x / Columns;
-            Vector2 low = WonderRestorationLayout.SurfacePoint(cell, count, u, 0f);
-            Vector2 high = WonderRestorationLayout.SurfacePoint(cell, count, u, 1f);
+            Vector2 low = Surface(u, 0f);
+            Vector2 high = Surface(u, 1f);
             bottom[x] = rect.yMin + low.y * rect.height;
             height[x] = Mathf.Max(1f, (high.y - low.y) * rect.height);
             for (int y = 0; y <= Rows; y++)
             {
                 int index = y * (Columns + 1) + x;
-                Vector2 uv = WonderRestorationLayout.SurfacePoint(cell, count, u, (float)y / Rows);
+                Vector2 uv = Surface(u, (float)y / Rows);
                 Vector2 position = new Vector2(rect.xMin + uv.x * rect.width, rect.yMin + uv.y * rect.height);
                 sourcePositions[index] = position;
                 sourceUVs[index] = new Vector2(Mathf.Lerp(atlas.x, atlas.z, uv.x), Mathf.Lerp(atlas.y, atlas.w, uv.y));

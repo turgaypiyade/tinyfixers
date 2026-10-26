@@ -18,6 +18,7 @@ MonoBehaviour:
   secondaryButton: {fileID: 21300000, guid: 1febb4121a35475594220c09dbecc2a7, type: 3}
   saveProgressBackgroundMaterial: {fileID: 2100000, guid: bb380a88a72e40ce877e774ad5ae4068, type: 2}
   saveProgressContinueButton: {fileID: 21300000, guid: 31a3eec15ec7e4edebed2e4bd6c22218, type: 3}
+  continueButtonFrame: {fileID: 21300000, guid: 432793548bdd6412cafaebf420341c94, type: 3}
   closeButton: {fileID: 21300000, guid: 8fb720f1c5fe84fceaa7533ae6712d06, type: 3}
   font: {fileID: 11400000, guid: 7fc0a3576e2194b19822a1f8eaec994a, type: 2}
   titleFont: {fileID: 11400000, guid: 5e6309197a20b48f38af13be4a943e86, type: 2}

@@ -32,6 +32,10 @@ public sealed class TeamChatMessage
     public long sentTicks;
     public TeamLifeInbox.Reply lifeReply;
     public TeamLifeInbox.BotRequest botLifeRequest;
+    /// Kendi aktif can isteğim (akışta kart olarak; Yardım butonu yok).
+    public bool myLifeRequest;
+    /// Gerçek takım arkadaşının can isteği (Firestore) — akışta kart.
+    public TeamLifeRequest realLifeRequest;
 
     /// <summary>Bu mesajı BEN mi gönderdim? true → sağda + kendi avatarım; false → solda.</summary>
     public bool isMine;
@@ -40,6 +44,9 @@ public sealed class TeamChatMessage
 /// <summary>Bir takım üyesinin can isteği (current/needed).</summary>
 public sealed class TeamLifeRequest
 {
+    public string requesterId;     // Firestore isteği: isteyenin uid'i (= doküman id); yerel/bot isteklerde boş
+    public long createdTicks;      // akış sırası
+    public bool helpedByMe;        // bu isteğe can gönderdim
     public string requesterName;
     public Sprite avatar;
     public int current;

@@ -54,6 +54,10 @@ public sealed class TeamLifeInbox
     public IReadOnlyList<BotRequest> BotRequests => state.botRequests;
     public int Pending => state.replies.FindAll(reply => !reply.accepted).Count;
     public bool IsWaiting => state.requested > 0;
+    /// Son can isteğim: kaç takım arkadaşı gönderdi / toplam kaç istendi (sohbetteki kendi istek kartım için).
+    public int RequestReceived => state.requestSenders.Count;
+    public int RequestTotal => state.requestSenders.Count + state.requested;
+    public long LastRequestTicks => state.lastRequestTicks;
     // İstek yalnız can eksikken ve 24 saatlik kilit dolunca. Bekleyen (alınmamış) cevaplar ya da
     // yarım kalmış eski istek ARTIK BLOKLAMAZ: eskiden can doluyken alınamayan cevaplar butonu
     // sonsuza dek "Canların Hazır"da kilitliyordu.
@@ -190,6 +194,32 @@ public sealed class TeamLifeInbox
         }
         Save();
         return canRequest;
+    }
+
+    /// <summary>
+    /// Firestore'daki can isteğime gerçek takım arkadaşları can gönderdi: her yeni yardımcı için bir "Kabul Et"
+    /// cevabı (her oyuncudan en fazla 1). requestCreatedTicks son isteğimden eskiyse (önceki günün dokümanı,
+    /// yeni istek henüz yazılamadı) yok sayılır — eski yardımcılar ikinci kez sayılmasın.
+    /// </summary>
+    public bool ReceiveRealHelpers(long requestCreatedTicks, IEnumerable<KeyValuePair<string, string>> helpers)
+    {
+        if (state.lastRequestTicks <= 0 || helpers == null) return false;
+        if (requestCreatedTicks < state.lastRequestTicks - TimeSpan.TicksPerHour) return false;
+        bool any = false;
+        foreach (var helper in helpers)
+        {
+            string key = "uid:" + helper.Key;   // bot isimleriyle çakışmasın
+            if (state.requestSenders.Contains(key)) continue;
+            state.requestSenders.Add(key);
+            AddReply(string.IsNullOrEmpty(helper.Value) ? GameLocalization.Get("team_player") : helper.Value, DateTime.UtcNow);
+            if (state.requested > 0) state.requested--;
+            any = true;
+        }
+        if (!any) return false;
+        if (!IsWaiting) state.nextGiftTicks = 0;
+        Save();
+        changed?.Invoke();
+        return true;
     }
 
     public bool HelpBot(string requestId)

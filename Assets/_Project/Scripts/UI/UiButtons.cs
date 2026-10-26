@@ -8,7 +8,7 @@ using UnityEngine.UI;
 /// </summary>
 public static class UiButtons
 {
-    public enum Kind { Orange, Green, Blue, Red, Purple, SquareRed, SquareGreen }
+    public enum Kind { Orange, Green, Blue, Red, Purple, SquareRed, SquareGreen, GreenPlain }
 
     private static Sprite Load(string name) => Resources.Load<Sprite>("UIButtons/" + name);
 
@@ -21,6 +21,8 @@ public static class UiButtons
         Kind.Purple      => Load("Btn_Purple"),
         Kind.SquareRed   => Load("BtnSq_Red"),
         Kind.SquareGreen => Load("BtnSq_Green"),
+        // Popup'ların yeşil ana butonu (GreenButonwoStroke, 9-slice kenarlı) — Can İste / Gönder / Kabul / Yardım.
+        Kind.GreenPlain  => CommonPopupSkin.Shared.continueButton,
         _ => null,
     };
 
@@ -28,7 +30,7 @@ public static class UiButtons
     private static Color OutlineOf(Kind kind) => kind switch
     {
         Kind.Orange      => new Color(0.55f, 0.22f, 0.02f),
-        Kind.Green or Kind.SquareGreen => new Color(0.10f, 0.35f, 0.05f),
+        Kind.Green or Kind.SquareGreen or Kind.GreenPlain => new Color(0.10f, 0.35f, 0.05f),
         Kind.Blue        => new Color(0.05f, 0.18f, 0.55f),
         Kind.Red or Kind.SquareRed     => new Color(0.50f, 0.04f, 0.08f),
         Kind.Purple      => new Color(0.30f, 0.08f, 0.50f),

@@ -130,6 +130,18 @@ public class PulseCoreExplosionFX : MonoBehaviour
 
     private bool ringAnimStarted;
 
+    /// Havuz (PulseCoreVfxPlayer): doluysa bitişte Destroy yerine kapanıp buraya döner.
+    public System.Action<PulseCoreExplosionFX> ReturnToPool;
+
+    // Zincirde üst üste binen patlama sayısı. Fazlası blur kopyası (Shadow) çizmez:
+    // her kopya patlama boyunda bir saydam katman daha = mobil GPU'da katlanan overdraw.
+    private static int activeCount;
+    private const int MaxBlurredConcurrent = 3;
+    private bool countedActive;
+
+    private float origRingInTime;
+    private float origTotalDuration;
+
     private Coroutine playRoutine;
     private bool isShuttingDown;
 
@@ -199,6 +211,7 @@ public class PulseCoreExplosionFX : MonoBehaviour
     private void OnEnable()
     {
         isShuttingDown = false;
+        ringAnimStarted = false;   // havuzdan dönüşte bayat halka boyutu raporlanmasın
 
         CacheBaselineOnce();
 
@@ -206,6 +219,15 @@ public class PulseCoreExplosionFX : MonoBehaviour
             ApplyRandomization();
         else
             RestoreBaseline();
+
+        if (!countedActive) { countedActive = true; activeCount++; }
+        if (activeCount > MaxBlurredConcurrent)
+        {
+            DisableShadows(glowShadows);
+            DisableShadows(coreShadows);
+            DisableShadows(ringShadows);
+            DisableShadows(raysShadows);
+        }
 
         HideAll();
 
@@ -234,6 +256,7 @@ public class PulseCoreExplosionFX : MonoBehaviour
 
     private void OnDisable()
     {
+        if (countedActive) { countedActive = false; activeCount--; }
         isShuttingDown = true;
         OnRadiusPx?.Invoke(float.MaxValue);   // FX kapanırken kalan halkalar serbest
         OnRadiusPx = null;
@@ -269,6 +292,16 @@ public class PulseCoreExplosionFX : MonoBehaviour
         origRaysColor = raysColor;
         origRingColor = ringColor;
 
+        origRingInTime = ringInTime;
+        origTotalDuration = totalDuration;
+
+        // Sönen katman (alpha 0) çizilmesin: patlama ~0.7 sn'de söner ama nesne totalDuration (2 sn) yaşar;
+        // aksi halde görünmez tam-alan katmanlar + blur kopyaları GPU'da boyanmaya devam eder.
+        CullWhenTransparent(sunburstRays);
+        CullWhenTransparent(innerGlow);
+        CullWhenTransparent(shockwaveRing);
+        CullWhenTransparent(coreFlash);
+
         // Eski Outline varsa kaldır, yeni Shadow tabanlı blur kullanacağız
         RemoveOldOutline(innerGlow);
         RemoveOldOutline(coreFlash);
@@ -276,6 +309,19 @@ public class PulseCoreExplosionFX : MonoBehaviour
         RemoveOldOutline(sunburstRays);
 
         baselineCached = true;
+    }
+
+    private static void CullWhenTransparent(Image img)
+    {
+        if (img != null) img.canvasRenderer.cullTransparentMesh = true;
+    }
+
+    /// Havuzdan yeniden kullanmadan önce: önceki oynatmanın dalga süresi/ömür ayarını prefab değerine döndür.
+    public void ResetTimingForReuse()
+    {
+        if (!baselineCached) return;
+        ringInTime = origRingInTime;
+        totalDuration = origTotalDuration;
     }
 
     private void RestoreBaseline()
@@ -379,6 +425,7 @@ public class PulseCoreExplosionFX : MonoBehaviour
         for (int i = 0; i < BlurLayerCount; i++)
         {
             var shadow = reuse ? shadows[i] : img.gameObject.AddComponent<Shadow>();
+            shadow.enabled = true;   // havuzdan dönüşte kalabalık zincirde kapatılmış olabilir
             shadow.useGraphicAlpha = true;
 
             float angle = angles[i % angles.Length] * Mathf.Deg2Rad;
@@ -419,6 +466,7 @@ public class PulseCoreExplosionFX : MonoBehaviour
         for (int i = 0; i < layers; i++)
         {
             var shadow = reuse ? shadows[i] : img.gameObject.AddComponent<Shadow>();
+            shadow.enabled = true;   // havuzdan dönüşte kalabalık zincirde kapatılmış olabilir
             shadow.useGraphicAlpha = true;
 
             // Her katman farklı açı; yarıçap içten dışa artar → yumuşak degrade
@@ -472,7 +520,13 @@ public class PulseCoreExplosionFX : MonoBehaviour
     {
         yield return StartCoroutine(CoPlayExplosion());
 
-        if (!isShuttingDown && destroyOnFinish && gameObject != null)
+        if (isShuttingDown || !destroyOnFinish || gameObject == null) yield break;
+        if (ReturnToPool != null)
+        {
+            gameObject.SetActive(false);
+            ReturnToPool(this);
+        }
+        else
             Destroy(gameObject);
     }
 

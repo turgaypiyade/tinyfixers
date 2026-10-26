@@ -31,6 +31,27 @@ public sealed class RewardTextStyle : ScriptableObject
         }
     }
 
+    private static Material sharpMaterial;
+
+    /// Küçük yazılar (çark dilimleri, ödül etiketi) için: aynı altın kontur ama dar ve keskin gölge. Büyük başlıklarda
+    /// güzel duran yumuşak, geniş gölge (Underlay 0.65 / 0.55) küçük boyda harfleri bulanık gösteriyordu.
+    public static void ApplySharp(TMP_Text text, float fontSize)
+    {
+        Apply(text, fontSize);
+        var style = Shared;
+        if (text == null || style == null || style.material == null) return;
+        if (sharpMaterial == null)
+        {
+            sharpMaterial = new Material(style.material) { name = style.material.name + " (Sharp)" };
+            sharpMaterial.SetFloat(ShaderUtilities.ID_UnderlaySoftness, 0.12f);
+            sharpMaterial.SetFloat(ShaderUtilities.ID_UnderlayDilate, 0.25f);
+            sharpMaterial.SetFloat(ShaderUtilities.ID_UnderlayOffsetY, -0.18f);
+            sharpMaterial.SetFloat(ShaderUtilities.ID_OutlineSoftness, 0f);
+            sharpMaterial.SetFloat(ShaderUtilities.ID_Sharpness, 0.25f);
+        }
+        text.fontSharedMaterial = sharpMaterial;
+    }
+
     /// Stil yoksa yazıya dokunmaz (eski görünüm kalır).
     public static void Apply(TMP_Text text, float fontSize)
     {

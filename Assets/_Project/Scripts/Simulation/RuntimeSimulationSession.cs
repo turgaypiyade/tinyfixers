@@ -87,6 +87,9 @@ public sealed class RuntimeSimulationSession : MonoBehaviour
         public string detail;
         public float elapsedSeconds;
         public int remainingGoalUnits;
+        // Hedef bazında kalan: "SpreadingGel=40;KeyGenerator=12" — hangi hedefin takıldığını gösterir.
+        public string goalsLeft;
+        public string goalsStart;   // aynı biçim, seviye verisindeki başlangıç miktarları
         public string emptyCellsAtEnd;
         public List<string> trace = new();
     }
@@ -319,6 +322,7 @@ public sealed class RuntimeSimulationSession : MonoBehaviour
 
         _activeBoard = board;
         _movesAtStart = board.RemainingMoves;
+        result.goalsStart = DescribeGoals(board.ActiveLevelData);
         if (CurrentLevel == null && board.ActiveLevelData != null)
             result.level = $"L{CurrentLevelNumber:000} {board.ActiveLevelData.name}";
         board.OnLevelFailRequested += OnForcedFail;
@@ -492,7 +496,37 @@ public sealed class RuntimeSimulationSession : MonoBehaviour
         var goals = new List<TopHudController.ActiveGoal>();
         _activeBoard.TopHud.GetActiveGoals(goals);
         result.remainingGoalUnits = 0;
-        foreach (var goal in goals) result.remainingGoalUnits += goal.remaining;
+        var sb = new System.Text.StringBuilder();
+        foreach (var goal in goals)
+        {
+            result.remainingGoalUnits += goal.remaining;
+            if (sb.Length > 0) sb.Append(';');
+            sb.Append(GoalLabel(goal)).Append('=').Append(goal.remaining);
+        }
+        result.goalsLeft = sb.ToString();
+    }
+
+    private static string GoalLabel(TopHudController.ActiveGoal goal) =>
+        GoalLabel(goal.targetType, goal.obstacleId, goal.collectibleId, goal.tileType);
+
+    private static string GoalLabel(LevelGoalTargetType type, ObstacleId obstacle, CollectibleId collectible, TileType tile) => type switch
+    {
+        LevelGoalTargetType.Obstacle => obstacle.ToString(),
+        LevelGoalTargetType.Collectible => "Collect_" + collectible,
+        _ => "Tile_" + tile,
+    };
+
+    private static string DescribeGoals(LevelData level)
+    {
+        if (level == null || level.goals == null) return "";
+        var sb = new System.Text.StringBuilder();
+        foreach (var g in level.goals)
+        {
+            if (g == null) continue;
+            if (sb.Length > 0) sb.Append(';');
+            sb.Append(GoalLabel(g.targetType, g.obstacleId, g.collectibleId, g.tileType)).Append('=').Append(g.amount);
+        }
+        return sb.ToString();
     }
 
     private void OnForcedFail() => _forcedFail = true;

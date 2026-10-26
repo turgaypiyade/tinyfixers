@@ -34,6 +34,18 @@ public class WonderDefinition : ScriptableObject
     /// <summary>Görev sayısı — tasks doluysa ondan, değilse totalStages.</summary>
     public int TaskCount => (tasks != null && tasks.Length > 0) ? tasks.Length : totalStages;
 
+    /// <summary>En az bir görevin resim bölgesi tanımlı mı? Değilse eski eğri parça düzeni kullanılır.</summary>
+    public bool HasTaskRegions
+    {
+        get
+        {
+            if (tasks == null) return false;
+            foreach (var t in tasks)
+                if (t != null && t.regions != null && t.regions.Length > 0) return true;
+            return false;
+        }
+    }
+
     /// <summary>Görev adı — çevirisi "wonder_{wonderId}_task_{n}" (n 1'den), yoksa tasks'taki ad, yoksa harika adı.</summary>
     public string GetTaskName(int stage)
     {
@@ -84,13 +96,33 @@ public class WonderDefinition : ScriptableObject
     public WonderCharacter[] characters;
 }
 
-/// <summary>Bir harika görevi = inşa parçası: ad + ikon + yıldız maliyeti.</summary>
+/// <summary>Bir harika görevi = inşa parçası: ad + ikon + yıldız maliyeti + resimdeki bölgesi + açılış efekti.</summary>
 [Serializable]
 public class WonderTask
 {
     public string name;      // ör. "Ana Kubbe" (boşsa harika adı)
     public Sprite icon;      // görev satırı ikonu (boşsa harika ikonu)
     public int starCost = 5; // bu görevin yıldız maliyeti
+
+    [Tooltip("Görev metnindeki eylem — açılış efekti buna göre: Onar=kaynak+paslı tabaka düşer, Parlat=parlama süpürmesi, " +
+             "Boya=yukarıdan boya akışı, Işık=merkezden ışıma, Temizle=yandan süpürme, Parlama=açık bölgenin üstünden cila parıltısı " +
+             "(bölge sahiplenmez; önceki görevlerin açtığı yerin üstünden geçer).")]
+    public WonderTaskAction action = WonderTaskAction.Repair;
+    [Tooltip("Görevin resimde açtığı yer(ler): normalize, sol-alt köşe (0,0). İç içe bölgelerde KÜÇÜK olan kazanır " +
+             "(kubbe duvarın içinde ayrı açılır). Bölgesiz görev = hiçbir bölgeye girmeyen kalan alan (birden çoksa sonuncusu).")]
+    public Rect[] regions;
+}
+
+/// <summary>Görev metnindeki eylem → açılış efekti. [[project_wonder_reveal_background]]</summary>
+public enum WonderTaskAction
+{
+    Repair = 0,
+    Polish = 1,
+    Paint = 2,
+    Light = 3,
+    Clean = 4,
+    /// Bölgeyi AÇMAZ: önceki görevlerin açtığı yerin (ör. tüm kule) üzerinden parlama bandı geçer ("Mermeri Parlat").
+    Shine = 5,
 }
 
 /// <summary>Harika üzerinde gezen bir karakter (robot/dron) — yolu + kareleri + ayarları.</summary>

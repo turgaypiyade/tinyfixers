@@ -20,6 +20,12 @@ Shader "UI/WonderReveal"
         _RegionCut ("Stage, contour progress, active", Vector) = (0, 0, 0, 0)
         _RegionFinish ("Stage, restoration progress, active", Vector) = (0, 0, 0, 0)
         _Torch ("Torch UV, active", Vector) = (0, 0, 0, 0)
+        [HideInInspector] _TaskRegions ("Task regions active", Float) = 0
+        [HideInInspector] _TaskRectCount ("Task rect count", Float) = 0
+        [HideInInspector] _RemainderTask ("Task owning uncovered pixels", Float) = 0
+        [HideInInspector] _TaskBounds ("Animating task bounds", Vector) = (0, 0, 1, 1)
+        [HideInInspector] _TaskAnim ("Task, progress, action, active", Vector) = (0, 0, 0, 0)
+        [HideInInspector] _PieceTask ("Falling sheet task", Float) = -1
         [HideInInspector] _RhodesTorch ("RodosDevi background flame", Float) = 0
 
         _EdgeWidth     ("Weld Edge Width", Range(0.001, 0.2)) = 0.05
@@ -106,6 +112,11 @@ Shader "UI/WonderReveal"
             float _Restoration, _RestorationPiece, _CutThickness, _RegionCount, _RegionStride;
             float4 _RestorationRect, _SpriteUVRect, _RegionCut, _RegionFinish, _Torch;
             float _RhodesTorch;
+            // Görev bölgeleri (WonderTaskRegions ile aynı kural): en küçük içeren dikdörtgen kazanır.
+            float4 _TaskRects[24];
+            float _TaskRectOwners[24];
+            float _TaskRegions, _TaskRectCount, _RemainderTask, _PieceTask;
+            float4 _TaskBounds, _TaskAnim;
             float  _EdgeWidth;
             fixed4 _EdgeColor;
             float  _EdgeNoise;
@@ -183,30 +194,88 @@ Shader "UI/WonderReveal"
                 return weathered;
             }
 
-            float3 restoredImage(float2 uv, float3 photo)
+            // Hangi görev bu pikseli açar. Kenarlar hafif dalgalı: düz dikdörtgen çizgisi görünmesin.
+            float taskOwner(float2 uv)
+            {
+                float2 w = uv + (float2(patinaNoise(uv * float2(9.0, 13.0)), patinaNoise(uv * float2(13.0, 9.0) + 7.0)) - 0.5) * 0.014;
+                float best = 1e5;
+                float owner = _RemainderTask;
+                [loop] for (int k = 0; k < 24; k++)
+                {
+                    if ((float)k >= _TaskRectCount) break;
+                    float4 r = _TaskRects[k];
+                    if (w.x >= r.x && w.y >= r.y && w.x <= r.z && w.y <= r.w)
+                    {
+                        float area = (r.z - r.x) * (r.w - r.y);
+                        if (area < best) { best = area; owner = _TaskRectOwners[k]; }
+                    }
+                }
+                return owner;
+            }
+
+            // Onarma dışındaki eylemler: bölge içinde ilerleyen bir cephe paslıyı temize çevirir.
+            // action 1 Parlat: çapraz parlama bandı · 2 Boya: yukarıdan akan boya · 3 Işık: merkezden ışıma · 4 Temizle: yandan süpürme
+            float3 sweepTask(float2 uv, float3 photo, float3 weathered, float action, float p)
+            {
+                float2 local = saturate((uv - _TaskBounds.xy) / max(_TaskBounds.zw - _TaskBounds.xy, float2(0.001, 0.001)));
+                float n = patinaNoise(uv * float2(23.0, 31.0)) - 0.5;
+                float s;
+                float soft = 0.05;
+                if (action < 1.5)      s = local.x * 0.55 + local.y * 0.45 + n * 0.03;
+                else if (action < 2.5) { s = 1.0 - local.y + (vnoise(local.x * 16.0) - 0.5) * 0.14; soft = 0.025; }
+                else if (action < 3.5) s = length((local - 0.5) * float2(1.0, 1.2)) * 1.3 + n * 0.05;
+                else                   { s = local.x + n * 0.12; soft = 0.09; }
+                float front = lerp(-0.15, 1.25, p);
+                float clean = 1.0 - smoothstep(front - soft, front + soft, s);
+                float3 c = lerp(weathered, photo, clean);
+                float bd = (s - front) / 0.045;   // pow() negatif tabanda NaN verir
+                float band = exp(-bd * bd);
+                if (action < 1.5)
+                {
+                    c += float3(1.0, 0.96, 0.82) * band * 0.85;                     // parlama bandı
+                    c += photo * clean * 0.18 * (1.0 - p);                         // taze cila parıltısı
+                }
+                else if (action < 2.5)
+                {
+                    c = lerp(c, c * 0.72, band * 0.8);                             // ıslak boya kenarı
+                    c += photo * clean * 0.10 * (1.0 - p);
+                }
+                else if (action < 3.5)
+                {
+                    float3 warm = float3(1.0, 0.78, 0.38);
+                    c += warm * band * 0.75;
+                    c += photo * warm * clean * 0.45 * sin(3.14159265 * p);         // yanan ışığın parlaması
+                }
+                else
+                {
+                    c = lerp(c, float3(0.86, 0.76, 0.58), band * 0.45);            // savrulan toz
+                }
+                return c;
+            }
+
+            // Parlama (Shine): bölge sahiplenmez; açık yüzeyin üstünden çapraz cila bandı geçer, parlak yüzeyde daha güçlü.
+            float3 shineOverlay(float2 uv, float3 c, float3 photo, float p)
+            {
+                float2 size = max(_TaskBounds.zw - _TaskBounds.xy, float2(0.001, 0.001));
+                float2 local = (uv - _TaskBounds.xy) / size;
+                float2 edge = min(local, 1.0 - local);
+                float inside = smoothstep(0.0, 0.06, min(edge.x, edge.y));
+                if (inside <= 0.0) return c;
+                float s = local.x * 0.55 + local.y * 0.45;
+                float front = lerp(-0.2, 1.2, p);
+                float bd = (s - front) / 0.05;
+                float band = exp(-bd * bd);
+                float lum = dot(photo, float3(0.299, 0.587, 0.114));
+                float glint = band * inside * (0.35 + lum * 0.9);
+                float twinkle = step(0.985, hash2(floor(uv * float2(160.0, 280.0)))) * exp(-bd * bd * 0.25) * inside;
+                return c + float3(1.0, 0.95, 0.80) * glint * 0.9 + float3(1.0, 1.0, 0.9) * twinkle * 0.8;
+            }
+
+            // Onarma: torç bölge çevresini keser, paslı tabaka (ayrı mesh) kıvrılıp düşer.
+            float3 repairCut(float2 uv, float3 photo, float3 weathered, float rank, float left, float right, float lower, float upper)
             {
                 float count = max(1.0, _RegionCount);
-                float rows = ceil(count * 0.5);
-                float row = clamp(floor(uv.y * rows), 0.0, rows - 1.0);
-                float lower = regionBoundary(row, rows, uv.x);
-                float upper = regionBoundary(row + 1.0, rows, uv.x);
-                // Boundary displacement is less than half a row; only one neighbor is possible.
-                row = clamp(row - step(uv.y, lower) + step(upper, uv.y), 0.0, rows - 1.0);
-                lower = regionBoundary(row, rows, uv.x);
-                upper = regionBoundary(row + 1.0, rows, uv.x);
-                float split = regionSplit(uv.y);
-                float fullWidth = step(count - 1.0, row * 2.0);
-                float column = step(split, uv.x) * (1.0 - fullWidth);
-                float left = column * split;
-                float right = fullWidth > 0.5 ? 1.0 : lerp(split, 1.0, column);
-                float cell = row * 2.0 + column;
-                float rank = fmod(cell * _RegionStride, count);
                 float clean = saturate(_Reveal * count - rank);
-                // The complete reward is exactly the original image and skips all patina work.
-                if (clean >= 0.999) return photo;
-
-                float3 weathered = weatheredImage(uv, photo);
-
                 float finishing = _RegionFinish.z * (1.0 - step(0.5, abs(rank - _RegionFinish.x)));
                 float2 local = saturate(float2((uv.x - left) / max(0.001, right - left),
                     (uv.y - lower) / max(0.001, upper - lower)));
@@ -238,6 +307,47 @@ Shader "UI/WonderReveal"
                     c += float3(1.3, 1.15, 0.75) * exp(-dot(torch, torch) / 95.0) * _Torch.z;
                 }
                 return c;
+            }
+
+            float3 restoredImage(float2 uv, float3 photo)
+            {
+                float count = max(1.0, _RegionCount);
+                if (_TaskRegions > 0.5)
+                {
+                    float task = taskOwner(uv);
+                    float3 ct = photo;
+                    if (saturate(_Reveal * count - task) < 0.999)
+                    {
+                        float3 weatheredT = weatheredImage(uv, photo);
+                        if (_TaskAnim.w > 0.5 && abs(task - _TaskAnim.x) < 0.5 && _TaskAnim.z > 0.5 && _TaskAnim.z < 4.5)
+                            ct = sweepTask(uv, photo, weatheredT, _TaskAnim.z, _TaskAnim.y);
+                        else
+                            ct = repairCut(uv, photo, weatheredT, task, _TaskBounds.x, _TaskBounds.z, _TaskBounds.y, _TaskBounds.w);
+                    }
+                    if (_TaskAnim.w > 0.5 && _TaskAnim.z > 4.5) ct = shineOverlay(uv, ct, photo, _TaskAnim.y);
+                    return ct;
+                }
+                float rows = ceil(count * 0.5);
+                float row = clamp(floor(uv.y * rows), 0.0, rows - 1.0);
+                float lower = regionBoundary(row, rows, uv.x);
+                float upper = regionBoundary(row + 1.0, rows, uv.x);
+                // Boundary displacement is less than half a row; only one neighbor is possible.
+                row = clamp(row - step(uv.y, lower) + step(upper, uv.y), 0.0, rows - 1.0);
+                lower = regionBoundary(row, rows, uv.x);
+                upper = regionBoundary(row + 1.0, rows, uv.x);
+                float split = regionSplit(uv.y);
+                float fullWidth = step(count - 1.0, row * 2.0);
+                float column = step(split, uv.x) * (1.0 - fullWidth);
+                float left = column * split;
+                float right = fullWidth > 0.5 ? 1.0 : lerp(split, 1.0, column);
+                float cell = row * 2.0 + column;
+                float rank = fmod(cell * _RegionStride, count);
+                float clean = saturate(_Reveal * count - rank);
+                // The complete reward is exactly the original image and skips all patina work.
+                if (clean >= 0.999) return photo;
+
+                float3 weathered = weatheredImage(uv, photo);
+                return repairCut(uv, photo, weathered, rank, left, right, lower, upper);
             }
 
             // RodosDevi.png's painted flame: localized motion, warm flicker and two drifting embers.
@@ -289,6 +399,8 @@ Shader "UI/WonderReveal"
                     float2 uv = saturate((i.texcoord - _SpriteUVRect.xy) / max(_SpriteUVRect.zw - _SpriteUVRect.xy, float2(0.0001, 0.0001)));
                     rgb = weatheredImage(uv, textureColor.rgb) * i.color.rgb;
                     a = i.color.a;
+                    // Görev bölgesinde tabaka yalnız o görevin piksellerini taşır (iç içe bölgeler açık kalır).
+                    if (_TaskRegions > 0.5 && abs(taskOwner(uv) - _PieceTask) > 0.5) a = 0.0;
                 }
                 else if (_Restoration > 0.5)
                 {
