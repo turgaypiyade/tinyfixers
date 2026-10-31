@@ -60,7 +60,7 @@ public sealed class OverrideSpecialView : MonoBehaviour
     private Vector2 canvasSize;
     private float turnFramePhase;
     private bool staticIconHidden;
-    private float staticIconAlpha;
+    private float staticIconRendererAlpha;
     private bool activating;
     private bool externalTurning;
     private OverrideChargeGraphic chargeGraphic;
@@ -361,12 +361,13 @@ public sealed class OverrideSpecialView : MonoBehaviour
         if (staticIconImage == null) return;
         if (!staticIconHidden)
         {
-            staticIconAlpha = staticIconImage.color.a;
+            // Own a separate visibility multiplier. The gather/reveal and impact flash
+            // also write Image.color; capturing their temporary alpha (often zero)
+            // and restoring it later can leave a live tile permanently invisible.
+            staticIconRendererAlpha = staticIconImage.canvasRenderer.GetAlpha();
             staticIconHidden = true;
         }
-        var color = staticIconImage.color;
-        color.a = 0f;
-        staticIconImage.color = color;
+        staticIconImage.canvasRenderer.SetAlpha(0f);
     }
 
     private void RestoreStaticIcon()
@@ -374,9 +375,7 @@ public sealed class OverrideSpecialView : MonoBehaviour
         if (!staticIconHidden) return;
         if (staticIconImage != null)
         {
-            var color = staticIconImage.color;
-            color.a = staticIconAlpha;
-            staticIconImage.color = color;
+            staticIconImage.canvasRenderer.SetAlpha(staticIconRendererAlpha);
         }
         staticIconHidden = false;
     }

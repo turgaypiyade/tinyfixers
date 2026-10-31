@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Firebase.Extensions;
 using Firebase.Firestore;
 using UnityEngine;
@@ -42,6 +43,24 @@ public static class FirebaseCloudSaveService
     private static bool dirty;
     private static bool pushInFlight;
     private static int lastPushedLevel = -1;
+    private static Task lastPush = Task.CompletedTask;
+    private static int restoreVersion;
+    public static event Action OnRestoreFailed;
+
+    internal static Task FlushBeforeAccountSwitch()
+    {
+        if (pushInFlight || !RestoreResolved || !FirebaseAuthService.IsReady || SuspendForDeletion)
+            return Task.FromException(new InvalidOperationException("Cloud save is not ready."));
+        MarkDirty();
+        Push();
+        return lastPush;
+    }
+
+    internal static void BeginAccountSwitch()
+    {
+        RestoreResolved = false;
+        ++restoreVersion; // invalidate an older read/retry before changing Firebase identity
+    }
 
     private static FirebaseFirestore Db => FirebaseFirestore.DefaultInstance;
 
@@ -64,6 +83,7 @@ public static class FirebaseCloudSaveService
         PlayerWallet.OnTotalStarsChanged += _ => MarkDirty();
         PlayerWallet.OnTotalScoreChanged += _ => MarkDirty();
         FriendState.OnChanged += MarkDirty;
+        PlayerProfile.OnChanged += MarkDirty;
         WonderProgress.OnBackgroundChanged += MarkDirty;   // Journey'den seçilen arka plan
     }
 
@@ -99,13 +119,23 @@ public static class FirebaseCloudSaveService
 
     private static void StartRestore()
     {
-        SaveDoc.GetSnapshotAsync().ContinueWithOnMainThread(task =>
+        if (!FirebaseAuthService.IsReady || SuspendForDeletion) return;
+        string uid = FirebaseAuthService.UserId;
+        int version = ++restoreVersion;
+        bool replaceAccount = LocalAccountData.NeedsReplacement(uid);
+        var doc = SaveDoc;
+        doc.GetSnapshotAsync(replaceAccount ? Source.Server : Source.Default).ContinueWithOnMainThread(task =>
         {
+            if (version != restoreVersion || !FirebaseAuthService.IsReady || FirebaseAuthService.UserId != uid) return;
             if (task.IsFaulted || task.IsCanceled)
             {
                 if (GameDiagnostics.Backend)
                     Debug.LogWarning($"[CloudSave] restore fetch hatası, tekrar denenecek: {task.Exception?.GetBaseException().Message}");
-                CloudSaveBehaviour.Instance?.ScheduleRetry(FetchRetryDelay, StartRestore);
+                OnRestoreFailed?.Invoke();
+                CloudSaveBehaviour.Instance?.ScheduleRetry(FetchRetryDelay, () =>
+                {
+                    if (version == restoreVersion && FirebaseAuthService.UserId == uid) StartRestore();
+                });
                 return;
             }
 
@@ -129,6 +159,23 @@ public static class FirebaseCloudSaveService
                 snap.TryGetValue<bool>("force", out force);            // admin override
                 hasData = snap.TryGetValue<Dictionary<string, object>>("data", out cloudData);
             }
+
+            if (replaceAccount)
+            {
+                LocalAccountData.ReplaceWith(cloudData ?? new Dictionary<string, object>());
+                LevelTelemetryStore.ResetForAccount(uid);
+                PlayerStatsCloudReporter.ResetForAccount();
+                ProgressEventService.Instance?.ReloadFromPrefs();
+                MusicState.ReloadFromPrefs();
+                ReconcileCurrencyFromCloud(hasData, cloudData, false);
+                LocalAccountData.SetOwner(uid);
+                RestoreResolved = true;
+                CurrencyLedger.OpenSyncGate();
+                OnRestored?.Invoke();
+                Push();
+                return;
+            }
+            LocalAccountData.SetOwner(uid);
 
             // A newer reset beats stale progress, then force/level decide within that revision.
             bool restoreProgress = CloudSaveManifest.ShouldRestoreProgress(
@@ -227,6 +274,9 @@ public static class FirebaseCloudSaveService
         // Oyuncu dizini profili de aynı ritimde tazelenir (isim/bölüm/avatar değiştiyse).
         PlayerDirectoryService.UpsertIfChanged();
 
+        string uid = FirebaseAuthService.UserId;
+        var completion = new TaskCompletionSource<bool>();
+        lastPush = completion.Task;
         SaveDoc.SetAsync(doc, options).ContinueWithOnMainThread(task =>
         {
             pushInFlight = false;
@@ -235,16 +285,24 @@ public static class FirebaseCloudSaveService
                 dirty = true;   // sıradaki döngüde tekrar dene (offline'da SDK zaten kuyruklar)
                 if (GameDiagnostics.Backend)
                     Debug.LogWarning($"[CloudSave] push hatası: {task.Exception?.GetBaseException().Message}");
+                if (task.IsCanceled) completion.TrySetCanceled();
+                else completion.TrySetException(task.Exception ?? new Exception("Cloud save failed."));
             }
             else
             {
                 // Buluta yazılan delta'yı tabana katla (delta'dan düş) — tekrar sayılmasın.
+                if (FirebaseAuthService.UserId != uid)
+                {
+                    completion.TrySetException(new InvalidOperationException("Account changed before save acknowledgement."));
+                    return;
+                }
                 CurrencyLedger.FoldAfterPush(coinsDeltaSnap, starsDeltaSnap);
                 if (replaceResetSnapshot && CloudSaveManifest.ProgressResetRevision == resetRevision)
                 {
                     PlayerPrefs.DeleteKey(CloudSaveManifest.PendingProgressResetKey);
                     PlayerPrefs.Save();
                 }
+                completion.TrySetResult(true);
             }
         });
     }
@@ -276,6 +334,8 @@ public static class FirebaseCloudSaveService
                 PlayerPrefs.GetInt("current_level", 1) != lastPushedLevel)
                 dirty = true;
 
+            // Signature checks only; independent social failures retry even with a clean save.
+            PlayerDirectoryService.UpsertIfChanged();
             if (dirty) Push();
         }
 

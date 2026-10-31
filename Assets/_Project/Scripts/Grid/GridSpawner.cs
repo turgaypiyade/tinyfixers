@@ -326,6 +326,7 @@ public class GridSpawner : MonoBehaviour
         board.SetLevelData(resolvedLevel);
         ScriptedTutorial.Begin(board, resolvedLevel, CurrentLevel.Global);
         EnsureKeyGeneratorService();
+        SetupBirdHouses();
 
         // ObstacleStateService artık var (SetLevelData onu init etti). Stamp aşamasında toplanan
         // beneath kayıtlarını şimdi push et — init store'ları temizledikten SONRA.
@@ -398,6 +399,30 @@ public class GridSpawner : MonoBehaviour
         board.OnRequestObbDetonationView    += HandleRequestObbDetonationView;
         board.OnWardrobeOpened              += HandleWardrobeOpened;
         board.OnWardrobeItemRemoved         += HandleWardrobeItemRemoved;
+    }
+
+    // Guguk kuşu evi: level'da ev (yığın altındakiler dahil) ya da Bird hedefi varsa servis kurulur; yoksa
+    // önceki level'dan kalan servis temizlenir.
+    private void SetupBirdHouses()
+    {
+        bool hasBirdHouse = false;
+        if (resolvedLevel.obstacles != null)
+            hasBirdHouse = System.Array.IndexOf(resolvedLevel.obstacles, (int)ObstacleId.BirdHouse) >= 0;
+        if (!hasBirdHouse && resolvedLevel.stackedObstacles != null)
+            foreach (var entry in resolvedLevel.stackedObstacles)
+                if (entry.obstacleId == ObstacleId.BirdHouse) { hasBirdHouse = true; break; }
+        if (!hasBirdHouse && resolvedLevel.goals != null)
+            foreach (var goal in resolvedLevel.goals)
+                if (goal != null && goal.targetType == LevelGoalTargetType.Collectible
+                    && goal.collectibleId == CollectibleId.Bird) { hasBirdHouse = true; break; }
+
+        if (!hasBirdHouse)
+        {
+            if (board.TryGetComponent<BirdHouseService>(out var existing))
+                existing.Clear();
+            return;
+        }
+        BirdHouseService.Ensure(board).Build(resolvedLevel);
     }
 
     private void EnsureKeyGeneratorService()
@@ -575,7 +600,7 @@ public class GridSpawner : MonoBehaviour
     // kendi en üst oynanabilir hücresinin üst kenarından (+ pay) aşağısını gösterir.
     private void ApplyTilesTopClip()
     {
-        if (tilesRoot == null) return;
+        if (tilesRoot == null) { board?.SetSpawnHiddenRows(null); return; }
         if (tilesRoot.TryGetComponent(out RectMask2D oldClip)) oldClip.enabled = false;   // önceki sürümden kalmışsa
         tilesRoot.TryGetComponent(out TilesTopClipShape shape);
         tilesRoot.TryGetComponent(out TilesTopClipMask mask);
@@ -583,6 +608,7 @@ public class GridSpawner : MonoBehaviour
         {
             if (mask != null) mask.enabled = false;
             if (shape != null) shape.enabled = false;
+            board?.SetSpawnHiddenRows(null);   // gizli bölge yok → yeni taşın görsel başlangıcı kaydırılmaz
             return;
         }
         // Graphic'in CanvasRenderer'ı otomatik eklenmiyor (MissingComponentException) → önce elle ekle.
@@ -596,14 +622,19 @@ public class GridSpawner : MonoBehaviour
 
         float margin = tileSize * Mathf.Max(0f, tilesTopClipMarginTiles);
         var tops = new float[width];
+        var hiddenRows = new int[width];
         for (int x = 0; x < width; x++)
         {
             int topRow = 0;   // tamamen boş sütun: ızgara üst kenarı
             for (int y = 0; y < height; y++)
                 if (!IsShapeEmptyCell(x, y)) { topRow = y; break; }
             tops[x] = -topRow * tileSize + margin;
+            hiddenRows[x] = topRow;
         }
         shape.SetShape(tops, tileSize);
+        // Yeni taş, maskenin bu sütunu açtığı hücreye normal sütundaki mesafeden gelsin (delik satırlarında
+        // görünmeden geçen yol kısalır). Aynı kaynaktan (cells == Empty) → maske ile birebir tutarlı.
+        board?.SetSpawnHiddenRows(hiddenRows);
     }
 
     private bool IsShapeEmptyCell(int x, int y)
@@ -712,6 +743,7 @@ public class GridSpawner : MonoBehaviour
             DrawMudOverlays();
             DrawSpreadingGelOverlays();
             DrawWallObstacles();
+            DrawLampStrips();
             DrawHamsterObstacles();
             // DrawMudOverlays ClearAll() yapar; stamped-beneath mud'ları bundan SONRA çizilmeli.
             // Aksi halde LevelP_00540'ta plastic/movable altındaki mud ilk açılışta silinir,
@@ -1178,6 +1210,11 @@ public class GridSpawner : MonoBehaviour
         var runtimeClone = CloneLevelDataForRuntime(sourceLevel);
         ownsResolvedLevelInstance = runtimeClone != null;
 
+        // SIM build: güncel level JSON'u varsa gömülü veri yerine o oynanır (yeniden build gerekmez).
+        if (runtimeClone != null && RuntimeSimulationSession.IsActive && RuntimeSimulationSession.CurrentLevel == null
+            && RuntimeSimulationSession.ApplyLevelOverride(runtimeClone, RuntimeSimulationSession.CurrentLevelNumber))
+            runtimeClone.name = $"L{RuntimeSimulationSession.CurrentLevelNumber:000}_Override_Runtime";
+
         // Merkezden (Firestore config/levels) ayarlanan hamle sayısı — kopyaya yazılır, asset kirlenmez;
         // hamleyi okuyan her yer (HUD, yıldız, skor) aynı değeri görür.
         if (runtimeClone != null && !RuntimeSimulationSession.IsActive)
@@ -1191,7 +1228,13 @@ public class GridSpawner : MonoBehaviour
     {
         int n = RuntimeSimulationSession.CurrentLevelNumber;
         var catalog = levelRuntimeSelector != null ? levelRuntimeSelector.Catalog : null;
-        return n > 0 && catalog != null && catalog.TryGetGlobalLevel(n, out var data) ? data : null;
+        if (n > 0 && catalog != null && catalog.TryGetGlobalLevel(n, out var data)) return data;
+        // Build'den sonra eklenen level: katalogda yok ama güncel JSON'u var → paylaşılan referanslar (engel
+        // kütüphanesi vb.) için ilk levelı taban al; veri ResolveLevelData'da JSON'dan yazılır.
+        if (RuntimeSimulationSession.HasLevelOverride(n) && catalog != null && catalog.entries != null)
+            foreach (var e in catalog.entries)
+                if (e != null && e.levelData != null) return e.levelData;
+        return null;
     }
 
     // Runtime'da level üzerinde mutasyon yaparız (obstacle stamp'leme, hedef ilerlemesi vb.) ama
@@ -1289,6 +1332,8 @@ public class GridSpawner : MonoBehaviour
                 if (obsId == ObstacleId.SpreadingGel) continue;
                 // Wall kendi parça renderer'ını kullanır (WallObstacleService / WallPieceView).
                 if (obsId == ObstacleId.Wall || obsId == ObstacleId.MetalWall) continue;
+                // Lamba şeridi kendi parça renderer'ını kullanır (LampStripService).
+                if (obsId == ObstacleId.LampStrip) continue;
                 // Oil kendi cell-anchored blob renderer'ını kullanır. Generic full-cell image
                 // üretirsek her hücrede iç bevel kalır ve tek sıvı alan gibi birleşmez.
                 if (obsId == ObstacleId.Oil) continue;
@@ -1368,6 +1413,30 @@ public class GridSpawner : MonoBehaviour
         }
 
         WallObstacleService.Ensure(board).Build(resolvedLevel, overTilesObstaclesRoot, tileSize);
+    }
+
+    // Lamba şeridi: çerçeve + lambalar + kayma LampStripService'te (board'a runtime eklenir; örtü altındakiler dahil).
+    // Level'da şerit yoksa servis varsa temizlenir.
+    private void DrawLampStrips()
+    {
+        if (board == null || resolvedLevel?.obstacles == null || overTilesObstaclesRoot == null) return;
+
+        bool hasStrip = System.Array.IndexOf(resolvedLevel.obstacles, (int)ObstacleId.LampStrip) >= 0;
+        if (!hasStrip && board.ObstacleStateService != null)
+        {
+            var buried = new HashSet<ObstacleId>();
+            board.ObstacleStateService.CollectStampedBeneathIds(buried);
+            hasStrip = buried.Contains(ObstacleId.LampStrip);
+        }
+
+        if (!hasStrip)
+        {
+            if (board.TryGetComponent<LampStripService>(out var existing))
+                existing.Clear();
+            return;
+        }
+
+        LampStripService.Ensure(board).Build(resolvedLevel, overTilesObstaclesRoot, tileSize);
     }
 
     // Aç Hamster: tek hücre hareketli engel (TileView, kargo gibi); beslenme/kare değişimi/zıplama
@@ -2163,7 +2232,7 @@ public class GridSpawner : MonoBehaviour
             if (p.beneathId == ObstacleId.Oil ||
                 p.beneathId == ObstacleId.Safe || p.beneathId == ObstacleId.AncientSeal || p.beneathId == ObstacleId.Tube ||
                 p.beneathId == ObstacleId.Magnet || p.beneathId == ObstacleId.Grass ||
-                WallKind.For(p.beneathId) != null)
+                WallKind.For(p.beneathId) != null || p.beneathId == ObstacleId.LampStrip)
                 continue;
 
             var def = resolvedLevel.obstacleLibrary.Get(p.beneathId);
@@ -2671,6 +2740,14 @@ public class GridSpawner : MonoBehaviour
                 if (grassFlowerOverlayService != null) AddRoot(grassFlowerOverlayService.transform);
                 break;
             case ObstacleId.SpreadingGel: AddRoot(spreadingGelOverlayRoot); break;
+            case ObstacleId.LampStrip:
+                if (board.TryGetComponent<LampStripService>(out var strips))
+                {
+                    var stripRoots = new List<Transform>();
+                    strips.CollectViewRoots(stripRoots);
+                    foreach (var r in stripRoots) AddRoot(r);
+                }
+                break;
             case ObstacleId.Wall:
             case ObstacleId.MetalWall:
                 if (board.TryGetComponent<WallObstacleService>(out var walls))
@@ -2788,6 +2865,17 @@ public class GridSpawner : MonoBehaviour
             return;
         }
 
+        // State destruction is emitted BEFORE TriggerObstacleVisualChange. Capture the two
+        // final halves here, while the tracked source still exists. The later visual event
+        // finds no tracked view and cannot double-play (or silently lose) the finale.
+        if (TryPlayRhodesFinalBreak(originIndex, obstacleId))
+        {
+            obstacleViewsByOrigin.Remove(originIndex);
+            obstacleDefsByOrigin.Remove(originIndex);
+            ApplyUnderTileCellBgTint();
+            return;
+        }
+
         // Brandalı heykel: hangi olay önce gelirse (yok edildi / görsel temizlendi) görseli finale devreder.
         if (obstacleId == ObstacleId.TarpStatue && IsTrackedObstacleViewFor(originIndex, obstacleId)
             && obstacleViewsByOrigin.TryGetValue(originIndex, out var tarpImage) && tarpImage != null
@@ -2816,6 +2904,20 @@ public class GridSpawner : MonoBehaviour
         _batteryBoxViews.Remove(originIndex);
         _overrideBatteryBoxViews.Remove(originIndex);
         ApplyUnderTileCellBgTint();
+    }
+
+    private bool TryPlayRhodesFinalBreak(int originIndex, ObstacleId obstacleId)
+    {
+        if (obstacleId != ObstacleId.RhodesStatue || !IsTrackedObstacleViewFor(originIndex, obstacleId)
+            || !obstacleViewsByOrigin.TryGetValue(originIndex, out var image) || image == null)
+            return false;
+
+        StopObstacleHitShake(originIndex, image.rectTransform);
+        if (!RhodesStatueView.TryPlayFinalBreak(board, image)) return false;
+
+        image.gameObject.SetActive(false);
+        Destroy(image.gameObject);
+        return true;
     }
 
     private void HandleCellUnlocked(int cellIndex)
@@ -4111,7 +4213,7 @@ public class GridSpawner : MonoBehaviour
 
         // Duvar: parça görseli + kalan vuruş WallObstacleService'te (OnObstacleViewRestored'ı o da dinler);
         // generic 1x1 image çizilmez.
-        if (WallKind.For(obsId) != null)
+        if (WallKind.For(obsId) != null || obsId == ObstacleId.LampStrip)
             return;
 
         // Oil ayrı bir overlay renderer'ı kullanır (obstacleViewsByOrigin değil). Bir cover'ın
@@ -4257,6 +4359,10 @@ public class GridSpawner : MonoBehaviour
                 && TarpStatueService.TryPlayFinale(board, change.originIndex, image))
             {
                 // Heykel hedefe uçar, çerçeve parçalanır; görünümü servis yok eder.
+            }
+            else if (TryPlayRhodesFinalBreak(change.originIndex, change.obstacleId))
+            {
+                // The same ownership handoff also supports a visual-first caller.
             }
             else if (BoardController.IsGelLauncher(change.obstacleId))
             {

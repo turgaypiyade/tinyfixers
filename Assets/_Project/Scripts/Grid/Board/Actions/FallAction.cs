@@ -33,6 +33,9 @@ public class FallAction : BoardAction
 
         // Doğan taşın plan içindeki doğuş sırası = spawn sütunundaki akış sırası (0: tahtadaki taş).
         public int spawnOrder;
+        // Doğan taşın sütununda maskenin gizlediği üst satır sayısı (BoardController.GetSpawnHiddenRows).
+        // Yalnız düz düşen doğan taşın GÖRSEL başlangıcını aşağı alır; mantıksal yol (fromY) değişmez.
+        public int spawnHiddenRows;
         // Bölünmüş sütun aksiyonları global sırayla önceden başlatıldıysa biletleri (PrimeContinuous).
         public TileFallMotionSystem.Ticket primedTicket;
     }
@@ -159,7 +162,8 @@ public class FallAction : BoardAction
         float settleStr,
         AnimationCurve curve,
         float startDelay = 0f,
-        int spawnOrder = 0)
+        int spawnOrder = 0,
+        int spawnHiddenRows = 0)
     {
         if (tile == null || !tile)
             return;
@@ -196,6 +200,7 @@ public class FallAction : BoardAction
             pathSegmentDurations = segmentDurations,
             planGeneration = tile.NotePlannedFall(),
             spawnOrder = spawnOrder,
+            spawnHiddenRows = Mathf.Max(0, spawnHiddenRows),
         });
     }
 
@@ -266,7 +271,8 @@ public class FallAction : BoardAction
             pathWaypoints = r.pathWaypoints != null ? (Vector2Int[])r.pathWaypoints.Clone() : null,
             pathSegmentDurations = r.pathSegmentDurations != null ? (float[])r.pathSegmentDurations.Clone() : null,
             planGeneration = r.planGeneration,
-            spawnOrder = r.spawnOrder
+            spawnOrder = r.spawnOrder,
+            spawnHiddenRows = r.spawnHiddenRows
         };
     }
 
@@ -749,7 +755,9 @@ public class FallAction : BoardAction
 
         // En alttaki hedefe giden taş offset 0 alır.
         // Üst hedeflere gidenler 1, 2, 3... hücre daha yukarıdan görünür.
-        return Mathf.Max(0, maxToY - r.toY);
+        // Maskenin gizlediği üst satırlar (delikli sütun) kadar başlangıç aşağı iner → offset negatif olabilir;
+        // dizilim aynı kalır, taş maskenin açıldığı hücreye normal sütundaki mesafeden gelir.
+        return Mathf.Max(0, maxToY - r.toY) - r.spawnHiddenRows;
     }
 
     private static Vector2Int[] BuildVisualWaypoints(
@@ -763,7 +771,7 @@ public class FallAction : BoardAction
             r,
             maxToYPerVerticalSpawnSource);
 
-        if (visualOffset <= 0)
+        if (visualOffset == 0)
             return r.pathWaypoints;
 
         // Original path mutate edilmez.
@@ -772,7 +780,7 @@ public class FallAction : BoardAction
         for (int i = 0; i < r.pathWaypoints.Length; i++)
             visualWaypoints[i] = r.pathWaypoints[i];
 
-        // Sadece ilk waypoint gorsel olarak yukariya alinir.
+        // Sadece ilk waypoint gorsel olarak kaydirilir (yigin araligi yukari, maske gizli satirlari asagi).
         visualWaypoints[0] = new Vector2Int(
             visualWaypoints[0].x,
             visualWaypoints[0].y - visualOffset);
@@ -799,7 +807,7 @@ public class FallAction : BoardAction
 
         if (board != null)
         {
-            // Sadece ilk segment uzadiysa, onun suresini yeniden hesapla.
+            // Sadece ilk segment uzadi/kisaldiysa, onun suresini yeniden hesapla.
             // Diger segmentler aynen kalir.
             visualDurations[0] = board.GetFallDurationForMove(
                 visualWaypoints[0].x,
@@ -820,7 +828,7 @@ public class FallAction : BoardAction
             r,
             maxToYPerVerticalSpawnSource);
 
-        if (visualOffset <= 0)
+        if (visualOffset == 0)
             return r.duration;
 
         bool isPath = r.pathWaypoints != null && r.pathWaypoints.Length >= 2;
@@ -943,7 +951,7 @@ public class FallAction : BoardAction
                 r,
                 maxToYPerVerticalSpawnSource);
 
-            string visualNote = visualOffset > 0
+            string visualNote = visualOffset != 0
                 ? $" visualFromY={visualFromY} visualOffset={visualOffset} visualDuration={moveDuration:0.000}"
                 : string.Empty;
 

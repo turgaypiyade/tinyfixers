@@ -18,8 +18,69 @@ MonoBehaviour:
     bandStyle: 1
     bandSprite: {fileID: 21300000, guid: 83afb5006eba84bdea92bf2aa60329cc, type: 3}
     offers:
+    - id: bundle_welcome
+      storeProductId: com.yigefep.tinyfixers.bundle_welcome
+      displayName: "Hoş Geldin Paketi"
+      cardStyle: 0
+      showBestBadge: 1
+      showOnFailPopup: 1
+      groups:
+      - background: {fileID: 0}
+        icons:
+        - {fileID: 21300000, guid: da6a3c8bdeb2483ebfe31324edd1b45d, type: 3}
+        labelMode: 0
+        labelValue: 2500
+        showTimerIcon: 0
+        grants:
+        - kind: 0
+          amount: 2500
+          booster: 1
+          durationHours: 1
+          timedType: 13
+      - background: {fileID: 21300000, guid: d5fedb512e27b4d35b4b51e5317fe60b, type: 3}
+        icons:
+        - {fileID: 21300000, guid: ed345d94ee5f64d2ca7e7fbd7f8a9aff, type: 3}
+        - {fileID: 21300000, guid: 30434a3e9715343989745b73a5f1e925, type: 3}
+        - {fileID: 21300000, guid: 822cf0df638a3404399e3a61943aa8d4, type: 3}
+        labelMode: 1
+        labelValue: 1
+        showTimerIcon: 0
+        grants:
+        - kind: 3
+          amount: 1
+          booster: 1
+          durationHours: 1
+          timedType: 13
+        - kind: 3
+          amount: 1
+          booster: 2
+          durationHours: 1
+          timedType: 13
+        - kind: 3
+          amount: 1
+          booster: 3
+          durationHours: 1
+          timedType: 13
+      - background: {fileID: 21300000, guid: 9f1b99fa54f36443d8a108bfd3f5dc7b, type: 3}
+        icons:
+        - {fileID: 21300000, guid: 62c8a31be03e44a65adcd1407edae4be, type: 3}
+        labelMode: 2
+        labelValue: 1
+        showTimerIcon: 0
+        grants:
+        - kind: 4
+          amount: 1
+          booster: 1
+          durationHours: 1
+          timedType: 13
+      availability: 2
+      cooldownHours: 24
+      priceType: 0
+      priceLabel: $1.99
+      priceAmount: 0
     - id: bundle_start
-      displayName: "Gezginci \xC7antas\u0131"
+      storeProductId: com.yigefep.tinyfixers.bundle_start
+      displayName: "Gezginci Çantası"
       cardStyle: 0
       showBestBadge: 0
       showOnFailPopup: 1
@@ -99,10 +160,11 @@ MonoBehaviour:
       availability: 0
       cooldownHours: 24
       priceType: 0
-      priceLabel: 499.99 TL
+      priceLabel: $9.99
       priceAmount: 0
     - id: bundle_hunter_loot
-      displayName: "Avc\u0131 Ganimeti"
+      storeProductId: com.yigefep.tinyfixers.bundle_hunter_loot
+      displayName: "Avcı Ganimeti"
       cardStyle: 0
       showBestBadge: 0
       showOnFailPopup: 0
@@ -182,10 +244,11 @@ MonoBehaviour:
       availability: 0
       cooldownHours: 24
       priceType: 0
-      priceLabel: 999.99 TL
+      priceLabel: $19.99
       priceAmount: 0
     - id: bundle_explorer_chest
-      displayName: "Ka\u015Fif Sand\u0131\u011F\u0131"
+      storeProductId: com.yigefep.tinyfixers.bundle_explorer_chest
+      displayName: "Kaşif Sandığı"
       cardStyle: 0
       showBestBadge: 0
       showOnFailPopup: 0
@@ -265,10 +328,11 @@ MonoBehaviour:
       availability: 0
       cooldownHours: 24
       priceType: 0
-      priceLabel: 1999.99 TL
+      priceLabel: $39.99
       priceAmount: 0
     - id: bundle_grand_safe
-      displayName: "Muhte\u015Fem Kasa"
+      storeProductId: com.yigefep.tinyfixers.bundle_grand_safe
+      displayName: "Büyük Kasa"
       cardStyle: 0
       showBestBadge: 0
       showOnFailPopup: 0
@@ -360,10 +424,11 @@ MonoBehaviour:
       availability: 0
       cooldownHours: 24
       priceType: 0
-      priceLabel: 3999.99 TL
+      priceLabel: $79.99
       priceAmount: 0
     - id: bundle_legendary
-      displayName: Efsanevi Hazine
+      storeProductId: com.yigefep.tinyfixers.bundle_legendary
+      displayName: "Efsanevi Paket"
       cardStyle: 0
       showBestBadge: 1
       showOnFailPopup: 1
@@ -455,7 +520,7 @@ MonoBehaviour:
       availability: 0
       cooldownHours: 24
       priceType: 0
-      priceLabel: 4999.99 TL
+      priceLabel: $99.99
       priceAmount: 0
   - title: "Alt\u0131nlar"
     titleKey: shop_section_coins
@@ -463,7 +528,8 @@ MonoBehaviour:
     bandSprite: {fileID: 21300000, guid: dacecceb180224b269a6e3f3b0ec21b8, type: 3}
     offers:
     - id: coins_1000
-      displayName: 1,000
+      storeProductId: com.yigefep.tinyfixers.coins_1000
+      displayName: "1.000 Altın"
       cardStyle: 1
       showBestBadge: 0
       showOnFailPopup: 1
@@ -483,10 +549,11 @@ MonoBehaviour:
       availability: 0
       cooldownHours: 24
       priceType: 0
-      priceLabel: 99.99 TL
+      priceLabel: $1.99
       priceAmount: 0
     - id: coins_5000
-      displayName: 5,000
+      storeProductId: com.yigefep.tinyfixers.coins_5000
+      displayName: "5.000 Altın"
       cardStyle: 1
       showBestBadge: 0
       showOnFailPopup: 1
@@ -506,10 +573,11 @@ MonoBehaviour:
       availability: 0
       cooldownHours: 24
       priceType: 0
-      priceLabel: 399.99 TL
+      priceLabel: $7.99
       priceAmount: 0
     - id: coins_10000
-      displayName: 10,000
+      storeProductId: com.yigefep.tinyfixers.coins_10000
+      displayName: "10.000 Altın"
       cardStyle: 1
       showBestBadge: 0
       showOnFailPopup: 0
@@ -529,10 +597,11 @@ MonoBehaviour:
       availability: 0
       cooldownHours: 24
       priceType: 0
-      priceLabel: 799.99 TL
+      priceLabel: $14.99
       priceAmount: 0
     - id: coins_25000
-      displayName: 25,000
+      storeProductId: com.yigefep.tinyfixers.coins_25000
+      displayName: "25.000 Altın"
       cardStyle: 1
       showBestBadge: 0
       showOnFailPopup: 0
@@ -552,10 +621,11 @@ MonoBehaviour:
       availability: 0
       cooldownHours: 24
       priceType: 0
-      priceLabel: 1499.99 TL
+      priceLabel: $29.99
       priceAmount: 0
     - id: coins_50000
-      displayName: 50,000
+      storeProductId: com.yigefep.tinyfixers.coins_50000
+      displayName: "50.000 Altın"
       cardStyle: 1
       showBestBadge: 0
       showOnFailPopup: 0
@@ -575,10 +645,11 @@ MonoBehaviour:
       availability: 0
       cooldownHours: 24
       priceType: 0
-      priceLabel: 2999.99 TL
+      priceLabel: $54.99
       priceAmount: 0
     - id: coins_100000
-      displayName: 100,000
+      storeProductId: com.yigefep.tinyfixers.coins_100000
+      displayName: "100.000 Altın"
       cardStyle: 1
       showBestBadge: 0
       showOnFailPopup: 0
@@ -598,5 +669,5 @@ MonoBehaviour:
       availability: 0
       cooldownHours: 24
       priceType: 0
-      priceLabel: 4999.99 TL
+      priceLabel: $99.99
       priceAmount: 0

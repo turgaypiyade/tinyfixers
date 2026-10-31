@@ -1,4 +1,4 @@
-#if UNITY_EDITOR
+#if UNITY_EDITOR && TF_AUTH_LINK_DEBUG
 using Firebase.Auth;
 using UnityEngine;
 

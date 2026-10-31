@@ -1,0 +1,132 @@
+# Engel tasarım rehberi
+
+108 hazırlanırken mevcut kod, `ObstacleLibrary.asset` ve `LevelCatalogPro.asset` üzerinden çıkarıldı. Tasarım amaçlı yaşayan nottur; eski dokümanlarla çelişirse güncel servis kodu ve asset ayarları esas alınır. Yeni engel veya davranış değiştiğinde güncellenir.
+
+## Seçim ilkesi
+
+O ana kadar açılmış bütün engeller tasarım havuzudur. Son tanıtılan engeller her levelde zorunlu değildir. Bölgesel renk uyumu, toplu geometrik yerleşim, oynanış çeşitliliği ve yardım/zorluk dengesi birlikte değerlendirilir. Aşağıdaki ilk seviye değerleri katalogdaki ilk authored/goal kullanımını gösterir; ayrı bir tutorial takvimi değildir. Dinamik doğan engeller ayrıca değerlendirilmelidir.
+
+## Jel — SpreadingGel, ID 46
+
+- Temizlenecek bir engel değildir; kalıcı bir kaplama hedefidir. Altındaki taş oynanabilir. Tüm board hedefleniyorsa `goal.amount = Normal hücre sayısı`; hole'lar sayılmaz, sonradan açılacak engel hücreleri sayılır.
+- HUD kalanını `amount - RevealedCount` olarak hesaplar. Başlangıçtaki açık jel sayılır; örtü altındaki mühürlü jel, örtü kırılmadan hedefe sayılmaz ve yayılma kaynağı olmaz.
+- Güncel temel kural: olayın kaynağı jele bulaşmışsa olayın temizlediği taş hücrelerine jel bırakılır. Normal eşleşmenin bir taşı jel üzerindeyse bütün eşleşme grubu bulaşır. Oluşan special da bulaşı taşır.
+- Swap ile jel kaynağından çıkan taş, o swap'ın eşleşme kararında kaynak kabul edilir. Geçersiz swap tek başına kalıcı yayılma yaratmaz. Salt gravity de yayılma nedeni değildir.
+- Jel üzerinde/bulaşmış kaynaktan tetiklenen special ve combo, zincirlerde de yayılma sağlayabilir. Jelsiz bağımsız cascade eşleşmeleri otomatik bulaşmaz. Bir etkinin jel üzerinden geçmesi veya jele komşu olması tek başına yeterli değildir.
+- SculptingStone/chest gibi katmanların altında seed saklanabilir: base `obstacles[] = SpreadingGel`, üst engel `stackedObstacles[]`. Örtü kırılınca seed açılır.
+- Tasarım akışı: açık jel çevresinde eşleşme/special kur → engelli bölgeleri aç → geriye kalan bütün hücreleri kapla. Yayılma, bütün engeller bitene kadar kodla ertelenmez; iki süreç birlikte ilerleyebilir. Zorunlu temizlenecek engeller ayrıca hedeflenir.
+- Yardımcı patlamalar bütün board'u otomatik jelleyecek varsayımıyla tasarım yapılmaz; jel kaynağı ve ilgili etki yolu önemlidir.
+
+Kaynaklar: [BoardController](../../Assets/_Project/Scripts/Grid/Board/BoardController.cs) içindeki `NoteGelSpreadParticipants`, `NoteGelCarriedBySwap`, `ShouldPaintGelOnClear`, `NoteGelSpreadOrigin`; [SpreadingGelOverlayService](../../Assets/_Project/Scripts/Grid/SpreadingGel/SpreadingGelOverlayService.cs); [TopHudController](../../Assets/_Project/Scripts/UI/TopHUD/TopHudController.cs) içindeki jel hedef hesabı; [GridSpawner](../../Assets/_Project/Scripts/Grid/GridSpawner.cs) içindeki `DrawStampedBeneathVisuals`.
+
+`LevelData.cs` jel açıklamasındaki eski swap özeti güncel eşleşme/zincir kurallarını bütünüyle açıklamıyor. Rehber yukarıdaki çalışan metotlara dayanır.
+
+## AncientSeal — ID 64
+
+Aynı aktif rengi bekleyen mühürler taşları eşit paylaşmaz: önce bir mührün o renk sayacı doldurulur, sonra sıradakine geçilir. İlk seçim origin indeksine göre yapılır; sonradan aynı renge geçen veya örtüsü açılan başka bir mühür mevcut hedefin önüne geçmez. Renklerin hedefleri birbirinden bağımsızdır.
+
+Uçuştaki taşlar ihtiyaçtan düşülerek rezerve edilir; bir mührün ihtiyacı tamamen karşılanınca aynı eşleşmenin fazlası sıradakine gidebilir. Görünen sayaç yalnız taş vardığında azalır, bu yüzden son uçuşlar kısa süreli örtüşebilir. Örtülü mühürler toplamaz. Kural, bir mührün üç renginin tamamını bitirmeyi beklemek değildir; o anda istenen renk sayacını sırayla bitirmektir.
+
+## Yardımcı engeller
+
+Kullanıcının hedef politikası: **RocketBasket ve OverrideBatteryBox doğrudan goal yapılmaz.** EggBird yardımcı rolündeyse hedef zorunluluğu yoktur; tüm yumurtalar kırılmadan level tamamlanabilir. EggBird ancak özel olarak temizleme amacı seçildiğinde goal olur. Yardımcılar mümkün olduğunda bitişik bir grup halinde düzenlenir. Tam-board jel gibi ayrı hedefler, yardımcıların kapladığı hücrelere erişimi yine gerektirebilir; doğrudan yardımcı goal'ü olmaması bu dolaylı gereksinimi kaldırmaz.
+
+| Engel | Güncel davranış | Tasarımda kullanım |
+|---|---|---|
+| RocketBasket · 38 | Varsayılan kırmızı/sarı/mavi olmak üzere 3 roket. Komşu normal eşleşme yalnız yüklü aynı renk roketi ateşler; special/booster kalan roketlerden birini ateşleyebilir. Boşalınca kalkar; normalde ayrı hedef yapılmaz. | Zor bölgelere yardım sağlayan erişilebilir bir odak. Yakınında yeterli eşleşme alanı ve gerekli renk havuzu bırak. |
+| OverrideBatteryBox · 43 | 2×2, dört rengin şarjı ayrı. Güncel library `hits=3`: renk başına 3, toplam 12 şarj vuruşu. Dolunca board genelinde bir vuruşluk dalga; normal taşları temizler, specials zincirlenebilir. Çok katmanlı her engeli tek seferde yok etmez. | Daha çok hazırlık isteyen güçlü yardım. Dört renk havuzunu ve çevresinde şarj edilebilir alanı koru. |
+| EggBird · 45 | Hareketli, iki vuruş: çatla → kuşlar çık. Üç uygun hedef seçilir; mümkünse farklı, eşit rastgele, hedef önceliği yok. Hedef başına tek vuruş; ilave komşu splash yok. | Küçük bir engeli temizlemekle yardım ödülü bir arada. Belirli bir engeli kesin vuracağı varsayılmaz. |
+
+RocketBasket için `rocketBasketFireAllOnHit=1` bütün yüklü roketleri tek tetiklemede boşaltır; normal match yine yüklü renklerden biriyle eşleşmelidir. Bu ayar bilinçli bir kolaylaştırmadır. 108'de kapalıdır.
+
+Kaynaklar: [RocketBasketService](../../Assets/_Project/Scripts/Grid/Board/Obstacles/RocketBasketService.cs), [ObstacleStateService](../../Assets/_Project/Scripts/Grid/Board/Obstacles/ObstacleStateService.cs), [OverrideBatteryBoxDetonationAction](../../Assets/_Project/Scripts/Grid/Board/Actions/OverrideBatteryBoxDetonationAction.cs), [EggBirdHatchAction](../../Assets/_Project/Scripts/Grid/Board/Actions/EggBirdHatchAction.cs), [EggBird QA](../EggBird-QA.md).
+
+## Açılmış engel aileleri için kısa başvuru
+
+Vuruş sayıları mevcut library'den okunmuştur; özel servislerin renk, öğe, şarj ve kilit sayaçları ayrıca geçerlidir. Tablo ayrıntılı servis dokümanlarının yerine geçmez.
+
+| Engel / ID | İlk seviye | Özellik / yerleşim notu |
+|---|---:|---|
+| chest1/2/3 · 4/5/6 | 1 / 3 / 14 | Tek hücre, 1/2/3 vuruş. Ahşap renk blokları, şeritler ve örtüler için. |
+| Stone · 1 | 2 | Tek vuruşlu taş; mevcut stage bayrakları ayrıca library'den kontrol edilir. |
+| Mud · 25 | 4 | İki katmanlı alt zemin; jel gibi kalıcı kaplama hedefi değildir. |
+| Oil · 14 | 6 | Yayılan baskı engeli; yayılma/temizleme kuralları Oil servisi üzerinden işler. |
+| plastic_orange / plastic · 8/7 | 8 / 12 | Tek vuruşlu hareketli engeller. Gravity açılış desenini zamanla değiştirir. |
+| Cargo · 34 | 9 | Kırılmaz; aşağı çıkıştan toplanır. Çıkış ve düz düşüş yolu tasarlanmalı. |
+| Plastic_Blue / Plastic_Red · 11/12 | 14 / 15 | Komşu normal eşleşmede kendi rengini ister; renk havuzu ve erişim önemli. |
+| ColorChest · 21 | 18 | 2×2 renk mekanikli sandık; tek hücreli chest gibi sayılmamalı. |
+| HatLauncher · 31 | 22 | EnergyOrb üreten kaynak; collectible hedefiyle birlikte düşünülür. |
+| Wardrobe · 27 | 29 | 2×2; kapı açma ve içerideki öğeleri çıkarma aşamaları. |
+| Player/EnemyShieldPickup · 35/36 | 30 | Boss bağlamında kalkan; normal levelde sıradan kırılabilir hareketli öğe. |
+| Tube · 26 | 31 | Özel `tubes[]` verisiyle çok hücreli, küçülen engel. |
+| HelmetPorcelain · 30 | 37 | Tek vuruş, hareketli; açık tonlu gruplar için. |
+| SculptingStone · 28 | 38 | Güncel ayarda üç vuruş, tek hücre. Krem bloklar; aşamalarla oyma şekil açığa çıkar. |
+| SculptingSpecial · 39 | 45 | Güncel ayarda tek vuruş fakat yalnız special hasarı. Normal match ile açılacağı varsayılmaz. |
+| PlasticTwoStage · 40 | 47 | İki vuruş, hareketli; plastic/porcelain ailesiyle uyumlu gruplar. |
+| Grass · 42 | 58 | Görünen komşu eşleşmelerle aşınan örtü; kendi hücresindeki match aynı hasar kuralı değildir. Güncel library `locksInteraction=1`; eski enum yorumundaki serbest swap özeti esas alınmaz. |
+| GoldMoney · 32 | 63 | Tek vuruşlu hareketli bonus; ana level hedefi değildir. |
+| Safe · 33 | 63 | `safes[]` footprint'i altında içerik saklar; sıralı renk kilitleri. |
+| RocketBasket · 38 | 71 | Yukarıdaki yardım bölümü. |
+| Barrell_v2 · 41 | 72 | Güncel footprint 2×2, dört vuruş; sonunda Mud saçar. Dinamik Mud hedefi dikkate alınır. |
+| Magnet · 29 | 74 | `magnets[]` ile eşleşmiş uçlar; vuruşlarla yaklaşır, birleşince kalkar. |
+| KeyGenerator · 44 | 76 | Key taşı üretir; Tile/Key hedefiyle birlikte kullanılır. |
+| EnergyContainer · 22 | 79 | EnergyOrb üretimi servis yönetimindedir; salt `hits` değeri hedef toplamı değildir. |
+| SpreadingGel · 46 | 86 | Yukarıdaki kaplama bölümü. |
+| OverrideBatteryBox / EggBird · 43/45 | 87 | Yukarıdaki yardım bölümü. |
+| WaterTank · 52 | 93 | 2×2, iki vuruş ve güncel stage'lerde SpecialOnly; kırılınca WaterPuddle üretir. |
+| Wall · 55 | 101 | Bağlı parça ortak origin taşır. Tek hücreye beş vuruş bütün parçayı yıkar; hedef hücre değil parça sayısıdır. |
+| GrassFlower · 58 | 105 | Çimin üzerinde ilave çiçek katmanı. GrassFlower hedefi çiçek dökümünü; Grass hedefi alttaki çimin temizlenmesini ister. |
+| GelLauncher · 59–62 | — | Jel fırlatıcı (kartuş). Up/Down 1×2, Left/Right 2×1; ağız yönü id'den. Yalnız special, 2 vuruş (kapalı → çatlak). Kırılınca kapak ağızdan tahta kenarına kadar uçar, yolundaki her hücrede engel kalmayana kadar vurur (kırılmazlarda durur), taşı kırar/special'ı tetikler; jel 2 hücre geriden yolu ve kartuşun kendi hücrelerini boyar. Hedef değil, yardımcı. Köşelere/kenarlara, ağız tahtanın içine bakacak şekilde konur; dik olanı üst köşeye koymak o sütunun üst girişini kapatır. |
+| PaintCanBox · 63 | Boya Piramidi | 2×2 sabit kasa, içinde 4-3-2 dizili 9 boya kutusu (sayılabilir içerik). Bitişik her eşleşme 1, her special 2 kutu düşürür; vuruşta tüm kutular sallanır, düşen takla atarak uçar. Son kutuyla kasa kalkar. Hedef olarak kullanılabilir (obstacleId 63). Wardrobe'un kapısız, hemen başlayan hâli. Kova: Resources/PaintCanBox/PaintCan.png (kırmızı gövde + mavi boya). Kasa başına renk seçimi hazır: Resources'a PaintCanRed/Yellow/Green/Blue.png konursa o renk kullanılır, yoksa varsayılan kova; LevelData inspector'ında "Boya Kasası (x,y)"; Auto = satır bandına göre (her 2 satır bir renk). Çok kasalı levelda bölgesel renk düzeni kur. |
+
+WaterPuddle (53), WaterTank'tan doğan tek vuruşlu alt zemindir; kendi hücresindeki taş temizlenince kurur. Dinamik olarak görülmesi, yalnız doğrudan yerleştirilmiş obstacle dizilerinin taranmasıyla bulunmayabilir.
+
+Listede bulunmayan bir ID yalnız kodda mevcut diye yeni levele eklenmez. Katalog, üretici/katman verileri ve tanıtım sırası ayrıca incelenir.
+
+Yeni kütüphane engeli: **RhodesStatue · ID 70**, 2×2 sabit dev heykel; dört aşama/dört special isabeti, normal/booster hasarı almaz. İlk production tanıtımı 161; 162 ve 166'da yoğun yükle geri gelir. Goal/prelevel ikonu Resources/RhodesStatue/S1_Base'tir. Kapladığı dört hücre tek obstacle/goal'dür. Ayrıntı: [RhodesStatue](../RhodesStatue.md).
+
+## Yeni fener — Lantern, ID 75 · ilk production 182
+
+Kullanıcının eklediği 1×1 hareketli engel; `hits=2`, her iki stage `behavior=MovableObstacle`, normal/special hit alır ve renk kısıtı yoktur. İlk sprite `Lantern_1_Unlit`, ilk hitten sonra `Lantern_2_Lit`; ikinci hit engeli toplar. HUD/prelevel goal ikonu yanan fenerdir. Hint 75 kaydı/lokalizasyonu mevcut.
+
+PlasticTwoStage 40 ile aynı temel iki-hit/movable davranışındadır; eski dokümanlarda turuncu PlasticTwoStage'e de “fener” denir, bu yeni ID 75 ile karıştırılmaz. Genel hedef refill'inde kalan miktar yaşayan+gömülü+planlanmış sayının üzerindeyse üretilebilir. **ID 40'a özel hamle başına bir spawn kilidi 75'e uygulanmıyor**; genel pass başına tek movable sınırı geçerlidir. Hedefi başlangıç adedinin üzerinde tasarlarken bu fark gözetilir. 182 v1 tanıtımında başlangıç 30/goal 30 idi. Kullanıcının tek sütun isteğiyle v2 başlangıç 11/goal 30 oldu; 19 kandil mevcut hedef refill kotasıyla gelir. Bu açılış sütunu kalıcı spawn sütunu değildir. Yeni fener adına özel runtime/VFX servisi yazılmadı.
+
+## Renkli sandıklar — ColorCrate, ID 71–74
+
+Sabit 1×1, üç aşamalı sandıklar: **71 sarı/Gear, 72 kırmızı/Core, 73 mavi/Bolt, 74 yeşil/Plate**. Komşu normal eşleşme yalnız sandığın kendi rengindeyse hasar verir; special bu renk kısıtını aşar. `ObstacleLibrary` içinde her biri `hits=3`, `restrictNormalMatchTileType=1`, bütün aşamalarda `allowDiagonal=1` taşır. Son aşamada `holdsTile=1` vardır; açılışta serbest taş hücresi sayılmazlar. ID 21 ColorChest'ten farklı, tek hücreli ayrı bir ailedir.
+
+Kırmızı/yeşil ilk production kullanımı **169**; sarı/mavi renk varyantlarının ilk kullanımı **171**. 171 [Renkli Çerçeve](Level171-Renkli-Cerceve.md), dört renkli sandıkları 7×3 hole boşluğunu çevreleyen kesintisiz bir konturda birleştirir. Renk hedefleri ayrı ayrı sayılır. Sandıklar birbirinden kopuk adacıklar yerine kenarı/şekli tamamlayan bantlarda kullanılır.
+
+## Diyagonal köşe geçişi — 148 geri bildirimi
+
+Wardrobe (27), PaintCanBox (63) ve TarpStatue (68) için **bütün stage'lerde `allowDiagonal = 1`**.
+148'in şekli korunarak kullanıcı isteğiyle ortak `ObstacleLibrary` ayarı açıldı; diğer levellarda da geçerlidir.
+Sonraki kullanıcı isteğiyle **OverrideBatteryBox (43), LaserCannon (65), KeyGenerator (44) ve SculptingStone (28)**
+için de bütün stage'lerde `allowDiagonal = 1` yapıldı. Üretim, hasar, vuruş sayıları ve `blocksCells` ayarları korunur;
+değişiklik yalnız köşe geçişini açar. Bu engellerin çevresindeki dolum kolaylaşabileceği için mevcut level dengeleri
+oynanarak değerlendirilmelidir; canlı oyun testi yapılmadı. Hareketli engeller ve diğer engel türleri değiştirilmedi.
+Bu ayar, taşın engelin köşesinden komşu alt hücreye çapraz kaymasını sağlar; engelin kapladığı hücreye taş yerleştirmez.
+Çapraz hedef ve kaynak oynanabilir olmalı; iki yan köşeden en az biri geçişe izin vermelidir.
+Dolum incelemesinde yalnız kaynak/hedef boşluğuna bakılmaz, `BoardCellStateQuery` ve `FindSlideSource` köşe kuralı da kontrol edilir.
+
+Temel kaynaklar: [LevelData](../../Assets/_Project/Scripts/Core/LevelData.cs), [ObstacleLibrary](../../Assets/_Project/Settings/ObstacleLibrary.asset), [LevelCatalogPro](../../Assets/_Project/Settings/LevelCatalogPro.asset). [Eski akış envanteri](../ObstacleFlow_Inventory.md) zamanlama geçmişi için faydalıdır; güncel gameplay ayarı olarak tek başına kullanılmaz.
+
+## GrassWaterLily — ID 69, ilk seviye 151
+
+Tek seçimle çim + nilüfer yerleşir; ayrıca Grass eklenmez. Komşu special ilk gözlemden sonra bir gerçek oyuncu hamlesi aynı hücrede kaldıysa yutulur. İçeride special varken ilk special vuruşu geri fırlatır; uygun hücreye patlamadan iner. İçerisi boş olsa da dört yapraklı ilk aşamayı yalnız special vuruşu açar. İlk yaprak düştükten sonra içerisi boşken normal eşleşme veya special birer yaprak düşürür. Yeniden special yutmuş olsa da içi dolu çiçeği yalnız special açar; normal eşleşme zarar vermez. Dört yaprak bittiğinde alt çim normal akışla temizlenir. ID 69 hedefi ancak alttaki çim de bitince bir kez ilerler. Booster yaprak düşürmez; normal eşleşme sadece içerisi boş ve ilk yaprağı düşmüşken hasar verir. Renk/ölçek hasarla değişmez.
+
+Tanıtımda çevresinde special üretme ve geri atılan special'ın inebileceği açık hücreler bırakılır; yoğun kaplama altında saklanmaz. Ayrıntı: [GrassWaterLily](../GrassWaterLily-Plan.md), ilk tasarım: [Nilüfer Göleti 151](Level151-Nilufer-Goleti.md).
+
+## Su kanalı — WaterChannel, ID 76 · ilk production 183
+
+Güncel `WaterChannelService` ve `WaterChannelEntry` esas alınır: yolun ilk hücresi herhangi bir aktif kaynak/depo; tekrar yok, dik komşu adımlarla yalnız yana/aşağı gidilir. Son hücre sol/sağ/alt sınır veya hole'a açılmalıdır; ExitSide son adım, alt, uygun yan sırasıyla seçer. Kaynak runtime geçirgendir, normal taş tutmaz. Diğer kanal hücreleri tek vuruşlu oynanabilir alt katmandır; açılınca **normal oynanabilir kalırlar**, taşlar üstlerine gelir. LevelData enum yorumundaki açılan kanalı hole sayan eski cümle güncel davranışı anlatmaz.
+
+Yol `waterChannels[].pathCellIndices` içinde sıralı int dizisidir; kaynak dışındaki hücreler GridSpawner'da ID76 ve kendi origin'iyle damgalanır. Güncel GridSpawner, kaynak dışındaki hücrede kendi origin'ine sahip 1×1 engeli korur ve kanalın üst katmanına taşır. Kaynak/depo boş bırakılır; çok hücreli engel kanal yoluyla çakıştırılmaz. Kurulum sırası GrassFlower dönüşümü → kanal tabanı → korunan kanal örtüleri → yazılmış diğer katmanlardır. Örneğin 189'da WaterChannel76 altında, GrassWaterLily69 üsttedir; nilüferin çim tabanı da korunur. Üstteki taşın temizlenmesi/special isabeti hücreyi açar; depodan kesintisiz açık bölge su alır, ortadan açılan parça bağlantı gelene kadar kuru kalır. Goal miktarı hücre değil **tamamlanacak kanal sayısı**dır; TopHUD hücre yıkımını saymaz, OnWaterChannelCompleted olayını sayar. ID76 altında statik sprite yerine Resources/WaterChannelSkin şekilleri kullanılır; goal ikonu ChannelSource, hint76/lokalizasyon mevcut.
+
+183 ilk tanıtımı: tek 21 hücrelik yol (1 kaynak + 20 açılacak hücre), alt çıkış. İki aileli ek yük Lantern75 ve SculptingStone28. Kanal açık kaldığında oyuncu alanını bölmüş sayma; eski dinamik-hole/kanala-swap planı geçersizdir. Performans/teardown sınırı 183 notunda; yeni level için runtime değiştirilmedi.
+
+### Renkli sandık başlangıç aşaması — 179 revizyonu
+
+`StackedObstacleEntry.initialRemainingHits` yalnız ColorCrate71–74 için geçerlidir. 0 veya eksik alan library varsayılanıdır; pozitif değer1…def.hits aralığına clamp olur. Max hits3 kalır; kalan2 ikinci görsel/kural aşaması, kalan1 son aşamadır (`holdsTile=1` de o aşamadan gelir). 179'da satırlar3/2/1/1, son12hücrede örtü altında taş tutulur.
+
+State kurulumda id+origin anahtarıyla başlangıç hitlerini bir kez toplar; exposed ve beneath kaydı aynı değeri kullanır. Kırılma/snapshot mevcut kalan-hit akışıyla sürer. Spawn/editor/PNG başlangıç aşamasını görselleştirir. Başka bir kapak aynı origin'de diye sandığın başlangıç hitini devralmaz. Eski levellarda alan0 kalır; paylaşılan library değişmez. Başlangıç aşaması normal **Obstacle → ColorCrate → Başlangıç kalan vuruş (1/2/3)** yolundan seçilir. Normal sandıklar `LevelData.colorCrateInitialHits` girdisinde saklanır; yeni katman oluşturulmaz. Aynı sandığa tıklamak aşamasını değiştirir; silme/üzerine başka engel boyama başlangıç kaydını temizler. Gerçek üst katmanlar için Overlay mevcut `StackedObstacleEntry.initialRemainingHits` desteğini korur. Obstacle fırçası, aynı origin üzerinde mevcut en üst generic katman aynı sandıksa yalnız aşamasını günceller; 179 gibi Mud tabanını korur. Kütüphanenin ortak Hits/stage ayarları tüm levelları etkilediğinden ayrı, kapalı bir foldout altında gösterilir. Bu UI düzeltmesi level assetlerini değiştirmedi; doğrulama `Checks/ColorCrate-Obstacle-Brush/` içinde. Unity derleme/Play yapılmadı.

@@ -23,7 +23,9 @@ public struct Rect {public Vector2 size;public float width=>size.x;public float 
 public class RectTransform {public Vector2 sizeDelta=new Vector2(100,100),anchoredPosition;public Rect rect=>new Rect{size=sizeDelta};public Vector3 localScale=Vector3.one,localEulerAngles;public Quaternion localRotation;public void SetAsFirstSibling(){}}
 public struct Color {public float r,g,b,a;public Color(float r,float g,float b,float a){this.r=r;this.g=g;this.b=b;this.a=a;}public static Color white=>new Color(1,1,1,1);}
 public class Sprite {public string name;public Sprite(string n){name=n;}}
+public class CanvasRenderer {float alpha=1;public float GetAlpha()=>alpha;public void SetAlpha(float a){alpha=a;}}
 public class Image {
+ public CanvasRenderer canvasRenderer=new CanvasRenderer();public float visibleAlpha=>color.a*canvasRenderer.GetAlpha();
  public enum Type{Simple,Filled}public enum FillMethod{Vertical}
  public GameObject gameObject=new GameObject();public RectTransform transform=>rectTransform;public bool raycastTarget=true,enabled=true;public static int created;public Image(){created++;}public RectTransform rectTransform=new RectTransform();public Color color;public Type type;public FillMethod fillMethod;public int fillOrigin;public float fillAmount;public bool preserveAspect=true;
  Sprite s;public int writes;public Sprite sprite{get=>s;set{writes++;s=value;}}
@@ -99,13 +101,13 @@ public class View {
     var topOffset=Quaternion.Euler(0,0,rock)*(Vector3)Vector2.Scale(v.canvasSize,v.topTurnOffsetRatio);
     var bottomOffset=Quaternion.Euler(0,0,rock)*(Vector3)Vector2.Scale(v.canvasSize,v.bottomTurnOffsetRatio);
     Check(Near(v.topImage.rectTransform.anchoredPosition.y,topOffset.y)&&Near(v.bottomImage.rectTransform.anchoredPosition.y,bottomOffset.y),""rock preserves common pivot without old separation"");
-    Check(Near(v.staticIconImage.color.a,0)&&v.staticIconImage.raycastTarget&&v.staticIconImage.enabled,""static icon cannot cover frames; input graphic remains enabled"");
+    Check(Near(v.staticIconImage.visibleAlpha,0)&&v.staticIconImage.raycastTarget&&v.staticIconImage.enabled,""static icon cannot cover frames; input graphic remains enabled"");
     Check(Near(v.fullImage.color.a,0),""old full-sphere merge pop stays hidden"");
    }
-   Check(changed&&!v.staticIconHidden&&Near(v.staticIconImage.color.a,1)&&v.idleRoutine!=null,""isolated preview animates then restores static icon and idle"");
+   Check(changed&&!v.staticIconHidden&&Near(v.staticIconImage.visibleAlpha,1)&&v.idleRoutine!=null,""isolated preview animates then restores static icon and idle"");
    Check(Image.created==objects,""isolated preview creates no extra Images"");
    v.PlayCreation();e=v.routine.enumerator;e.MoveNext();e.MoveNext();v.OnDisable();
-   Check(Near(v.staticIconImage.color.a,1)&&!v.staticIconHidden&&!v.IsPlaying,""interrupted preview restores icon opacity"");v.Stop();
+   Check(Near(v.staticIconImage.visibleAlpha,1)&&!v.staticIconHidden&&!v.IsPlaying,""interrupted preview restores icon opacity"");v.Stop();
   }
   v=Setup();Check(Near(v.TurnFrameRate(0),18)&&Near(v.TurnFrameRate(1),120),""turn accelerates from 18 to 120 sprite frames per second"");
   float rate=0;for(int i=0;i<=100;i++){float next=v.TurnFrameRate(i/100f);Check(next>=rate&&next<=120,""turn speed never slows down"");rate=next;}
@@ -122,11 +124,11 @@ public class View {
   for(int i=0;i<180;i++){Check(active.MoveNext(),""activation stays alive beyond idle duration"");
    if(!v.topUsesTurnFrame)continue;
    float z=v.topImage.rectTransform.localEulerAngles.z;rockedLeft|=z< -2;rockedRight|=z>2;
-   Check(v.chargeGraphic!=null&&Near(v.staticIconImage.color.a,0),""charge and animated sphere remain visible throughout fanout"");
+   Check(v.chargeGraphic!=null&&Near(v.staticIconImage.visibleAlpha,0),""charge and animated sphere remain visible throughout fanout"");
    if(i>90)Check(v.turnFramePhase>lastPhase,""fast turn continues while rocking at peak speed"");lastPhase=v.turnFramePhase;
   }
   Check(rockedLeft&&rockedRight,""charge rocks both directions"");
-  var pooled=v.chargeGraphic;int returnsBefore=UiVfxPool.returned;UiVfxPool.parentTransition=true;v.OnDisable();UiVfxPool.parentTransition=false;Check(object.ReferenceEquals(v.chargeGraphic,pooled)&&UiVfxPool.returned==returnsBefore&&!v.activating&&Near(v.topImage.rectTransform.localEulerAngles.z,0)&&Near(v.staticIconImage.color.a,1),""disable hides retained charge without reparenting during activation"");
+  var pooled=v.chargeGraphic;int returnsBefore=UiVfxPool.returned;UiVfxPool.parentTransition=true;v.OnDisable();UiVfxPool.parentTransition=false;Check(object.ReferenceEquals(v.chargeGraphic,pooled)&&UiVfxPool.returned==returnsBefore&&!v.activating&&Near(v.topImage.rectTransform.localEulerAngles.z,0)&&Near(v.staticIconImage.visibleAlpha,1),""disable hides retained charge without reparenting during activation"");
   v.BeginActivation();active=v.routine.enumerator;active.MoveNext();active.MoveNext();Check(object.ReferenceEquals(pooled,v.chargeGraphic),""charge mesh object is reused after cancellation"");
   int objectsBefore=GameObject.created;v.Stop();v.Stop();Check(UiVfxPool.rented==UiVfxPool.returned,""all acquired effects returned exactly once, including repeated Stop"");
   v.PlayCreation();active=v.routine.enumerator;while(active.MoveNext()){}Check(GameObject.created==objectsBefore&&UiVfxPool.rented==UiVfxPool.returned,""idle repeat reuses pooled effect and returns on completion"");
@@ -167,7 +169,7 @@ public class View {
   Check(left.TopReverse&&!left.BottomReverse&&!right.TopReverse&&right.BottomReverse,""left upper turns right; right upper turns left; both lower halves oppose their own upper"");
   left.EnsureIdle();Check(left.idleRoutine==null&&left.routine==null&&left.IsPlaying,""externally driven combo never starts an idle or extra coroutine"");
   float phase=0;for(int i=1;i<70;i++){left.TickComboTurn(i/60f,1f/60,1);right.TickComboTurn(i/60f,1f/60,1);Check(left.Phase>phase&&Near(left.Phase,right.Phase),""both combo phases advance continuously beyond lift/smash boundary"");phase=left.Phase;}
-  UiVfxPool.parentTransition=true;left.OnDisable();UiVfxPool.parentTransition=false;Check(left.chargeGraphic!=null&&!left.IsPlaying,""parent disable retains combo child without a return callback"");left.Stop();right.EndComboTurn();Check(right.staticIconImage==null,""pooled combo view releases its scene icon reference"");Check(!left.IsPlaying&&!right.IsPlaying&&Near(leftIcon.color.a,1)&&UiVfxPool.rented==UiVfxPool.returned,""external combo cancellation restores both icons and returns charge graphics"");
+  UiVfxPool.parentTransition=true;left.OnDisable();UiVfxPool.parentTransition=false;Check(left.chargeGraphic!=null&&!left.IsPlaying,""parent disable retains combo child without a return callback"");left.Stop();right.EndComboTurn();Check(right.staticIconImage==null,""pooled combo view releases its scene icon reference"");Check(!left.IsPlaying&&!right.IsPlaying&&Near(leftIcon.visibleAlpha,1)&&UiVfxPool.rented==UiVfxPool.returned,""external combo cancellation restores both icons and returns charge graphics"");
   Console.WriteLine(""PASS: ""+checks+"" Override turn, rocking, charge mesh, pooling and teardown checks."");
  }
 }

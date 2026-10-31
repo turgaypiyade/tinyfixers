@@ -47,7 +47,7 @@ public sealed class LineVPatchBotCombo
         // Tek başına PatchBot ile AYNI canlı hedefleme: hedef niyet (intent) olarak seçilir, uçuş boyunca
         // doğrulanır; hedef kırılırsa bot havada yeni hedefe döner (PatchbotLiveDashTargetRegistry).
         // Eskiden hedef kalkışta bir kez sabitlenip bot boş hücreye dalabiliyordu.
-        var coordinator = new PatchBotTargetCoordinator(rt.Board, rt.PatchbotService);
+        var coordinator = new PatchBotTargetCoordinator(rt.Board, rt.PatchbotService, TileSpecial.LineV);
         var picked = coordinator.PickIntent(patchBotTile, lineTile, null);
         if (!picked.hasIntent || picked.intent == null)
             return result;

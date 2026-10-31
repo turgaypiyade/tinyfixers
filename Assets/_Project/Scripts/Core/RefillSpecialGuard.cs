@@ -24,6 +24,11 @@ public static class RefillSpecialGuard
     // StrugglesOn — erken çıkış sayılmaz) korumayı gevşetir → tahta kendiliğinden daha sık special üretir.
     // Hazır special / ek hamle YOK; yalnız kısılan olasılık geri açılır. Sayaç seviye kazanılınca sıfırlanır,
     // canı bitip giden oyuncu ne zaman dönerse dönsün bu seviyede gevşeme sürer. Simülasyon etkilenmez.
+    // Rahatlama anı (kullanıcı, 2026-10-28): zorlanılan seviye kazanılınca SONRAKİ seviye de gevşek başlar —
+    // bazı zor seviyelerin arkasında nefes alma anı gelmiyordu. Önceki seviyede 2+ kayıp → ×0.5. O seviyenin
+    // kendi kayıpları daha güçlü gevşeme verirse o geçerli (en düşük çarpan).
+    private const int CarryMinStruggles = 2;
+    private const float CarryMultiplier = 0.5f;
     private const int ReliefMinMoves = 15;          // yalnız ≥15 hamlelik seviyelerde (gerçek emek)
     private const int StrongReliefStruggles = 3;
     private const float ReliefMultiplier = 0.5f;    // 1 kayıp: koruma yarıya
@@ -36,8 +41,10 @@ public static class RefillSpecialGuard
     {
         if (RuntimeSimulationSession.IsActive || level == null || level.moves < ReliefMinMoves) return 1f;
         int struggles = LevelAttemptStats.StrugglesOn(globalLevel);
-        return struggles >= StrongReliefStruggles ? StrongReliefMultiplier
+        float own = struggles >= StrongReliefStruggles ? StrongReliefMultiplier
             : struggles >= 1 ? ReliefMultiplier : 1f;
+        float carried = LevelAttemptStats.CarriedStrugglesFor(globalLevel) >= CarryMinStruggles ? CarryMultiplier : 1f;
+        return Mathf.Min(own, carried);
     }
 
     private static float Base(LevelData level, int globalLevel)

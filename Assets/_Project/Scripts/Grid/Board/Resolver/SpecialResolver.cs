@@ -66,7 +66,7 @@ public class SpecialResolver
         dispatcher.QueueProcessor = queueProcessor;
     }
 
-    public List<BoardAction> ResolveSpecialSwap(TileView a, TileView b, TileSpecial originalSa, TileSpecial originalSb, TileType? capturedOverridePartnerType = null, HashSet<Vector2Int> externalProtectedCells = null)
+    public List<BoardAction> ResolveSpecialSwap(TileView a, TileView b, TileSpecial originalSa, TileSpecial originalSb, TileType? capturedOverridePartnerType = null, HashSet<Vector2Int> externalProtectedCells = null, bool gelFromSwapSources = false)
     {
         var actions = new List<BoardAction>();
 
@@ -88,6 +88,7 @@ public class SpecialResolver
         // etki jelin üzerinden geçse bile bulaştırmaz. (Tüm combolar bu metottan geçiyor.)
         board.NoteGelSpreadOrigin(a);
         board.NoteGelSpreadOrigin(b);
+        bool comboSpreadsGel = gelFromSwapSources || board.IsGelSpreadSourceTile(a) || board.IsGelSpreadSourceTile(b);
 
         bool aOriginallySpecial = originalSa != TileSpecial.None;
         bool bOriginallySpecial = originalSb != TileSpecial.None;
@@ -100,6 +101,11 @@ public class SpecialResolver
             board.IsSpecialActivationPhase = false;
             return actions;
         }
+
+        // Titreşim: iki special'ın swap'ı = kombo. Tüm kombolar buradan geçer (SpecialBehaviorDispatcher
+        // .ApplyComboEffect çağrılmıyor, build'de stripleniyor — 2026-10-28 cihazda kombolar titremedi).
+        if (bothOriginallySpecial)
+            Haptics.PlayCombo(originalSa, originalSb);
 
         bool originalSaIsLine = originalSa == TileSpecial.LineH || originalSa == TileSpecial.LineV;
         bool originalSbIsLine = originalSb == TileSpecial.LineH || originalSb == TileSpecial.LineV;
@@ -218,7 +224,8 @@ public class SpecialResolver
                     PulseChainAreaHalf,
                     board.PulseChainCatchOverlap,
                     ResolveOtherSpecialInline,
-                    virtualLineSweeps: new List<LightningLineStrike> { new LightningLineStrike(cell, false) })
+                    virtualLineSweeps: new List<LightningLineStrike> { new LightningLineStrike(cell, false) },
+                    gelFromSource: comboSpreadsGel)
             });
 
             actions.AddRange(result.Actions);
@@ -254,7 +261,8 @@ public class SpecialResolver
                     PulseChainAreaHalf,
                     board.PulseChainCatchOverlap,
                     ResolveOtherSpecialInline,
-                    virtualLineSweeps: new List<LightningLineStrike> { new LightningLineStrike(cell, true) })
+                    virtualLineSweeps: new List<LightningLineStrike> { new LightningLineStrike(cell, true) },
+                    gelFromSource: comboSpreadsGel)
             });
 
             actions.AddRange(result.Actions);
@@ -319,7 +327,8 @@ public class SpecialResolver
                 ResolveOtherSpecialInline,
                 root: null,
                 linePulseCrossCenter: crossCenter,
-                consumeTiles: new List<TileView> { a, b }));
+                consumeTiles: new List<TileView> { a, b },
+                gelFromSource: comboSpreadsGel));
 
             TraceSpecialChain("ResolveSpecialSwap.LineVHPulseCore", a, b);
             board.IsSpecialActivationPhase = false;
@@ -411,7 +420,8 @@ public class SpecialResolver
                     PulseChainAreaHalf,
                     board.PulseChainCatchOverlap,
                     ResolveOtherSpecialInline,
-                    simultaneousLineCells: cells)
+                    simultaneousLineCells: cells,
+                    gelFromSource: comboSpreadsGel)
             });
 
             actions.AddRange(result.Actions);
@@ -441,7 +451,8 @@ public class SpecialResolver
                 root: null,
                 linePulseCrossCenter: crossCenter,
                 consumeTiles: new List<TileView> { a, b },
-                crossHalf: 0));
+                crossHalf: 0,
+                gelFromSource: comboSpreadsGel));
 
             TraceSpecialChain("ResolveSpecialSwap.LineVLineH", a, b);
             board.IsSpecialActivationPhase = false;
@@ -456,6 +467,11 @@ public class SpecialResolver
         {
             var overrideTile = originalSaIsOverride ? a : b;
             var normalTile = overrideTile == a ? b : a;
+            // Swap'ta normal taşın eşleşmesi onu special yaptıysa (swap noktasında oluşum) partner olarak verilmez:
+            // partner Override'da her durumda temizlenir/kombo tetiklerdi. Renk swap anında yakalandı (ForcedPartnerType);
+            // süpürme special'ları atladığı için yeni special yerinde kalır.
+            if (normalTile != null && normalTile.GetSpecial() != TileSpecial.None && capturedOverridePartnerType.HasValue)
+                normalTile = null;
 
             var result = overrideSpecial.Execute(new OverrideExecutionRuntime
             {
@@ -505,7 +521,8 @@ public class SpecialResolver
                     PulseChainAreaHalf,
                     board.PulseChainCatchOverlap,
                     ResolveOtherSpecialInline,
-                    protectedCells: protectedCells));
+                    protectedCells: protectedCells,
+                    gelFromSource: comboSpreadsGel));
                 TraceSpecialChain($"ResolveSpecialSwap.{originalSpecial}", a, b);
                 board.IsSpecialActivationPhase = false;
                 return actions;

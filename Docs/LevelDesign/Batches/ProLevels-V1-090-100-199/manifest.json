@@ -1,0 +1,24 @@
+{
+  "levels": [
+    {
+      "level": 90,
+      "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00000900.asset",
+      "guid": "2cd191ecca86401ea980f14bde4a91a0",
+      "sha256": "d184447ada76268bd20143da438a824c0d7e1717c84a19df230410856c570746"
+    },
+    {
+      "level": 100,
+      "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00001000.asset",
+      "guid": "d44ba33e1a764736b41990b69589be5a",
+      "sha256": "688f534290c5401022e6981618daf6cebe08aabfc7d7adec509aeec6bbc254dc"
+    },
+    {
+      "level": 199,
+      "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00001990.asset",
+      "guid": "84afe003d3f1470db4c259ac9f12cf35",
+      "sha256": "69ac882198d1bef9da82429f007c5b2258dd728bbf23702b2f7a8f72251c11ff",
+      "revision": 2
+    }
+  ],
+  "scope": "Only empty V1 90, 100, 199; no release, publication or build."
+}

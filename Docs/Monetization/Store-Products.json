@@ -1,0 +1,772 @@
+{
+  "note": "User-approved USD prices and TR/EN names. All 12 Google Play products created and standard Buy options verified Active on 2026-10-31; regional prices calculated once from USD. Local reference, not a store import file. Device purchases and iOS products remain unverified.",
+  "baseCurrency": "USD",
+  "products": [
+    {
+      "offerId": "bundle_welcome",
+      "productId": "com.yigefep.tinyfixers.bundle_welcome",
+      "name": "Hoş Geldin Paketi",
+      "names": {
+        "tr": "Hoş Geldin Paketi",
+        "en": "Welcome Pack"
+      },
+      "basePriceCurrency": "USD",
+      "basePriceUsd": "1.99",
+      "referencePrice": "$1.99",
+      "type": "Consumable",
+      "availability": "OnceEver",
+      "grants": [
+        {
+          "kind": 0,
+          "amount": 2500,
+          "booster": 1,
+          "durationHours": 1,
+          "timedType": 13
+        },
+        {
+          "kind": 3,
+          "amount": 1,
+          "booster": 1,
+          "durationHours": 1,
+          "timedType": 13
+        },
+        {
+          "kind": 3,
+          "amount": 1,
+          "booster": 2,
+          "durationHours": 1,
+          "timedType": 13
+        },
+        {
+          "kind": 3,
+          "amount": 1,
+          "booster": 3,
+          "durationHours": 1,
+          "timedType": 13
+        },
+        {
+          "kind": 4,
+          "amount": 1,
+          "booster": 1,
+          "durationHours": 1,
+          "timedType": 13
+        }
+      ],
+      "summary": "2,500 altın; 3 güçlendiricinin her birinden ×1; 1 saat sınırsız can",
+      "googlePlay": {
+        "status": "Active",
+        "purchaseOptionId": "standard",
+        "purchaseType": "Buy",
+        "backwardsCompatible": true,
+        "availableCountryRegionCount": 174,
+        "defaultLocale": "en-US",
+        "additionalLocales": [
+          "tr-TR"
+        ],
+        "verifiedUsPrice": "1.99",
+        "verificationDate": "2026-10-31"
+      }
+    },
+    {
+      "offerId": "bundle_start",
+      "productId": "com.yigefep.tinyfixers.bundle_start",
+      "name": "Gezginci Çantası",
+      "names": {
+        "tr": "Gezginci Çantası",
+        "en": "Traveler's Bag"
+      },
+      "basePriceCurrency": "USD",
+      "basePriceUsd": "9.99",
+      "referencePrice": "$9.99",
+      "type": "Consumable",
+      "availability": "Always",
+      "grants": [
+        {
+          "kind": 0,
+          "amount": 5000,
+          "booster": 1,
+          "durationHours": 1,
+          "timedType": 13
+        },
+        {
+          "kind": 3,
+          "amount": 1,
+          "booster": 1,
+          "durationHours": 1,
+          "timedType": 13
+        },
+        {
+          "kind": 3,
+          "amount": 1,
+          "booster": 2,
+          "durationHours": 1,
+          "timedType": 13
+        },
+        {
+          "kind": 3,
+          "amount": 1,
+          "booster": 3,
+          "durationHours": 1,
+          "timedType": 13
+        },
+        {
+          "kind": 3,
+          "amount": 1,
+          "booster": 4,
+          "durationHours": 1,
+          "timedType": 13
+        },
+        {
+          "kind": 3,
+          "amount": 1,
+          "booster": 5,
+          "durationHours": 1,
+          "timedType": 13
+        },
+        {
+          "kind": 5,
+          "amount": 1,
+          "booster": 1,
+          "durationHours": 1,
+          "timedType": 11
+        },
+        {
+          "kind": 5,
+          "amount": 1,
+          "booster": 1,
+          "durationHours": 1,
+          "timedType": 13
+        },
+        {
+          "kind": 5,
+          "amount": 1,
+          "booster": 1,
+          "durationHours": 1,
+          "timedType": 12
+        }
+      ],
+      "summary": "5,000 altın; 5 güçlendiricinin her birinden ×1; 3 joker için 1 saat sınırsız kullanım",
+      "googlePlay": {
+        "status": "Active",
+        "purchaseOptionId": "standard",
+        "purchaseType": "Buy",
+        "backwardsCompatible": true,
+        "availableCountryRegionCount": 174,
+        "defaultLocale": "en-US",
+        "additionalLocales": [
+          "tr-TR"
+        ],
+        "verifiedUsPrice": "9.99",
+        "verificationDate": "2026-10-31"
+      }
+    },
+    {
+      "offerId": "bundle_hunter_loot",
+      "productId": "com.yigefep.tinyfixers.bundle_hunter_loot",
+      "name": "Avcı Ganimeti",
+      "names": {
+        "tr": "Avcı Ganimeti",
+        "en": "Hunter's Loot"
+      },
+      "basePriceCurrency": "USD",
+      "basePriceUsd": "19.99",
+      "referencePrice": "$19.99",
+      "type": "Consumable",
+      "availability": "Always",
+      "grants": [
+        {
+          "kind": 0,
+          "amount": 10000,
+          "booster": 1,
+          "durationHours": 1,
+          "timedType": 13
+        },
+        {
+          "kind": 3,
+          "amount": 2,
+          "booster": 1,
+          "durationHours": 1,
+          "timedType": 13
+        },
+        {
+          "kind": 3,
+          "amount": 2,
+          "booster": 2,
+          "durationHours": 1,
+          "timedType": 13
+        },
+        {
+          "kind": 3,
+          "amount": 2,
+          "booster": 3,
+          "durationHours": 1,
+          "timedType": 13
+        },
+        {
+          "kind": 3,
+          "amount": 2,
+          "booster": 4,
+          "durationHours": 1,
+          "timedType": 13
+        },
+        {
+          "kind": 3,
+          "amount": 2,
+          "booster": 5,
+          "durationHours": 1,
+          "timedType": 13
+        },
+        {
+          "kind": 5,
+          "amount": 1,
+          "booster": 1,
+          "durationHours": 12,
+          "timedType": 11
+        },
+        {
+          "kind": 5,
+          "amount": 1,
+          "booster": 1,
+          "durationHours": 12,
+          "timedType": 13
+        },
+        {
+          "kind": 5,
+          "amount": 1,
+          "booster": 1,
+          "durationHours": 12,
+          "timedType": 12
+        }
+      ],
+      "summary": "10,000 altın; 5 güçlendiricinin her birinden ×2; 3 joker için 12 saat sınırsız kullanım",
+      "googlePlay": {
+        "status": "Active",
+        "purchaseOptionId": "standard",
+        "purchaseType": "Buy",
+        "backwardsCompatible": true,
+        "availableCountryRegionCount": 174,
+        "defaultLocale": "en-US",
+        "additionalLocales": [
+          "tr-TR"
+        ],
+        "verifiedUsPrice": "19.99",
+        "verificationDate": "2026-10-31"
+      }
+    },
+    {
+      "offerId": "bundle_explorer_chest",
+      "productId": "com.yigefep.tinyfixers.bundle_explorer_chest",
+      "name": "Kaşif Sandığı",
+      "names": {
+        "tr": "Kaşif Sandığı",
+        "en": "Explorer's Chest"
+      },
+      "basePriceCurrency": "USD",
+      "basePriceUsd": "39.99",
+      "referencePrice": "$39.99",
+      "type": "Consumable",
+      "availability": "Always",
+      "grants": [
+        {
+          "kind": 0,
+          "amount": 25000,
+          "booster": 1,
+          "durationHours": 1,
+          "timedType": 13
+        },
+        {
+          "kind": 3,
+          "amount": 4,
+          "booster": 1,
+          "durationHours": 1,
+          "timedType": 13
+        },
+        {
+          "kind": 3,
+          "amount": 4,
+          "booster": 2,
+          "durationHours": 1,
+          "timedType": 13
+        },
+        {
+          "kind": 3,
+          "amount": 4,
+          "booster": 3,
+          "durationHours": 1,
+          "timedType": 13
+        },
+        {
+          "kind": 3,
+          "amount": 4,
+          "booster": 4,
+          "durationHours": 1,
+          "timedType": 13
+        },
+        {
+          "kind": 3,
+          "amount": 4,
+          "booster": 5,
+          "durationHours": 1,
+          "timedType": 13
+        },
+        {
+          "kind": 5,
+          "amount": 1,
+          "booster": 1,
+          "durationHours": 24,
+          "timedType": 11
+        },
+        {
+          "kind": 5,
+          "amount": 1,
+          "booster": 1,
+          "durationHours": 24,
+          "timedType": 13
+        },
+        {
+          "kind": 5,
+          "amount": 1,
+          "booster": 1,
+          "durationHours": 24,
+          "timedType": 12
+        }
+      ],
+      "summary": "25,000 altın; 5 güçlendiricinin her birinden ×4; 3 joker için 24 saat sınırsız kullanım",
+      "googlePlay": {
+        "status": "Active",
+        "purchaseOptionId": "standard",
+        "purchaseType": "Buy",
+        "backwardsCompatible": true,
+        "availableCountryRegionCount": 174,
+        "defaultLocale": "en-US",
+        "additionalLocales": [
+          "tr-TR"
+        ],
+        "verifiedUsPrice": "39.99",
+        "verificationDate": "2026-10-31"
+      }
+    },
+    {
+      "offerId": "bundle_grand_safe",
+      "productId": "com.yigefep.tinyfixers.bundle_grand_safe",
+      "name": "Büyük Kasa",
+      "names": {
+        "tr": "Büyük Kasa",
+        "en": "Grand Safe"
+      },
+      "basePriceCurrency": "USD",
+      "basePriceUsd": "79.99",
+      "referencePrice": "$79.99",
+      "type": "Consumable",
+      "availability": "Always",
+      "grants": [
+        {
+          "kind": 0,
+          "amount": 50000,
+          "booster": 1,
+          "durationHours": 1,
+          "timedType": 13
+        },
+        {
+          "kind": 3,
+          "amount": 10,
+          "booster": 1,
+          "durationHours": 1,
+          "timedType": 13
+        },
+        {
+          "kind": 3,
+          "amount": 10,
+          "booster": 3,
+          "durationHours": 1,
+          "timedType": 13
+        },
+        {
+          "kind": 3,
+          "amount": 10,
+          "booster": 2,
+          "durationHours": 1,
+          "timedType": 13
+        },
+        {
+          "kind": 3,
+          "amount": 10,
+          "booster": 4,
+          "durationHours": 1,
+          "timedType": 13
+        },
+        {
+          "kind": 3,
+          "amount": 10,
+          "booster": 5,
+          "durationHours": 1,
+          "timedType": 13
+        },
+        {
+          "kind": 5,
+          "amount": 1,
+          "booster": 1,
+          "durationHours": 72,
+          "timedType": 11
+        },
+        {
+          "kind": 5,
+          "amount": 1,
+          "booster": 1,
+          "durationHours": 72,
+          "timedType": 13
+        },
+        {
+          "kind": 5,
+          "amount": 1,
+          "booster": 1,
+          "durationHours": 72,
+          "timedType": 12
+        },
+        {
+          "kind": 4,
+          "amount": 1,
+          "booster": 1,
+          "durationHours": 12,
+          "timedType": 13
+        }
+      ],
+      "summary": "50,000 altın; 5 güçlendiricinin her birinden ×10; 3 joker için 72 saat sınırsız kullanım; 12 saat sınırsız can",
+      "googlePlay": {
+        "status": "Active",
+        "purchaseOptionId": "standard",
+        "purchaseType": "Buy",
+        "backwardsCompatible": true,
+        "availableCountryRegionCount": 174,
+        "defaultLocale": "en-US",
+        "additionalLocales": [
+          "tr-TR"
+        ],
+        "verifiedUsPrice": "79.99",
+        "verificationDate": "2026-10-31"
+      }
+    },
+    {
+      "offerId": "bundle_legendary",
+      "productId": "com.yigefep.tinyfixers.bundle_legendary",
+      "name": "Efsanevi Paket",
+      "names": {
+        "tr": "Efsanevi Paket",
+        "en": "Legendary Pack"
+      },
+      "basePriceCurrency": "USD",
+      "basePriceUsd": "99.99",
+      "referencePrice": "$99.99",
+      "type": "Consumable",
+      "availability": "Always",
+      "grants": [
+        {
+          "kind": 0,
+          "amount": 65000,
+          "booster": 1,
+          "durationHours": 1,
+          "timedType": 13
+        },
+        {
+          "kind": 3,
+          "amount": 13,
+          "booster": 1,
+          "durationHours": 1,
+          "timedType": 13
+        },
+        {
+          "kind": 3,
+          "amount": 13,
+          "booster": 2,
+          "durationHours": 1,
+          "timedType": 13
+        },
+        {
+          "kind": 3,
+          "amount": 13,
+          "booster": 3,
+          "durationHours": 1,
+          "timedType": 13
+        },
+        {
+          "kind": 3,
+          "amount": 13,
+          "booster": 4,
+          "durationHours": 1,
+          "timedType": 13
+        },
+        {
+          "kind": 3,
+          "amount": 13,
+          "booster": 5,
+          "durationHours": 1,
+          "timedType": 13
+        },
+        {
+          "kind": 5,
+          "amount": 1,
+          "booster": 1,
+          "durationHours": 100,
+          "timedType": 11
+        },
+        {
+          "kind": 5,
+          "amount": 1,
+          "booster": 1,
+          "durationHours": 100,
+          "timedType": 13
+        },
+        {
+          "kind": 5,
+          "amount": 1,
+          "booster": 1,
+          "durationHours": 100,
+          "timedType": 12
+        },
+        {
+          "kind": 4,
+          "amount": 1,
+          "booster": 1,
+          "durationHours": 18,
+          "timedType": 13
+        }
+      ],
+      "summary": "65,000 altın; 5 güçlendiricinin her birinden ×13; 3 joker için 100 saat sınırsız kullanım; 18 saat sınırsız can",
+      "googlePlay": {
+        "status": "Active",
+        "purchaseOptionId": "standard",
+        "purchaseType": "Buy",
+        "backwardsCompatible": true,
+        "availableCountryRegionCount": 174,
+        "defaultLocale": "en-US",
+        "additionalLocales": [
+          "tr-TR"
+        ],
+        "verifiedUsPrice": "99.99",
+        "verificationDate": "2026-10-31"
+      }
+    },
+    {
+      "offerId": "coins_1000",
+      "productId": "com.yigefep.tinyfixers.coins_1000",
+      "name": "1.000 Altın",
+      "names": {
+        "tr": "1.000 Altın",
+        "en": "1,000 Coins"
+      },
+      "basePriceCurrency": "USD",
+      "basePriceUsd": "1.99",
+      "referencePrice": "$1.99",
+      "type": "Consumable",
+      "availability": "Always",
+      "grants": [
+        {
+          "kind": 0,
+          "amount": 1000,
+          "booster": 1,
+          "durationHours": 1,
+          "timedType": 13
+        }
+      ],
+      "summary": "1,000 altın",
+      "googlePlay": {
+        "status": "Active",
+        "purchaseOptionId": "standard",
+        "purchaseType": "Buy",
+        "backwardsCompatible": true,
+        "availableCountryRegionCount": 174,
+        "defaultLocale": "en-US",
+        "additionalLocales": [
+          "tr-TR"
+        ],
+        "verifiedUsPrice": "1.99",
+        "verificationDate": "2026-10-31"
+      }
+    },
+    {
+      "offerId": "coins_5000",
+      "productId": "com.yigefep.tinyfixers.coins_5000",
+      "name": "5.000 Altın",
+      "names": {
+        "tr": "5.000 Altın",
+        "en": "5,000 Coins"
+      },
+      "basePriceCurrency": "USD",
+      "basePriceUsd": "7.99",
+      "referencePrice": "$7.99",
+      "type": "Consumable",
+      "availability": "Always",
+      "grants": [
+        {
+          "kind": 0,
+          "amount": 5000,
+          "booster": 1,
+          "durationHours": 1,
+          "timedType": 13
+        }
+      ],
+      "summary": "5,000 altın",
+      "googlePlay": {
+        "status": "Active",
+        "purchaseOptionId": "standard",
+        "purchaseType": "Buy",
+        "backwardsCompatible": true,
+        "availableCountryRegionCount": 174,
+        "defaultLocale": "en-US",
+        "additionalLocales": [
+          "tr-TR"
+        ],
+        "verifiedUsPrice": "7.99",
+        "verificationDate": "2026-10-31"
+      }
+    },
+    {
+      "offerId": "coins_10000",
+      "productId": "com.yigefep.tinyfixers.coins_10000",
+      "name": "10.000 Altın",
+      "names": {
+        "tr": "10.000 Altın",
+        "en": "10,000 Coins"
+      },
+      "basePriceCurrency": "USD",
+      "basePriceUsd": "14.99",
+      "referencePrice": "$14.99",
+      "type": "Consumable",
+      "availability": "Always",
+      "grants": [
+        {
+          "kind": 0,
+          "amount": 10000,
+          "booster": 1,
+          "durationHours": 1,
+          "timedType": 13
+        }
+      ],
+      "summary": "10,000 altın",
+      "googlePlay": {
+        "status": "Active",
+        "purchaseOptionId": "standard",
+        "purchaseType": "Buy",
+        "backwardsCompatible": true,
+        "availableCountryRegionCount": 174,
+        "defaultLocale": "en-US",
+        "additionalLocales": [
+          "tr-TR"
+        ],
+        "verifiedUsPrice": "14.99",
+        "verificationDate": "2026-10-31"
+      }
+    },
+    {
+      "offerId": "coins_25000",
+      "productId": "com.yigefep.tinyfixers.coins_25000",
+      "name": "25.000 Altın",
+      "names": {
+        "tr": "25.000 Altın",
+        "en": "25,000 Coins"
+      },
+      "basePriceCurrency": "USD",
+      "basePriceUsd": "29.99",
+      "referencePrice": "$29.99",
+      "type": "Consumable",
+      "availability": "Always",
+      "grants": [
+        {
+          "kind": 0,
+          "amount": 25000,
+          "booster": 1,
+          "durationHours": 1,
+          "timedType": 13
+        }
+      ],
+      "summary": "25,000 altın",
+      "googlePlay": {
+        "status": "Active",
+        "purchaseOptionId": "standard",
+        "purchaseType": "Buy",
+        "backwardsCompatible": true,
+        "availableCountryRegionCount": 174,
+        "defaultLocale": "en-US",
+        "additionalLocales": [
+          "tr-TR"
+        ],
+        "verifiedUsPrice": "29.99",
+        "verificationDate": "2026-10-31"
+      }
+    },
+    {
+      "offerId": "coins_50000",
+      "productId": "com.yigefep.tinyfixers.coins_50000",
+      "name": "50.000 Altın",
+      "names": {
+        "tr": "50.000 Altın",
+        "en": "50,000 Coins"
+      },
+      "basePriceCurrency": "USD",
+      "basePriceUsd": "54.99",
+      "referencePrice": "$54.99",
+      "type": "Consumable",
+      "availability": "Always",
+      "grants": [
+        {
+          "kind": 0,
+          "amount": 50000,
+          "booster": 1,
+          "durationHours": 1,
+          "timedType": 13
+        }
+      ],
+      "summary": "50,000 altın",
+      "googlePlay": {
+        "status": "Active",
+        "purchaseOptionId": "standard",
+        "purchaseType": "Buy",
+        "backwardsCompatible": true,
+        "availableCountryRegionCount": 174,
+        "defaultLocale": "en-US",
+        "additionalLocales": [
+          "tr-TR"
+        ],
+        "verifiedUsPrice": "54.99",
+        "verificationDate": "2026-10-31"
+      }
+    },
+    {
+      "offerId": "coins_100000",
+      "productId": "com.yigefep.tinyfixers.coins_100000",
+      "name": "100.000 Altın",
+      "names": {
+        "tr": "100.000 Altın",
+        "en": "100,000 Coins"
+      },
+      "basePriceCurrency": "USD",
+      "basePriceUsd": "99.99",
+      "referencePrice": "$99.99",
+      "type": "Consumable",
+      "availability": "Always",
+      "grants": [
+        {
+          "kind": 0,
+          "amount": 100000,
+          "booster": 1,
+          "durationHours": 1,
+          "timedType": 13
+        }
+      ],
+      "summary": "100,000 altın",
+      "googlePlay": {
+        "status": "Active",
+        "purchaseOptionId": "standard",
+        "purchaseType": "Buy",
+        "backwardsCompatible": true,
+        "availableCountryRegionCount": 174,
+        "defaultLocale": "en-US",
+        "additionalLocales": [
+          "tr-TR"
+        ],
+        "verifiedUsPrice": "99.99",
+        "verificationDate": "2026-10-31"
+      }
+    }
+  ]
+}

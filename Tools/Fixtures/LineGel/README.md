@@ -1,0 +1,1 @@
+`Before.cs.txt` preserves the pre-fix production sweep methods. `check_line_gel.csx` compares these fixed excerpts with current production methods using delayed-clear and gel-source doubles. This fixture is not runtime code and does not require an old Git HEAD or a Unity build.

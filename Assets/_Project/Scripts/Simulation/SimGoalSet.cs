@@ -94,7 +94,7 @@ public sealed class SimGoalSet
         if (g.targetType == LevelGoalTargetType.Collectible)
             return g.collectibleId == CollectibleId.BossDamage
                 ? SimGoalFidelity.Approximate      // taş başına sabit hasar; boss saldırıları yok
-                : SimGoalFidelity.NotSimulated;    // EnergyOrb: konteyner/launcher sistemi yok
+                : SimGoalFidelity.NotSimulated;    // EnergyOrb / Bird: konteyner/launcher/kuş evi sistemi yok
 
         return g.obstacleId switch
         {
@@ -112,6 +112,8 @@ public sealed class SimGoalSet
             ObstacleId.Wall            => SimGoalFidelity.Approximate,  // hücre aşamaları + parça yıkımı yok
             ObstacleId.MetalWall       => SimGoalFidelity.Approximate,  // ardışık vuruş sıfırlaması yok
             ObstacleId.KeyGenerator    => SimGoalFidelity.NotSimulated,
+            ObstacleId.BirdHouse       => SimGoalFidelity.NotSimulated, // ardışık vuruş + kuş kotası modellenmiyor
+            ObstacleId.LampStrip       => SimGoalFidelity.NotSimulated, // lamba rengi + kayma modellenmiyor
             ObstacleId.Hamster         => SimGoalFidelity.NotSimulated, // beslenme/zıplama modellenmiyor
             ObstacleId.BilliardBall    => SimGoalFidelity.NotSimulated, // yuvarlanma/cep modellenmiyor
             ObstacleId.TarpStatue      => SimGoalFidelity.Approximate,  // branda renk toplaması modellenmiyor

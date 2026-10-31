@@ -1,0 +1,44 @@
+{
+  "schedule": {
+    "1": [
+      0
+    ],
+    "2": [],
+    "3": [
+      1,
+      3
+    ],
+    "4": [],
+    "5": [
+      4,
+      7
+    ],
+    "6": [],
+    "7": [
+      2,
+      8
+    ],
+    "8": [
+      5,
+      9
+    ],
+    "9": [
+      6
+    ],
+    "10": []
+  },
+  "obstacleFirstUses": {
+    "4": 1,
+    "5": 2,
+    "6": 4,
+    "25": 6
+  },
+  "preservedFiles": 3107,
+  "allTenBasicStepsByLevel9": true,
+  "legacyTutorialsRemoved": [
+    19,
+    22
+  ],
+  "runtimeChange": "Activation resolves the taught special kind; no extra board scan or Update loop.",
+  "limits": "Static colors/geometry and isolated production method checks; no Unity Play/build, gravity/cascade/bot simulation or measured balance."
+}

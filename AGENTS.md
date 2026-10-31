@@ -1,6 +1,6 @@
 # Codex Project Instructions
 
-- For numbered level design, revisions, or design-reference feedback, read `Docs/LevelDesign/Skills/tinyfixers-level-design/SKILL.md` and resume from `Docs/LevelDesign/Design-State.md` before changing assets. Preserve user-approved levels; record explicit feedback separately from the agent's own visual assessment.
+- For numbered level design, revisions, or design-reference feedback, read `Docs/LevelDesign/Memory.md` and `Docs/LevelDesign/Skills/tinyfixers-level-design/SKILL.md`, then resume from `Docs/LevelDesign/Design-State.md` before changing assets. Memory.md records the latest user rules and supersedes older conflicting design notes. Preserve user-approved levels; record explicit feedback separately from the agent's own visual assessment.
 
 - Do not run Unity builds, `dotnet build`, or other project build commands for this repository unless the user explicitly asks for a build in that turn.
 - Remote level publishing: never create a release baseline until the user explicitly declares “bu ilk release” (or explicitly identifies a later app release). This is separate from permission to publish: upload only when the user explicitly asks to send/publish levels. Preparing tools, exporting previews or testing must not mark a release or deploy anything. Cloudflare management credentials stay on the developer machine and must never enter game assets or published content.

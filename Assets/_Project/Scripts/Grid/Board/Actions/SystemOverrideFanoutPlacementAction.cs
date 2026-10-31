@@ -338,6 +338,7 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
         PlayOverrideLaserImpact(targetProvider(), edgeColor);
         // İşaretlenen her taş nota dizisinde bir sonrakini çalar (yükselen arpej; robot lazer sesi yerine).
         PlacementChime.Play(board.SfxSource, noteIndex, 0.6f);
+        Haptics.OnComboMoment(Haptics.ComboMoment.Implant);   // her yerleştirmede tık (yalnız kombo oturumunda)
         board.SyncTileData(target.X, target.Y);
         target.RefreshIcon();
         StartImplantBreath(target, implantBreaths);

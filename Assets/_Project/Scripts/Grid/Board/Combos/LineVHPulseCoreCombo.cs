@@ -561,6 +561,7 @@ public sealed class LineVHPulseCoreComboAction : BoardAction
                     continue;
                 }
 
+                if (tile != null) Haptics.OnLineCellBreak();
                 board.ClearCellDataOnly(cell);
                 board.ClearCellVisualOnly(cell, kvp.Value.type, kvp.Value.view);
             }
@@ -632,6 +633,7 @@ public sealed class LineVHPulseCoreComboAction : BoardAction
             // view'ı yok etmek "data yaşıyor, görsel öldü" orphan'ı üretir.
             if (tile != null)
             {
+                Haptics.OnLineCellBreak();
                 board.BreakFx?.PlayTileBreak(tile);
                 board.ClearCellDataOnly(cell);
                 board.ClearCellVisualOnly(cell, tile.GetTileType(), tile);

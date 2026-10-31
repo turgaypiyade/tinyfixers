@@ -15,6 +15,8 @@ public sealed class PatchBotIntent
 
     /// <summary>Seçim anındaki cell — debug ve fallback için.</summary>
     public Vector2Int InitialCell;
+    // Keep payload identity after its source tile has been cleared/reused.
+    public TileSpecial PayloadSpecial;
     private Vector2Int? cachedObstacleCell;
 
     // Gel covers a board cell, not the falling tile that occupied it at takeoff.
@@ -102,11 +104,12 @@ public sealed class PatchBotIntent
 }
 
 /// <summary>
-/// PatchBot ailesinin hedef SEÇİM POLİTİKASI (öncelik + yoğunluk). Uygunluk ve rezervasyonlar bu sınıfta
+/// PatchBot ailesinin hedef SEÇİM POLİTİKASI (solo önceliği / taşınan etkinin faydası). Uygunluk ve rezervasyonlar bu sınıfta
 /// DEĞİL, tahta başına tek <see cref="BoardTargetPool"/>'dadır (board.TargetPool) → kaç örnek oluşturulursa
 /// oluşturulsun (combo/roket sepeti/Override grubu/iniş anı yeniden hedefleme) herkes aynı rezervasyonları görür.
-///   1) Obstacle: origin bazlı kapasite (kalan anlamlı vuruş − ortak rezervasyon); çok-hücreli engel TEK aday.
+///   1) Solo obstacle: origin bazlı kapasite; dolmaya yakın faydalı Battery Box da değerlendirilebilir.
 ///   2) Normal tile: TileView referansı bazlı — taş düşse de aynı view aynı bot tarafından takip edilir.
+///   3) Line/Pulse payload: gerçek etki alanındaki hedef, cargo yolu ve yardımcı faydası birlikte puanlanır.
 ///
 /// Yeni Intent API'si:
 ///   - PickIntent: kalkış anında bir hedef seçer + soft reservation koyar.
@@ -119,16 +122,20 @@ public class PatchBotTargetCoordinator
 {
     private readonly BoardController board;
     private readonly PatchbotComboService patchbotService;
+    private readonly TileSpecial defaultPayload;
+    private PatchBotImpactScorer impactScorer;
 
     private BoardTargetPool Pool => board.TargetPool;
 
     private int activeBotCount;   // bu örneğin (tek kombo/grup) bot sayısı
     public int ActiveBotCount => activeBotCount;
 
-    public PatchBotTargetCoordinator(BoardController board, PatchbotComboService patchbotService)
+    public PatchBotTargetCoordinator(BoardController board, PatchbotComboService patchbotService,
+        TileSpecial carriedSpecial = TileSpecial.None)
     {
         this.board = board;
         this.patchbotService = patchbotService;
+        defaultPayload = carriedSpecial;
     }
 
     // ─────────────────────────────────────────────
@@ -197,15 +204,20 @@ public class PatchBotTargetCoordinator
         HashSet<TileView> excluded,
         TileView[] additionalExcluded,
         Vector2Int fromCell,
-        bool preserveGelPreference = false)
+        bool preserveGelPreference = false,
+        TileSpecial preservedPayload = TileSpecial.None)
     {
-        var pick = FindTargetWithReservations(patchBotTile, partnerTile, excluded, additionalExcluded, fromCell, preserveGelPreference);
+        var payload = preservedPayload != TileSpecial.None ? preservedPayload : defaultPayload;
+        if (payload == TileSpecial.None && partnerTile != null)
+            payload = partnerTile.GetSpecial();
+        var pick = FindTargetWithReservations(patchBotTile, partnerTile, excluded, additionalExcluded, fromCell, preserveGelPreference, payload);
         if (!pick.hasCell)
             return (null, false);
 
         var intent = new PatchBotIntent
         {
-            InitialCell = new Vector2Int(pick.x, pick.y)
+            InitialCell = new Vector2Int(pick.x, pick.y),
+            PayloadSpecial = payload
         };
 
         var obstacleService = board.ObstacleStateService;
@@ -257,13 +269,14 @@ public class PatchBotTargetCoordinator
         }
 
         bool preserveGelPreference = intent != null && intent.TargetsGelSpreadCell;
+        var payload = intent != null ? intent.PayloadSpecial : defaultPayload;
         // Intent öldü — serbest bırak, yeni hedef ara.
         if (intent != null)
             ReleaseIntent(intent);
 
         var fromCell = patchBotTile != null ? new Vector2Int(patchBotTile.X, patchBotTile.Y) : Vector2Int.zero;
         var (newIntent, hasNew) = PickIntentCore(patchBotTile, partnerTile, excluded, additionalExcluded,
-            fromCell, preserveGelPreference);
+            fromCell, preserveGelPreference, payload);
         if (!hasNew)
             return (new Vector2Int(-1, -1), null, false);
 
@@ -295,11 +308,12 @@ public class PatchBotTargetCoordinator
         }
 
         bool preserveGelPreference = intent != null && intent.TargetsGelSpreadCell;
+        var payload = intent != null ? intent.PayloadSpecial : defaultPayload;
         if (intent != null)
             ReleaseIntent(intent);
 
         var (newIntent, hasNew) = PickIntentCore(patchBotTile, partnerTile, excluded, null,
-            fromCell, preserveGelPreference);
+            fromCell, preserveGelPreference, payload);
         if (!hasNew)
             return (new Vector2Int(-1, -1), null, false);
 
@@ -388,6 +402,8 @@ public class PatchBotTargetCoordinator
     // ─────────────────────────────────────────────
 
     private readonly List<TopHudController.ActiveGoal> activeGoalsBuffer = new();
+    private readonly HashSet<ObstacleId> activeObstacleGoals = new();
+    private readonly List<TileType> activeTileGoals = new();
 
     private (TileView tile, int x, int y, bool hasCell, bool gelSpread) FindTargetWithReservations(
         TileView patchBotTile,
@@ -395,28 +411,15 @@ public class PatchBotTargetCoordinator
         HashSet<TileView> excluded,
         TileView[] additionalExcluded,
         Vector2Int fromCell,
-        bool preserveGelPreference)
+        bool preserveGelPreference,
+        TileSpecial payload)
     {
-        var cargoDropPathCells = new List<(int x, int y, TileView tile)>();
-        var obstacleGoalCells = new List<(int x, int y, TileView tile)>();
-        var obstacleGoalUnderCells = new List<(int x, int y, TileView tile)>();
-        var tileGoalCells = new List<(int x, int y, TileView tile)>();
-        var otherObstacleCells = new List<(int x, int y, TileView tile)>();
-        var otherObstacleUnderCells = new List<(int x, int y, TileView tile)>();
-        var normalCells = new List<(int x, int y, TileView tile)>();
-        var gelSpreadCells = new List<(int x, int y, TileView tile)>();
-        // Board'daki special'lar (Line/Pulse/PatchBot/Override) hedef DEĞİL (kullanıcı kuralı): bot onları
-        // tetikleyip oyuncunun elinden almasın. Yalnız tahtada başka hiçbir şey kalmadıysa son çare.
-        var specialFallbackCells = new List<(int x, int y, TileView tile)>();
-        var obstacleUnitCells = new Dictionary<int, List<(int x, int y, TileView tile)>>();
-        var obstacleUnitIsGoal = new Dictionary<int, bool>();
-
         activeGoalsBuffer.Clear();
         var activeGoals = board.TopHud;
         activeGoals?.GetActiveGoals(activeGoalsBuffer);
 
-        var activeObstacleGoals = new HashSet<ObstacleId>();
-        var activeTileGoals = new List<TileType>();
+        activeObstacleGoals.Clear();
+        activeTileGoals.Clear();
         for (int i = 0; i < activeGoalsBuffer.Count; i++)
         {
             var goal = activeGoalsBuffer[i];
@@ -427,6 +430,12 @@ public class PatchBotTargetCoordinator
                 // EnergyOrb hem EnergyContainer hem HatLauncher'dan çıkar → ikisi de goal obstacle.
                 activeObstacleGoals.Add(ObstacleId.EnergyContainer);
                 activeObstacleGoals.Add(ObstacleId.HatLauncher);
+            }
+            else if (goal.targetType == LevelGoalTargetType.Collectible
+                     && CollectibleSources.ProducerOf(goal.collectibleId) != ObstacleId.None)
+            {
+                // Kuş hedefi → kuş evleri hedef engel.
+                activeObstacleGoals.Add(CollectibleSources.ProducerOf(goal.collectibleId));
             }
             else if (goal.targetType == LevelGoalTargetType.Tile)
                 activeTileGoals.Add(goal.tileType);
@@ -440,6 +449,32 @@ public class PatchBotTargetCoordinator
         bool gelGoalActive = activeObstacleGoals.Remove(ObstacleId.SpreadingGel);
         bool preferNonGel = patchbotService != null
                             && (preserveGelPreference || patchbotService.ShouldPreferNonGelCells(patchBotTile, gelGoalActive));
+
+        // Payloads compare actual row/column/5x5 work across buckets. A fixed cargo
+        // priority or random obstacle pick can waste most of a carried explosion.
+        // Solo bots keep their existing policy, except a near-ready useful helper.
+        if (payload == TileSpecial.PulseCore || payload == TileSpecial.LineH || payload == TileSpecial.LineV)
+        {
+            impactScorer ??= new PatchBotImpactScorer(board, patchbotService);
+            var impactPick = impactScorer.Pick(payload, patchBotTile, partnerTile, excluded,
+                additionalExcluded, activeObstacleGoals, activeTileGoals, preferNonGel);
+            if (impactPick.hasCell) return impactPick;
+        }
+
+        var cargoDropPathCells = new List<(int x, int y, TileView tile)>();
+        var obstacleGoalCells = new List<(int x, int y, TileView tile)>();
+        var obstacleGoalUnderCells = new List<(int x, int y, TileView tile)>();
+        var tileGoalCells = new List<(int x, int y, TileView tile)>();
+        var otherObstacleCells = new List<(int x, int y, TileView tile)>();
+        var otherObstacleUnderCells = new List<(int x, int y, TileView tile)>();
+        var normalCells = new List<(int x, int y, TileView tile)>();
+        var gelSpreadCells = new List<(int x, int y, TileView tile)>();
+        // Board'daki special'lar (Line/Pulse/PatchBot/Override) hedef DEĞİL (kullanıcı kuralı): bot onları
+        // tetikleyip oyuncunun elinden almasın. Yalnız tahtada başka hiçbir şey kalmadıysa son çare.
+        var specialFallbackCells = new List<(int x, int y, TileView tile)>();
+        var obstacleUnitCells = new Dictionary<int, List<(int x, int y, TileView tile)>>();
+        var obstacleUnitIsGoal = new Dictionary<int, bool>();
+        bool nearReadyHelper = false;
 
         bool IsExcludedTile(TileView tile)
         {
@@ -525,6 +560,10 @@ public class PatchBotTargetCoordinator
                     if (Pool.ObstacleCapacityAt(x, y) <= 0)
                         continue;
 
+                    if (obstacleId == ObstacleId.OverrideBatteryBox
+                        && board.ObstacleStateService.GetActiveMeaningfulHitsAt(x, y) <= 2)
+                        nearReadyHelper = true;
+
                     int unitOrigin = board.ObstacleStateService.GetObstacleOriginAt(x, y);
                     if (unitOrigin < 0) unitOrigin = x + y * board.Width;
                     if (!obstacleUnitCells.TryGetValue(unitOrigin, out var unitCells))
@@ -557,6 +596,8 @@ public class PatchBotTargetCoordinator
         // bot çatlamış hücre dururken sağlam hücreye gidebiliyordu.
         WallObstacleService wallService = null;
         bool wallLookupDone = false;
+        LampStripService lampService = null;
+        bool lampLookupDone = false;
         foreach (var kv in obstacleUnitCells)
         {
             var cells = kv.Value;
@@ -571,13 +612,21 @@ public class PatchBotTargetCoordinator
                 wallLookupDone = true;
                 board.TryGetComponent(out wallService);
             }
+            // Lamba şeridi: temsilci yanan lambalı hücre (boş yuvaya vuruş boşa gider).
+            bool isLamp = unitId == ObstacleId.LampStrip;
+            if (isLamp && !lampLookupDone)
+            {
+                lampLookupDone = true;
+                board.TryGetComponent(out lampService);
+            }
 
             var rep = cells[0];
             float best = float.MaxValue;
             int bestStage = int.MinValue;
             foreach (var c in cells)
             {
-                int stage = isWall && wallService != null ? wallService.GetStageAt(c.x + c.y * board.Width) : 0;
+                int stage = isWall && wallService != null ? wallService.GetStageAt(c.x + c.y * board.Width)
+                    : isLamp && lampService != null ? (lampService.IsLitAt(c.x + c.y * board.Width) ? 1 : 0) : 0;
                 float d = (c.x - cx) * (c.x - cx) + (c.y - cy) * (c.y - cy);
                 if (stage > bestStage || (stage == bestStage && d < best)) { bestStage = stage; best = d; rep = c; }
             }
@@ -588,6 +637,15 @@ public class PatchBotTargetCoordinator
             bool under = board.ObstacleStateService.IsUnderTileObstacleAt(rep.x, rep.y);
             if (obstacleUnitIsGoal[kv.Key]) (under ? obstacleGoalUnderCells : obstacleGoalCells).Add(rep);
             else (under ? otherObstacleUnderCells : otherObstacleCells).Add(rep);
+        }
+
+        // Solo bots do no extra snapshot work unless the normal scan found a useful helper candidate.
+        if (nearReadyHelper && !preferFarFrom.HasValue)
+        {
+            impactScorer ??= new PatchBotImpactScorer(board, patchbotService);
+            var helperPick = impactScorer.Pick(TileSpecial.None, patchBotTile, partnerTile, excluded,
+                additionalExcluded, activeObstacleGoals, activeTileGoals, preferNonGel);
+            if (helperPick.hasCell) return helperPick;
         }
 
         // Hedef, "kaynaktan en uzak" veya rastgele DEĞİL; payload'ın en çok hücreye değeceği

@@ -1,0 +1,23 @@
+    private void HideStaticIcon()
+    {
+        if (staticIconImage == null) return;
+        if (!staticIconHidden)
+        {
+            staticIconAlpha = staticIconImage.color.a;
+            staticIconHidden = true;
+        }
+        var color = staticIconImage.color;
+        color.a = 0f;
+        staticIconImage.color = color;
+    }
+    private void RestoreStaticIcon()
+    {
+        if (!staticIconHidden) return;
+        if (staticIconImage != null)
+        {
+            var color = staticIconImage.color;
+            color.a = staticIconAlpha;
+            staticIconImage.color = color;
+        }
+        staticIconHidden = false;
+    }

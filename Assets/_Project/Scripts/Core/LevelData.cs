@@ -14,7 +14,21 @@ public enum CollectibleId : int
 
     // Boss Duel modunda boss'a verilen hasar. Goal amount = boss HP;
     // BossDuelController her temizlenen taş için bu goal'ü ilerletir.
-    BossDamage = 2
+    BossDamage = 2,
+
+    // Guguk kuşu evinden (ObstacleId.BirdHouse) uçan kuşlar. Goal amount = toplam kuş.
+    Bird = 3
+}
+
+public static class CollectibleSources
+{
+    /// Collectible'ı tahtada üreten engel: hedef ikonu (ObstacleDef.goalIconSprite) ve PatchBot hedefi buradan
+    /// çözülür. None = kendi ikon/hedef kuralı olan collectible (EnergyOrb, BossDamage).
+    public static ObstacleId ProducerOf(CollectibleId id) => id switch
+    {
+        CollectibleId.Bird => ObstacleId.BirdHouse,
+        _ => ObstacleId.None,
+    };
 }
 
 public enum LevelKind : int
@@ -311,6 +325,58 @@ public enum ObstacleId : int
     // su depoya kesintisiz bağlı açık hücrelere akar; tamamı açılınca su son hücrenin kenarından çıkar → hedef +1.
     // Ayrıntı: Docs/WaterChannel_Plan.md.
     WaterChannel = 76,
+    // Altın (HEDEF): GoldMoney görselli, plastik gibi hareketli tek vuruşluk engel; toplanan her parça cüzdana
+    // 1 altın. Seçili sütunlarda refill her boş hücreyi altınla doldurur (spawnFillsColumn) → altın sütunu akışı.
+    // Bonus GoldMoney'den (32, hedef değil) ayrı. Ödül leveli için (V1 71, 2026-10-29).
+    GoldCoin = 77,
+
+    // Guguk kuşu evi (1x1, KIRILMAZ, BirdHouseService). 1. vuruş kapağı açar, kuş çıkar; kuş görünürken her vuruş
+    // kuşu hedefe uçurur (Collectible Bird +1) ve yuvadan yenisi çıkar, kapak açık kalır. Bir hamle boyunca vuruş
+    // gelmezse kuş içeri girer, kapak kapanır. Evler ortak kota (Bird hedefi) dolana kadar
+    // sınırsız kuş verir; kota dolunca hepsi kapanır. Üstüne kasa/taş/AncientSeal konabilir; zemin örtüsü gelmez.
+    BirdHouse = 78,
+
+    // Lamba şeridi (LampStripService): duvar gibi serbest şekilli (düz/L/zikzak, DALLANMASIZ) tek parça çerçeve,
+    // her hücresinde renkli lamba. Renkli lamba yanındaki AYNI RENK eşleşmeyle ya da special'la kırılır; mor lamba
+    // yalnız special'la. Kırılan lambanın yeri boş kalır. Parça ayarı açıksa her oyuncu hamlesi bitince bütün dizi
+    // (boşluklar dahil) yol boyunca 1 hücre kayar, uçtan çıkan diğer uçtan girer. Tüm lambalar kırılınca çerçeve
+    // 2-3 büyük parçaya ayrılıp düşer; hedef = çerçeve sayısı. Üstüne yağ/çim gelebilir; altında çamur/jel olabilir.
+    LampStrip = 79,
+}
+
+/// Lamba şeridi hücre rengi (LevelData.lampColorByCell). Renkler taş türleriyle eşleşir (renkli sandık sırası).
+public static class LampStripColor
+{
+    public const int None = 0;      // boş yuva (kırılmış / lambasız)
+    public const int Yellow = 1;    // Gear
+    public const int Red = 2;       // Core
+    public const int Blue = 3;      // Bolt
+    public const int Green = 4;     // Plate
+    public const int Purple = 5;    // yalnız special
+    public const int Count = 6;
+
+    public static bool TryGetTileType(int color, out TileType type)
+    {
+        switch (color)
+        {
+            case Yellow: type = TileType.Gear; return true;
+            case Red: type = TileType.Core; return true;
+            case Blue: type = TileType.Bolt; return true;
+            case Green: type = TileType.Plate; return true;
+            default: type = TileType.Gear; return false;
+        }
+    }
+}
+
+[System.Serializable]
+public struct LampStripSettings
+{
+    [Tooltip("Editördeki duvar/şerit parça numarası (wallPieceIds). Runtime parçayı origin hücresinin numarasıyla bulur.")]
+    public int pieceId;
+    [Tooltip("Açık: her oyuncu hamlesi bitince lambalar yol boyunca 1 hücre kayar (döngü). Kapalı: tanıtım, sabit.")]
+    public bool shift;
+    [Tooltip("Kayma yönü. Kapalı = ileri: yolun sol-üst ucundan diğer ucuna (yatayda sağa, dikeyde aşağı). Açık = geri.")]
+    public bool reverse;
 }
 
 public enum TubeDirection { Up, Down, Left, Right }
@@ -761,6 +827,11 @@ public class LevelData : ScriptableObject
              "obstacleOrigins'ten tanır: aynı numaralı bitişik duvar hücreleri tek origin paylaşır. 0 = duvar yok.")]
     public int[] wallPieceIds;
 
+    [Tooltip("Lamba şeridi: hücre başına lamba rengi (LampStripColor). 0 = boş yuva. Editörde şerit boyanırken yazılır.")]
+    public int[] lampColorByCell;
+    [Tooltip("Lamba şeridi parça ayarları (kayma açık/kapalı + yön), parça numarasına göre. Listede olmayan parça kaymaz.")]
+    public LampStripSettings[] lampStripSettings;
+
     [Tooltip("Aç Hamster doyma eşiği (lokma), level varsayılanı. 0 = ObstacleLibrary'deki hamsterSatiety. " +
              "Hamster başına değer (hamsterSatietyByCell) varsa o geçerlidir.")]
     [Min(0)] public int hamsterSatietyOverride = 0;
@@ -862,6 +933,39 @@ public class LevelData : ScriptableObject
              "size = width*height.")]
     public int[] pinnedSpecialTypes;
 
+    [Tooltip("Hareketli engellerin (plastik vb.) hedef için yeniden üretileceği sütunlar. Hiçbiri seçili değilse " +
+             "eskisi gibi her sütundan gelebilir. Seçiliyse yalnız bu sütunlardan düşer → ip gibi akış (kargo hariç).")]
+    public bool[] movableSpawnColumns;
+
+    [Tooltip("Seçili sütunlardan gerekli engel bu kadar hamle gelemezse başka sütundan da düşebilir (hedef tıkanmasın). " +
+             "0 = katı: yalnız seçili sütunlar.")]
+    [Min(0)] public int movableSpawnFallbackMoves = 3;
+
+    [Tooltip("AÇIK: seçili sütunlar hep hareketli engelle dolu kalır (geçiş başına 1 sınırı yok) ve her sütun yalnız " +
+             "başta kendisine konan engel türünü üretir (turuncu sütun → turuncu). KAPALI: geçiş başına 1, karışık akış.")]
+    public bool movableSpawnFillColumns = true;
+
+    /// Tasarımcı en az bir üretim sütunu seçmiş mi?
+    public bool HasMovableSpawnColumns
+    {
+        get
+        {
+            if (movableSpawnColumns == null) return false;
+            for (int i = 0; i < movableSpawnColumns.Length && i < width; i++) if (movableSpawnColumns[i]) return true;
+            return false;
+        }
+    }
+
+    /// x sütunu hareketli engel üretimine açık mı? Seçim yoksa her sütun açıktır.
+    public bool IsMovableSpawnColumn(int x)
+    {
+        if (movableSpawnColumns == null) return true;
+        bool any = false;
+        for (int i = 0; i < movableSpawnColumns.Length && i < width; i++)
+            if (movableSpawnColumns[i]) { any = true; if (i == x) return true; }
+        return !any;
+    }
+
     public int Index(int x, int y) => y * width + x;
 
     public bool InBounds(int x, int y) =>
@@ -898,6 +1002,12 @@ public class LevelData : ScriptableObject
 
         if (wallPieceIds == null || wallPieceIds.Length != size)
             wallPieceIds = new int[size];
+
+        if (lampColorByCell == null || lampColorByCell.Length != size)
+            lampColorByCell = new int[size];
+
+        if (lampStripSettings == null)
+            lampStripSettings = System.Array.Empty<LampStripSettings>();
 
         if (tubes == null)
             tubes = System.Array.Empty<TubeEntry>();

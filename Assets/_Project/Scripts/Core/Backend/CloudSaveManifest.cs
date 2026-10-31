@@ -63,6 +63,7 @@ public static class CloudSaveManifest
         "boss_duel_howto_seen_v1",
         "tutorial_seen_workshop_repair",
         "real_users_seen_max",   // bot evreni azalma eğrisi cihazlar arası tutarlı kalsın
+        "shop_owned_bundle_welcome",   // ömürde-bir Hoş Geldin Paketi: yeniden kurulumda tekrar satılmasın
         "music_selected",        // seçili müzik parçası
         // Level deneme sayacı (LevelAttemptStats) — gizli yardım kademesi cihaz değişince korunsun.
         "level_attempt_level",
@@ -70,6 +71,8 @@ public static class CloudSaveManifest
         "level_attempt_fails",
         "level_attempt_struggles",
         "level_attempt_lives_spent",
+        "level_attempt_carry_level",
+        "level_attempt_carry_struggles",
         "mercy_has_rewarded_ad",
         "mercy_has_purchase",
         // Harika (wonder/event) ilerlemesi: en son tamamlanan event + model sürümü.
@@ -109,6 +112,7 @@ public static class CloudSaveManifest
         "bridge_cycle",
         "gearcup_state_v1",
         "harvest_cycle",
+        "giftfestival_state_v1",
         "iap_processed_transactions",
         "bridge_join_ticks",
         "bridge_lastask_ticks",
@@ -158,6 +162,7 @@ public static class CloudSaveManifest
         || key.StartsWith("safari_", System.StringComparison.Ordinal)
         || key.StartsWith("bridge_", System.StringComparison.Ordinal)
         || key.StartsWith("gearcup_", System.StringComparison.Ordinal)
+        || key.StartsWith("giftfestival_", System.StringComparison.Ordinal)
         || key.StartsWith("progress_event_", System.StringComparison.Ordinal);
 
     private static long ReadRevision(object value) =>

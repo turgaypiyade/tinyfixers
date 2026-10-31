@@ -69,6 +69,9 @@ public class ObstacleDef
              "(diagonal yok) ve en alt satıra inip board'dan çıkınca toplanır (goal +1). " +
              "behavior = MovableObstacle ile birlikte kullanılır.")]
     public bool exitAtBottom = false;
+    [Tooltip("AÇIK: hedef için yeniden üretilirken level'da SEÇİLİ üretim sütunlarındaki her boş hücre bu engelle dolar " +
+             "(geçiş başına 1 sınırı yok) → sütun hep bu engel akar (ör. Altın sütunu). Sütun seçilmemişse normal kural.")]
+    public bool spawnFillsColumn = false;
     [Tooltip("AÇIK: bu obstacle'ın gravity-gölgesinde kalan boş hücrelere İLK DAĞITIMDA taş konur " +
              "(örn. Oil duvarının altı dolu başlar; cep engel kırılana kadar refill almaz). " +
              "KAPALI (varsayılan): gölge boş kalır (chest altı gibi). Bir hücrenin dolması için " +
@@ -132,6 +135,28 @@ public class ObstacleDef
     [Tooltip("Uçan obstacle hedefe çarptığında çalacak ses; yumurta kırılma sesinden ayrıdır.")]
     public AudioClip impactSound;
     [Range(0f, 1f)] public float impactSoundVolume = 1f;
+
+    [Header("Absorb / Release Audio")]
+    [Tooltip("Engel komşu bir special'ı yuttuğunda (GrassWaterLily).")]
+    public AudioClip absorbSound;
+    [Range(0f, 1f)] public float absorbSoundVolume = 1f;
+    [Tooltip("Engel yuttuğu special'ı geri fırlattığında — fırlatma anında (GrassWaterLily).")]
+    public AudioClip releaseSound;
+    [Range(0f, 1f)] public float releaseSoundVolume = 1f;
+
+    [Header("Bird House Audio")]
+    [Tooltip("Guguk kuşu evi: kapak açılıp kuş çıkarken (BirdHouseService). Boşsa sessiz.")]
+    public AudioClip birdAppearSound;
+    [Range(0f, 1f)] public float birdAppearSoundVolume = 1f;
+    [Tooltip("Guguk kuşu evi: kanat çırpma — kuş çıkarken ve havalanırken (beklerken çırpma sessizdir).")]
+    public AudioClip birdWingSound;
+    [Range(0f, 1f)] public float birdWingSoundVolume = 1f;
+    [Tooltip("Guguk kuşu evi: kuş hedefe uçarken ötüş (kalkış anında bir kez).")]
+    public AudioClip birdFlySound;
+    [Range(0f, 1f)] public float birdFlySoundVolume = 1f;
+    [Tooltip("Guguk kuşu evi: kuş vuruş gelmediği için içeri girerken / kapak kapanırken.")]
+    public AudioClip birdRetreatSound;
+    [Range(0f, 1f)] public float birdRetreatSoundVolume = 1f;
     [HideInInspector] public bool drawUnderTiles = false;        // legacy serialized flag
 
     [SerializeField, HideInInspector, FormerlySerializedAs("sprite")]

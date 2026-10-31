@@ -39,6 +39,26 @@ public sealed class RuntimeSimulationSession : MonoBehaviour
     /// <summary>SIM build: oynanan katalog seviye numarası. Asset yolu build'de yok; GridSpawner katalogdan çözer.</summary>
     public static int CurrentLevelNumber { get; private set; }
 
+    /// <summary>
+    /// SIM build: güncel level verisi klasörü (editör SimLevelExporter → Library/SimLevels/L0004.json). Dosya varsa
+    /// build'e gömülü kopyanın yerine o kullanılır → level değişince yeniden build gerekmez (2026-10-28).
+    /// </summary>
+    public static string LevelOverrideDir { get; private set; }
+
+    public static bool HasLevelOverride(int levelNumber) =>
+        !string.IsNullOrEmpty(LevelOverrideDir) && levelNumber > 0 && File.Exists(LevelOverridePath(levelNumber));
+
+    /// Runtime kopyanın veri alanlarını güncel JSON ile değiştirir; JSON'da olmayan nesne referansları
+    /// (ObstacleLibrary, müzik, görseller) kopyada olduğu gibi kalır.
+    public static bool ApplyLevelOverride(LevelData runtimeCopy, int levelNumber)
+    {
+        if (runtimeCopy == null || !HasLevelOverride(levelNumber)) return false;
+        JsonUtility.FromJsonOverwrite(File.ReadAllText(LevelOverridePath(levelNumber)), runtimeCopy);
+        return true;
+    }
+
+    private static string LevelOverridePath(int levelNumber) => Path.Combine(LevelOverrideDir, $"L{levelNumber:0000}.json");
+
 #if TF_SIM_BUILD
     private static class SimArgs
     {
@@ -62,6 +82,7 @@ public sealed class RuntimeSimulationSession : MonoBehaviour
     {
         public string[] levelPaths;
         public int[] levelNumbers;      // SIM build: katalog seviye numaraları (levelPaths yerine)
+        public string levelOverrideDir; // SIM build: güncel level JSON klasörü (Library/SimLevels); boşsa gömülü veri
         public string scenePath = "Assets/_Project/Scenes/01_Game.unity";
         public int gamesPerLevel = 20;
         public int seed = 42;
@@ -82,6 +103,7 @@ public sealed class RuntimeSimulationSession : MonoBehaviour
     {
         public string level;
         public string levelPath;
+        public string bot;   // Acemi / Usta / diğer politika adı
         public int sample, seed, movesUsed, movesLeft, rejectedInputs;
         public string outcome; // Won, Lost, NoMoves, Timeout, Error, Cancelled. Only Won/Lost enter win%.
         public string detail;
@@ -163,6 +185,7 @@ public sealed class RuntimeSimulationSession : MonoBehaviour
         DontDestroyOnLoad(host);
         var session = host.AddComponent<RuntimeSimulationSession>();
         session._config = config;
+        LevelOverrideDir = string.IsNullOrWhiteSpace(config.levelOverrideDir) ? null : config.levelOverrideDir;
         session._report = new Report { config = config, unityVersion = Application.unityVersion, buildGuid = Application.buildGUID };
         session._oldTimeScale = Time.timeScale;
         session._oldRandomState = UnityEngine.Random.state;
@@ -381,7 +404,12 @@ public sealed class RuntimeSimulationSession : MonoBehaviour
         board.OnLevelFailRequested += OnForcedFail;
         try
         {
-            var bot = new RuntimeSimulationBot(board, _config.policy, result.seed);
+            // Auto: seviye ≤50 Acemi (GoalAware), 51+ Usta (Expert). Seviye no yoksa (editör asset yolu) Acemi.
+            var policy = _config.policy == RuntimeBotPolicy.Auto
+                ? (CurrentLevelNumber > 50 ? RuntimeBotPolicy.Expert : RuntimeBotPolicy.GoalAware)
+                : _config.policy;
+            result.bot = policy == RuntimeBotPolicy.Expert ? "Usta" : policy == RuntimeBotPolicy.GoalAware ? "Acemi" : policy.ToString();
+            var bot = new RuntimeSimulationBot(board, policy, result.seed);
             var rejected = new HashSet<RuntimeBotMove>();
             float waitingSince = Time.realtimeSinceStartup;
             int stableFrames = 0;

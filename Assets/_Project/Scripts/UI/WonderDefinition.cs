@@ -18,6 +18,8 @@ public class WonderDefinition : ScriptableObject
 
     [Header("Arka Plan")]
     public Sprite backgroundSprite;
+    [Tooltip("Önceden bulanıklaştırılmış düşük çözünürlüklü görüntü. Restorasyonda kapalı alanları gösterir; boşsa eski pas görünümü kullanılır. Oyun sırasında blur hesaplanmaz.")]
+    public Texture2D unrestoredTexture;
     [Tooltip("Görev sayısı = kaynak kademesi sayısı. Reveal % = yapılan görev / bu.")]
     [Min(1)] public int totalStages = 5;
 

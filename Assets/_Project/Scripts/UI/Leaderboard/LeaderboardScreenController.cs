@@ -75,12 +75,17 @@ public sealed class LeaderboardScreenController : MonoBehaviour
     private readonly Dictionary<LeaderboardTab, int> subFilterByTab = new();
     private LeaderboardTab current = LeaderboardTab.Weekly;
     private bool wired;
+    private float refreshTimer;
 
     private void OnEnable()
     {
         service ??= BackendServices.Leaderboard;
         service.OnChanged += Render;
         FriendState.OnChanged += OnFriendsChanged;
+        if (!FirebaseAuthService.IsReady) FirebaseAuthService.OnReady += OnSocialReady;
+        FirebaseCloudSaveService.OnRestored += OnSocialReady;
+        PlayerProfile.OnChanged += OnSocialReady;
+        refreshTimer = 0f;
         WireTabs();
         ScreenTitleStyle.ApplyToScreen(transform, theme != null ? theme.headingFont : null);
         SocialBackdrop.ApplyToScreen(transform);
@@ -91,13 +96,32 @@ public sealed class LeaderboardScreenController : MonoBehaviour
     {
         if (service != null) service.OnChanged -= Render;
         FriendState.OnChanged -= OnFriendsChanged;
+        FirebaseAuthService.OnReady -= OnSocialReady;
+        FirebaseCloudSaveService.OnRestored -= OnSocialReady;
+        PlayerProfile.OnChanged -= OnSocialReady;
+    }
+
+    private void OnSocialReady() => service?.Fetch(current);
+
+    // Refresh only while this screen is visible, never a background polling object per friend.
+    private void Update()
+    {
+        refreshTimer += Time.unscaledDeltaTime;
+        if (refreshTimer < 30f) return;
+        refreshTimer = 0f;
+        service?.Fetch(current);
+    }
+
+    private void OnApplicationPause(bool paused)
+    {
+        if (!paused && isActiveAndEnabled) OnSocialReady();
     }
 
     // Arkadaş eklendi/çıktı (öneri kartı veya popup) → arkadaş listesi yeniden yüklensin.
     private void OnFriendsChanged()
     {
         if (current == LeaderboardTab.Friends) service?.Fetch(current);
-        Render();
+        else Render();
     }
 
     private void WireTabs()

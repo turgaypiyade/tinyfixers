@@ -20,6 +20,8 @@ public sealed class WonderRestorationPieceGraphic : MaskableGraphic
 
     static readonly int TaskRegionsId = Shader.PropertyToID("_TaskRegions");
     static readonly int PieceTaskId = Shader.PropertyToID("_PieceTask");
+    static readonly int UnrestoredTexId = Shader.PropertyToID("_UnrestoredTex");
+    static readonly int UseUnrestoredTexId = Shader.PropertyToID("_UseUnrestoredTex");
     WonderTaskRegions regions;
     int surfaceCell, surfaceCount;
 
@@ -60,6 +62,9 @@ public sealed class WonderRestorationPieceGraphic : MaskableGraphic
             material = ownedMaterial;
         }
         texture = sprite != null ? sprite.texture : Texture2D.whiteTexture;
+        // Keep the reusable sheet consistent with the view, including after changing preview mode.
+        ownedMaterial.SetTexture(UnrestoredTexId, sourceMaterial.GetTexture(UnrestoredTexId));
+        ownedMaterial.SetFloat(UseUnrestoredTexId, sourceMaterial.GetFloat(UseUnrestoredTexId));
         Vector4 atlas = sprite != null ? UnityEngine.Sprites.DataUtility.GetOuterUV(sprite) : new Vector4(0, 0, 1, 1);
         ownedMaterial.SetVector("_SpriteUVRect", atlas);
         imageRect = rect;

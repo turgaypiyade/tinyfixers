@@ -1,7 +1,11 @@
 # Wonder Boya Kovası (5. joker) — kurallar ve uygulama (2026-10-17)
 
 EN: **Wonder Paint Bucket**. `BoardController.BoosterMode.PaintBucket`, booster index **4**, açılış **level 30**
-(diğerleri 8/13/18/24; açılınca 3 hak hediye + ilk oyun ücretsiz — ortak BoosterAccessService kuralı).
+(diğerleri 11/13/18/24; açılınca 3 hak hediye + ilk oyun ücretsiz — ortak BoosterAccessService kuralı).
+
+2026-10-29: Kullanıcı oyun içi jokerlerin10. seviyeden sonra açılmasını istedi.
+İlk joker Hammer11'de; satır13, sütun18, karıştırma24, boya kovası30 olarak ilerler.
+UI kilidi ve kullanım uygunluğu aynı `BoosterAccessService` eşiklerini okur.
 
 ## Kurallar (kullanıcı onaylı)
 1. Joker seçilir → odak ekranı: **"Wonder Boya Kovası!"** / "Bir taşa dokun: o renk 3 hamle boyunca tahtadan çıkar!"

@@ -808,8 +808,8 @@ PlayerSettings:
   webWasm2023: 0
   webEnableSubmoduleStrippingCompatibility: 0
   scriptingDefineSymbols:
-    Android: TF_FIREBASE_ANALYTICS;TF_IAP;IAP_FAKE_STORE_DEFAULT
-    iPhone: TF_FIREBASE_ANALYTICS;TF_IAP;IAP_FAKE_STORE_DEFAULT
+    Android: TF_FIREBASE_ANALYTICS;TF_IAP;TF_ADMOB
+    iPhone: TF_FIREBASE_ANALYTICS;TF_IAP;TF_ADMOB
   additionalCompilerArguments: {}
   platformArchitecture: {}
   scriptingBackend:

@@ -1,5 +1,18 @@
 # Bostan Hasadı (kazı event'i) — Event Tasarım Taslağı
 
+**2026-10-29 — mevcut uygulamanın genel kazanım kontrolü:** Aşağıdaki2026-10-10
+tasarım taslağından farklı olarak güncel `HarvestConfig.asset` kapısı50, döngüsü7
+gün / aktif süresi5 gün ve kat sayısı5'tir. Normal galibiyet1, ilk deneme2,
+Boss2 kürek verir; Boss'a ayrıca ilk deneme bonusu eklenmez. Event ekranına
+girmeden de `PlayerStats.OnLevelCleared` üzerinden kalıcı kayıt yapılır.
+Takvim aktifken bile5 hasat bitmişse kazanım bilinçli olarak durur. Seviye
+oynanırken süre dolduysa galibiyet kürek vermez; sezon sonu kalan kürekler
+altına dönüşür. Yeni sezon, önceki sezonun bitmiş katını sıfırlar.
+`csi Tools/check_harvest_rewards.csx`:415 üretim metodu/takvim kontrolü geçti;
+normal/Boss/ilk deneme,50 kapısı,çift aboneliği önleme,yeni sezon ve dönüşüm
+kapsandı. Bildirilen kürek kaybı bu kontrollerde tekrarlanmadı; belirli oyuncu
+kaydına erişilmedi. Runtime davranışı değiştirilmedi; Unity Play/build yapılmadı.
+
 2026-10-10. Kod YOK, yalnız tasarım.
 
 **KİLİTLENEN KARARLAR (2026-10-10, güncel — tema SON hali):**

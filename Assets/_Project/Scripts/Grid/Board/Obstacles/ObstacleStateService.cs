@@ -241,6 +241,9 @@ public class ObstacleStateService : ISimObstacleQuery
     public Action<int> HatLauncherHitInterceptor;
     /// <summary>KeyGenerator: set by KeyGeneratorService. Returns true only when a key is produced.</summary>
     public Func<int, bool> KeyGeneratorHitInterceptor;
+    /// <summary>BirdHouse: set by BirdHouseService (origin, context). true = vuruş tüketildi (kapak açıldı / kuş
+    /// uçtu / hamle sınırı); false = kota bitti → engel vuruş almaz. Ev hiçbir zaman kendi HP'sini düşürmez.</summary>
+    public Func<int, ObstacleHitContext, bool> BirdHouseHitInterceptor;
 
     // Per-move emit guard for HatLauncher / EnergyContainer. These obstacles never break per hit
     // (they only "exhaust" once the shared goal capacity is reached), so without a per-move cap a
@@ -262,6 +265,20 @@ public class ObstacleStateService : ISimObstacleQuery
     /// wall cell is hit. Per-cell stage state is owned by the service; it answers whether the hit only
     /// advanced that cell's stage or must collapse the whole piece.</summary>
     public Func<int, int, ObstacleHitContext, WallHitOutcome> WallHitInterceptor;
+    /// <summary>Lamba şeridi: LampStripService set eder (origin, vurulan HÜCRE, context, eşleşme rengi). Advanced = o
+    /// hücredeki lamba kırıldı; Collapse = son lamba da kırıldı (çerçeve temizlenir); Ignored = yanlış renk / boş yuva /
+    /// mor lambaya normal eşleşme → vuruş tüketilmez.</summary>
+    public Func<int, int, ObstacleHitContext, TileType?, WallHitOutcome> LampStripHitInterceptor;
+    /// <summary>Lamba şeridi: hücrede şu an kırılabilir (yanan) lamba var mı? Hedef seçici boş yuvaya gitmesin.</summary>
+    public Func<int, bool> LampStripCellLitQuery;
+    /// <summary>Son kırılan lambanın rengi (parçacık rengi). LampStripService vuruş sırasında yazar.</summary>
+    public ChestColorMask LampStripLastHitColor;
+
+    /// Serbest şekilli, tek origin'li ama HÜCRE bazında vuruş alan parça engelleri (duvar ailesi): yığın altı
+    /// geri yükleme, kalan vuruş (wallRemainingHits) ve hedef kilidi kuralları ortaktır.
+    public static bool IsWallFamily(ObstacleId id) =>
+        id == ObstacleId.Wall || id == ObstacleId.MetalWall || id == ObstacleId.LampStrip;
+
 
     /// Aç Hamster: HamsterObstacleService set eder (origin, vurulan hücre). Vuruş hamsteri BESLER, asla hasar
     /// vermez. true → bu vuruş son doyumu tamamladı, hamster ayrılıyor (engel temizlenir); false → yerinde kalır.
@@ -580,6 +597,18 @@ public class ObstacleStateService : ISimObstacleQuery
             return new ObstacleHitResult(false, false, true, default, default, Array.Empty<int>());
         }
 
+        // BirdHouse: KeyGenerator gibi kalıcı üretici. Aç/uç durumu ve ortak kota BirdHouseService'te.
+        if (id == ObstacleId.BirdHouse)
+        {
+            if (BirdHouseHitInterceptor != null && BirdHouseHitInterceptor.Invoke(origin, context))
+            {
+                var bhChange = new ObstacleVisualChange(origin, id, false, remainingHitsByOrigin[origin], null);
+                return new ObstacleHitResult(true, true, false, bhChange, default, Array.Empty<int>());
+            }
+
+            return new ObstacleHitResult(false, false, true, default, default, Array.Empty<int>());
+        }
+
         // RocketBasket: color-keyed launcher fully managed by RocketBasketService via the interceptor.
         // A hit only "counts" if the source is a normal-match color that matches a still-loaded rocket
         // charge → interceptor launches that rocket and returns true (hit consumed). Wrong color / no
@@ -681,6 +710,30 @@ public class ObstacleStateService : ISimObstacleQuery
 
             change = new ObstacleVisualChange(origin, id, false, remainingHitsByOrigin[origin], null, hitCellIndex: idx);
             return new ObstacleHitResult(true, true, false, change, default, hamsterCells);
+        }
+
+        if (id == ObstacleId.LampStrip)
+        {
+            if (LampStripHitInterceptor == null)
+                return new ObstacleHitResult(false, false, true, default, default, Array.Empty<int>());
+
+            int[] lampCells = CollectCellsForOrigin(origin, id, includeBuried: true);
+            LampStripLastHitColor = ChestColorMask.None;
+            var lampOutcome = LampStripHitInterceptor.Invoke(origin, idx, context, sourceTileType);
+            if (lampOutcome == WallHitOutcome.Ignored)
+                return new ObstacleHitResult(false, false, true, default, default, Array.Empty<int>());
+
+            if (lampOutcome == WallHitOutcome.Collapse)
+            {
+                ClearObstacleFromLevel(origin, id);
+                change = new ObstacleVisualChange(origin, id, true, 0, null, hitCellIndex: idx);
+                var lampTransition = new ObstacleStageTransition(true, origin, id, 0, true, default, default);
+                return new ObstacleHitResult(true, true, false, change, lampTransition, lampCells);
+            }
+
+            change = new ObstacleVisualChange(origin, id, false, GetRemainingHitsAt(x, y), null,
+                LampStripLastHitColor, hitCellIndex: idx);
+            return new ObstacleHitResult(true, true, false, change, default, lampCells);
         }
 
         if (id == ObstacleId.Wall || id == ObstacleId.MetalWall)
@@ -1040,8 +1093,7 @@ public class ObstacleStateService : ISimObstacleQuery
     public bool TakesPerCellHits(int x, int y)
     {
         var id = GetObstacleIdAt(x, y);
-        return id == ObstacleId.Magnet || id == ObstacleId.Wall || id == ObstacleId.MetalWall
-            || id == ObstacleId.Hamster;
+        return id == ObstacleId.Magnet || IsWallFamily(id) || id == ObstacleId.Hamster;
     }
 
     public bool IsMagnetEndpoint(int x, int y)
@@ -1289,6 +1341,31 @@ public class ObstacleStateService : ISimObstacleQuery
 
         return stage != null && stage.locksInteraction;
     }
+    /// <summary>
+    /// Salt-okunur soru (durum değiştirmez): (x, y)'deki engel, bu renkteki NORMAL eşleşmeden hasar alır mı?
+    /// TryDamage'ın renk kurallarıyla aynı: restrictNormalMatchTileType (ör. Kırmızı/Mavi Plastik) ve açık
+    /// Renkli Sandık'ın kalan renkleri. Simülasyon botu yanlış renkle hamle harcamasın diye (2026-10-29).
+    /// </summary>
+    public bool AcceptsNormalMatchColorAt(int x, int y, TileType matchType)
+    {
+        if (!IsValidCell(x, y)) return false;
+        var id = GetObstacleIdAt(x, y);
+        if (id == ObstacleId.None) return false;
+        var def = library != null ? library.Get(id) : null;
+        if (def == null) return true;
+        int origin = GetObstacleOriginAt(x, y);
+        if (origin < 0 || origin >= remainingHitsByOrigin.Length) origin = level.Index(x, y);
+        int remaining = remainingHitsByOrigin[origin];
+        if (remaining < 0) remaining = Mathf.Max(1, def.hits);
+        if (!CanConsumeHit(def, remaining, ObstacleHitContext.NormalMatch, matchType)) return false;
+        if (id == ObstacleId.ColorChest && remaining < def.hits)
+        {
+            var flag = ((TileType?)matchType).ToChestColor();
+            return flag != ChestColorMask.None && _chestColorStates.TryGetValue(origin, out var mask) && (mask & flag) != 0;
+        }
+        return true;
+    }
+
     private bool CanConsumeHit(
         ObstacleDef def,
         int remainingHits,
@@ -1410,7 +1487,7 @@ public class ObstacleStateService : ISimObstacleQuery
         bool originCellRestored = (ObstacleId)level.obstacles[origin] != originId
             || level.obstacleOrigins[origin] != origin;
 
-        if (originId == ObstacleId.Wall || originId == ObstacleId.MetalWall)
+        if (IsWallFamily(originId))
         {
             for (int i = 0; i < level.obstacles.Length; i++)
                 if (RemoveStampedObstacleBeneath(i, originId, origin))
@@ -1564,7 +1641,7 @@ public class ObstacleStateService : ISimObstacleQuery
         if (!IsValidCell(x, y)) return false;
         int idx = level.Index(x, y);
         var id = (ObstacleId)level.obstacles[idx];
-        if (id == ObstacleId.Wall || id == ObstacleId.MetalWall) return false;
+        if (IsWallFamily(id)) return false;
         return id != ObstacleId.None && IsBuriedAnywhere(id, level.obstacleOrigins[idx]);
     }
 
@@ -2438,6 +2515,8 @@ public class ObstacleStateService : ISimObstacleQuery
 
     // Producer quota/HUD eligibility is independent of the permanent obstacle stage.
     public Func<bool> HatLauncherCanProduceQuery;
+    /// BirdHouse: BirdHouseService set eder. Ortak kuş kotası hâlâ açık mı (false → ev vuruş almaz, hedeflenmez).
+    public Func<bool> BirdHouseCanProduceQuery;
 
     public int GetActiveMeaningfulHitsAt(int x, int y)
     {
@@ -2456,6 +2535,13 @@ public class ObstacleStateService : ISimObstacleQuery
 
         if (id == ObstacleId.KeyGenerator)
             return KeyGeneratorCanProduceQuery != null && KeyGeneratorCanProduceQuery() ? 1 : 0;
+
+        if (id == ObstacleId.BirdHouse)
+            return BirdHouseHitInterceptor != null && BirdHouseCanProduceQuery != null
+                   && BirdHouseCanProduceQuery() ? 1 : 0;
+
+        if (id == ObstacleId.LampStrip)
+            return LampStripCellLitQuery != null && LampStripCellLitQuery(idx) ? 1 : 0;
 
         if (id == ObstacleId.Safe)
         {
@@ -2734,7 +2820,7 @@ public class ObstacleStateService : ISimObstacleQuery
     public void SetWallRemainingHits(int origin, ObstacleId id, int remaining)
     {
         if (origin < 0 || origin >= remainingHitsByOrigin.Length) return;
-        if (id != ObstacleId.Wall && id != ObstacleId.MetalWall) return;
+        if (!IsWallFamily(id)) return;
         wallRemainingHits[(id, origin)] = Mathf.Max(1, remaining);
     }
 

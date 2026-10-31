@@ -4,7 +4,7 @@ using UnityEngine.SceneManagement;
 /// <summary>
 /// Booster (0=Hammer/Single, 1=Row, 2=Column, 3=Shuffle, 4=PaintBucket) kilit + free-oyun + hak kuralları —
 /// TEK merkez. PreLevelSpecialPopup ile aynı desen:
-///   - Booster kendi unlock level'ına kadar kilitli (8 / 13 / 18 / 24 / 30).
+///   - Booster kendi unlock level'ına kadar kilitli (11 / 13 / 18 / 24 / 30).
 ///   - Unlock SONRASI girilen İLK oyun o booster için FREE: kullanım hak düşürmez.
 ///     Free, oyuna girmekle tüketilir (kullanılmasa bile o oyuna özeldir).
 ///   - Unlock ile birlikte tek seferlik 3 hak hediye edilir (free oyun bunları harcamaz).
@@ -14,7 +14,7 @@ using UnityEngine.SceneManagement;
 public static class BoosterAccessService
 {
     private const int BoosterCount = 5;
-    private static readonly int[] UnlockLevels = { 8, 13, 18, 24, 30 };
+    private static readonly int[] UnlockLevels = { 11, 13, 18, 24, 30 };
     public const int PaintBucketIndex = 4;
     private const string LevelPrefsKey = "current_level";
 

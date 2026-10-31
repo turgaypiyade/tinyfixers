@@ -1,141 +1,178 @@
 using System;
+using Firebase;
 using Firebase.Auth;
 using Firebase.Extensions;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
-/// <summary>
-/// Sosyal login (Docs/ProductionPlan.md P4): mevcut ANONİM Firebase hesabını
-/// Google / Apple / Facebook kimliğine BAĞLAR (link) — uid değişmez, ilerleme kaybolmaz.
-///
-/// Akış:
-///  1) Provider SDK'sı token üretir (Google idToken, Apple idToken+rawNonce, FB accessToken).
-///     SDK'lar projeye eklenene dek ilgili TokenProvider null'dır → buton "yakında" kalır.
-///  2) LinkWithCredential: başarı → aynı uid artık kalıcı kimlikli.
-///  3) Çakışma ("credential already in use" — bu sosyal hesap BAŞKA bir uid'e bağlı):
-///     OnLinkConflict tetiklenir; kullanıcı "o hesaba geç" derse SwitchToExisting →
-///     SignInWithCredential (uid DEĞİŞİR; cloud save yeni uid'den restore edilir,
-///     "yüksek level kazanır" politikası veri kaybını önler).
-///
-/// KULLANICI ADIMLARI (console/SDK):
-///  - Firebase Console → Authentication → Sign-in method → Google/Apple/Facebook aç.
-///  - Google Sign-In SDK + iOS URL scheme; Apple: SIWA plugin (iOS'ta üçüncü parti login
-///    sunuluyorsa Apple ZORUNLU); Facebook SDK + App ID. Ayrıntı: ProductionPlan P4.
-/// </summary>
+/// <summary>Link in place; switching accounts requires an acknowledged source save and an exact target restore.</summary>
 public static class AuthLinkService
 {
     public enum Provider { Google, Apple, Facebook }
-
-    /// <summary>Bağlama başarıyla bitti (provider adıyla).</summary>
     public static event Action<Provider> OnLinked;
-
-    /// <summary>Bu sosyal hesap başka bir oyuncu kaydına bağlı — kullanıcıya sor.</summary>
     public static event Action<Provider, Credential> OnLinkConflict;
-
-    /// <summary>Hata (iptal dahil) — UI mesaj gösterebilir.</summary>
     public static event Action<Provider, string> OnLinkFailed;
-
-    /// <summary>
-    /// Provider token sağlayıcıları — ilgili SDK entegre edilince atanır
-    /// (örn. GoogleSignInBridge Google'ı doldurur). null = buton pasif/"yakında".
-    /// Callback: (credential, hata) — kullanıcı iptalinde her ikisi null.
-    /// </summary>
+    public static event Action OnStateChanged;
+    public static event Action OnCanceled;
     public static Action<Action<Credential, string>> GoogleTokenProvider;
     public static Action<Action<Credential, string>> AppleTokenProvider;
     public static Action<Action<Credential, string>> FacebookTokenProvider;
+    public static bool IsBusy { get; private set; }
+    private static int operation;
+    private static Credential pendingCredential;
+    private static Provider pendingProvider;
+    private static string pendingOwner;
 
-    public static bool IsAvailable(Provider p) => p switch
-    {
-        Provider.Google => GoogleTokenProvider != null,
-        Provider.Apple => AppleTokenProvider != null,
-        Provider.Facebook => FacebookTokenProvider != null,
-        _ => false,
-    };
+    public static bool IsAvailable(Provider p) => Fetcher(p) != null;
+    public static void NotifyAvailabilityChanged() => OnStateChanged?.Invoke();
+    public static bool IsLinked => FirebaseAuthService.IsReady && FirebaseAuthService.CurrentUser != null
+        && !FirebaseAuthService.CurrentUser.IsAnonymous;
+    public static bool CanStart => !RuntimeSimulationSession.IsActive && !IsBusy
+        && FirebaseAuthService.IsReady && FirebaseCloudSaveService.RestoreResolved
+        && !FirebaseCloudSaveService.SuspendForDeletion;
 
-    /// <summary>Şu anki kullanıcı kalıcı bir kimliğe bağlı mı (anonim değil mi)?</summary>
-    public static bool IsLinked
+    public static bool HasProvider(Provider p)
     {
-        get
-        {
-            var user = FirebaseAuth.DefaultInstance?.CurrentUser;
-            return user != null && !user.IsAnonymous;
-        }
+        if (!FirebaseAuthService.IsReady) return false;
+        var user = FirebaseAuthService.CurrentUser;
+        if (user == null) return false;
+        string id = p == Provider.Apple ? "apple.com" : p == Provider.Google ? "google.com" : "facebook.com";
+        foreach (var data in user.ProviderData) if (data.ProviderId == id) return true;
+        return false;
     }
+
+    private static Action<Action<Credential, string>> Fetcher(Provider p) => p switch
+    {
+        Provider.Google => GoogleTokenProvider,
+        Provider.Apple => AppleTokenProvider,
+        Provider.Facebook => FacebookTokenProvider,
+        _ => null,
+    };
 
     public static void Link(Provider provider)
     {
-        var fetch = provider switch
+        if (IsBusy) return;
+        if (!CanStart) { Fail(provider, "auth_session_not_ready"); return; }
+        if (HasProvider(provider)) { OnLinked?.Invoke(provider); return; }
+        var fetch = Fetcher(provider);
+        if (fetch == null) { Fail(provider, "auth_provider_inactive"); return; }
+        CancelConflict();
+        string uid = FirebaseAuthService.UserId;
+        int token = ++operation;
+        bool received = false;
+        SetBusy(true);
+        try
         {
-            Provider.Google => GoogleTokenProvider,
-            Provider.Apple => AppleTokenProvider,
-            Provider.Facebook => FacebookTokenProvider,
-            _ => null,
-        };
-
-        if (fetch == null)
-        {
-            OnLinkFailed?.Invoke(provider, GameLocalization.Get("auth_provider_inactive"));
-            return;
-        }
-
-        fetch((credential, error) =>
-        {
-            if (credential == null)
+            fetch((credential, error) =>
             {
-                if (!string.IsNullOrEmpty(error))
-                    OnLinkFailed?.Invoke(provider, error);
-                return;   // sessiz iptal
-            }
-            LinkCredential(provider, credential);
-        });
+                if (received || token != operation) return;
+                received = true;
+                if (!FirebaseAuthService.IsReady || FirebaseAuthService.UserId != uid)
+                { Fail(provider, "auth_session_not_ready"); return; }
+                if (credential == null)
+                {
+                    SetBusy(false);
+                    if (!string.IsNullOrEmpty(error)) OnLinkFailed?.Invoke(provider, error);
+                    else OnCanceled?.Invoke();
+                    return;
+                }
+                LinkCredential(provider, credential, uid, token);
+            });
+        }
+        catch { Fail(provider, "auth_link_error"); }
     }
 
-    private static void LinkCredential(Provider provider, Credential credential)
+    private static void LinkCredential(Provider provider, Credential credential, string uid, int token)
     {
-        var user = FirebaseAuth.DefaultInstance?.CurrentUser;
-        if (user == null)
-        {
-            OnLinkFailed?.Invoke(provider, GameLocalization.Get("auth_session_not_ready"));
-            return;
-        }
-
+        var user = FirebaseAuthService.CurrentUser;
+        if (user == null || user.UserId != uid) { Fail(provider, "auth_session_not_ready"); return; }
         user.LinkWithCredentialAsync(credential).ContinueWithOnMainThread(task =>
         {
+            if (token != operation) return;
+            if (FirebaseAuthService.UserId != uid)
+            { Fail(provider, "auth_session_not_ready"); return; }
             if (!task.IsFaulted && !task.IsCanceled)
             {
+                SetBusy(false);
+                FirebaseCloudSaveService.MarkDirty();
+                FirebaseCloudSaveService.Push();
                 OnLinked?.Invoke(provider);
                 return;
             }
-
-            // Çakışma: bu sosyal kimlik başka uid'e bağlı.
-            var baseEx = task.Exception?.GetBaseException();
-            if (baseEx is FirebaseAccountLinkException || (baseEx?.Message?.Contains("already in use") ?? false)
-                || (baseEx?.Message?.Contains("already associated") ?? false))
+            var error = task.Exception?.GetBaseException();
+            int code = error is FirebaseException firebase ? firebase.ErrorCode : -1;
+            if (code == (int)AuthError.CredentialAlreadyInUse || code == (int)AuthError.EmailAlreadyInUse)
             {
+                // Apple credentials can be single-use: Firebase supplies the replacement on collision.
+                if (error is FirebaseAccountLinkException link && link.UserInfo?.UpdatedCredential != null
+                    && link.UserInfo.UpdatedCredential.IsValid()) credential = link.UserInfo.UpdatedCredential;
+                pendingCredential = credential;
+                pendingProvider = provider;
+                pendingOwner = uid;
+                SetBusy(false);
                 OnLinkConflict?.Invoke(provider, credential);
                 return;
             }
-
-            OnLinkFailed?.Invoke(provider, baseEx?.Message ?? GameLocalization.Get("auth_link_error"));
+            Fail(provider, code == (int)AuthError.NetworkRequestFailed ? "auth_network_error" : "auth_link_error");
         });
     }
 
-    /// <summary>
-    /// Çakışmada kullanıcı "o hesaba geç" derse: sosyal kimliğin BAĞLI OLDUĞU hesaba
-    /// giriş yapılır (uid değişir). Ardından cloud save yeni uid'den restore edilir —
-    /// mevcut cihaz ilerlemesi "yüksek level kazanır" kuralıyla korunur/birleşir.
-    /// </summary>
+    public static void CancelConflict()
+    {
+        pendingCredential = null;
+        pendingOwner = null;
+    }
+
     public static void SwitchToExisting(Provider provider, Credential credential)
     {
-        FirebaseAuth.DefaultInstance.SignInWithCredentialAsync(credential).ContinueWithOnMainThread(task =>
+        if (IsBusy) return;
+        if (!CanStart || credential == null || credential != pendingCredential || provider != pendingProvider
+            || pendingOwner != FirebaseAuthService.UserId)
+        { Fail(provider, "auth_session_not_ready"); return; }
+        if (LevelAttemptStats.HasActiveAttempt) { Fail(provider, "auth_switch_from_menu"); return; }
+        string uid = FirebaseAuthService.UserId;
+        int token = ++operation;
+        SetBusy(true);
+        FirebaseCloudSaveService.FlushBeforeAccountSwitch().ContinueWithOnMainThread(saved =>
         {
-            if (task.IsFaulted || task.IsCanceled)
+            if (token != operation) return;
+            if (saved.IsCanceled || saved.IsFaulted || FirebaseAuthService.UserId != uid)
+            { Fail(provider, "auth_backup_required"); return; }
+            try { LocalAccountData.PrepareSwitch(uid); }
+            catch { Fail(provider, "auth_backup_required"); return; }
+            FirebaseCloudSaveService.BeginAccountSwitch();
+            FirebaseAuthService.SuspendForAccountSwitch();
+            FirebaseAuth.DefaultInstance.SignInWithCredentialAsync(credential).ContinueWithOnMainThread(signedIn =>
             {
-                OnLinkFailed?.Invoke(provider, task.Exception?.GetBaseException().Message ?? "Giriş hatası.");
-                return;
-            }
-            OnLinked?.Invoke(provider);
-            // Not: FirebaseAuthService.UserId eski uid'i tutuyor olabilir; tam geçiş
-            // uygulama yeniden başlatılınca netleşir. UI "yeniden başlat" önerir.
+                if (token != operation) return;
+                if (signedIn.IsCanceled || signedIn.IsFaulted)
+                {
+                    FirebaseAuthService.ResumeCurrentSession();
+                    Fail(provider, "auth_link_error");
+                    return;
+                }
+                string destination = signedIn.Result.UserId;
+                Action restored = null;
+                restored = () =>
+                {
+                    if (FirebaseAuthService.UserId != destination || !FirebaseCloudSaveService.RestoreResolved) return;
+                    FirebaseCloudSaveService.OnRestored -= restored;
+                    FirebaseCloudSaveService.OnRestoreFailed -= RestoreFailed;
+                    CancelConflict();
+                    SetBusy(false);
+                    OnLinked?.Invoke(provider);
+                    SceneManager.LoadScene("MainMenu");
+                };
+                FirebaseCloudSaveService.OnRestored += restored;
+                FirebaseCloudSaveService.OnRestoreFailed += RestoreFailed;
+                // OnReady runs the cloud restore with the NEW UID; uploads stay gated until it finishes.
+                FirebaseAuthService.ResumeCurrentSession();
+            });
         });
     }
+
+    private static void RestoreFailed()
+        => OnLinkFailed?.Invoke(pendingProvider, GameLocalization.Get("auth_restore_retry"));
+    private static void SetBusy(bool value) { IsBusy = value; OnStateChanged?.Invoke(); }
+    private static void Fail(Provider p, string key) { SetBusy(false); OnLinkFailed?.Invoke(p, GameLocalization.Get(key)); }
 }

@@ -1,0 +1,232 @@
+[
+  {
+    "v1Level": 12,
+    "historicCatalogueCount": 189,
+    "shortlist": [
+      {
+        "level": 6,
+        "name": "LevelP_00070",
+        "blockerOverlap": 0.5357,
+        "maskOverlap": 0.7096,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.5357,
+        "croppedShapeOverlap": 0.5667,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [
+          4
+        ],
+        "familyOverlap": 0.3333
+      },
+      {
+        "level": 113,
+        "name": "LevelP_001190",
+        "blockerOverlap": 0.3721,
+        "maskOverlap": 0.8207,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.3721,
+        "croppedShapeOverlap": 0.4014,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      },
+      {
+        "level": 107,
+        "name": "LevelP_001140",
+        "blockerOverlap": 0.358,
+        "maskOverlap": 0.7711,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.358,
+        "croppedShapeOverlap": 0.4545,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      },
+      {
+        "level": 51,
+        "name": "LevelP_00570",
+        "blockerOverlap": 0.3519,
+        "maskOverlap": 0.7967,
+        "orientation": "dikey ayna",
+        "sameDirectionOverlap": 0.2807,
+        "croppedShapeOverlap": 0.5587,
+        "croppedShapeOrientation": "dikey ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      }
+    ],
+    "limits": "Geometry/reflections shortlist, not originality/quality/pass-rate scores. Historic numbers differ from V1 numbers."
+  },
+  {
+    "v1Level": 13,
+    "historicCatalogueCount": 189,
+    "shortlist": [
+      {
+        "level": 3,
+        "name": "LevelP_00030",
+        "blockerOverlap": 0.6294,
+        "maskOverlap": 0.7727,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.6294,
+        "croppedShapeOverlap": 0.6796,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [
+          5
+        ],
+        "familyOverlap": 0.5
+      },
+      {
+        "level": 141,
+        "name": "LevelP_001450",
+        "blockerOverlap": 0.625,
+        "maskOverlap": 0.7953,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.625,
+        "croppedShapeOverlap": 0.75,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      },
+      {
+        "level": 50,
+        "name": "LevelP_00250",
+        "blockerOverlap": 0.625,
+        "maskOverlap": 0.7727,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.625,
+        "croppedShapeOverlap": 0.6667,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      },
+      {
+        "level": 59,
+        "name": "LevelP_00670",
+        "blockerOverlap": 0.625,
+        "maskOverlap": 0.7727,
+        "orientation": "dikey ayna",
+        "sameDirectionOverlap": 0.0,
+        "croppedShapeOverlap": 0.6667,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      }
+    ],
+    "limits": "Geometry/reflections shortlist, not originality/quality/pass-rate scores. Historic numbers differ from V1 numbers."
+  },
+  {
+    "v1Level": 14,
+    "historicCatalogueCount": 189,
+    "shortlist": [
+      {
+        "level": 85,
+        "name": "LevelP_00960",
+        "blockerOverlap": 0.6341,
+        "maskOverlap": 0.697,
+        "orientation": "180 derece",
+        "sameDirectionOverlap": 0.2407,
+        "croppedShapeOverlap": 0.197,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [
+          4
+        ],
+        "familyOverlap": 0.1667
+      },
+      {
+        "level": 36,
+        "name": "LevelP_00410",
+        "blockerOverlap": 0.4432,
+        "maskOverlap": 0.5707,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.4432,
+        "croppedShapeOverlap": 0.4432,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      },
+      {
+        "level": 159,
+        "name": "LevelP_001630",
+        "blockerOverlap": 0.4198,
+        "maskOverlap": 0.5862,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.4198,
+        "croppedShapeOverlap": 0.4198,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      },
+      {
+        "level": 163,
+        "name": "LevelP_001670",
+        "blockerOverlap": 0.4167,
+        "maskOverlap": 0.697,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.4167,
+        "croppedShapeOverlap": 0.4432,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      }
+    ],
+    "limits": "Geometry/reflections shortlist, not originality/quality/pass-rate scores. Historic numbers differ from V1 numbers."
+  },
+  {
+    "v1Level": 15,
+    "historicCatalogueCount": 189,
+    "shortlist": [
+      {
+        "level": 188,
+        "name": "LevelP_001920",
+        "blockerOverlap": 0.2857,
+        "maskOverlap": 0.7526,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.2857,
+        "croppedShapeOverlap": 0.3226,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      },
+      {
+        "level": 99,
+        "name": "LevelP_001070",
+        "blockerOverlap": 0.2787,
+        "maskOverlap": 0.6915,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.2787,
+        "croppedShapeOverlap": 0.2518,
+        "croppedShapeOrientation": "180 derece",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      },
+      {
+        "level": 179,
+        "name": "LevelP_001830",
+        "blockerOverlap": 0.2759,
+        "maskOverlap": 0.6196,
+        "orientation": "yatay ayna",
+        "sameDirectionOverlap": 0.2333,
+        "croppedShapeOverlap": 0.3071,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [
+          25
+        ],
+        "familyOverlap": 0.1
+      },
+      {
+        "level": 88,
+        "name": "LevelP_00985",
+        "blockerOverlap": 0.2719,
+        "maskOverlap": 0.6294,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.2719,
+        "croppedShapeOverlap": 0.2876,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [
+          6
+        ],
+        "familyOverlap": 0.1667
+      }
+    ],
+    "limits": "Geometry/reflections shortlist, not originality/quality/pass-rate scores. Historic numbers differ from V1 numbers."
+  }
+]

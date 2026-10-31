@@ -17,7 +17,7 @@ MonoBehaviour:
     config: {fileID: 11400000, guid: 5fcd28381c9ea4927a3ec19115d9e47d, type: 2}
     schedule:
       enabled: 1
-      minLevel: 1
+      minLevel: 20
       scheduleType: 0
       weekStartDay: 0
       eventDurationDays: 3

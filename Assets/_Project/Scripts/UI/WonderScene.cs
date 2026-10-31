@@ -55,6 +55,7 @@ public class WonderScene : MonoBehaviour
 
         var view = bg.GetComponent<WonderRevealView>();
         view.ConfigureShader(shader);
+        view.ConfigureUnrestoredTexture(def.unrestoredTexture);
         view.wonderId = def.wonderId;
         view.totalStages = def.TaskCount;
         view.welderFrames = def.welderFrames;

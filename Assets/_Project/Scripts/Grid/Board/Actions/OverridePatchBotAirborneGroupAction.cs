@@ -86,7 +86,8 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
         float startTime = Time.realtimeSinceStartup;
 
         var patchbotService = new PatchbotComboService(board);
-        var coordinator = new PatchBotTargetCoordinator(board, patchbotService);
+        var coordinator = new PatchBotTargetCoordinator(board, patchbotService,
+            impactMode == AirborneImpactMode.PulseCoreAtTarget ? TileSpecial.PulseCore : TileSpecial.None);
         var bots = BuildAndLiftBots(coordinator);
         ClearPulseSourceForPulseMode();
 
@@ -383,6 +384,8 @@ public sealed class OverridePatchBotAirborneGroupAction : BoardAction
     {
         if (bot == null || bot.rect == null)
             yield break;
+
+        Haptics.OnComboMoment(Haptics.ComboMoment.PatchBotTakeoff);   // Override+PatchBot: her botun kalkışı
 
         Vector2 start = bot.rect.anchoredPosition;
         Vector2 hover = bot.hoverAnchor;

@@ -1,0 +1,120 @@
+using System;using System.Linq;using System.Collections;using System.Collections.Generic;using System.Reflection;using System.Threading.Tasks;using System.Text.RegularExpressions;
+public enum RuntimeInitializeLoadType{AfterSceneLoad,SubsystemRegistration}
+public sealed class RuntimeInitializeOnLoadMethodAttribute:Attribute{public RuntimeInitializeOnLoadMethodAttribute(RuntimeInitializeLoadType t){}}
+public sealed class Coroutine{public IEnumerator routine;public bool cancelled;}
+public class MonoBehaviour{
+ public static List<Coroutine> routines=new List<Coroutine>();
+ public Coroutine StartCoroutine(IEnumerator e){var c=new Coroutine{routine=e};routines.Add(c);if(!e.MoveNext())c.cancelled=true;return c;}
+ public void StopAllCoroutines(){foreach(var c in routines)c.cancelled=true;}
+ public static void Tick(){foreach(var c in routines.ToArray())if(!c.cancelled&&!c.routine.MoveNext())c.cancelled=true;routines.RemoveAll(c=>c.cancelled);}
+}
+public static class GlobalObject{public static void DontDestroyOnLoad(object o){}}
+public class GameObject{public GameObject(string n){}public T AddComponent<T>()=>(T)Activator.CreateInstance(typeof(T),true);}
+public sealed class WaitForSecondsRealtime{public WaitForSecondsRealtime(float f){}}
+public static class Time{public static float realtimeSinceStartup;}
+public static class Debug{public static bool isDebugBuild=true;public static int errors;public static void Log(object o){}public static void LogWarning(object o){}public static void LogError(object o){errors++;}public static void LogException(Exception e){errors++;}}
+public static class Mathf{public static int Min(int a,int b)=>Math.Min(a,b);}
+public sealed class TextAsset{public string text;}
+public static class Resources{public static T Load<T>(string p)where T:class=>null;}
+public static class JsonUtility{public static T FromJson<T>(string s)=>default(T);}
+public static class PlayerPrefs{public static Dictionary<string,string> data=new Dictionary<string,string>();public static string GetString(string k,string d="")=>data.ContainsKey(k)?data[k]:d;public static void SetString(string k,string v){data[k]=v;}public static void Save(){}}
+public static class RuntimeSimulationSession{public static bool IsActive;}
+public static class GameDiagnostics{public static bool Backend;}
+public static class CurrencyLedger{public static bool SyncGateOpen;}
+public static class AuthLinkService{public static bool IsBusy;}
+public static class LocalAccountData{public static bool IsSwitchPending;}
+public static class AccountDeletionService{public static bool InProgress;}
+public static class FirebaseCloudSaveService{public static void Push(){}}
+public static class LegalConsent{public static bool IsShowing;}
+public static class GameSettings{public static bool SoundEnabled=true;public static event Action<bool> OnSoundChanged;public static void Sound(bool v){SoundEnabled=v;OnSoundChanged?.Invoke(v);}}
+public static class LevelAssist{public static int ads,purchases;public static void RecordRewardedAdCompleted(){ads++;}public static void RecordPurchaseCompleted(){purchases++;}}
+public static class GameLocalization{public static string Get(string k)=>k;public static string GetOr(string k,string v)=>v;}
+public static class RuntimeChoicePopup{public static int count;public static void Show(string a,string b){count++;}}
+public sealed class ShopOffer{public enum PriceType{RealMoney,Coins,Stars,Free}public PriceType priceType;public string id;public string StoreProductId=>id;public int priceAmount;}
+public sealed class ShopCatalog{public static ShopCatalog Shared=new ShopCatalog();public List<ShopOffer> offers=new List<ShopOffer>();public IEnumerable<ShopOffer> RealMoneyOffers()=>offers;}
+public static class ShopState{public static bool available=true;public static bool IsAvailable(ShopOffer o)=>available;public static void RecordPurchase(ShopOffer o){}}
+public static class ShopRewardGranter{public static int grants;public static void Grant(ShopOffer o){grants++;}}
+public static class LivesManager{public static HashSet<string> receipts=new HashSet<string>();public static bool GrantPurchaseThanks(string s)=>receipts.Add(s);}
+public static class PlayerWallet{public static bool SpendCoins(int n)=>false;public static bool SpendStars(int n)=>false;}
+public enum ProductType{Consumable}
+public sealed class ProductDefinition{public string id;public ProductDefinition(string s,ProductType t){id=s;}}
+public sealed class ProductMetadata{public string localizedPriceString="TRY99.99";}
+public sealed class Product{public ProductDefinition definition;public bool availableToPurchase=true;public ProductMetadata metadata=new ProductMetadata();}
+public sealed class CartItem{public Product Product;public int Quantity=1;}
+public sealed class Cart{public List<CartItem> items=new List<CartItem>();public IReadOnlyList<CartItem> Items()=>items;}
+public sealed class Info{public string TransactionID,Receipt="native receipt";}
+public class Order{public Info Info;public Cart CartOrdered;}
+public sealed class PendingOrder:Order{}
+public sealed class DeferredOrder:Order{}
+public enum PurchaseFailureReason{Unknown,UserCancelled,DuplicateTransaction}
+public sealed class FailedOrder:Order{public PurchaseFailureReason FailureReason;public string Details;}
+public sealed class ProductFetchFailed{public string FailureReason;}
+public sealed class StoreConnectionFailureDescription{public string Message;}
+public sealed class PurchasesFetchFailureDescription{public string message;}
+public sealed class Orders{public List<PendingOrder> PendingOrders=new List<PendingOrder>();}
+public static class UnityIAPServices{public static StoreController instance;public static StoreController StoreController()=>instance=new StoreController();}
+public sealed class StoreController{
+ public event Action OnStoreConnected;public event Action<StoreConnectionFailureDescription> OnStoreDisconnected;public event Action<List<Product>> OnProductsFetched;public event Action<ProductFetchFailed> OnProductsFetchFailed;public event Action<PendingOrder> OnPurchasePending;public event Action<Order> OnPurchaseConfirmed;public event Action<FailedOrder> OnPurchaseFailed;public event Action<DeferredOrder> OnPurchaseDeferred;public event Action<Orders> OnPurchasesFetched;public event Action<PurchasesFetchFailureDescription> OnPurchasesFetchFailed;
+ public Dictionary<string,Product> products=new Dictionary<string,Product>();public int confirms,requests;public bool throwPurchase;
+ public void ProcessPendingOrdersOnPurchasesFetched(bool b){}public Task Connect(){OnStoreConnected?.Invoke();return Task.CompletedTask;}
+ public void FetchProducts(List<ProductDefinition> defs){foreach(var d in defs)products[d.id]=new Product{definition=d};OnProductsFetched?.Invoke(products.Values.ToList());}
+ public void FetchPurchases(){OnPurchasesFetched?.Invoke(new Orders());}
+ public Product GetProductById(string s)=>products.ContainsKey(s)?products[s]:null;
+ public void PurchaseProduct(Product p){requests++;if(throwPurchase)throw new InvalidOperationException("network");}
+ public void ConfirmPurchase(PendingOrder p){confirms++;OnPurchaseConfirmed?.Invoke(new Order());}
+ public void Pending(PendingOrder p)=>OnPurchasePending?.Invoke(p);public void Fail(bool cancelled)=>OnPurchaseFailed?.Invoke(new FailedOrder{FailureReason=cancelled?PurchaseFailureReason.UserCancelled:PurchaseFailureReason.Unknown});public void Deferred()=>OnPurchaseDeferred?.Invoke(new DeferredOrder());
+}
+public enum PrivacyOptionsRequirementStatus{Unknown,Required,NotRequired}
+public sealed class ConsentRequestParameters{}
+public sealed class FormError{public string Message;}
+public static class ConsentInformation{public static bool allowed=true;public static PrivacyOptionsRequirementStatus PrivacyOptionsRequirementStatus=PrivacyOptionsRequirementStatus.Required;public static bool CanRequestAds()=>allowed;public static void Update(ConsentRequestParameters p,Action<FormError> cb)=>cb(null);}
+public static class ConsentForm{public static Action<FormError> privacy;public static void LoadAndShowConsentFormIfRequired(Action<FormError> cb)=>cb(null);public static void ShowPrivacyOptionsForm(Action<FormError> cb){privacy=cb;}}
+public static class MobileAds{public static bool RaiseAdEventsOnUnityMainThread,muted;public static void Initialize(Action<object> cb)=>cb(null);public static void SetApplicationMuted(bool v){muted=v;}}
+public static class MobileAdsEventExecutor{public static void ExecuteInUpdate(Action a)=>a();}
+public sealed class AdRequest{}
+public sealed class LoadAdError{public string GetMessage()=>"no fill";}
+public sealed class AdError{public string GetMessage()=>"failed";}
+public sealed class RewardedAd{
+ public static List<Action<RewardedAd,LoadAdError>> loads=new List<Action<RewardedAd,LoadAdError>>();public static string unit;public static RewardedAd last;
+ public event Action OnAdFullScreenContentClosed;public event Action<AdError> OnAdFullScreenContentFailed;public Action<object> reward;public bool destroyed;
+ public static void Load(string id,AdRequest r,Action<RewardedAd,LoadAdError> cb){unit=id;loads.Add(cb);}
+ public static RewardedAd CompleteLoad(){var a=new RewardedAd();var cb=loads[0];loads.RemoveAt(0);cb(a,null);return a;}
+ public bool CanShowAd()=>!destroyed;public void Destroy(){destroyed=true;}public void Show(Action<object> cb){reward=cb;last=this;}public void Earn()=>reward?.Invoke(null);public void Close()=>OnAdFullScreenContentClosed?.Invoke();public void Fail()=>OnAdFullScreenContentFailed?.Invoke(new AdError());
+}
+/* CONFIG */
+/* PURCHASE */
+/* STORE */
+/* ADS */
+void Call(Type t,string name)=>t.GetMethod(name,BindingFlags.NonPublic|BindingFlags.Static).Invoke(null,null);
+int checks=0;void Check(bool ok,string msg){if(!ok)throw new Exception(msg);checks++;}
+PendingOrder Paid(StoreController s,string tx,string id,int quantity=1)=>new PendingOrder{Info=new Info{TransactionID=tx},CartOrdered=new Cart{items=new List<CartItem>{new CartItem{Product=s.GetProductById(id),Quantity=quantity}}}};
+var offer=new ShopOffer{id="com.yigefep.tinyfixers.coins_1000"};ShopCatalog.Shared.offers.Add(offer);
+Call(typeof(StoreIap),"Reset");Call(typeof(StoreIap),"Bootstrap");var store=UnityIAPServices.instance;
+Check(!ShopPurchaseService.SimulateRealMoneyPurchases,"Development devices must never get free IAP fallback.");
+Check(!ShopPurchaseService.TryPurchase(offer)&&ShopRewardGranter.grants==0&&store.requests==0,"Boot wallet gate must block native purchase.");
+CurrencyLedger.SyncGateOpen=true;Check(!ShopPurchaseService.TryPurchase(offer)&&store.requests==1&&StoreIap.IsPurchasing,"Store purchase must be asynchronous.");
+store.Fail(true);Check(!StoreIap.IsPurchasing&&ShopRewardGranter.grants==0,"Cancelled purchases must not grant.");
+store.throwPurchase=true;ShopPurchaseService.TryPurchase(offer);Check(!StoreIap.IsPurchasing&&ShopRewardGranter.grants==0,"Native request exception must release purchase state.");store.throwPurchase=false;
+ShopPurchaseService.TryPurchase(offer);store.Deferred();Check(!StoreIap.IsPurchasing&&ShopRewardGranter.grants==0,"Deferred payment must not grant.");
+int ui=0;ShopPurchaseService.OnReceipt+=(a,b)=>throw new Exception("broken UI");ShopPurchaseService.OnPurchased+=a=>ui++;
+CurrencyLedger.SyncGateOpen=false;store.Pending(Paid(store,"tx1",offer.id));MonoBehaviour.Tick();Check(ShopRewardGranter.grants==0&&store.confirms==0,"Paid restore must wait for the wallet.");
+CurrencyLedger.SyncGateOpen=true;MonoBehaviour.Tick();Check(ShopRewardGranter.grants==1&&store.confirms==1&&ui==1,"Delivery must save receipt and confirm even when receipt UI throws.");
+store.Pending(Paid(store,"tx1",offer.id));MonoBehaviour.Tick();Check(ShopRewardGranter.grants==1&&store.confirms==2&&ui==1,"Duplicate callback must only confirm, never re-grant.");
+PlayerPrefs.data["iap_processed_transactions"]="stale cloud snapshot";store.Pending(Paid(store,"tx1",offer.id));MonoBehaviour.Tick();Check(ShopRewardGranter.grants==1,"Stale cloud restore cannot erase device receipts.");
+store.Pending(Paid(store,"",offer.id));Check(store.confirms==3,"Missing transaction ID must not confirm.");
+store.Pending(new PendingOrder{Info=new Info{TransactionID="unknown"},CartOrdered=new Cart{items=new List<CartItem>{new CartItem{Product=new Product{definition=new ProductDefinition("unknown",ProductType.Consumable)}}}}});Check(store.confirms==3,"Unknown products must remain unconfirmed.");
+store.Pending(Paid(store,"tx2",offer.id,2));MonoBehaviour.Tick();Check(ShopRewardGranter.grants==3&&store.confirms==4,"Purchased quantities must deliver once per unit.");
+store.Pending(Paid(store,"tx2",offer.id,2));MonoBehaviour.Tick();Check(ShopRewardGranter.grants==3&&store.confirms==5,"Quantity replay must not repeat unit grants.");
+ShopState.available=false;Check(!ShopPurchaseService.TryPurchase(offer),"Unavailable offer must not start purchase.");ShopState.available=true;
+Call(typeof(StoreIap),"Shutdown");Check(!StoreIap.IsAvailable&&!ShopPurchaseService.TryPurchase(offer)&&ShopRewardGranter.grants==3,"Unavailable SDK on a development device must not simulate a purchase.");
+Check(MonetizationConfig.Current.RewardedId(true,false)==null,"Production must not silently fall back to test ads.");
+Check(MonetizationConfig.Current.RewardedId(true,true)==MonetizationConfig.TestAndroidRewardedId,"Development must use official test inventory.");
+Call(typeof(AdService),"Reset");Call(typeof(AdService),"Bootstrap");Check(RewardedAd.loads.Count==1,"Consent success must request one ad.");var ad=RewardedAd.CompleteLoad();
+int completions=0;bool earned=false;AdService.ShowRewarded(v=>{completions++;earned=v;});ad.Earn();ad.Earn();ad.Close();ad.Close();Check(completions==1&&earned&&LevelAssist.ads==1,"Repeated reward/close callbacks must complete once.");
+var next=RewardedAd.CompleteLoad();AdService.ShowRewarded(v=>{completions++;earned=v;});next.Close();Check(completions==2&&!earned&&LevelAssist.ads==1,"Closed ad without reward must not earn.");
+next=RewardedAd.CompleteLoad();AdService.ShowRewarded(v=>{completions++;earned=v;});next.Fail();next.Close();Check(completions==3&&!earned,"Show error and close must not double-complete.");
+// Loading when consent changes: the old response must be destroyed instead of cached.
+var old=RewardedAd.loads[0];RewardedAd.loads.RemoveAt(0);AdService.ShowPrivacyOptions();ConsentForm.privacy(null);var stale=new RewardedAd();old(stale,null);Check(stale.destroyed&&!AdService.IsReady,"Pre-consent-change load must be discarded.");
+RewardedAd.CompleteLoad();GameSettings.Sound(false);Check(MobileAds.muted,"Active ad SDK must obey sound settings immediately.");
+Call(typeof(AdService),"Shutdown");GameSettings.Sound(true);Check(MobileAds.muted&&!AdService.IsReady,"Teardown must unsubscribe settings and destroy cached ad.");
+Console.WriteLine("PASS: "+checks+" production purchase/ad state checks; fake SDK only, no project build or real charge.");

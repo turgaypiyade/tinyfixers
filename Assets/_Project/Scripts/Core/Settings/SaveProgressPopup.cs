@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -13,6 +14,9 @@ using UnityEngine.UI;
 public sealed class SaveProgressPopup : MonoBehaviour
 {
     private TMP_Text statusText;
+    private readonly Dictionary<AuthLinkService.Provider, Button> providerButtons = new();
+    private readonly Dictionary<AuthLinkService.Provider, TMP_Text> providerLabels = new();
+    private Button doneButton, switchButton, cancelButton;
     private GameObject providerChoices;
     private GameObject confirmRow;
     private AuthLinkService.Provider pendingProvider;
@@ -39,13 +43,22 @@ public sealed class SaveProgressPopup : MonoBehaviour
         transform.SetAsLastSibling();
         ShowConfirmation(false);
         RefreshStatus();
+        RefreshButtons();
 
         AuthLinkService.OnLinked -= HandleLinked;
         AuthLinkService.OnLinkFailed -= HandleFailed;
         AuthLinkService.OnLinkConflict -= HandleConflict;
+        AuthLinkService.OnStateChanged -= HandleState;
+        AuthLinkService.OnCanceled -= HandleCanceled;
+        FirebaseAuthService.OnReady -= HandleReady;
+        FirebaseCloudSaveService.OnRestored -= HandleReady;
         AuthLinkService.OnLinked += HandleLinked;
         AuthLinkService.OnLinkFailed += HandleFailed;
         AuthLinkService.OnLinkConflict += HandleConflict;
+        AuthLinkService.OnStateChanged += HandleState;
+        AuthLinkService.OnCanceled += HandleCanceled;
+        FirebaseAuthService.OnReady += HandleReady;
+        FirebaseCloudSaveService.OnRestored += HandleReady;
     }
 
     private void OnDisable()
@@ -53,9 +66,43 @@ public sealed class SaveProgressPopup : MonoBehaviour
         AuthLinkService.OnLinked -= HandleLinked;
         AuthLinkService.OnLinkFailed -= HandleFailed;
         AuthLinkService.OnLinkConflict -= HandleConflict;
+        AuthLinkService.OnStateChanged -= HandleState;
+        AuthLinkService.OnCanceled -= HandleCanceled;
+        FirebaseAuthService.OnReady -= HandleReady;
+        FirebaseCloudSaveService.OnRestored -= HandleReady;
+        if (!AuthLinkService.IsBusy) AuthLinkService.CancelConflict();
+        pendingCredential = null;
     }
 
-    private void Close() => gameObject.SetActive(false);
+    private void Close()
+    {
+        if (AuthLinkService.IsBusy) return;
+        AuthLinkService.CancelConflict();
+        gameObject.SetActive(false);
+    }
+
+    private void HandleState()
+    {
+        RefreshButtons();
+        if (AuthLinkService.IsBusy) SetStatus(GameLocalization.Get("save_progress_connecting"), true);
+    }
+    private void HandleReady() { RefreshButtons(); if (!AuthLinkService.IsBusy) RefreshStatus(); }
+    private void HandleCanceled() { RefreshButtons(); RefreshStatus(); }
+
+    private void RefreshButtons()
+    {
+        foreach (var entry in providerButtons)
+        {
+            bool linked = AuthLinkService.HasProvider(entry.Key);
+            bool available = AuthLinkService.IsAvailable(entry.Key);
+            entry.Value.interactable = available && AuthLinkService.CanStart && !linked;
+            providerLabels[entry.Key].text = GameLocalization.Get(linked ? "save_progress_provider_linked"
+                : !available ? "save_progress_provider_unavailable" : "save_progress_provider_continue");
+        }
+        if (doneButton != null) doneButton.interactable = !AuthLinkService.IsBusy;
+        if (switchButton != null) switchButton.interactable = !AuthLinkService.IsBusy;
+        if (cancelButton != null) cancelButton.interactable = !AuthLinkService.IsBusy;
+    }
 
     // ── AuthLink olayları ───────────────────────────────────────────
 
@@ -63,11 +110,14 @@ public sealed class SaveProgressPopup : MonoBehaviour
     {
         SetStatus(GameLocalization.GetFormat("save_progress_linked_provider", p), positive: true);
         ShowConfirmation(false);
-        FirebaseCloudSaveService.Push();   // kalıcı kimlikle hemen yedekle
+        RefreshButtons();
     }
 
     private void HandleFailed(AuthLinkService.Provider p, string message)
-        => SetStatus(message, positive: false);
+    {
+        SetStatus(message, positive: false);
+        RefreshButtons();
+    }
 
     private void HandleConflict(AuthLinkService.Provider p, Firebase.Auth.Credential credential)
     {
@@ -81,6 +131,7 @@ public sealed class SaveProgressPopup : MonoBehaviour
     {
         if (providerChoices != null) providerChoices.SetActive(!show);
         if (confirmRow != null) confirmRow.SetActive(show);
+        if (!show) { pendingCredential = null; AuthLinkService.CancelConflict(); }
     }
 
     private void SetStatus(string msg, bool positive)
@@ -92,7 +143,9 @@ public sealed class SaveProgressPopup : MonoBehaviour
 
     private void RefreshStatus()
     {
-        if (AuthLinkService.IsLinked)
+        if (!FirebaseAuthService.IsReady || !FirebaseCloudSaveService.RestoreResolved)
+            SetStatus(GameLocalization.Get("auth_session_not_ready"), positive: true);
+        else if (AuthLinkService.IsLinked)
             SetStatus(GameLocalization.Get("save_progress_linked"), positive: true);
         else
             SetStatus(GameLocalization.Get("save_progress_not_linked"), positive: true);
@@ -123,16 +176,16 @@ public sealed class SaveProgressPopup : MonoBehaviour
 
         confirmRow = CommonPopupView.NewRect(view.Body, "ConfirmRow", Vector2.zero).gameObject;
         CommonPopupView.Region((RectTransform)confirmRow.transform, new Rect(0, 0, 1, 0.76f));
-        var yes = CommonPopupView.Button(confirmRow.transform, "ConfirmSwitch", GameLocalization.Get("save_progress_switch"),
+        var yes = switchButton = CommonPopupView.Button(confirmRow.transform, "ConfirmSwitch", GameLocalization.Get("save_progress_switch"),
             () => AuthLinkService.SwitchToExisting(pendingProvider, pendingCredential), CommonPopupSkin.Shared.accountButton);
         CommonPopupView.Region((RectTransform)yes.transform, new Rect(0, 0.52f, 1, 0.30f));
-        var no = CommonPopupView.Button(confirmRow.transform, "CancelSwitch", GameLocalization.Get("common_cancel"),
+        var no = cancelButton = CommonPopupView.Button(confirmRow.transform, "CancelSwitch", GameLocalization.Get("common_cancel"),
             () => { ShowConfirmation(false); RefreshStatus(); }, CommonPopupSkin.Shared.accountButton);
         CommonPopupView.Region((RectTransform)no.transform, new Rect(0, 0.14f, 1, 0.30f));
         CommonPopupView.StyleText(yes.GetComponentInChildren<TMP_Text>(), 42, Color.white);
         CommonPopupView.StyleText(no.GetComponentInChildren<TMP_Text>(), 42, Color.white);
         confirmRow.SetActive(false);
-        var done = CommonPopupView.Button(view.Actions, "BtnContinue", GameLocalization.Get("common_ok"), Close,
+        var done = doneButton = CommonPopupView.Button(view.Actions, "BtnContinue", GameLocalization.Get("common_ok"), Close,
             CommonPopupSkin.Shared.saveProgressContinueButton);
         CommonPopupView.Region((RectTransform)done.transform, CommonPopupView.ActionRegion(0, 1));
     }
@@ -158,6 +211,8 @@ public sealed class SaveProgressPopup : MonoBehaviour
         var colors = button.colors;
         colors.disabledColor = new Color(0.70f, 0.74f, 0.80f, 0.85f);
         button.colors = colors;
-        button.interactable = available;
+        providerButtons[provider] = button;
+        providerLabels[provider] = subtitle;
+        button.interactable = available && AuthLinkService.CanStart;
     }
 }

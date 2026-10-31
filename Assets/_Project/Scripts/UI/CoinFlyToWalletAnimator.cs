@@ -195,7 +195,7 @@ public sealed class CoinFlyToWalletAnimator : MonoBehaviour
         OnCoinFlyStarted?.Invoke();
         PlayOneShot(startSfx);
 
-        Coroutine countRoutine = StartCoroutine(UiNumberTween.Tween(chipMoneyText, pendingBefore, pendingAfter, totalDuration, formatChipMoneyN0));
+        Coroutine countRoutine = StartCoroutine(UiNumberTween.Tween(chipMoneyText, pendingBefore, pendingAfter, totalDuration, formatChipMoneyN0, GameEventSfx.PlayCoinTick));
 
         int completedCoins = 0;
         for (int i = 0; i < coinCount; i++)
@@ -219,7 +219,7 @@ public sealed class CoinFlyToWalletAnimator : MonoBehaviour
         OnCoinFlyStarted?.Invoke();
         PlayOneShot(startSfx);
 
-        yield return StartCoroutine(UiNumberTween.Tween(chipMoneyText, pendingBefore, pendingAfter, duration, formatChipMoneyN0));
+        yield return StartCoroutine(UiNumberTween.Tween(chipMoneyText, pendingBefore, pendingAfter, duration, formatChipMoneyN0, GameEventSfx.PlayCoinTick));
 
         RefreshWalletText(pendingAfter);
         OnCoinFlyFinished?.Invoke();

@@ -130,19 +130,22 @@ public class LevelEndSimplePopupController : MonoBehaviour
     [SerializeField] private Color lossNameColor = new Color(0.86f, 0.16f, 0.16f, 1f);
     [Tooltip("Event kaybı bu sayıdan FAZLAYSA altın ödülü listelenmez (altın zaten varsayılan; balon kalabalıklaşmasın).")]
     [SerializeField, Min(0)] private int maxEventLossesWithCoin = 2;
-    private readonly System.Collections.Generic.List<GameObject> _lossRows = new();
+    private readonly System.Collections.Generic.List<LossRowView> _lossRows = new(3);
     private bool failSecondStage;   // false: ilk cancel kayıpları kaydırır; true: ikinci cancel → ana menü
     private bool _hasLosses;        // gösterilecek kayıp var mı (RefreshFailLossSummary set eder)
 
     // Balon sayfaları: balona en fazla lossItemsPerPage öğe sığar. Fazlası varsa X → balon sola kayıp çıkar,
     // sıradaki öğelerle sağdan yeniden gelir; son sayfadan sonraki X gerçekten vazgeçirir.
     [Tooltip("Kayıp balonunda bir seferde gösterilen öğe sayısı (fazlası X ile sıradaki sayfada).")]
-    [SerializeField, Min(1)] private int lossItemsPerPage = 3;
+    [SerializeField, Range(1, 3)] private int lossItemsPerPage = 3;
     private System.Collections.Generic.List<(Sprite icon, string label, int amount, bool achieved)> _lossItems;
     private int _lossPage;
     private bool _lossPaging;       // sayfa geçiş animasyonu sürüyor → X yok sayılır (çift tık sayfa atlamasın)
     private bool _lossPanelHomeSet;
     private Vector2 _lossPanelHome; // panelin sahnedeki yazılı konumu (kaydırmalar buna göre)
+    private Coroutine _lossSlideRoutine;
+    private CanvasGroup _lossPanelInput;
+    private int LossPageSize => Mathf.Clamp(lossItemsPerPage, 1, 3);
 
     [Header("Success - Star Images")]
     [SerializeField] private Image[] starImages;
@@ -305,9 +308,33 @@ public class LevelEndSimplePopupController : MonoBehaviour
             failMessageText = FindComponent<TMP_Text>(failPopupRoot.transform, "UI/FailMessageText") ?? failMessageText;
             failContinueText = FindComponent<TMP_Text>(failContinue, "BtnContinueText") ?? failContinueText;
             failEventLossWarningText = FindComponent<TMP_Text>(failPopupRoot.transform, "UI/EventLossWarningText") ?? failEventLossWarningText;
+            // Scene and prefab variants do not serialize the same bubble references.
+            // Resolve what is present, but never make pagination depend on these optional visuals.
+            var lossPanel = failPopupRoot.transform.Find("LossSlidePanel") as RectTransform;
+            if (lossPanel != null) lossSlidePanel = lossPanel;
+            if (lossSlidePanel != null)
+            {
+                lossRowContainer = lossSlidePanel.Find("SpeechBubble/LossRowContainer")
+                    ?? lossSlidePanel.Find("LossRowContainer") ?? lossRowContainer;
+                lossMessageText = FindComponent<TMP_Text>(lossSlidePanel, "SpeechBubble/LossMessageText") ?? lossMessageText;
+                LossPanelHome(lossSlidePanel);
+                if (_lossPanelInput == null || _lossPanelInput.transform != lossSlidePanel)
+                {
+                    if (!lossSlidePanel.TryGetComponent(out _lossPanelInput))
+                        _lossPanelInput = lossSlidePanel.gameObject.AddComponent<CanvasGroup>();
+                }
+                // The hero/bubble/rows are presentation only. They must not cover the sibling cancel button.
+                _lossPanelInput.interactable = false;
+                _lossPanelInput.blocksRaycasts = false;
+            }
+            if (lossMessageText != null) lossMessageText.raycastTarget = false;
+            if (lossTitleText != null) lossTitleText.raycastTarget = false;
+            if (failEventLossWarningText != null) failEventLossWarningText.raycastTarget = false;
 
             if (failDescriptionText == null)
                 failDescriptionText = failMessageText;
+            // Popup başlık kuralı: BÜYÜK HARF, dile duyarlı (tr i → İ) — "HAMLE KALMADI!", "OYUNDAN ÇIK".
+            DisplayUpperCase.Apply(failTitleText);
         }
 
         if (successPopupRoot != null)
@@ -327,6 +354,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
                 ? successContinue.GetComponent<Image>() : successContinueButtonImage;
             successCloseButtonImage = FindComponent<Image>(successPopupRoot.transform, "UIS/BtnSClose") ?? successCloseButtonImage;
             successTitleText = FindComponent<TMP_Text>(successPopupRoot.transform, "UIS/SuccessTitleText") ?? successTitleText;
+            DisplayUpperCase.Apply(successTitleText);   // "SEVİYE 12"
             successContinueText = FindComponent<TMP_Text>(successContinue, "BtnContinueText") ?? successContinueText;
             scoreLabelText = FindComponent<TMP_Text>(successPopupRoot.transform, "UIS/ScoreRow/ScoreLabelText") ?? scoreLabelText;
             scoreValueText = FindComponent<TMP_Text>(successPopupRoot.transform, "UIS/ScoreRow/ScoreValueText") ?? scoreValueText;
@@ -396,6 +424,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
     private void OnDisable()
     {
+        CancelLossPaging();
         Unsubscribe();
         UnregisterButtonListeners();
         PlayerWallet.OnCoinsChanged -= HandleWalletCoinsChanged;
@@ -510,14 +539,14 @@ public class LevelEndSimplePopupController : MonoBehaviour
             if (failMessageText != null)
                 failMessageText.gameObject.SetActive(false);
             lossSlidePanel.gameObject.SetActive(true);
-            StartCoroutine(SlideInFromRight(lossSlidePanel, lossSlideDuration));
+            _lossSlideRoutine = StartCoroutine(ShowFirstLossPage());
             return;
         }
 
         // Balonda gösterilmemiş kayıp kaldıysa: sıradaki sayfa (sola çık → sağdan gel).
         if (failSecondStage && lossSlidePanel != null && HasNextLossPage())
         {
-            StartCoroutine(ShowNextLossPage());
+            _lossSlideRoutine = StartCoroutine(ShowNextLossPage());
             return;
         }
 
@@ -526,15 +555,33 @@ public class LevelEndSimplePopupController : MonoBehaviour
     }
 
     private bool HasNextLossPage()
-        => _lossItems != null && (_lossPage + 1) * Mathf.Max(1, lossItemsPerPage) < _lossItems.Count;
+        => _lossItems != null && (_lossPage + 1) * LossPageSize < _lossItems.Count;
+
+    private IEnumerator ShowFirstLossPage()
+    {
+        _lossPaging = true;
+        try { yield return SlideInFromRight(lossSlidePanel, lossSlideDuration); }
+        finally { _lossPaging = false; _lossSlideRoutine = null; }
+    }
 
     private System.Collections.IEnumerator ShowNextLossPage()
     {
         _lossPaging = true;
-        yield return SlideOutToLeft(lossSlidePanel, lossSlideDuration * 0.8f);
-        RenderLossPage(_lossPage + 1);
-        yield return SlideInFromRight(lossSlidePanel, lossSlideDuration);
+        try
+        {
+            yield return SlideOutToLeft(lossSlidePanel, lossSlideDuration * 0.8f);
+            RenderLossPage(_lossPage + 1);
+            yield return SlideInFromRight(lossSlidePanel, lossSlideDuration);
+        }
+        finally { _lossPaging = false; _lossSlideRoutine = null; }
+    }
+
+    private void CancelLossPaging()
+    {
+        if (_lossSlideRoutine != null) StopCoroutine(_lossSlideRoutine);
+        _lossSlideRoutine = null;
         _lossPaging = false;
+        if (lossSlidePanel != null && _lossPanelHomeSet) lossSlidePanel.anchoredPosition = _lossPanelHome;
     }
 
     private System.Collections.IEnumerator SlideOutToLeft(RectTransform panel, float dur)
@@ -1551,6 +1598,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
     // Her kayıp öğesi için lossRowPrefab instantiate edilir. Prefab/container yoksa metne düşer.
     private void RefreshFailLossSummary()
     {
+        CancelLossPaging();
         _lossItems = BuildLossItems();
         _hasLosses = _lossItems.Count > 0;
         RenderLossPage(0);
@@ -1559,20 +1607,18 @@ public class LevelEndSimplePopupController : MonoBehaviour
     // Bir sayfanın (en fazla lossItemsPerPage öğe) satırlarını + balon cümlesini çizer.
     private void RenderLossPage(int page)
     {
-        // Eski satırları temizle
+        // Reuse at most three row objects across pages and repeated fail popups.
         for (int i = 0; i < _lossRows.Count; i++)
-            if (_lossRows[i] != null) Destroy(_lossRows[i]);
-        _lossRows.Clear();
+            if (_lossRows[i] != null) _lossRows[i].gameObject.SetActive(false);
 
         var all = _lossItems ?? new System.Collections.Generic.List<(Sprite icon, string label, int amount, bool achieved)>();
         bool any = all.Count > 0;
-        int per = Mathf.Max(1, lossItemsPerPage);
+        int per = LossPageSize;
         int pageCount = Mathf.Max(1, (all.Count + per - 1) / per);
         _lossPage = Mathf.Clamp(page, 0, pageCount - 1);
 
-        // Balon modu sayfalı; prefab'sız metin yedeği tek seferde hepsini yazar.
-        bool paged = lossMessageText != null && lossRowPrefab != null && lossRowContainer != null;
-        var items = paged ? all.GetRange(_lossPage * per, Mathf.Min(per, all.Count - _lossPage * per)) : all;
+        // Every presentation path uses the same page, including text-only and prefab fallbacks.
+        var items = all.GetRange(_lossPage * per, Mathf.Min(per, all.Count - _lossPage * per));
 
         // Başlık ("Şunları kaybedeceksin") — kayıp varken göster.
         if (lossTitleText != null)
@@ -1595,14 +1641,17 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
         if (lossRowPrefab != null && lossRowContainer != null)
         {
-            foreach (var it in items)
+            for (int i = 0; i < items.Count; i++)
             {
-                var row = Instantiate(lossRowPrefab, lossRowContainer);
+                var it = items[i];
+                if (i >= _lossRows.Count) _lossRows.Add(Instantiate(lossRowPrefab, lossRowContainer));
+                else if (_lossRows[i] == null) _lossRows[i] = Instantiate(lossRowPrefab, lossRowContainer);
+                var row = _lossRows[i];
+                row.gameObject.SetActive(true);
                 if (bubble)
                     row.Set(it.icon, null, it.amount, notAchievedIcon != null ? notAchievedIcon : achievedIcon);
                 else
                     row.Set(it.icon, it.label, it.amount, it.achieved ? achievedIcon : notAchievedIcon);
-                _lossRows.Add(row.gameObject);
             }
 
             if (lossSummaryRoot != null) lossSummaryRoot.SetActive(any);
@@ -1849,6 +1898,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
             },
             GameLocalization.Get("common_close"),
             GiveUpLevel);
+        RuntimeChoicePopup.SetTitleArc(15f);   // kullanıcı ayarı (2026-10-27): "Yetersiz Altın" başlığı 15°
     }
 
     // Cüzdan güncel devam bedelini karşılıyorsa düş ve oyunu kaldığı yerden sürdür. Fail'de altının
@@ -2893,6 +2943,17 @@ public class LevelEndSimplePopupController : MonoBehaviour
             return obstacleDef != null ? obstacleDef.GetGoalIconSprite() : null;
         }
 
+        // Engelin ürettiği collectible (kuş evi → kuş): ikon üreticinin hedef ikonudur.
+        if (goal.targetType == LevelGoalTargetType.Collectible)
+        {
+            var producer = CollectibleSources.ProducerOf(goal.collectibleId);
+            var levelData = board != null ? board.ActiveLevelData : null;
+            var producerDef = producer != ObstacleId.None && levelData != null && levelData.obstacleLibrary != null
+                ? levelData.obstacleLibrary.Get(producer)
+                : null;
+            if (producerDef != null) return producerDef.GetGoalIconSprite();
+        }
+
         return null;
     }
 
@@ -3074,6 +3135,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
     public void HideAllPopups()
     {
+        CancelLossPaging();
         if (starRevealRoutine != null)
         {
             StopCoroutine(starRevealRoutine);

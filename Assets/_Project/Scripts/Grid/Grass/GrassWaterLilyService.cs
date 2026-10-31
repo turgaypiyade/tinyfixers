@@ -32,7 +32,7 @@ public sealed class GrassWaterLilyService : MonoBehaviour
         public Image flight;
         public TileSpecial stored;
         public TileType baseType, overrideType;
-        public bool hasOverride, releasePending, outbound, completed;
+        public bool hasOverride, releasePending, outbound, completed, spitSoundPlayed;
         public TileView target;
         public Vector3 from, to;
         public Vector3 spitLaunch, spitControlA, spitControlB;
@@ -62,6 +62,8 @@ public sealed class GrassWaterLilyService : MonoBehaviour
     private int petalCount, move;
     private float tileSize;
     private BoardController board;
+    private AudioClip swallowClip, spitClip;
+    private float swallowVolume = 1f, spitVolume = 1f;
     private ObstacleStateService state;
     private RectTransform fxRoot;
     private IList<Sprite> frames;
@@ -71,7 +73,13 @@ public sealed class GrassWaterLilyService : MonoBehaviour
     {
         board = owner; state = board.ObstacleStateService; tileSize = size;
         fxRoot = board.BreakFxParent;
-        frames = board.ActiveLevelData.obstacleLibrary.Get(ObstacleId.GrassWaterLily)?.auxiliarySprites;
+        var def = board.ActiveLevelData.obstacleLibrary.Get(ObstacleId.GrassWaterLily);
+        frames = def?.auxiliarySprites;
+        if (def != null)
+        {
+            swallowClip = def.absorbSound; swallowVolume = def.absorbSoundVolume;
+            spitClip = def.releaseSound; spitVolume = def.releaseSoundVolume;
+        }
         if (frames == null || frames.Count < 5)
         {
             if (GameDiagnostics.CriticalErrors)
@@ -176,7 +184,8 @@ public sealed class GrassWaterLilyService : MonoBehaviour
     private TileView Candidate(int x, int y)
     {
         var t = board.GetTileViewAt(x, y);
-        if (t == null || !t.gameObject.activeInHierarchy || !t.IsRuntimeIdle || t.IsSpecialCreationRevealPlaying
+        if (t == null || !t.gameObject.activeInHierarchy || !board.IsTileReadyForContinuousMatch(t)
+            || t.KeepHiddenForCombo || t.IsSpecialCreationRevealPlaying
             || t.WasDragging || t.GetSpecial() == TileSpecial.None || t.IsSpecialLocked
             || board.IsPendingTriggeredSpecialCell(x, y) || board.IsReservedTileTargetCell(x, y)
             || state.IsInteractionLockedAt(x, y) || state.IsMovableObstacleAt(x, y)) return null;
@@ -184,6 +193,7 @@ public sealed class GrassWaterLilyService : MonoBehaviour
     }
     private void Swallow(Lily lily, TileView target)
     {
+        PlaySfx(swallowClip, swallowVolume);
         Array.Clear(lily.neighbours, 0, lily.neighbours.Length);
         lily.stored = target.GetSpecial(); lily.baseType = target.GetTileType();
         lily.hasOverride = target.GetOverrideBaseType(out lily.overrideType);
@@ -250,7 +260,7 @@ public sealed class GrassWaterLilyService : MonoBehaviour
         for (int y = 0; y < board.Height; y++)
             for (int x = 0; x < board.Width; x++)
             {
-                if (!board.IsTileFreeForDynamicObstacle(x, y) || state.HasObstacleAt(x, y) || state.IsInteractionLockedAt(x, y)) continue;
+                if (!IsReleaseTarget(x, y)) continue;
                 // Prefer landing outside all live mouths so a just-returned special can be played.
                 bool adjacent = false;
                 foreach (var other in flowers)
@@ -262,7 +272,7 @@ public sealed class GrassWaterLilyService : MonoBehaviour
         if (chosen == null)
             for (int y = 0; y < board.Height && chosen == null; y++)
                 for (int x = 0; x < board.Width; x++)
-                    if (board.IsTileFreeForDynamicObstacle(x, y) && !state.HasObstacleAt(x, y) && !state.IsInteractionLockedAt(x, y))
+                    if (IsReleaseTarget(x, y))
                     { chosen = board.GetTileViewAt(x, y); break; }
         if (chosen == null) return false; // Keep it stored; retry only when the board changes/settles.
         lily.target = chosen; lily.version = chosen.LifetimeVersion;
@@ -281,6 +291,17 @@ public sealed class GrassWaterLilyService : MonoBehaviour
         lily.spitDirection = new Vector2(direction.x, direction.y).normalized;
         ConfigureSpitArc(lily);
         return true;
+    }
+
+    private bool IsReleaseTarget(int x, int y)
+    {
+        if (!board.IsTileFreeForDynamicObstacle(x, y) || state.HasObstacleAt(x, y)
+            || state.IsInteractionLockedAt(x, y)) return false;
+        var tile = board.GetTileViewAt(x, y);
+        // Runtime Idle alone can precede a queued fall/creation visual. Never give
+        // the stored special to a consumed/hidden source or an airborne target.
+        return tile != null && !tile.KeepHiddenForCombo && !tile.IsSpecialCreationRevealPlaying
+            && board.IsTileReadyForContinuousMatch(tile);
     }
 
     private void ConfigureSpitArc(Lily lily)
@@ -331,7 +352,7 @@ public sealed class GrassWaterLilyService : MonoBehaviour
     {
         EnsureFlight(lily);
         lily.outbound = outbound; lily.age = 0; lily.pose = 0; lily.lastFrame = -1;
-        lily.launchAge = -1;
+        lily.launchAge = -1; lily.spitSoundPlayed = false;   // her yeni uçuşta tükürme sesi bir kez
         lily.from = fxRoot.InverseTransformPoint(from); lily.to = fxRoot.InverseTransformPoint(to);
         Vector3 direction = transform.InverseTransformVector(to - from);
         lily.spitDirection = new Vector2(direction.x, direction.y).normalized;
@@ -357,6 +378,9 @@ public sealed class GrassWaterLilyService : MonoBehaviour
         {
             var target = lily.target;
             if (target != null && target.IsCurrentLifetime(lily.version)
+                && target.X == lily.destination % board.Width && target.Y == lily.destination / board.Width
+                && !target.KeepHiddenForCombo && !target.IsSpecialCreationRevealPlaying
+                && board.IsTileReadyForContinuousMatch(target)
                 && board.GetTileViewAt(target.X, target.Y) == target && target.GetSpecial() == TileSpecial.None
                 && !state.HasObstacleAt(target.X, target.Y) && !state.IsInteractionLockedAt(target.X, target.Y))
             {
@@ -416,6 +440,12 @@ public sealed class GrassWaterLilyService : MonoBehaviour
                 lily.age += dt;
                 if (lily.outbound)
                 {
+                    // Tükürme sesi hedef seçilince değil, special gerçekten fırladığı karede (wind-up sonu).
+                    if (!lily.spitSoundPlayed && lily.launchAge >= 0 && lily.age >= lily.launchAge)
+                    {
+                        lily.spitSoundPlayed = true;
+                        PlaySfx(spitClip, spitVolume);
+                    }
                     AnimateSpit(lily);
                     if (lily.launchAge >= 0 && lily.age >= lily.launchAge + SpitTravel + SpitLanding) CompleteFlight(lily);
                 }
@@ -448,6 +478,12 @@ public sealed class GrassWaterLilyService : MonoBehaviour
         }
     }
     private static float Smooth(float t) => t * t * (3 - 2 * t);
+
+    // Merkezi ses yolu (AGENTS kuralı): ayar kapalıysa/teardown'da BoardAudioDirector susturur.
+    private void PlaySfx(AudioClip clip, float volume)
+    {
+        if (clip != null && board != null && board.Audio != null) board.Audio.PlayOneShotClip(clip, volume);
+    }
     private void SetFrame(Lily lily, int frame)
     {
         if (frame == lily.lastFrame) return;

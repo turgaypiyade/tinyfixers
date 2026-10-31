@@ -11,11 +11,25 @@ Resolve the repository root by `Assets/_Project/Settings/LevelCatalogPro.asset`.
 
 Read `Docs/LevelDesign/Design-State.md`, `Design-Principles.md`, and the relevant entries in `Design-Feedback.md`. Use the existing levels through 170 as the primary local visual reference pool; the user considers their appearance successful. Read the image index at `Docs/LevelDesign/References/Index.md` and open only relevant examples. Preserve user-approved levels. Do not redirect the active design every time a new reference arrives. Feedback-only references teach visual grammar; they do not authorize redesigning an approved level or copying another game's mechanics.
 
+Choose the active progression before resolving numbers. For the user's new early-game V1 work,
+use `Assets/_Project/Settings/ProLevels/LevelCatalogProV1.asset` and `LevelV1_*.asset` in that folder;
+the older `LevelCatalogPro.asset` / `ProductionLevels` flow is reference, not the write target.
+Keep the beginner difficulty targets separate from the historical 170+ targets. In V1 each
+ten-level set introduces min 2 / max 3 obstacles; endings 5 are Hard, endings 9 Super Hard,
+and multiples of 10 Boss Duel. Track stage/color variants separately from mechanic families.
+An explicit "check first" request is review scope; do not fill empty slots before that review.
+
 Resolve the requested level by catalog number, not asset filename. Inspect current `ObstacleLibrary.asset`, `LevelData.cs`, `Obstacle-Design-Guide.md`, and nearby levels before choosing obstacles. Old summaries can miss newly added families. Distinguish new mechanics from color variants. Consider the whole unlocked pool, not just the newest obstacle or ordinary crates.
 
-Keep every level's Turkish name in `Assets/_Project/Resources/LevelNames.json`, matched by the real catalog `level` and `levelKey`. Preserve existing names unless the user requests a rename. Add a name for each new level; keep its design-note title, preview and `Docs/LevelDesign/Level-Names.md` consistent. Names are persistent product data for later UI use, separate from a draft batch's rollback files.
+Keep every level's Turkish name (`name`) and English name (`nameEn`) in `Assets/_Project/Resources/LevelNames.json`, matched by the real catalog `level` and `levelKey`. Preserve existing names unless the user requests a rename. Add a name for each new level; keep its design-note title, preview and `Docs/LevelDesign/Level-Names.md` consistent. Names are persistent product data shown in the PreLevel popup (TR/EN by device language), separate from a draft batch's rollback files.
 
 Form a clear visual composition and player decision before authoring: what shape is visible, which region opens first, and what that unlocks. Consider a few distinct concepts internally and choose without requiring approval for routine design choices. Check repetition across the existing catalog, then inspect the closest historical boards as well as nearby levels. A long gap since an obstacle's last use does not establish novelty.
+
+Early-game simplicity still needs a visible idea and a meaningful opening beat. Do not substitute
+a large empty rectangle plus edge blockers for a level concept. If a gate intentionally delays
+refill, show its initially empty cells honestly, verify the feed route after opening it, and
+check that prepared specials survive initial gravity at their authored positions. Prepared
+specials are optional design tools, not a default for every revision.
 
 For a repetition review, use `Tools/review_level_patterns.py --candidate <catalog-number> --output Docs/LevelDesign/Reviews/<review-name>` to inventory authored geometry, layers and families without changing assets. Inspect the shortlist visually; compare obstacle silhouettes both at board position and cropped to their own bounds, including reflections. Small versus large versions of the same staircase can evade a board-position-only comparison. Check the open work area, first player decision, and what each cleared layer unlocks. Scores are shortlist aids, never a percentage of novelty or user approval. See `Docs/LevelDesign/Reviews/181-Repetition/Review.md` for the rejected staircase and its historical counterparts.
 

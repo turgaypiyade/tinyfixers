@@ -116,6 +116,15 @@ public static class FirebaseAuthService
         });
     }
 
+    internal static void SuspendForAccountSwitch() => IsReady = false;
+
+    internal static void ResumeCurrentSession()
+    {
+        var user = CurrentUser;
+        if (user == null) throw new InvalidOperationException("No authenticated session.");
+        Complete(user);
+    }
+
     private static void Complete(FirebaseUser user)
     {
         UserId  = user.UserId;

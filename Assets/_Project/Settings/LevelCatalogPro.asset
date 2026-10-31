@@ -204,11 +204,11 @@ MonoBehaviour:
   - chapter: 2
     level: 48
     levelKey: LevelCL_048
-    levelData: {fileID: 11400000, guid: c5f5c328eb12242b7b7124acaf933105, type: 2}
+    levelData: {fileID: 11400000, guid: 6ad519bbcd0384ec1ae4ff6290c1b25d, type: 2}
   - chapter: 2
     level: 49
     levelKey: LevelCL_049
-    levelData: {fileID: 11400000, guid: 6ad519bbcd0384ec1ae4ff6290c1b25d, type: 2}
+    levelData: {fileID: 11400000, guid: c5f5c328eb12242b7b7124acaf933105, type: 2}
   - chapter: 2
     level: 50
     levelKey: LevelCL_050
@@ -272,11 +272,11 @@ MonoBehaviour:
   - chapter: 3
     level: 65
     levelKey: LevelCL_065
-    levelData: {fileID: 11400000, guid: 9f537577bc9fc4de3bc318f293c3e247, type: 2}
+    levelData: {fileID: 11400000, guid: c388cdf5106824e29afeb4dbe4a6c848, type: 2}
   - chapter: 3
     level: 66
     levelKey: LevelCL_066
-    levelData: {fileID: 11400000, guid: c388cdf5106824e29afeb4dbe4a6c848, type: 2}
+    levelData: {fileID: 11400000, guid: 9f537577bc9fc4de3bc318f293c3e247, type: 2}
   - chapter: 3
     level: 67
     levelKey: LevelCL_067

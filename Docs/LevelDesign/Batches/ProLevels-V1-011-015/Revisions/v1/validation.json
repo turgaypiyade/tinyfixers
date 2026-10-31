@@ -1,0 +1,86 @@
+{
+  "preservedExistingFiles": 3007,
+  "level11Preserved": true,
+  "levels": [
+    {
+      "level": 12,
+      "name": "Açık Avlu",
+      "moves": 29,
+      "difficulty": "Normal",
+      "targetPassRate": "55–85%",
+      "active": 81,
+      "openingTileCells": 64,
+      "gravityFedOpeningCells": 64,
+      "obstacles": {
+        "4": 17,
+        "25": 21
+      },
+      "authoredCoveredMud": 0,
+      "maxAuthoredDepth": 1,
+      "initialHitBudget": 59,
+      "oilCap": 0,
+      "limits": "Static graph/asset checks only; no gameplay, cascade/bot simulation or measured pass rate."
+    },
+    {
+      "level": 13,
+      "name": "Katmanlı Geçit",
+      "moves": 30,
+      "difficulty": "Normal",
+      "targetPassRate": "55–85%",
+      "active": 81,
+      "openingTileCells": 69,
+      "gravityFedOpeningCells": 69,
+      "obstacles": {
+        "25": 21,
+        "5": 7,
+        "4": 5
+      },
+      "authoredCoveredMud": 12,
+      "maxAuthoredDepth": 2,
+      "initialHitBudget": 61,
+      "oilCap": 0,
+      "limits": "Static graph/asset checks only; no gameplay, cascade/bot simulation or measured pass rate."
+    },
+    {
+      "level": 14,
+      "name": "Yağlı Köşe",
+      "moves": 28,
+      "difficulty": "Normal",
+      "targetPassRate": "55–85%",
+      "active": 81,
+      "openingTileCells": 57,
+      "gravityFedOpeningCells": 57,
+      "obstacles": {
+        "4": 7,
+        "14": 8,
+        "5": 9
+      },
+      "authoredCoveredMud": 0,
+      "maxAuthoredDepth": 1,
+      "initialHitBudget": 33,
+      "oilCap": 14,
+      "limits": "Static graph/asset checks only; no gameplay, cascade/bot simulation or measured pass rate."
+    },
+    {
+      "level": 15,
+      "name": "Üç Katlı Bent",
+      "moves": 29,
+      "difficulty": "Zor",
+      "targetPassRate": "35–55%",
+      "active": 81,
+      "openingTileCells": 54,
+      "gravityFedOpeningCells": 54,
+      "obstacles": {
+        "25": 27,
+        "4": 9,
+        "5": 9,
+        "6": 9
+      },
+      "authoredCoveredMud": 27,
+      "maxAuthoredDepth": 2,
+      "initialHitBudget": 108,
+      "oilCap": 0,
+      "limits": "Static graph/asset checks only; no gameplay, cascade/bot simulation or measured pass rate."
+    }
+  ]
+}

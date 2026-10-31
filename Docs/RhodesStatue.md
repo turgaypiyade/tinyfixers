@@ -18,7 +18,7 @@ Güncel runtime görünümü `RhodesStatueView` ile `Resources/RhodesStatue/S1�
 
 Kullanıcı görselleri düzenleyebilir. Aynı sheet boyutu ve dört eşit dilim korunursa bu PNG'yi yerinde değiştirmek yeterlidir; `.meta` silinmemeli, sprite ID/GUID bağlantıları korunmalıdır. Boyut/dizilim değişirse slice rect'leri de güncellenmelidir. Kod dosya adına göre runtime yükleme veya yeni Sprite.Create yapmaz.
 
-Kırılmada mevcut taş sesleri ve altı paylaşılan taş parçası kullanılır; `BoardBreakFxService` pool'u ve standart shatter yolu yeniden kullanılır. Yeni Update, coroutine host'u, scene taraması veya kare başına allocation eklenmedi. Genel obstacle hasar yolunun mevcut footprint toplama maliyeti değişmedi; cihaz performansı ölçülmedi.
+Son vuruşta (2026-10-31) son taban görseli iki tam boy yarıya ayrılır. Yarılar kendi konumlarından sola/sağa ve yukarı sıçrar, dönerek yerçekimiyle düşer. `RhodesStatueView.TryPlayFinalBreak`, mevcut `ObstacleScatterFx` Image havuzunu ve board başına kesilmiş sprite önbelleğini kullanır; kaynak Image hemen kalkar. Genel shatter bu finalde ayrıca çalışmaz; mevcut ara aşama kılıç/kalkan hareketleri korunur. Yeni Update, parça başına coroutine veya scene taraması eklenmedi. Genel obstacle hasar/goal kuralları değişmedi; cihaz performansı ölçülmedi.
 
 ## Kontrol
 

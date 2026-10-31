@@ -516,6 +516,7 @@ public class BoosterService
         hammer.localRotation = Quaternion.Euler(0f, 0f, hitAngle);
         board.PatchbotDashUI?.PlayImpactBurstAtCell(board, cell, 1.35f);
         PlayJokerSfx("HammerHit");
+        Haptics.Play(Haptics.Strength.Heavy);
 
         // Return at contact so gameplay hits in this frame, before the hammer exits.
         exitRoutine?.Invoke(PlayHammerFallFx(hammer, targetPos));
@@ -574,6 +575,7 @@ public class BoosterService
         ScreenCrackFx.Play(faceScreen, new Vector2(0f, -HammerCrackDownOffset));
         if (!PlayJokerSfx("GlassCrack"))
             PlayJokerSfx("HammerHit", 0.6f);   // cam sesi eklenene dek
+            Haptics.Play(Haptics.Strength.Heavy);   // çekiç ekran camına çarptı
 
         // Geri sekme + şaşkın titreme.
         Vector2 recoilPos = overPos + new Vector2(board.TileSize * 0.08f, -board.TileSize * 0.25f);

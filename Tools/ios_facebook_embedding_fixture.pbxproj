@@ -1,0 +1,120 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {};
+	objectVersion = 77;
+	objects = {
+		000000000000000000000001 = {
+			isa = PBXProject;
+			buildConfigurationList = 000000000000000000000030;
+			mainGroup = 000000000000000000000002;
+			productRefGroup = 000000000000000000000003;
+			targets = (
+				000000000000000000000010,
+				000000000000000000000011,
+			);
+		};
+		000000000000000000000002 = {
+			isa = PBXGroup;
+			children = (
+				000000000000000000000003,
+			);
+			sourceTree = "<group>";
+		};
+		000000000000000000000003 = {
+			isa = PBXGroup;
+			children = ();
+			name = Products;
+			sourceTree = "<group>";
+		};
+		000000000000000000000010 = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 000000000000000000000031;
+			buildPhases = (
+				000000000000000000000020,
+			);
+			dependencies = ();
+			name = "Unity-iPhone";
+			productName = WonderFixers;
+			productType = "com.apple.product-type.application";
+		};
+		000000000000000000000011 = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 000000000000000000000032;
+			buildPhases = (
+				000000000000000000000021,
+			);
+			dependencies = ();
+			name = UnityFramework;
+			productName = UnityFramework;
+			productType = "com.apple.product-type.framework";
+		};
+		000000000000000000000020 = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = ();
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		000000000000000000000021 = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = ();
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		000000000000000000000030 = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				000000000000000000000040,
+				000000000000000000000044,
+			);
+			defaultConfigurationName = Release;
+		};
+		000000000000000000000031 = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				000000000000000000000041,
+				000000000000000000000042,
+			);
+			defaultConfigurationName = Release;
+		};
+		000000000000000000000032 = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				000000000000000000000043,
+			);
+			defaultConfigurationName = Release;
+		};
+		000000000000000000000040 = {
+			isa = XCBuildConfiguration;
+			buildSettings = {};
+			name = Release;
+		};
+		000000000000000000000041 = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@loader_path/Frameworks", );
+			};
+			name = Debug;
+		};
+		000000000000000000000042 = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@loader_path/Frameworks", );
+			};
+			name = Release;
+		};
+		000000000000000000000043 = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = NO;
+			};
+			name = Release;
+		};
+		000000000000000000000044 = {
+			isa = XCBuildConfiguration;
+			buildSettings = {};
+			name = Debug;
+		};
+	};
+	rootObject = 000000000000000000000001;
+}

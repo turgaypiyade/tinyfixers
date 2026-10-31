@@ -1,0 +1,30 @@
+{
+  "revision": "v2",
+  "levels": [
+    {
+      "level": 202,
+      "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00002020.asset",
+      "guid": "90d366ecba0e484e847e85f75ed877c2",
+      "sha256": "562209142fe8c713eefd3484bcd3f78f212dec62e183d2b17eceaa79325e59f1"
+    },
+    {
+      "level": 203,
+      "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00002030.asset",
+      "guid": "cf24fe4b55734555bd1753bd4a00712c",
+      "sha256": "b5874baf614fdad2109777e4aebaf584c9c93f4b292d927954dc452406f33336"
+    },
+    {
+      "level": 204,
+      "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00002040.asset",
+      "guid": "d24941283aad4c9996af759a79d2a97b",
+      "sha256": "2fa691ce1a0c763c7e562055047999f546f996e63e58f71f4763e73e108e1c1f"
+    },
+    {
+      "level": 205,
+      "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00002050.asset",
+      "guid": "ebfc75dd87f24d1797f8058214d9aac1",
+      "sha256": "8fda0805c4438e8eb6be8c47df6793ae9b4bada4adc70117994747cabcea99c4"
+    }
+  ],
+  "scope": "Only 202–205 level content; 201 remains50; no GUID/catalog/name/runtime changes or publication."
+}

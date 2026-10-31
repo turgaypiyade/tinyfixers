@@ -1,14 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Threading.Tasks;
 using Firebase.Extensions;
 using Firebase.Firestore;
 using UnityEngine;
 
 /// <summary>
 /// Hibrit liderlik panosu: yerel botlarla ANINDA dolar (gecikmesiz), arkasından gerçek
-/// Firestore verisi (gerçek oyuncular) karışır. Weekly + Players destekli; Friends/Team boş.
+/// Firestore verisi (gerçek oyuncular) karışır. Weekly/Players gerçek skorlar; Friends UID profil yenilemesi, Team yerel dolgu.
 /// Kendi skorun her zaman gösterilir (yerel), gerçek veri gelince güncellenir.
 /// Skor kaynağı: PlayerWallet.TotalScore. Botlar Firestore'a YAZILMAZ (sadece görünüm).
 /// </summary>
@@ -16,6 +15,11 @@ public sealed class FirebaseLeaderboardService : ILeaderboardService
 {
     private const int TopCount = 100;
     private const int TeamCapacity = 50;
+    private readonly HashSet<LeaderboardTab> pendingAuthTabs = new();
+    private readonly Dictionary<(LeaderboardTab tab, int sub), int> fetchVersions = new();
+    private static string lastPublishedSignature;
+    private static bool publishing;
+
 
     public event Action OnChanged;
 
@@ -87,6 +91,7 @@ public sealed class FirebaseLeaderboardService : ILeaderboardService
         // Arkadaşlar = GERÇEK arkadaş listen (FriendState). "Ekle" alt-görünümü liste kullanmaz.
         if (tab == LeaderboardTab.Friends)
         {
+            PlayerDirectoryService.RefreshFriends();
             cache[(tab, 0)] = FriendsBoard();
             cache[(tab, 1)] = new List<LeaderboardEntry>();
             OnChanged?.Invoke();
@@ -99,39 +104,55 @@ public sealed class FirebaseLeaderboardService : ILeaderboardService
         cache[(tab, 1)] = Rank(Merge(new List<LeaderboardEntry>(), region: 1));
         OnChanged?.Invoke();
 
-        // 2) Gerçek Firestore verisi yalnız Dünya havuzuna karışır (bölgesel board sonra).
+        // 2) Dünya ve ülke ayrı gerçek skor kayıtlarını okur.
         //    Auth hazır değilse hazır olunca çek.
         if (!FirebaseAuthService.IsReady)
         {
-            FirebaseAuthService.OnReady += () => FetchReal(tab);
+            if (pendingAuthTabs.Add(tab) && pendingAuthTabs.Count == 1)
+                FirebaseAuthService.OnReady += OnAuthReady;
             return;
         }
         FetchReal(tab);
     }
 
-    // Gerçek Firestore verisini çek, kendi skorunu yaz, botlarla birleştir.
+    private void OnAuthReady()
+    {
+        FirebaseAuthService.OnReady -= OnAuthReady;
+        var tabs = new List<LeaderboardTab>(pendingAuthTabs);
+        pendingAuthTabs.Clear();
+        foreach (var tab in tabs) FetchReal(tab);
+    }
+
+    // Reads must not wait for an acknowledged write: offline/pending writes can take minutes.
     private void FetchReal(LeaderboardTab tab)
     {
+        PublishOwnScoreIfChanged();
         string path = tab == LeaderboardTab.Weekly
-            ? $"leaderboards/{WeekId()}/scores"
-            : "leaderboards/global/scores";
-        var col = Db.Collection(path);
+            ? $"leaderboards/{WeekId()}/scores" : "leaderboards/global/scores";
+        FetchBoard(tab, 0, path);
+        if (tab == LeaderboardTab.Players)
+            FetchBoard(tab, 1, $"leaderboards/region_{RegionCode}/scores");
+    }
 
-        WriteOwnScore(col).ContinueWithOnMainThread(_ =>
-        {
-            col.OrderByDescending("score").Limit(TopCount).GetSnapshotAsync()
-               .ContinueWithOnMainThread(task =>
+    private void FetchBoard(LeaderboardTab tab, int sub, string path)
+    {
+        var key = (tab, sub);
+        int version = fetchVersions.TryGetValue(key, out int previous) ? previous + 1 : 1;
+        fetchVersions[key] = version;
+        string owner = FirebaseAuthService.UserId;
+        Db.Collection(path).OrderByDescending("score").Limit(TopCount).GetSnapshotAsync()
+            .ContinueWithOnMainThread(task =>
             {
+                if (FirebaseAuthService.UserId != owner || fetchVersions[key] != version) return;
                 if (task.IsFaulted || task.IsCanceled)
                 {
                     if (GameDiagnostics.Backend)
-                        Debug.LogError($"[Leaderboard] okuma hatası ({tab}): {task.Exception}");
+                        Debug.LogWarning($"[Leaderboard] read deferred ({tab}/{sub}): {task.Exception?.GetBaseException().Message}");
                     return;
                 }
-                cache[(tab, 0)] = Rank(Merge(ParseOthers(task.Result), region: 0));
+                cache[key] = Rank(Merge(ParseOthers(task.Result), region: sub));
                 OnChanged?.Invoke();
             });
-        });
     }
 
     // Gerçek(diğerleri) + botlar + kendi satırın → tek liste (henüz sırasız).
@@ -286,15 +307,40 @@ public sealed class FirebaseLeaderboardService : ILeaderboardService
         return list;
     }
 
-    private static Task WriteOwnScore(CollectionReference col)
+    /// <summary>Publish on profile/score changes and retry from the shared save tick, even if ranks is never opened.</summary>
+    public static void PublishOwnScoreIfChanged()
     {
+        if (RuntimeSimulationSession.IsActive || !FirebaseAuthService.IsReady
+            || !FirebaseCloudSaveService.RestoreResolved || FirebaseCloudSaveService.SuspendForDeletion || publishing) return;
+        string uid = FirebaseAuthService.UserId, name = PlayerProfile.PlayerName;
+        string week = WeekId(), region = PlayerDirectoryService.DetectRegion();
+        int score = PlayerWallet.TotalScore;
+        string signature = $"{uid}|{week}|{region}|{name}|{score}";
+        if (lastPublishedSignature == signature) return;
+        publishing = true;
         var data = new Dictionary<string, object>
         {
-            { "name",      PlayerProfile.PlayerName },
-            { "score",     PlayerWallet.TotalScore },
+            { "name", name },
+            { "score", score },
             { "updatedAt", FieldValue.ServerTimestamp },
         };
-        return col.Document(FirebaseAuthService.UserId).SetAsync(data, SetOptions.MergeAll);
+        // Same permitted score schema on all boards; no rules/index deployment required.
+        var batch = Db.StartBatch();
+        batch.Set(Db.Collection("leaderboards/global/scores").Document(uid), data, SetOptions.MergeAll);
+        batch.Set(Db.Collection($"leaderboards/{week}/scores").Document(uid), data, SetOptions.MergeAll);
+        batch.Set(Db.Collection($"leaderboards/region_{region}/scores").Document(uid), data, SetOptions.MergeAll);
+        batch.CommitAsync().ContinueWithOnMainThread(task =>
+        {
+            publishing = false;
+            if (task.IsFaulted || task.IsCanceled)
+            {
+                if (GameDiagnostics.Backend)
+                    Debug.LogWarning($"[Leaderboard] publish deferred: {task.Exception?.GetBaseException().Message}");
+                return;
+            }
+            lastPublishedSignature = signature;
+            PublishOwnScoreIfChanged();
+        });
     }
 
     internal static string CurrentWeekId => WeekId();

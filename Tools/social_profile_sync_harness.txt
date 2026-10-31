@@ -1,0 +1,80 @@
+using System;using System.Globalization;using System.Linq;using System.Collections.Generic;using System.Threading.Tasks;using System.Reflection;
+public enum RuntimeInitializeLoadType{AfterSceneLoad}
+public class RuntimeInitializeOnLoadMethodAttribute:Attribute{public RuntimeInitializeOnLoadMethodAttribute(RuntimeInitializeLoadType t){}}
+public static class RuntimeSimulationSession{public static bool IsActive;}
+public static class GameDiagnostics{public static bool Backend=false;}
+public static class Debug{public static void LogWarning(object o){}public static void LogError(object o){}}
+public static class Time{public static float realtimeSinceStartup;}
+public static class Mathf{public static int Max(int a,int b)=>Math.Max(a,b);public static int Min(int a,int b)=>Math.Min(a,b);public static int Abs(int a)=>Math.Abs(a);}
+public static class SystemInfo{public static string deviceUniqueIdentifier="device";}
+public static class PlayerPrefs{static Dictionary<string,object> data=new Dictionary<string,object>();public static int saves;public static int GetInt(string k,int d=0)=>data.ContainsKey(k)?(int)data[k]:d;public static string GetString(string k,string d="")=>data.ContainsKey(k)?(string)data[k]:d;public static void SetInt(string k,int v)=>data[k]=v;public static void SetString(string k,string v)=>data[k]=v;public static void Save(){saves++;}}
+public static class DeviceCountry{public static string Get()=>"TR";}
+public static class PlayerProfile{public static string PlayerName="Old";public static event Action OnChanged;public static void Rename(string s){PlayerName=s;OnChanged?.Invoke();}}
+public static class PlayerWallet{public static int TotalScore=100;public static event Action<int> OnTotalScoreChanged;}
+public static class FirebaseAuthService{public static bool IsReady;public static string UserId="owner";static Action ready;public static event Action OnReady{add{ready+=value;if(IsReady)value();}remove{ready-=value;}}public static void Ready(){IsReady=true;ready?.Invoke();}public static int Subscribers=>ready?.GetInvocationList().Length??0;}
+public static class FirebaseCloudSaveService{public static bool RestoreResolved,SuspendForDeletion;public static event Action OnRestored;public static void Restored(){RestoreResolved=true;OnRestored?.Invoke();}}
+public static class PlayerTeamState{public static bool HasTeam=true;public static string TeamId="team",TeamName="Team";public static bool IsCreator;}
+public static class GameLocalization{public static string Get(string s)=>s;}
+public static class NamePool{public static string PlayerAt(int i)=>"Bot"+i;public static string TeamAt(int i)=>"Team"+i;}
+public static class BotPopulation{public static int ActiveCount=2;public static void ReportRealUsers(int i){}}
+public static class BotProgression{public static int WeeklyScore(int i)=>0;public static int TeamMembers(int i)=>5;public static int TeamWeeklyScore(int i)=>0;}
+public static class FriendDirectory{public static int ChapterOf(string n)=>1;}
+public enum LeaderboardTab{Weekly,Friends,Players,Team}
+public class LeaderboardEntry{public string playerName,subtitle;public int score,chapter,rank,capacityCurrent,capacityMax;public bool isSelf;}
+public interface ILeaderboardService{event Action OnChanged;List<LeaderboardEntry> GetEntries(LeaderboardTab tab,int sub);string[] GetSubFilters(LeaderboardTab tab);string GetTimeLabel(LeaderboardTab tab);void Fetch(LeaderboardTab tab);}
+public static class SetOptions{public static object MergeAll=new object();}
+public static class FieldValue{public static object ServerTimestamp=new object();}
+public class DocumentSnapshot{public string Id;public bool Exists=true;public Dictionary<string,object> Data=new Dictionary<string,object>();public bool ContainsField(string s)=>Data.ContainsKey(s);public T GetValue<T>(string s)=>(T)Data[s];}
+public class QuerySnapshot{public List<DocumentSnapshot> Documents=new List<DocumentSnapshot>();}
+public class Query{
+ public string path;public Query(string p){path=p;}
+ public Query OrderByDescending(string s)=>this;public Query WhereEqualTo(string s,object v)=>this;public Query Limit(int n)=>this;
+ public Task<QuerySnapshot> GetSnapshotAsync(){FirebaseFirestore.queries.Add(path);return Task.FromResult(FirebaseFirestore.queryResults.ContainsKey(path)?FirebaseFirestore.queryResults[path]:new QuerySnapshot());}
+}
+public class CollectionReference:Query{public CollectionReference(string p):base(p){}public DocumentReference Document(string id)=>new DocumentReference(path+"/"+id);}
+public class DocumentReference{public string path;public DocumentReference(string p){path=p;}public Task SetAsync(Dictionary<string,object> d,object merge)=>FirebaseFirestore.Write(new List<KeyValuePair<string,Dictionary<string,object>>>{new KeyValuePair<string,Dictionary<string,object>>(path,d)});public Task<DocumentSnapshot> GetSnapshotAsync(){FirebaseFirestore.reads.Add(path);if(FirebaseFirestore.failedReads.Contains(path))return Task.FromException<DocumentSnapshot>(new Exception("offline"));return Task.FromResult(FirebaseFirestore.docs.ContainsKey(path)?FirebaseFirestore.docs[path]:new DocumentSnapshot{Exists=false,Id=path.Split('/').Last()});}public CollectionReference Collection(string p)=>new CollectionReference(path+"/"+p);}
+public class WriteBatch{public List<KeyValuePair<string,Dictionary<string,object>>> data=new List<KeyValuePair<string,Dictionary<string,object>>>();public void Set(DocumentReference d,Dictionary<string,object> v,object merge){data.Add(new KeyValuePair<string,Dictionary<string,object>>(d.path,v));}public Task CommitAsync()=>FirebaseFirestore.Write(data);}
+public class FirebaseFirestore{
+ public static FirebaseFirestore DefaultInstance=new FirebaseFirestore();public CollectionReference Collection(string p)=>new CollectionReference(p);public WriteBatch StartBatch()=>new WriteBatch();
+ public static List<string> queries=new List<string>(),reads=new List<string>();public static Dictionary<string,QuerySnapshot> queryResults=new Dictionary<string,QuerySnapshot>();public static Dictionary<string,DocumentSnapshot> docs=new Dictionary<string,DocumentSnapshot>();public static HashSet<string> failedReads=new HashSet<string>();public static bool failWrites,holdWrites;public static int writes;
+ public static Queue<Action> pending=new Queue<Action>();
+ public static Task Write(List<KeyValuePair<string,Dictionary<string,object>>> values){writes++;var t=new TaskCompletionSource<bool>();Action commit=()=>{if(failWrites){t.SetException(new Exception("offline"));return;}foreach(var kv in values){var id=kv.Key.Split('/').Last();DocumentSnapshot d;if(!docs.TryGetValue(kv.Key,out d))docs[kv.Key]=d=new DocumentSnapshot{Id=id};foreach(var field in kv.Value)d.Data[field.Key]=field.Value;}t.SetResult(true);};if(holdWrites)pending.Enqueue(commit);else commit();return t.Task;}
+ public static void Release(){while(pending.Count>0)pending.Dequeue()();}
+}
+public static class Extensions{
+ public static Queue<Action> main=new Queue<Action>();
+ public static void ContinueWithOnMainThread(Task task,Action<Task> action){main.Enqueue(()=>{if(!task.IsCompleted){main.Enqueue(()=>ContinueWithOnMainThread(task,action));return;}action(task);});}
+ public static void ContinueWithOnMainThread<T>(Task<T> task,Action<Task<T>> action){main.Enqueue(()=>{if(!task.IsCompleted){main.Enqueue(()=>ContinueWithOnMainThread(task,action));return;}action(task);});}
+ public static void Pump(){int guard=0;while(main.Count>0){if(++guard>100)throw new Exception("pending callbacks loop");main.Dequeue()();}}
+}
+public static class FirebaseTeamCloud{private static string lastProfileSignature;private static bool profileWriteInFlight;public static DocumentReference TeamDoc(string id)=>FirebaseFirestore.DefaultInstance.Collection("teams").Document(id);
+/* TEAM SYNC */
+}
+/* FRIEND STATE */
+/* PLAYER DIRECTORY */
+/* LEADERBOARD */
+int checks=0;Action<bool,string> Check=(ok,msg)=>{checks++;if(!ok)throw new Exception(msg);};
+Action Pump=()=>Extensions.Pump();
+Action Boot=()=>typeof(PlayerDirectoryService).GetMethod("Bootstrap",BindingFlags.NonPublic|BindingFlags.Static).Invoke(null,null);
+Boot();PlayerDirectoryService.UpsertIfChanged();Check(FirebaseFirestore.writes==0,"no auth means no writes");FirebaseAuthService.Ready();Check(FirebaseFirestore.writes==0,"do not overwrite restored profile with startup defaults");
+FirebaseCloudSaveService.Restored();Pump();
+Check(FirebaseFirestore.docs["players/owner"].GetValue<string>("name")=="Old","directory published after restore");
+Check(FirebaseFirestore.docs["leaderboards/global/scores/owner"].GetValue<string>("name")=="Old","score published without opening ranks");
+Check(FirebaseFirestore.docs["leaderboards/region_TR/scores/owner"].GetValue<int>("score")==100,"country score published");
+Check(FirebaseFirestore.docs["teams/team/members/owner"].GetValue<string>("name")=="Old","member published");
+int before=FirebaseFirestore.writes;PlayerDirectoryService.UpsertIfChanged();Pump();Check(FirebaseFirestore.writes==before,"unchanged tick does not write");
+PlayerProfile.Rename("New");Pump();Check(FirebaseFirestore.docs["players/owner"].GetValue<string>("name")=="New","rename updates directory immediately");Check(FirebaseFirestore.docs["leaderboards/global/scores/owner"].GetValue<string>("name")=="New","rename updates scores immediately");Check(FirebaseFirestore.docs["teams/team/members/owner"].GetValue<string>("name")=="New","rename updates membership without rejoin");Check(!FirebaseFirestore.docs["teams/team/members/owner"].ContainsField("joinedAt"),"profile sync does not reset join timestamp");
+FirebaseFirestore.holdWrites=true;PlayerProfile.Rename("Queued");PlayerProfile.Rename("Latest");Check(FirebaseFirestore.pending.Count==3,"one in-flight write per projection");FirebaseFirestore.holdWrites=false;FirebaseFirestore.Release();Pump();Check(FirebaseFirestore.docs["players/owner"].GetValue<string>("name")=="Latest","latest edit survives pending directory write");Check(FirebaseFirestore.docs["leaderboards/global/scores/owner"].GetValue<string>("name")=="Latest","latest score name coalesced");Check(FirebaseFirestore.docs["teams/team/members/owner"].GetValue<string>("name")=="Latest","latest member name coalesced");
+FirebaseFirestore.failWrites=true;PlayerProfile.Rename("Retry");Pump();Check(FirebaseFirestore.docs["players/owner"].GetValue<string>("name")=="Latest","failed write not acknowledged");FirebaseFirestore.failWrites=false;PlayerDirectoryService.UpsertIfChanged();Pump();Check(FirebaseFirestore.docs["players/owner"].GetValue<string>("name")=="Retry","failed directory write retries");Check(FirebaseFirestore.docs["leaderboards/global/scores/owner"].GetValue<string>("name")=="Retry","failed score write retries with clean directory");
+PlayerWallet.TotalScore=123;FirebaseFirestore.failWrites=true;FirebaseLeaderboardService.PublishOwnScoreIfChanged();Pump();FirebaseFirestore.failWrites=false;before=FirebaseFirestore.writes;PlayerDirectoryService.UpsertIfChanged();Pump();Check(FirebaseFirestore.writes==before+1,"score retries even when directory signature is already acknowledged");Check(FirebaseFirestore.docs["leaderboards/global/scores/owner"].GetValue<int>("score")==123,"new score reaches all boards without visiting ranks");
+FirebaseCloudSaveService.SuspendForDeletion=true;before=FirebaseFirestore.writes;PlayerProfile.Rename("Deleted");Pump();Check(FirebaseFirestore.writes==before,"account deletion stops social writes");FirebaseCloudSaveService.SuspendForDeletion=false;
+FirebaseAuthService.UserId="other";PlayerDirectoryService.UpsertIfChanged();Pump();Check(FirebaseFirestore.docs.ContainsKey("players/other"),"signature scoped to auth UID");
+FriendState.AddRealFriend("a","Old friend",2);FriendState.AddRealFriend("b","Old friend",3);int events=0;FriendState.OnChanged+=()=>events++;
+FirebaseFirestore.docs["players/a"]=new DocumentSnapshot{Id="a",Data=new Dictionary<string,object>{{"name","Renamed friend"},{"chapter",20L}}};FirebaseFirestore.failedReads.Add("players/b");PlayerDirectoryService.RefreshFriends();Pump();Check(FriendState.RealFriends.Single(f=>f.uid=="a").name=="Renamed friend","existing friend renamed by stable UID");Check(FriendState.RealFriends.Single(f=>f.uid=="a").chapter==20,"friend progress refreshed");Check(FriendState.RealFriends.Single(f=>f.uid=="b").chapter==3,"failed friend read retains cache");Check(events==1,"refresh emits one change for all successful updates");before=FirebaseFirestore.reads.Count;PlayerDirectoryService.RefreshFriends();Pump();Check(FirebaseFirestore.reads.Count==before,"throttle recursive screen fetches");
+FriendState.RefreshRealFriends(new[]{new RemotePlayer{uid="stranger",name="New",chapter=3}});Check(FriendState.RealFriends.Count==2,"refresh never adds strangers");
+Time.realtimeSinceStartup=30;PlayerDirectoryService.RefreshFriends();Pump();Check(events==1,"unchanged refresh emits no render/save");
+var ranks=new FirebaseLeaderboardService();ranks.Fetch(LeaderboardTab.Players);Pump();Check(FirebaseFirestore.queries.Contains("leaderboards/region_TR/scores"),"country board reads real data");Check(FirebaseFirestore.queries.Contains("leaderboards/global/scores"),"world board reads real data");
+FirebaseFirestore.holdWrites=true;PlayerProfile.Rename("Offline pending");before=FirebaseFirestore.queries.Count;ranks.Fetch(LeaderboardTab.Players);Check(FirebaseFirestore.queries.Count==before+2,"pending score writes never block world/country reads");FirebaseFirestore.holdWrites=false;FirebaseFirestore.Release();Pump();
+FirebaseAuthService.IsReady=false;var delayed=new FirebaseLeaderboardService();int initialSubscribers=FirebaseAuthService.Subscribers;delayed.Fetch(LeaderboardTab.Players);delayed.Fetch(LeaderboardTab.Players);delayed.Fetch(LeaderboardTab.Weekly);Check(FirebaseAuthService.Subscribers==initialSubscribers+1,"repeated taps before auth add one handler");FirebaseAuthService.Ready();Pump();Check(FirebaseAuthService.Subscribers==initialSubscribers,"ready handler unsubscribes after draining tabs");
+RuntimeSimulationSession.IsActive=true;before=FirebaseFirestore.writes;PlayerDirectoryService.UpsertIfChanged();FirebaseLeaderboardService.PublishOwnScoreIfChanged();FirebaseTeamCloud.SyncSelfProfileIfChanged();Check(FirebaseFirestore.writes==before,"no social writes in simulation");
+Console.WriteLine("PASS: "+checks+" production-method sync regressions; SDK transport doubled, no remote data touched.");

@@ -37,7 +37,8 @@ public sealed class GoldCoinCollectService : MonoBehaviour
 
     private void HandleVisualChanged(ObstacleVisualChange change)
     {
-        if (change.cleared && change.obstacleId == ObstacleId.GoldMoney)
+        // GoldMoney (bonus) ve Altın (hedef, ödül leveli): toplanan her parça cüzdana.
+        if (change.cleared && (change.obstacleId == ObstacleId.GoldMoney || change.obstacleId == ObstacleId.GoldCoin))
         {
             int before = PlayerWallet.Coins;
             PlayerWallet.AddCoins(coinsPerPiece);

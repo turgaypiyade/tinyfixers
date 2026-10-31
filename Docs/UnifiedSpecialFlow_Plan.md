@@ -213,3 +213,33 @@ Sıradaki teknik borç:
 - Eski global busy/special-phase sinyallerini ancak bu doğrulama sonrası sadeleştir.
 
 İlgili: [[project_device_stutter_perf_pass]], [[project_special_chain_runner]], [[project_decoupled_resolve]].
+
+## 9. PatchBot taşınan etki hedeflemesi — 2026-10-29
+
+Kullanıcı Cargo altında yalnız ilk hücreyi ve dolu plastik sütununda ilk satırı
+hedeflemeyi yetersiz buldu; hedef olmayan OverrideBatteryBox'ın da yararlı olduğunda
+seçilebilmesini istedi. `PatchBotImpactScorer`, LineH'nin satırını, LineV'nin
+sütununu ve PulseCore'un5×5 alanını ayrı değerlendirir. Doğrudan hedef işi, diğer
+kırılabilir engeller, Cargo altındaki plastik/normal taş yolu ve jel kaplaması
+puanlanır. Eşit etkide çalışma bölgesinin merkezine yakın varış tercih edilir.
+Çok hücreli kutuların16 hücresi16 vuruş sayılmaz; gerçek origin/per-cell hit kuralı
+korunur. Magnet yalnız güncel uçtan, Tube yalnız tabandan hedeflenir.
+
+Battery Box'ın gelecekteki board vuruşu, kalan şarjına bölünerek yardımcı faydası
+olarak değerlendirilir; HUD'a sahte goal eklenmez. Solo bot politikası yalnız kalan
+şarjı1–2 ve yeterli faydası olan kutu için değişebilir. Diğer solo seçimler korunur.
+Pulse airborne yolu ve iki line combo'su taşıdıkları türü koordinatöre açıkça verir;
+intent bu türü saklar, kaynak tile temizlense/yeniden kullanılsa da retarget korur.
+
+Performans: bir hedef seçimi sırasında board snapshot'ı alınır; aday başına yalnız
+5×5 veya ilgili satır/sütun okunur. Snapshot, footprint, tekilleştirme, hedef/rezervasyon
+tamponları tekrar kullanılır. Geçerli uçuş intent'i yeniden puanlanmaz. Solo botta
+yakın-dolu kutu yoksa ek snapshot kurulmaz. Efekt/GameObject veya ses kaynağı eklenmedi.
+Bu yapısal incelemedir; cihaz FPS veya GC süresi ölçülmedi.
+
+Doğrulama: `csi Tools/check_keygenerator_patchbot.csx`147 kontrol; Cargo/plastik
+yolları, yatay/dikey etki, merkez seçimi, büyük kutu tekilleştirmesi, hedef olmayan
+yardımcı, kilitli/rezerve/tükenmiş hedef, kaynak tüketimi sonrası retarget, iptal ve
+100 seçimde tampon tekrar kullanımı. `csi Tools/check_patchbot_magnet.csx`85 uç/base
+ve görsel/patlama merkezi kontrolü. Unity Play/build ve bot/kaskat simülasyonu yok;
+hedef fayda puanı bir sezgisel seçimdir, tüm zincirlerin optimal çözümü değildir.

@@ -13,6 +13,9 @@ public sealed class TmpOutline : MonoBehaviour
     private float width;
     private Color color;
     private bool pending;
+    private bool shadow;
+    private Color shadowColor;
+    private Vector2 shadowOffset;
 
     public static void Apply(TMP_Text text, float width, Color color)
     {
@@ -20,6 +23,20 @@ public sealed class TmpOutline : MonoBehaviour
         if (!text.TryGetComponent(out TmpOutline o)) o = text.gameObject.AddComponent<TmpOutline>();
         o.width = width;
         o.color = color;
+        o.shadow = false;
+        o.pending = true;
+        o.TryApply();
+    }
+
+    /// <summary>Kontur + alt gölge (underlay): gölge konturlu harf biçiminde, offset yönünde kaymış
+    /// (x+ sağa, y− aşağı; SDF birimi). Küçük sayılarda kontur tek başına zemine karışınca okunurluğu verir.</summary>
+    public static void Apply(TMP_Text text, float width, Color color, Color shadowColor, Vector2 shadowOffset)
+    {
+        Apply(text, width, color);
+        var o = text.GetComponent<TmpOutline>();
+        o.shadow = true;
+        o.shadowColor = shadowColor;
+        o.shadowOffset = shadowOffset;
         o.pending = true;
         o.TryApply();
     }
@@ -35,6 +52,24 @@ public sealed class TmpOutline : MonoBehaviour
 
         text.outlineWidth = width;
         text.outlineColor = color;
+        // Mobil SDF shader'ı konturu yalnız OUTLINE_ON açıkken çizer (koddan üretilen font asset'leri bu
+        // shader'la gelir): anahtar kapalıysa genişlik verilse de kontur görünmez. Örnek materyalde aç.
+        var mat = text.fontMaterial;   // yazıya özel örnek (outlineWidth setter'ı zaten oluşturdu)
+        if (mat != null)
+        {
+            mat.EnableKeyword(ShaderUtilities.Keyword_Outline);
+            if (shadow)
+            {
+                mat.EnableKeyword(ShaderUtilities.Keyword_Underlay);
+                mat.SetColor(ShaderUtilities.ID_UnderlayColor, shadowColor);
+                mat.SetFloat(ShaderUtilities.ID_UnderlayOffsetX, shadowOffset.x);
+                mat.SetFloat(ShaderUtilities.ID_UnderlayOffsetY, shadowOffset.y);
+                mat.SetFloat(ShaderUtilities.ID_UnderlayDilate, width);   // gölge konturlu biçimle aynı kalınlıkta
+                mat.SetFloat(ShaderUtilities.ID_UnderlaySoftness, 0f);
+                ShaderUtilities.UpdateShaderRatios(mat);
+                text.UpdateMeshPadding();   // gölge ofseti mesh kenarında kesilmesin
+            }
+        }
         pending = false;
     }
 

@@ -68,21 +68,25 @@ public enum TileSpecial {None,LineH,LineV,PatchBot,PulseCore,SystemOverride}
 public enum TileType {Gear,Core,Bolt,Plate,Key}
 public enum ObstacleHitContext {NormalMatch,SpecialActivation,Booster}
 public class TileView {
- public int X,Y,LifetimeVersion=1;public bool IsRuntimeIdle=true,IsSpecialCreationRevealPlaying,WasDragging,IsSpecialLocked;
+ public int X,Y,LifetimeVersion=1;public bool IsRuntimeIdle=true,IsSpecialCreationRevealPlaying,WasDragging,IsSpecialLocked,KeepHiddenForCombo,PendingMotion;
  public GameObject gameObject=new GameObject();public TileSpecial special;public TileType type;public bool ov;public TileType overrideType;
  public TileSpecial GetSpecial()=>special;public TileType GetTileType()=>type;
  public bool GetOverrideBaseType(out TileType t){t=overrideType;return ov;}
  public void SetSpecial(TileSpecial s,bool deferVisualUpdate=false){special=s;}public void SetType(TileType t){type=t;}public void RefreshIcon(){}
  public void SetOverrideBaseType(TileType t){overrideType=t;ov=true;}public bool IsCurrentLifetime(int v)=>v==LifetimeVersion;
 }
+public class AudioClip {}
+public class BoardAudio {public void PlayOneShotClip(AudioClip clip,float volume) {}}
 public class FlowStub {public bool IsSettling,IsSpecialVisualInFlight;}
 public class Handle:IDisposable {Action a;public Handle(Action done){a=done;}public void Dispose(){var v=a;a=null;v?.Invoke();}}
 public class BoardController {
+ public BoardAudio Audio=new BoardAudio();
  public enum BoardJobKind {KeyFlight}
  public int Width=3,Height=3,jobs,reserved,holds,queries;public bool free=true;public TileView[,] tiles=new TileView[3,3];public FlowStub Flow=new FlowStub();
  public event Action OnBecameIdle,OnPlayerMoveResolved;
  public IDisposable BeginJob(BoardJobKind k){jobs++;return new Handle(()=>jobs--);}
  public bool IsTileFreeForDynamicObstacle(int x,int y){queries++;var t=tiles[x,y];return free&&t!=null&&t.IsRuntimeIdle&&t.GetSpecial()==TileSpecial.None&&holds==0;}
+ public bool IsTileReadyForContinuousMatch(TileView t)=>t.IsRuntimeIdle&&!t.PendingMotion;
  public TileView GetTileViewAt(int x,int y)=>x>=0&&y>=0&&x<3&&y<3?tiles[x,y]:null;
  public bool IsPendingTriggeredSpecialCell(int x,int y)=>false;public bool IsReservedTileTargetCell(int x,int y)=>false;
  public void ReserveTileTargetCell(Vector2Int p){reserved++;}public void ClearReservedTileTargetCell(Vector2Int p){reserved--;}
@@ -278,6 +282,25 @@ var tests=@"
    Check(Vector3.Distance(l.flight.rectTransform.localPosition,l.to)<.001f&&Near(previousScale,1),""arc reaches exact target at original size"");s.OnDisable();
   }
   Check(Near(HitSwaySeconds,.32f),""larger bush shake keeps original short duration"");
+  // An idle-looking logical target may still be hidden or have a queued fall.
+  foreach(int reason in new[]{0,1,2}){
+   s=Setup();l=s.flowers[0];
+   foreach(var t in s.board.tiles)if(t!=null){t.KeepHiddenForCombo=reason==0;t.PendingMotion=reason==1;t.IsSpecialCreationRevealPlaying=reason==2;}
+   s.Hit(0,ObstacleHitContext.SpecialActivation);
+   Check(l.target==null&&l.stored==TileSpecial.LineH,""hidden/queued-fall/reveal target cannot receive stored special"");
+   s.OnDisable();Check(s.board.jobs==0&&s.board.holds==0,""waiting unsafe target cleans up on teardown"");
+  }
+  foreach(int reason in new[]{0,1,2,3}){
+   s=Setup();l=s.flowers[0];s.Hit(0,ObstacleHitContext.SpecialActivation);target=l.target;
+   if(reason==0)target.KeepHiddenForCombo=true;
+   if(reason==1)target.PendingMotion=true;
+   if(reason==2)target.IsSpecialCreationRevealPlaying=true;
+   if(reason==3){s.board.tiles[target.X,target.Y]=null;target.X=(target.X+1)%3;s.board.tiles[target.X,target.Y]=target;}
+   Tick(s,1.2f);
+   Check(l.stored==TileSpecial.LineH&&target.GetSpecial()==TileSpecial.None,""invalid landing preserves stored special for retry"");
+   Check(s.board.holds==0&&s.board.reserved==0,""invalid landing releases original cell ownership"");
+   s.OnDisable();Check(s.board.jobs==0,""failed flight job cancelled on teardown"");
+  }
   Console.WriteLine(""PASS: ""+checks+"" water-lily impact, immediate/late landing, repeat-hit, large-petal, shared hit-sway and teardown checks."");
  }
 ";

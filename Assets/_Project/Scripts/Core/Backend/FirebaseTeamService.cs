@@ -28,6 +28,8 @@ public sealed class FirebaseTeamService : ITeamService, IDisposable
     private readonly List<TeamChatMessage> realChat = new();
     private ListenerRegistration chatListener;
     private ListenerRegistration lifeListener;
+    private ListenerRegistration teamListener;
+    private ListenerRegistration membersListener;
     // Takım arkadaşlarının son 24 saatteki can istekleri (Firestore; kendi isteğim hariç — o yerel kartta).
     private readonly List<TeamLifeRequest> realLifeRequests = new();
 
@@ -65,23 +67,28 @@ public sealed class FirebaseTeamService : ITeamService, IDisposable
         if (disposed || string.IsNullOrEmpty(teamId)) return;
 
         // Takım dokümanı: üye sayısı + bot harman tohumu.
-        FirebaseTeamCloud.TeamDoc(teamId).GetSnapshotAsync().ContinueWithOnMainThread(task =>
+        teamListener = FirebaseTeamCloud.TeamDoc(teamId).Listen(snap =>
         {
-            if (disposed || task.IsFaulted || task.IsCanceled || !task.Result.Exists) return;
-
-            var snap = task.Result;
+            if (disposed || !snap.Exists) return;
             long botMembers = snap.ContainsField("botMembers") ? snap.GetValue<long>("botMembers") : 0;
             long realMembers = snap.ContainsField("realMembers") ? snap.GetValue<long>("realMembers") : 0;
             long botSeed = snap.ContainsField("botSeed") ? snap.GetValue<long>("botSeed") : -1;
-
             info.memberCount = Mathf.Max(1, (int)(botMembers + realMembers));
-            if (botSeed >= 0 && botChat.Count == 0)
-                BuildBotChat((int)botSeed, (int)botMembers);
-
+            if (botSeed >= 0 && botChat.Count == 0) BuildBotChat((int)botSeed, (int)botMembers);
             LifeInbox.SetBots((int)botMembers, () => botChat.Count > 0
                 ? botChat[UnityEngine.Random.Range(0, botChat.Count)].senderName : GameLocalization.Get("team_teammates"));
             OnChanged?.Invoke();
         });
+        membersListener = FirebaseTeamCloud.TeamDoc(teamId).Collection("members")
+            .Limit(FirebaseTeamCloud.Capacity).Listen(snapshot =>
+            {
+                if (disposed) return;
+                info.realMemberNames.Clear();
+                foreach (var member in snapshot.Documents)
+                    if (member.ContainsField("name"))
+                        info.realMemberNames.Add(ChatModeration.Filter(member.GetValue<string>("name")));
+                OnChanged?.Invoke();
+            });
 
         // Can istekleri: takım arkadaşlarınınki kart olarak; kendi dokümanımdaki yardımcılar → "Kabul Et" cevapları.
         lifeListener = FirebaseTeamCloud.LifeRequests(teamId)
@@ -252,6 +259,10 @@ public sealed class FirebaseTeamService : ITeamService, IDisposable
     {
         disposed = true;
         ChatModeration.OnBlockedChanged -= HandleBlockedChanged;
+        teamListener?.Stop();
+        teamListener = null;
+        membersListener?.Stop();
+        membersListener = null;
         chatListener?.Stop();
         chatListener = null;
         lifeListener?.Stop();

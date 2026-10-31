@@ -22,10 +22,10 @@ def path_entries(text,key):
     return [dict(pathCellIndices=list(struct.unpack(f'<{len(raw)//8}i',bytes.fromhex(raw))))
             for raw in re.findall(r'^  - pathCellIndices: ([0-9a-f]+)$',section[1],re.M)]
 
-def load():
-    metas={re.search(r'^guid: (\w+)$',p.read_text(),re.M)[1]:Path(str(p)[:-5]) for p in (SETTINGS/'ProductionLevels').glob('*.asset.meta')}
+def load(catalog_path=None):
+    metas={re.search(r'^guid: (\w+)$',p.read_text(),re.M)[1]:Path(str(p)[:-5]) for p in SETTINGS.rglob('*.asset.meta')}
     names={e['level']:e['name'] for e in json.loads((ROOT/'Assets/_Project/Resources/LevelNames.json').read_text())['entries']}
-    catalog=(SETTINGS/'LevelCatalogPro.asset').read_text();levels=[]
+    catalog=(catalog_path or SETTINGS/'LevelCatalogPro.asset').read_text();levels=[]
     for n,level_key,guid in re.findall(r'    level: (\d+)\n    levelKey: ([^\n]+)\n    levelData: \{fileID: 11400000, guid: (\w+)',catalog):
         n=int(n);p=metas[guid];t=p.read_text();w=int_field(t,'width');h=int_field(t,'height');size=w*h
         data={k:array(t,k,size) for k in ('cells','obstacles','obstacleOrigins')}
@@ -122,8 +122,8 @@ def drawboard(im,d,xy,cell=14):
             draw.text((x+2,y+2),str(o),font=ImageFont.truetype(FONT,11),fill='#07101c')
 
 def main():
-    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--candidate',type=int,required=True);parser.add_argument('--output',type=Path,required=True);args=parser.parse_args()
-    out=args.output;out.mkdir(parents=True,exist_ok=True);levels=load();target=next(d for d in levels if d['level']==args.candidate)
+    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--candidate',type=int,required=True);parser.add_argument('--output',type=Path,required=True);parser.add_argument('--catalog',type=Path,help='Explicit active catalog; default preserves the historical production catalog.');args=parser.parse_args()
+    out=args.output;out.mkdir(parents=True,exist_ok=True);levels=load(args.catalog);target=next(d for d in levels if d['level']==args.candidate)
     previous=[d for d in levels if d['level']<args.candidate];rank=sorted([compare(target,d) for d in previous],key=lambda z:(z['blockerOverlap'],z['maskOverlap']),reverse=True)
     report=dict(candidate=args.candidate,previousLevelsScanned=len(previous),limits='Static authored geometry including valid tube paths, magnet paths, safes, seals and overlays. Custom data retained; no gameplay/dynamic spawning. IoU after normalization/reflection is a shortlist metric, never perceptual novelty percent. Crop score ignores size and placement. Opaque appearance/grass on movable objects require visual review.',geometryShortlist=rank[:24],croppedShapeShortlist=sorted(rank,key=lambda r:r['croppedShapeOverlap'],reverse=True)[:24],chestAndWardrobe=[d['level'] for d in previous if {21,27}<=set(map(int,d['obstacleInstances']))],chestLevels=[d['level'] for d in previous if 21 in d['obstacleInstances']],wardrobeLevels=[d['level'] for d in previous if 27 in d['obstacleInstances']],geometryWarnings=[dict(level=d['level'],issues=d['geometryWarnings']) for d in previous if d['geometryWarnings']])
     (out/'Catalog-Inventory.json').write_text(json.dumps(levels,ensure_ascii=False,indent=2)+'\n')

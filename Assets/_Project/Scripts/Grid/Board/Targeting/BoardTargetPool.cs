@@ -27,6 +27,8 @@ public sealed class BoardTargetPool
 
     private readonly Dictionary<Vector2Int, float> cellReservations = new();
     private readonly List<Vector2Int> staleCellBuffer = new();
+    private readonly List<TileView> staleTileBuffer = new();
+    private readonly List<int> obstacleOriginBuffer = new();
 
     public BoardTargetPool(BoardController board)
     {
@@ -57,6 +59,9 @@ public sealed class BoardTargetPool
             int origin = obs.GetObstacleOriginAt(x, y);
             if (origin < 0 || origin % board.Width != x || origin / board.Width != y) return false;
         }
+        // Mıknatıs yalnız UÇLARINDAN hasar alır; ara (boru) hücreleri inert. Ara hücre hedeflenirse
+        // vuruş boşa gider (2026-10-28: PatchBot boruya vuruyordu) → yalnız güncel uçlar aday.
+        if (id == ObstacleId.Magnet && !obs.IsMagnetEndpoint(x, y)) return false;
         if (obs.IsHitLockedAt(x, y)) return false;
         if (obs.IsFullyDisabledAt(x, y)) return false;
         return obs.GetActiveMeaningfulHitsAt(x, y) > 0;
@@ -118,7 +123,8 @@ public sealed class BoardTargetPool
     {
         if (!obstacleReservations.TryGetValue(origin, out var list)) return 0;
         float cutoff = Now - ReservationTtlSeconds;
-        list.RemoveAll(t => t < cutoff);
+        for (int i = list.Count - 1; i >= 0; i--)
+            if (list[i] < cutoff) list.RemoveAt(i);
         if (list.Count == 0) { obstacleReservations.Remove(origin); return 0; }
         return list.Count;
     }
@@ -156,6 +162,13 @@ public sealed class BoardTargetPool
     public List<Vector2Int> ReservedCells()
     {
         var cells = new List<Vector2Int>(tileReservations.Count + obstacleReservations.Count + cellReservations.Count);
+        CopyReservedCells(cells);
+        return cells;
+    }
+
+    public void CopyReservedCells(List<Vector2Int> cells)
+    {
+        cells.Clear();
         staleCellBuffer.Clear();
         foreach (var kv in cellReservations)
         {
@@ -163,21 +176,23 @@ public sealed class BoardTargetPool
             else cells.Add(kv.Key);
         }
         foreach (var cell in staleCellBuffer) cellReservations.Remove(cell);
-        var staleTiles = new List<TileView>();
+        staleTileBuffer.Clear();
         foreach (var kv in tileReservations)
         {
-            if (kv.Key == null || Now - kv.Value > ReservationTtlSeconds) { staleTiles.Add(kv.Key); continue; }
+            if (kv.Key == null || Now - kv.Value > ReservationTtlSeconds) { staleTileBuffer.Add(kv.Key); continue; }
             cells.Add(new Vector2Int(kv.Key.X, kv.Key.Y));
         }
-        foreach (var t in staleTiles) tileReservations.Remove(t);
+        foreach (var t in staleTileBuffer) tileReservations.Remove(t);
+        staleTileBuffer.Clear();
 
         var obs = board.ObstacleStateService;
-        if (obs == null || obstacleReservations.Count == 0) return cells;
-        foreach (int origin in new List<int>(obstacleReservations.Keys))
+        if (obs == null || obstacleReservations.Count == 0) return;
+        obstacleOriginBuffer.Clear();
+        foreach (int origin in obstacleReservations.Keys) obstacleOriginBuffer.Add(origin);
+        foreach (int origin in obstacleOriginBuffer)
         {
             if (ReservedObstacleHits(origin) <= 0) continue;
             cells.Add(new Vector2Int(origin % board.Width, origin / board.Width));
         }
-        return cells;
     }
 }

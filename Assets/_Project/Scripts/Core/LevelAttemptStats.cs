@@ -52,6 +52,9 @@ public static class LevelAttemptStats
     private const string KeyFails = "level_attempt_fails";
     private const string KeyStruggles = "level_attempt_struggles";
     private const string KeyLivesSpent = "level_attempt_lives_spent";
+    // Zorlanılan seviyenin kazanılmasından SONRAKİ seviyeye taşınan zorlanma (rahatlama anı; RefillSpecialGuard).
+    private const string KeyCarryLevel = "level_attempt_carry_level";
+    private const string KeyCarryStruggles = "level_attempt_carry_struggles";
 
     /// Tahta kuruldu, deneme başladı: (level, attempt).
     public static event Action<int, int> OnAttemptStarted;
@@ -97,6 +100,11 @@ public static class LevelAttemptStats
     public static int StrugglesOn(int level) =>
         PlayerPrefs.GetInt(KeyLevel, 0) == level
             ? Mathf.Max(0, PlayerPrefs.GetInt(KeyStruggles, ConsecutiveFails(level))) : 0;
+
+    /// Bir önceki seviyede kazanmadan önce yaşanan zorlanma (hamle bitip kaybedilen deneme) sayısı;
+    /// yalnız o seviyenin hemen ardından gelen seviye için döner, o seviye kazanılınca silinir.
+    public static int CarriedStrugglesFor(int level) =>
+        level > 0 && PlayerPrefs.GetInt(KeyCarryLevel, 0) == level ? Mathf.Max(0, PlayerPrefs.GetInt(KeyCarryStruggles, 0)) : 0;
 
     public static int AttemptsOn(int level) =>
         PlayerPrefs.GetInt(KeyLevel, 0) == level ? PlayerPrefs.GetInt(KeyAttempts, 0) : 0;
@@ -171,6 +179,20 @@ public static class LevelAttemptStats
 
         if (won)
         {
+            // Rahatlama anı (kullanıcı, 2026-10-28): bu seviyede zorlandıysa bir sonraki seviye de gevşek başlar.
+            // Kazanılan seviye taşınan kaydın sahibiyse onu da kapatır (rahatlama tek seviyelik).
+            int struggles = StrugglesOn(level);
+            if (struggles > 0)
+            {
+                PlayerPrefs.SetInt(KeyCarryLevel, level + 1);
+                PlayerPrefs.SetInt(KeyCarryStruggles, struggles);
+            }
+            else
+            {
+                PlayerPrefs.SetInt(KeyCarryLevel, 0);
+                PlayerPrefs.SetInt(KeyCarryStruggles, 0);
+            }
+
             // Explicit zeroes also clear stale counters in the merge-based cloud save.
             PlayerPrefs.SetInt(KeyLevel, 0);
             PlayerPrefs.SetInt(KeyAttempts, 0);

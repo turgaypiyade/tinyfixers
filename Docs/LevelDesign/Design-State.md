@@ -1,5 +1,216 @@
 # Level tasarım çalışma durumu
 
+> Önce [kalıcı level tasarım hafızasını](Memory.md) oku. **131–205 genel revizyonu uygulandı**;
+> aşağıdaki önceki 202–205 kaydı tarihsel kalmıştır. Güncel snapshot/sonuçlar
+> `Batches/131-205-Review-2026-10-31/` altında; Memory.md devam noktasını ve son kullanıcı kurallarını içerir.
+
+- **191 Işıklı Kapı v2 (2026-11-01, kullanıcı düzeni):** lamba | taş | lamba | 3 taş | lamba | taş | lamba; 9×10, dört
+  dikey şerit (satır 4–10, 7'şer lamba, tepede mor), orta 3×6 çamur; 24 hamle; hedef LampStrip 4 · Mud 18. v1 (iki Γ kemer,
+  kullanıcının önceden onayladığı) `Batches/191-LampStrip/Revisions/v1-gamma/`. Not/PNG `Level191-Isikli-Kapi.*`,
+  yazıcı `Batches/191-LampStrip/design.py`. Statik kontrol geçti; **oynanmadı**. Kullanıcı: "çok sevdim".
+- **196 Işık Çarkı (2026-11-01):** KAYAN Lamba Şeridi tanıtımı; 9×10 kubbe omuzlu, alt ortada 5×5 kapalı lamba halkası
+  (16 lamba, saat yönü, içi 3×3 hole), alt köşelerde 2×3 çim ×2; 22 hamle; hedef LampStrip 1 · Grass 12. Ad Basamaklı
+  Arşiv → Işık Çarkı / Wheel of Lights. Not/PNG `Level196-Isik-Carki.*`, yazıcı `Batches/196-LampStrip-Shift/design.py`,
+  eski asset yedeği aynı klasörde. Kullanıcı: "süper oldu"; kayma animasyonu sön→kay→yan dalgası. Sıradaki: 197–198 rahat→artan, 199 Super Hard.
+- **197 Işık Merdiveni rahatlatıldı (2026-11-01, kullanıcı önizlemeyi onayladı):** sağ üst fener/plastik bloğu taş alanı,
+  anahtar 30→16; hedef Lantern 12 · Plastic 15 · Stone 9 · Key 16; 32 hamle aynı. `Level197-Isik-Merdiveni.*`,
+  `Batches/197-Ease/`. 198'e dokunulmadı. **Sıradaki: 199 Super Hard zorlaştırma** (önce tasarım, hamle en son).
+- **199 Deniz Kabuğu zorlaştırma (2026-11-01):** yerleşim aynı; jel kaynağı mührün altında → mühür sayaçları
+  8/8/8 → 11 → **13/13/13** (kullanıcı 11 ile oynadı: 2 fail, biri tek hamleyle; 3.'de geçti, "biraz rahat" → 13 önerdi),
+  hamle 26 → 24. `Batches/199-Harden/`. 13 hali oynanmadı.
+- **Kullanıcı oyun geri bildirimi (2026-11-01):** 197 ve 198 "çok iyi olmuş" (197 rahatlatılmış hali).
+- **Boss fırlatmaları düzeltildi + 130 hedefleri (2026-11-01, kullanıcı kuralı → Memory kural 5):** 140–200'de
+  fırlatma ve alet tehdidi listeleri revizyon öncesi çeşitli hallerine döndü; hedefte olan türler çıkarıldı
+  (160: Mud atılmaz; 180: gri alet 47 hedefte olduğu için yalnız renkli aletler). HP/dalga/saldırı aynı.
+  130 Çiçekli Kemer: hedef Boss 400 · GrassFlower 22 · Grass 22 · Wall 3 (kalkan/roket sepeti yardımcı, hedef değil);
+  fırlatmalar [Oil, PlasticTwoStage, Helmet, Plastic_Red] aynı (hedefle çakışma yok). `Batches/BossThrows-2026-11-01/`.
+- **Kaynak+ürün hedef çiftleri temizlendi (2026-11-01, kullanıcı: "doğru bunları düzeltmeyi unutmuşum"):** kullanıcının elle
+  düzelttiği kalıba göre jel atıcılı seviyede hedef yalnız jel, su depolu seviyede yalnız su deposu. 138: WaterPuddle
+  hedefi silindi (WaterTank 4 · MetalWall 4). 144 ve 148: GelLauncherUp hedefi silindi. Tarama: başka çift yok.
+  Yedekler `Batches/SourceProductGoals-2026-11-01/`. Yardımcı kuralı: kalkan asla, roket sepeti varsayılan olarak hedef değil
+  (205'te RocketBasket 1 hedefi duruyor — kullanıcı "bazen koyuyorum").
+- **189 Dolaplı Geçit zorlaştırma (2026-11-01, onay bekliyor):** yan plastik şeritler içe bir sütun kalınlaştı (sütun 3 ve 7,
+  satır 5–9) → orta alan 5 → 3 sütun; plastik 10 → 20; hamle 30, guard otomatik aynı. `Batches/189-Check/`. Oynanmadı.
+- **135 Kristal Kalp zorlaştırma (2026-11-01):** kalp aynı; alt uçtaki 4 AÇIK jel tohumu da kum taşı
+  (28) altına alındı → jel ilk taş kırılınca başlar; taş hedefi 14 → 18. Kullanıcı 3 oyun: 1 fail, 2 galibiyette ≥12
+  hamle arttı ("zor değil") → **hamle 27 → 22**. `Batches/135-Harden/`.
+  Sonra kullanıcı kendisi üstte (4,2)/(6,2)'ye 2 taş ekledi (taş 20), hamle 21 — "yine sürekli geçiyorum".
+  Kök: otomatik refill special koruması 135 için yalnız **0.47** (101+ kuralı 0.3–0.7, seviye no karması) → refill çok
+  bedava special üretiyor; jel special ile satır/sütun boyunca yayılıyor. Ayrıca kayıptan sonra koruma ×0.5 (gizli yardım).
+  → **refillSpecialGuard 0.9** (asset'e elle; design.py artık kaynak değil, kullanıcı düzenlemesi asset'te). Oynanmadı.
+- **SIRADAKİ İŞ (kullanıcı kararı, 2026-10-31 akşam): 191–200 yeniden yorum.** 191–200 onluğunda hiç yeni
+  engel tanıtımı yoktu (kural: onlukta 2–3). Karar: **191 = Lamba Şeridi (LampStrip, id 79) KAYMAYAN tanıtım**,
+  **196 = KAYAN Lamba Şeridi tanıtımı** (lampStripSettings.shift); ikisi de rahat. 197–198 rahatlatılıp 199'a
+  doğru artan, **199 Super Hard zorlaştırılır** (Usta sim %67). 201 Kuş Evi aynen. Onluk dışı: **135 Hard
+  zorlaştır** (sim %73), **130 Boss çok hedefli yap** (tek BossDamage, sim %100), 189 sınırda. Onluk eğrisi ve
+  öncelik Design-Principles'ta; sim tablosu `Reviews/Sim-130-205-Usta/Review.md`. LampStrip henüz Unity'de
+  oynanmadı — 191 aynı zamanda engel testi. Kullanıcı hedefleri elle düzeltti (kaynak+ürün çifti yok kuralı).
+
+- **Güncel tamamlanan iş: ProLevels V1 131–205 genel revizyonu · 2026-10-31.**
+  Kullanıcı150sonrasını özellikle kolay/heyecansız ve alanları gereğinden geniş buldu;
+  5/9sonlu seviyeleri referans gösterdi. Yardımcılar ve boss engelleri dahil hedefte
+  temsil,en fazla5goal istedi.75level incelendi,**51asset revize/24aynen korundu**;
+  **17maskede/boyutta değişiklik**.5/9sonlu15levelin maskeleri/hamleleri aynı;
+  179'da hamster ailesi kaldırıldı,185'te renk ailesi sadeleşti (goal limiti istisnaları).
+  **Yedi bossun tamamı5goal**,bossHP/dalgalar/saldırı ayarları aynı;gri geri sayımlı
+  alet mekanigi korundu,başlangıçta1adet ve tek türde atış var. Diğer baskı türleri
+  hedeflere bağlı.143iki-aşamalı hedef4→36,151mühür sonrası altın hedefli,1767×7,
+  178/188üstte3boşsıra,184/196üstte2boşsıra kaldırıldı.202–204'e ek iş;
+  **201'in onaylı iki2×3grubu/50kuşu aynı**.1–130,katalog,adlar,GUID/metalar korundu.
+  `Batches/131-205-Review-2026-10-31/Review.md`75kararı;Before/After/manifest/
+  validation-after kayıtları.75YAML/mask/origin/footprint/katman/path/goal≤5,
+  boss≤10satır/atışkapsamı ve görsel kontrol geçti.2.337kapsam dışı baseline
+  dosyasından2.336aynı;**ayrı kullanıcı talebiyle Rodos olay-sırası düzeltmesi
+  yalnızGridSpawner.cs'te** ve hash'i ayrıca kayıtlı. Önceparçala/sonrakaynağısil
+  devri 6olay-sırası ve1.992scatter kontrolüyle geçti. Telefon görseli doğrulanmadı.
+  **Tasarımlar oynanıp onaylanmadı;denge/FPS ölçülmedi. Unity Play/build,bot/kaskat
+  simülasyonu,remote yayın/release baseline yok.206'ya geçme.**
+
+
+- **Önceki iş: ProLevels V1 202–205 v2 · 2026-10-31 — v1 reddedildi.**
+  Kullanıcı50 hedefinin yalnız201 için olduğunu düzeltti;202–205'i tekdüze buldu
+  ve BirdHouse'un güncel davranışını okuyup daha keyifli tasarlamamızı istedi.
+  Güncel servis yeniden incelendi:ilk hit kapağı açar,açıkken her isabet kuş verir
+  ve yeni kuş çıkarır;bir vuruşsuz oyuncu hamlesi evi kapatır. Normal/scripted
+  kaynak ev başına1kuş/hamle,special kaynak bu sınıra takılmaz. Runtime değişmedi.
+  **201'in onaylı yerleşimi ve50hedefi aynı.** Yalnız202–205 içerikleri revize:
+  **202:**9×9 halka avlu,63aktif/18hole,26hamle;3alt sıra ev,18kuş +2boya kasası.
+  Ortada3×2 boşluk;iki alt omuzdaki kasayı hangi yandan boşaltacağını seç.
+  **203:**9×10 çatallı kargo alanı,62aktif/28hole,27hamle;3orta sütun ev,
+  12kuş +4kargo +1duvar parçası. Tek3×2duvar bendi;aynı hücre beşincihit'e
+  gelince komple çöker. Alt yan cepler2hücre genişliğinde;2×2match kurulabilir.
+  **204:**9×11 S kıyı,74aktif/25hole,28hamle;4sol kenar ev,16kuş +1kanal +6fener.
+  Yol17hücre,sağ kenardan çıkar;fenerler altta3×2gruptur.
+  **205:**9×11 iki girişli park,77aktif/22hole,27hamle Zor;6alt2×3ev,24kuş
+  +2mühür +8pusula. Üst2×2mühürler kırmızı/yeşil başlar,renk başına5/6ister;
+  altlarında pusula vardır. Ortada1roket sepeti yardımcı;hazır combo/pin yok.
+  İlk taş yuvası52/49/63/60;boş yuva0/0/0/2.205'in yalnız iki üst köşe cebi,
+  mühür ve alt pusula açılana kadar boş. Kargolar bende,fenerler dibe dayanır.
+  Statik YAML/mask/origin/Wall parça/goal/katman/refill/yük desteği geçti;
+  tam boy dörtPNG ve topluPNG incelendi. **3.192 mevcut dosya** (201,katalog,
+  TR/EN isimler,tüm GUID/meta/runtime dahil)hash'e göre aynı;yalnız4asset değişti.
+  V1 ret arşivi `Batches/202-205/Revisions/v1-rejected/`;v2çalışma/not/PNG/audit
+  `Batches/202-205/`,yeni tekrar inceleme `Reviews/202-205/v2/`.
+  **V2 henüz oynanıp onaylanmadı;denge/FPS ölçülmedi. Unity Play/build,
+  bot/kaskat simülasyonu ve remote yayın/release yok.206'ya geçme.**
+
+- **Reddedilen önceki taslak: ProLevels V1 202–205 v1 + 201 hedef50 · 2026-10-31.**
+  Kullanıcı201 kuş kafesi yerleşimini beğendi,12 hedefi az bulup50 istedi;202–205
+  için diğer engelleri de kullanmamızı yetkilendirdi. Son ek tercih: iki sütun,
+  bazen yan kenarda tek sütun veya alt kenarda tek sıra; alta taş akışı korunur.
+  **201 yalnız Collectible Bird hedef12→50**;26 hamle,iki2×3 grup ve bütün diğer
+  asset alanları aynı. Eski12 hedef asset/not/PNG `Batches/201/Revisions/v1-goal12/`.
+  Yeni dört taslak,4 renk ve chapter9:
+  **202 Boyalı Kuş Avlusu:**9×10,88aktif,30hamle Normal; sağ kenar6ev/tek sütun,
+  sol alt8oyma taşı kapağı +2bitişik boya kasası. Hedef50kuş/8taş/2kasa.
+  **203 Kuşlu Sevkiyat:**9×11,97aktif,30hamle Normal; altta iki3×1kuş sırası,
+  orta3açık çıkışta6kargo +9oyma taşı rampası. Hedef50kuş/6kargo/9taş.
+  **204 Kuşlu Akarsu:**9×11,93aktif,30hamle Normal; solda2×4kuş,sağda19hücreli
+  1su yolu,sağ altta8fener. Hedef50kuş/1tamamlanmış kanal/8fener.
+  **205 Mühürlü Kuş Parkı:**9×11,97aktif,28hamle Zor; altta iki2×4kuş bloğu,
+  soluncu8/8/8renk isteyen2×4mühür altında; üstlerinde14yalnız-special pusula.
+  Hazır Pulse+LineV30/31'de alttaki sabit pusulalara dayanır. Hedef60kuş/14pusula/1mühür.
+  Açılışta normal taş yuvaları202:66,203:75,204:76,205:50 (ikisi hazır special);
+  boş başlangıç yuvası0/1/0/17dür ve PNG'lerde boş çizilmiştir.203'te kargolar
+  taş rampaya,204'te fenerler dibe dayanır; yerleri ilk gravity'de değişmez.
+  205'te iki combo sürükleme yönü de10pusulalık geçit açıp17boş yuvayı besler;
+  mührün altından yeni normal yuva değil8kalıcı kuş evi çıkar.
+  Assetler `ProLevels/LevelV1_00002020.asset` … `00002050.asset`; gerçek katalog
+  anahtarları LevelCL_0202…0205. JSON/TR+EN adları ve MD listesi eşleşiyor.
+  Kayıt/not/verifier/gerçek sprite PNG'ler `Batches/202-205/`,tekrar inceleme
+  `Reviews/202-205/`. Önceki201katalog referansı/eski isimler ve3.186mevcutdosya
+  korundu. Güncel BirdHouse servisinde toplama sonrası kota kaldıkça ev açık
+  kalır,yeni kuş çıkar; araya vuruşsuz hamle girerse geri çekilir. Kullanıcının
+  güncel runtime/library değişiklikleri korunur; eski iki-vuruş döngü özeti esas alınmaz.
+  **Statik YAML/mask/origin/goal/katman/refill/hazır-combo desteği ve görsel kontrol
+  geçti. Yeni202–205 ve201hedef50 henüz oynanıp onaylanmadı; ölçülmüşdenge/FPS yok.
+  Unity Play/build,bot/kaskat simülasyonu,remote yayın/release baseline yapılmadı.
+  206'ya geçme.201–210onluğu tamamlanmadığından2–3yeni aile kotası kapanmış sayılmaz.**
+
+- **Önceki iş: ProLevels V1 201 · Guguk Bahçesi / Cuckoo Garden · 2026-10-31.**
+  Kullanıcı yeni Birdhouse'u collectible hedefiyle tanıtmamızı; tek tek dağıtmak
+  yerine 2×3/2×4/3×3 gruplar, özellikle sol alt + sağ üst istedi. Yalnız201 eklendi:
+  **9×10, 88 aktif/2 dış köşe hole, 26 hamle, 4 renk; ilk taslak hedef12 idi,
+  sonraki açık kullanıcı isteğiyle50 Collectible Bird(3) oldu.**
+  BirdHouse78 iki ayrı **2 sütun×3 satır** blok; üst sağda sütun7–8/satır1–3,
+  alt solda sütun2–3/satır8–10 (üstten, 1 tabanlı). Yanlardaki birer açık sütun
+  her evi normal eşleşmeyle erişilebilir tutar; merkez ve bütün76 normal yuva
+  statik refill grafına bağlı. Hazır special/pin/kaplama/ek engel yok. Evler kalıcı
+  üretici; hedef ev kırmak değil, aynı zincirde/sonraki hamlede ikinci vuruşla
+  kuş toplamak. Otomatik78 hint ve TR/EN metinleri zaten mevcut; korunmuş durumda.
+  Asset `ProLevels/LevelV1_00002010.asset`, katalog `LevelCL_0201`, chapter9;
+  isim JSON/MD ve gerçek sprite önizlemesi hazır. Önceki200 V1 katalog yeri,
+  tüm eski isimler ve **3.184 mevcut dosya** koruma kaydına göre aynı; Gift Festival,
+  can/envanter düzeltmeleri ve yeni BirdHouse runtime/library de korunuyor.
+  Kayıt, verifier, PNG, manifest `Batches/201/`; tekrar envanteri `Reviews/201-Birdhouse/`.
+  **Statik YAML/mask/goal/erişim/dolum ve görsel kontrol geçti. Kullanıcı yerleşimi
+  beğendi;50 hedef revizyonu henüz oynanmadı. Ölçülmüş denge/FPS yok. Unity Play/build,
+  bot/kaskat simülasyonu,remote yayın ve release baseline yapılmadı. Sonraki isteği202–205'i yetkilendirdi.**
+
+- **Önceki iş: ProLevels V1 90 / 100 / 199 · 2026-10-29 — 199 v3 jel revizyonu.**
+  Kullanıcı199'u hâlâ kolay buldu; üstten2./3. satırda yalnız jeli silip Ancient
+  Seal altına4 jel istedi. v3'te yalnız taban `obstacles`/`obstacleOrigins` değişti:
+  jel13/21/22/23'ten kaldırılıp2×2 mühür ayak izine48/49/57/58 kondu. Açık jel0;
+  mühür açılınca4 seed ortaya çıkar. TNT, üç pusula örtüsü, bütün diğer içerik,
+  26 hamle, hedef87/17/1 ve mühür8/8/8 korundu. v2 `Revisions/199-v2/` altında.
+  Güncel çalışma alanından3.334 diğer dosya (UI ses düzeltmesi,90/100,katalog/isimler
+  dahil) koruma kaydında; güncel not/PNG/verifier batch klasöründedir.
+  **v3 henüz oynanıp onaylanmadı. Statik katman/görsel kontrolü yapıldı; ölçülmüş
+  denge, Unity Play/build/bot/kaskat veya remote yayın/release baseline yok.**
+  Aşağıdaki v2 açıklaması önceki revizyonun bağlamıdır; aktif jel yerleşimi v3'tür.
+  Kullanıcı önce oynama keyfini düşünmemizi, hemen yerleştirmemeyi ve doğadan şekiller
+  seçmemizi istedi. Yalnız üç boş katalog yeri dolduruldu:
+  **90 Dalga Düellosu:** 9×10, 65 aktif / 25 hole, 30 hamle, toplam420 Boss HP,
+  oyuncu180 HP; 13 oyma taşı / 1 sepet / 6 kalkan.
+  **100 Yaprak Düellosu:** 9×10, 70 aktif / 20 hole, 32 hamle, toplam480 Boss HP,
+  oyuncu210 HP; 7 hücrelik1 mıknatıs / 12 sandık2 / 6 kalkan.
+  Boss'lar3 manuel rakip; yalnız BossDamage goal, erken alet tehdidi yok.
+  **199 Deniz Kabuğu v2:** 9×11, 87 aktif / 12 hole, **26 hamle** Super Hard;
+  spiral17 oyma taşı + 17 special-only pusula, merkezde1 adet2×2 mühür (8/8/8),
+  4 kuş, 4 jel seed'i (1 açık / 3 örtülü), jel üzerinde1 sabit TNT.
+  Hedefler87 jel / 17 pusula / 1 mühür. Kullanıcı31 hamleyi kolay buldu; kabuğun
+  içinin dolu görünmesini ve26 hamle denemesini istedi.18 boş normal hücreye mevcut
+  başlangıç pin desteğiyle taş eklendi; ağız sınırındaki mevcut1 taşın rengi de ayarlı.
+  Artık44 normal taş + 1 TNT + 4 kuş; görünür boş normal yuva yok. İç renkler ve
+  rastgele dış sınırda başlangıç üçlüsü/2×2 oluşmaması kontrol edildi. İlk TNT3
+  pusulalık ağzı açar; yukarıdan yenilenen yuvalar27→41 olur (iç taşlar baştan var).
+  90'da44,100'de33 normal başlangıç taşı ve1/12 boş yuva önceki gibi korundu.
+  Assetler `ProLevels/LevelV1_00000900.asset`, `00001000.asset`, `00001990.asset`;
+  gerçek anahtarlar LevelCL_090 / LevelCL_0100 / LevelCL_0199 ve TR+EN isimler kayıtlı.
+  Yeni mekanik tanıtılmadı; seçilen ailelerin önceki V1 kullanımları doğrulandı.
+  İlk grupta3.098 mevcut dosya korunmuştu.199 v2 revizyonunda90/100, katalog, isimler
+  ve3.107 diğer dosya korundu; onaylı11–15 değişmedi. Eski199 `Revisions/199-v1/` altında.
+  Not/snapshot/verifier/gerçek sprite PNG'ler `Batches/ProLevels-V1-090-100-199/`;
+  aktif V1 tekrar haritaları ve15 board incelemesi `Reviews/ProLevels-V1-090-100-199/`.
+  YAML, mask, katman, hedef, custom path, başlangıç dolumu, sabit TNT/movable konumu
+  ve kapak sonrası dolum kontrolleri geçti. Runtime/VFX/audio/border kodu değişmedi.
+  Mevcut kuş/sepet/mıknatıs geçici allocation maliyetleri notta açıkça kaydedildi;
+  tamamen havuzlu veya ölçülmüş performans iddiası yok.
+  **199 v1/v2 için “kolay” geri bildirimi var; aktif v3 henüz oynanıp onaylanmadı. Denge ölçümü yok. Unity Play/build/bot/kaskat simülasyonu,
+  cihaz FPS ölçümü ve remote yayın/release baseline yapılmadı.** Başka level tasarlama.
+
+- **Önceki iş: ProLevels V1 yalnız 11–15 · 2026-10-28 — v1 reddedildi, v2 görsel olarak onaylandı.**
+  Kullanıcı ilk dört taslağı "ben level demem ... ne bir atraksiyonu" diye reddetti. Sadece teknik
+  doğruluk ve geniş boş alan yeterli bulunmadı. V1 U/L/köşe/alt sıra tasarımları ret kaydıyla
+  `Batches/ProLevels-V1-011-015/Revisions/v1/` altında saklandı. Mevcut **11 / Yağlı Rampa aynı**.
+  Güncel v2: **12 Açık Avlu — 9×10,74 aktif/16 hole,31 hamle,19 sandık1+28 Mud,1 dikey roket;
+  13 Katmanlı Geçit — 9×9,63 aktif/18 hole,30 hamle,9 sandık1+9 sandık2+18 alt Mud;
+  14 Yağlı Köşe — 9×10,63 aktif/27 hole,29 hamle,12 sandık2+6 sandık1+12 yağ/tavan18,1 yatay roket;
+  15 Üç Katlı Bent — 9×11,75 aktif/24 hole,30 hamle,6'şar sandık1/2/3+24 Mud,1 Pulse+1 roket.**
+  12–14 Normal hedef %55–85,15 Zor hedef %35–55; ölçülmüş oran yok. 12'de pencere arkasındaki
+  kapak alt avluya akış açar;13'te sol oda uzun çalışma kanadını açar;14'te yağlı sıra iki alanı
+  bağlar;15'te hazır combo ilk bendi, ardından diğer iki hazneyi aşamalı açar. 12'de28,15'te30
+  hücre baştan gerçekten boş; taşlar dolmuş gibi çizilmedi. Special konumlarının başlangıçta
+  düşmediği ve açılmaların yeni dolum rotaları oluşturduğu statik grafla doğrulandı.
+  Assetler `ProLevels/LevelV1_00000120.asset` … `00000150.asset`; GUID/isim/V1 katalog aynı.
+  Yeni runtime/library/border/VFX kodu yok. 3.007 mevcut dosya v2 koruma kaydına göre aynı;
+  ilk taslaktan sonra dışarıdan değişen LevelV1_00000040 korunup ayrı kaydedildi.
+  Not/PNG/verifier/önizleme: `Batches/ProLevels-V1-011-015/`; 189 eski katalog şekli yalnız
+  benzerlik adayları için tarandı (`Repetition-v2.*`), benzersizlik/beğeni skoru sayılmadı.
+  Yeni PNG'ler incelendi. Unity UI/Play/build/bot/kaskat simülasyonu, cihaz FPS/win-rate ölçümü yok.
+  **Kullanıcı v2 için “güzel oldu eline sağlık” dedi (2026-10-29): görsel/tasarım onayı; oynanış dengesi ölçümü değil. 11–15 korunur; 16'ya geçme.** Onluk başına min2/max3 obstacle;
+  5 Zor/9 Daha Zor/10 katları Boss. Başlangıca 170+ Normal %40–50 yönünü uygulama.
+
 - **101+ refill special yumuşatma · 2026-10-24:** Kullanıcı %40–90 engellemeyi agresif buldu; tamamen kaldırmak yerine %30–70 istedi. `RefillSpecialGuard` otomatik modda 101+ için %30–70, 51–100 için önceki %40–90, 1–50 için %80 kullanır. Seviyeye bağlı deterministik dağılım ve aday special başına mevcut rastgele karar korundu; elle verilen oranlar önceliklidir. Hamle/yerleşim/hedef/isim ve bütün 296 Settings asseti aynı. Editör açıklaması güncellendi. Statik sınır/kapsam kontrolü; Unity Play/build/sim veya kazanma oranı ölçümü yok.
 
 - **89–90 kullanıcı oynanış düzeltmesi · 2026-10-23:** 89 Gizli Jel Bahçesi (`LevelP_00991.asset` / `LevelCL_089`) ve 90 Mor Düello (`LevelP_00500.asset` / `LevelCL_090`) **28→33 hamle**. 89'un sağ alt 5 sütunluk taş alanı üstüne 4. satır/5–9. sütunlarda 5 normal hücre eklendi; aktif alan ve tam-board jel hedefi41→46. Diğer hedef/engel/katmanlar, 90 Boss düzeni, katalog ve isimler aynı. Önceki kullanıcı değişiklikleri dahil snapshot `Batches/089-090-Ease-2026-10-23/Before/`; not/önce-sonra PNG/statik doğrulama aynı klasörde. 1.897 diğer Settings/Scripts/isim dosyası aynı; YAML ve mask/katman kontrolü geçti. Gerçek sprite önizlemesi incelendi; Play/build/sim ve yeni denge ölçümü yok.

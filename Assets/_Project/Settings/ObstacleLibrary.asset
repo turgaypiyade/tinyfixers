@@ -222,9 +222,9 @@ MonoBehaviour:
     wardrobeItemSprites: []
     hamsterSatiety: 7
     hitSound: {fileID: 8300000, guid: 0f1bde174f79747b18d415aac08278f5, type: 3}
-    hitSoundVolume: 1
+    hitSoundVolume: 0.45
     breakSound: {fileID: 8300000, guid: 0f1bde174f79747b18d415aac08278f5, type: 3}
-    breakSoundVolume: 1
+    breakSoundVolume: 0.6
     followUpBreakSound: {fileID: 0}
     followUpBreakSoundVolume: 1
     coverRemovedSound: {fileID: 0}
@@ -294,9 +294,9 @@ MonoBehaviour:
     wardrobeItemSprites: []
     hamsterSatiety: 7
     hitSound: {fileID: 8300000, guid: 0f1bde174f79747b18d415aac08278f5, type: 3}
-    hitSoundVolume: 1
+    hitSoundVolume: 0.45
     breakSound: {fileID: 8300000, guid: 0f1bde174f79747b18d415aac08278f5, type: 3}
-    breakSoundVolume: 1
+    breakSoundVolume: 0.6
     followUpBreakSound: {fileID: 0}
     followUpBreakSoundVolume: 1
     coverRemovedSound: {fileID: 0}
@@ -356,9 +356,9 @@ MonoBehaviour:
     wardrobeItemSprites: []
     hamsterSatiety: 7
     hitSound: {fileID: 8300000, guid: 0f1bde174f79747b18d415aac08278f5, type: 3}
-    hitSoundVolume: 1
+    hitSoundVolume: 0.45
     breakSound: {fileID: 8300000, guid: 0f1bde174f79747b18d415aac08278f5, type: 3}
-    breakSoundVolume: 1
+    breakSoundVolume: 0.6
     followUpBreakSound: {fileID: 0}
     followUpBreakSoundVolume: 1
     coverRemovedSound: {fileID: 0}
@@ -1377,7 +1377,7 @@ MonoBehaviour:
       holdsTile: 0
       suppressHitParticles: 0
       hitParticleSprites: []
-      hitSound: {fileID: 8300000, guid: 1c291cb59bde541d1b3a1a8fb6b63dbc, type: 3}
+      hitSound: {fileID: 8300000, guid: 64e677cf73f947bab141098d038b50fa, type: 3}
       hitSoundVolume: 1
     auxiliarySprites: []
     allowCrossContextFallback: 0
@@ -1405,7 +1405,7 @@ MonoBehaviour:
     - {fileID: 21300000, guid: efaa3a7e71bf84bb3886de77bce99d6d, type: 3}
     - {fileID: 21300000, guid: efaa3a7e71bf84bb3886de77bce99d6d, type: 3}
     hamsterSatiety: 7
-    hitSound: {fileID: 8300000, guid: 1c291cb59bde541d1b3a1a8fb6b63dbc, type: 3}
+    hitSound: {fileID: 8300000, guid: 64e677cf73f947bab141098d038b50fa, type: 3}
     hitSoundVolume: 1
     breakSound: {fileID: 0}
     breakSoundVolume: 1
@@ -1966,10 +1966,10 @@ MonoBehaviour:
     breakParticleSprites: []
     wardrobeItemSprites: []
     hamsterSatiety: 7
-    hitSound: {fileID: 0}
-    hitSoundVolume: 1
-    breakSound: {fileID: 0}
-    breakSoundVolume: 1
+    hitSound: {fileID: 8300000, guid: 2f3ad373bc4e471b874b22f7bac73a77, type: 3}
+    hitSoundVolume: 0.55
+    breakSound: {fileID: 8300000, guid: 4e3f015bd0fa4491a31d0379abe1526c, type: 3}
+    breakSoundVolume: 0.8
     followUpBreakSound: {fileID: 0}
     followUpBreakSoundVolume: 1
     coverRemovedSound: {fileID: 0}
@@ -2936,8 +2936,8 @@ MonoBehaviour:
     breakParticleSprites: []
     wardrobeItemSprites: []
     hamsterSatiety: 7
-    hitSound: {fileID: 0}
-    hitSoundVolume: 1
+    hitSound: {fileID: 8300000, guid: 88e5e7cbd628453aabc1d9f09fcf90c6, type: 3}
+    hitSoundVolume: 0.8
     breakSound: {fileID: 0}
     breakSoundVolume: 1
     followUpBreakSound: {fileID: 0}
@@ -3304,10 +3304,10 @@ MonoBehaviour:
     breakParticleSprites: []
     wardrobeItemSprites: []
     hamsterSatiety: 7
-    hitSound: {fileID: 8300000, guid: 66ab25b6df4884243bc77331a5eabbef, type: 3}
-    hitSoundVolume: 1
-    breakSound: {fileID: 8300000, guid: d0a82f85986f049fa8173972f2dd549f, type: 3}
-    breakSoundVolume: 1
+    hitSound: {fileID: 8300000, guid: 8a7c557a18d74e63bb455118c6b2a9dc, type: 3}
+    hitSoundVolume: 0.8
+    breakSound: {fileID: 8300000, guid: 821266e1fe5c4befa43ffad2db85af28, type: 3}
+    breakSoundVolume: 0.8
     followUpBreakSound: {fileID: 0}
     followUpBreakSoundVolume: 1
     coverRemovedSound: {fileID: 0}
@@ -3639,10 +3639,10 @@ MonoBehaviour:
     breakParticleSprites: []
     wardrobeItemSprites: []
     hamsterSatiety: 7
-    hitSound: {fileID: 0}
-    hitSoundVolume: 1
-    breakSound: {fileID: 0}
-    breakSoundVolume: 1
+    hitSound: {fileID: 8300000, guid: 9c02a46908354b329f2e12c9555f73c8, type: 3}
+    hitSoundVolume: 0.75
+    breakSound: {fileID: 8300000, guid: 9eedffb1c3444deb9ed0b3ff2c969ea4, type: 3}
+    breakSoundVolume: 0.9
     followUpBreakSound: {fileID: 0}
     followUpBreakSoundVolume: 1
     coverRemovedSound: {fileID: 0}
@@ -3651,6 +3651,10 @@ MonoBehaviour:
     flightLoopSoundVolume: 0.75
     impactSound: {fileID: 0}
     impactSoundVolume: 1
+    absorbSound: {fileID: 8300000, guid: 914bab0b70764a9b867849a047bd7543, type: 3}
+    absorbSoundVolume: 0.85
+    releaseSound: {fileID: 8300000, guid: eefabd3fd4ee49f6a1f7909a7e2fdf4d, type: 3}
+    releaseSoundVolume: 0.85
     drawUnderTiles: 0
     legacySprite: {fileID: 21300000, guid: 266a563097834ceca24e8e1aab485910, type: 3}
     legacyStageSprites: []
@@ -3827,9 +3831,9 @@ MonoBehaviour:
     wardrobeItemSprites: []
     hamsterSatiety: 7
     hitSound: {fileID: 8300000, guid: 0f1bde174f79747b18d415aac08278f5, type: 3}
-    hitSoundVolume: 1
+    hitSoundVolume: 0.45
     breakSound: {fileID: 8300000, guid: 0f1bde174f79747b18d415aac08278f5, type: 3}
-    breakSoundVolume: 1
+    breakSoundVolume: 0.6
     followUpBreakSound: {fileID: 0}
     followUpBreakSoundVolume: 1
     coverRemovedSound: {fileID: 0}
@@ -3922,9 +3926,9 @@ MonoBehaviour:
     wardrobeItemSprites: []
     hamsterSatiety: 7
     hitSound: {fileID: 8300000, guid: 0f1bde174f79747b18d415aac08278f5, type: 3}
-    hitSoundVolume: 1
+    hitSoundVolume: 0.45
     breakSound: {fileID: 8300000, guid: 0f1bde174f79747b18d415aac08278f5, type: 3}
-    breakSoundVolume: 1
+    breakSoundVolume: 0.6
     followUpBreakSound: {fileID: 0}
     followUpBreakSoundVolume: 1
     coverRemovedSound: {fileID: 0}
@@ -4017,9 +4021,9 @@ MonoBehaviour:
     wardrobeItemSprites: []
     hamsterSatiety: 7
     hitSound: {fileID: 8300000, guid: 0f1bde174f79747b18d415aac08278f5, type: 3}
-    hitSoundVolume: 1
+    hitSoundVolume: 0.45
     breakSound: {fileID: 8300000, guid: 0f1bde174f79747b18d415aac08278f5, type: 3}
-    breakSoundVolume: 1
+    breakSoundVolume: 0.6
     followUpBreakSound: {fileID: 0}
     followUpBreakSoundVolume: 1
     coverRemovedSound: {fileID: 0}
@@ -4112,9 +4116,9 @@ MonoBehaviour:
     wardrobeItemSprites: []
     hamsterSatiety: 7
     hitSound: {fileID: 8300000, guid: 0f1bde174f79747b18d415aac08278f5, type: 3}
-    hitSoundVolume: 1
+    hitSoundVolume: 0.45
     breakSound: {fileID: 8300000, guid: 0f1bde174f79747b18d415aac08278f5, type: 3}
-    breakSoundVolume: 1
+    breakSoundVolume: 0.6
     followUpBreakSound: {fileID: 0}
     followUpBreakSoundVolume: 1
     coverRemovedSound: {fileID: 0}
@@ -4236,3 +4240,222 @@ MonoBehaviour:
     legacyStageDamageRules: 
     legacyBlocksCells: 0
     legacyBehavior: 0
+  - id: 77
+    stages:
+    - sprite: {fileID: 21300000, guid: a734466fad6ff4da59d52aef3779e940, type: 3}
+      damageRule: 0
+      blocksCells: 0
+      behavior: 3
+      allowDiagonal: 0
+      locksInteraction: 0
+      holdsTile: 0
+      suppressHitParticles: 0
+      hitParticleSprites: []
+      hitSound: {fileID: 8300000, guid: 64e677cf73f947bab141098d038b50fa, type: 3}
+      hitSoundVolume: 1
+    auxiliarySprites: []
+    allowCrossContextFallback: 0
+    restrictNormalMatchTileType: 0
+    requiredNormalMatchTileType: 0
+    size: {x: 1, y: 1}
+    hits: 1
+    fullCellSprite: 1
+    exitAtBottom: 0
+    spawnFillsColumn: 1
+    fillsShadowBeneath: 0
+    goalIconSprite: {fileID: 0}
+    coversCellFully: 0
+    suppressHitParticles: 0
+    hitParticleSprites: []
+    breakParticleSprites: []
+    wardrobeItemSprites:
+    - {fileID: 21300000, guid: efaa3a7e71bf84bb3886de77bce99d6d, type: 3}
+    - {fileID: 21300000, guid: efaa3a7e71bf84bb3886de77bce99d6d, type: 3}
+    - {fileID: 21300000, guid: efaa3a7e71bf84bb3886de77bce99d6d, type: 3}
+    - {fileID: 21300000, guid: efaa3a7e71bf84bb3886de77bce99d6d, type: 3}
+    - {fileID: 21300000, guid: efaa3a7e71bf84bb3886de77bce99d6d, type: 3}
+    - {fileID: 21300000, guid: efaa3a7e71bf84bb3886de77bce99d6d, type: 3}
+    - {fileID: 21300000, guid: efaa3a7e71bf84bb3886de77bce99d6d, type: 3}
+    - {fileID: 21300000, guid: efaa3a7e71bf84bb3886de77bce99d6d, type: 3}
+    - {fileID: 21300000, guid: efaa3a7e71bf84bb3886de77bce99d6d, type: 3}
+    - {fileID: 21300000, guid: efaa3a7e71bf84bb3886de77bce99d6d, type: 3}
+    hamsterSatiety: 7
+    hitSound: {fileID: 8300000, guid: 64e677cf73f947bab141098d038b50fa, type: 3}
+    hitSoundVolume: 1
+    breakSound: {fileID: 0}
+    breakSoundVolume: 1
+    followUpBreakSound: {fileID: 0}
+    followUpBreakSoundVolume: 1
+    coverRemovedSound: {fileID: 0}
+    coverRemovedSoundVolume: 1
+    flightLoopSound: {fileID: 0}
+    flightLoopSoundVolume: 0.75
+    impactSound: {fileID: 0}
+    impactSoundVolume: 1
+    drawUnderTiles: 0
+    legacySprite: {fileID: 21300000, guid: a734466fad6ff4da59d52aef3779e940, type: 3}
+    legacyStageSprites: []
+    legacyStageDamageRules: 
+    legacyBlocksCells: 0
+    legacyBehavior: 3
+  - id: 78
+    stages:
+    - sprite: {fileID: 21300000, guid: e2671d2f806740cb8723c335a1b5890b, type: 3}
+      damageRule: 0
+      blocksCells: 1
+      behavior: 1
+      allowDiagonal: 1
+      locksInteraction: 0
+      holdsTile: 0
+      suppressHitParticles: 1
+      hitParticleSprites: []
+      hitSound: {fileID: 0}
+      hitSoundVolume: 1
+    - sprite: {fileID: 21300000, guid: e2671d2f806740cb8723c335a1b5890b, type: 3}
+      damageRule: 5
+      blocksCells: 1
+      behavior: 1
+      allowDiagonal: 1
+      locksInteraction: 0
+      holdsTile: 0
+      suppressHitParticles: 1
+      hitParticleSprites: []
+      hitSound: {fileID: 0}
+      hitSoundVolume: 1
+    auxiliarySprites:
+    - {fileID: 21300000, guid: 3d3c81d3d6ed49bb995481ac4e8811e2, type: 3}
+    - {fileID: 21300000, guid: 3b1093f1fbd24bd3b3af280f1d8a601e, type: 3}
+    - {fileID: 21300000, guid: ac0f90346aea4253a3c726b7c6e1025a, type: 3}
+    - {fileID: 21300000, guid: f10119f8b3724917924c9f458ed9b324, type: 3}
+    - {fileID: 21300000, guid: f1cc9fb691184aea8b83ff003ebbbd84, type: 3}
+    - {fileID: 21300000, guid: d25e15daad5a4e6dbd05b78d88fc82a5, type: 3}
+    - {fileID: 21300000, guid: 9b506162bddd437eb11b56bd821d2574, type: 3}
+    - {fileID: 21300000, guid: 9ce113f501ec429c88c1118e3bafb603, type: 3}
+    - {fileID: 21300000, guid: 54c5c5060ce742d1b89160e9b6fe6aa6, type: 3}
+    allowCrossContextFallback: 0
+    restrictNormalMatchTileType: 0
+    requiredNormalMatchTileType: 0
+    size: {x: 1, y: 1}
+    hits: 2
+    fullCellSprite: 1
+    exitAtBottom: 0
+    spawnFillsColumn: 0
+    fillsShadowBeneath: 0
+    goalIconSprite: {fileID: 21300000, guid: 05f7102ace944de3b473a1ce0cdfdaef, type: 3}
+    coversCellFully: 1
+    suppressHitParticles: 1
+    hitParticleSprites: []
+    breakParticleSprites: []
+    particleScale: 1
+    particleCount: 0
+    wardrobeItemSprites: []
+    hamsterSatiety: 7
+    hitSound: {fileID: 0}
+    hitSoundVolume: 1
+    breakSound: {fileID: 0}
+    breakSoundVolume: 1
+    followUpBreakSound: {fileID: 0}
+    followUpBreakSoundVolume: 1
+    coverRemovedSound: {fileID: 0}
+    coverRemovedSoundVolume: 1
+    flightLoopSound: {fileID: 0}
+    flightLoopSoundVolume: 0.75
+    impactSound: {fileID: 0}
+    impactSoundVolume: 1
+    absorbSound: {fileID: 0}
+    absorbSoundVolume: 1
+    releaseSound: {fileID: 0}
+    releaseSoundVolume: 1
+    birdAppearSound: {fileID: 8300000, guid: f7f5f09dde9544a5aef6f2405a08379a, type: 3}
+    birdAppearSoundVolume: 0.9
+    birdWingSound: {fileID: 0}
+    birdWingSoundVolume: 1
+    birdFlySound: {fileID: 8300000, guid: de2f161e62434c34b34d33b7350f4fd4, type: 3}
+    birdFlySoundVolume: 0.85
+    birdRetreatSound: {fileID: 0}
+    birdRetreatSoundVolume: 1
+    drawUnderTiles: 0
+    legacySprite: {fileID: 21300000, guid: e2671d2f806740cb8723c335a1b5890b, type: 3}
+    legacyStageSprites: []
+    legacyStageDamageRules: 
+    legacyBlocksCells: 1
+    legacyBehavior: 1
+  - id: 79
+    stages:
+    - sprite: {fileID: 21300000, guid: 8055a9ca1f784a549c3c196deb6da9c9, type: 3}
+      damageRule: 0
+      blocksCells: 1
+      behavior: 1
+      allowDiagonal: 0
+      locksInteraction: 0
+      holdsTile: 0
+      suppressHitParticles: 0
+      hitParticleSprites: []
+      hitSound: {fileID: 0}
+      hitSoundVolume: 1
+    auxiliarySprites:
+    - {fileID: 21300000, guid: 3a58b8dc9bc34a49827fe4486c84434b, type: 3}
+    - {fileID: 21300000, guid: 06a65cd97f9443a4b06cdb83dceca1b9, type: 3}
+    - {fileID: 21300000, guid: aaf4085c133f4b19b4e4c937d7ceaa60, type: 3}
+    - {fileID: 21300000, guid: 8055a9ca1f784a549c3c196deb6da9c9, type: 3}
+    - {fileID: 21300000, guid: cd3e42a950be41858ab8fb81aa275603, type: 3}
+    - {fileID: 21300000, guid: c1e2800eaca14702b1eb2d8989946088, type: 3}
+    - {fileID: 21300000, guid: cda637b7d6534c8ab4f9bb889e8af6f8, type: 3}
+    - {fileID: 21300000, guid: b8b8106dff1740df8ea31dc84811f297, type: 3}
+    - {fileID: 21300000, guid: a5101adcd2664f1a988d2f2894cb844d, type: 3}
+    - {fileID: 21300000, guid: 9f8ca1cbc9434955bc462352059405da, type: 3}
+    - {fileID: 21300000, guid: 7b3ec63fafb142f781204dce8ec8307d, type: 3}
+    - {fileID: 21300000, guid: 587a3778363d464981cb7160a79d0e50, type: 3}
+    - {fileID: 21300000, guid: d32c2f9062054ce2a20736e71d00d907, type: 3}
+    - {fileID: 21300000, guid: b20cdeeda6454780b85def9d21e414e9, type: 3}
+    - {fileID: 21300000, guid: 945aeaaf8b4a4b46af4566a3bd644829, type: 3}
+    - {fileID: 21300000, guid: e5fd4530e41d4b04b26548733c3503e3, type: 3}
+    - {fileID: 21300000, guid: 5f388b5734d241f9a6cf862665933856, type: 3}
+    allowCrossContextFallback: 0
+    restrictNormalMatchTileType: 0
+    requiredNormalMatchTileType: 0
+    size: {x: 1, y: 1}
+    hits: 1
+    fullCellSprite: 1
+    exitAtBottom: 0
+    spawnFillsColumn: 0
+    fillsShadowBeneath: 0
+    goalIconSprite: {fileID: 21300000, guid: 48dd5e127f774d97bcd9e89db73e0951, type: 3}
+    coversCellFully: 1
+    suppressHitParticles: 0
+    hitParticleSprites: []
+    breakParticleSprites: []
+    particleScale: 0.9
+    particleCount: 6
+    wardrobeItemSprites: []
+    hamsterSatiety: 7
+    hitSound: {fileID: 8300000, guid: 500140e5855e14491ba01c285069f5c6, type: 3}
+    hitSoundVolume: 1
+    breakSound: {fileID: 8300000, guid: 6ef8f43a697c74693a3d128e32aaf957, type: 3}
+    breakSoundVolume: 0.9
+    followUpBreakSound: {fileID: 0}
+    followUpBreakSoundVolume: 1
+    coverRemovedSound: {fileID: 0}
+    coverRemovedSoundVolume: 1
+    flightLoopSound: {fileID: 0}
+    flightLoopSoundVolume: 0.75
+    impactSound: {fileID: 0}
+    impactSoundVolume: 1
+    absorbSound: {fileID: 0}
+    absorbSoundVolume: 1
+    releaseSound: {fileID: 0}
+    releaseSoundVolume: 1
+    birdAppearSound: {fileID: 0}
+    birdAppearSoundVolume: 1
+    birdWingSound: {fileID: 0}
+    birdWingSoundVolume: 1
+    birdFlySound: {fileID: 0}
+    birdFlySoundVolume: 1
+    birdRetreatSound: {fileID: 0}
+    birdRetreatSoundVolume: 1
+    drawUnderTiles: 0
+    legacySprite: {fileID: 21300000, guid: 8055a9ca1f784a549c3c196deb6da9c9, type: 3}
+    legacyStageSprites: []
+    legacyStageDamageRules: 
+    legacyBlocksCells: 1
+    legacyBehavior: 1

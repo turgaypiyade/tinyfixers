@@ -53,7 +53,7 @@ MonoBehaviour:
     rewardDurationMinutes: 0
     rewardWaveSprite: {fileID: 0}
     fallbackDescription: 
-    goalIcon: {fileID: 21300000, guid: 61c7ba969b2154f14b32626e233396f0, type: 3}
+    goalIcon: {fileID: 21300000, guid: 70536964206c4f4cba9727e52831bf86, type: 3}
   - goalType: 4
     targetCount: 250
     reward:

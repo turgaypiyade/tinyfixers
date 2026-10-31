@@ -490,7 +490,7 @@
         },
         {
           "key": "level_end_fail_continue_cost",
-          "value": "Devam Et <space=0.5em><sprite name=\"goldmoney\">{0}"
+          "value": "Devam Et <space=0.25em><sprite name=\"goldmoney\">{0}"
         },
         {
           "key": "level_end_billiard_stuck_title",
@@ -951,6 +951,30 @@
         {
           "key": "hint_obstacle_goldmoney_name",
           "value": "Altın"
+        },
+        {
+          "key": "hint_obstacle_goldcoin_name",
+          "value": "Altın Yağmuru"
+        },
+        {
+          "key": "hint_obstacle_goldcoin",
+          "value": "Altının yanında eşleşme yaparak topla; her altın cüzdanına girer. Topladıkça yukarıdan yenisi düşer!"
+        },
+        {
+          "key": "hint_obstacle_birdhouse_name",
+          "value": "Guguk Kuşu Evi"
+        },
+        {
+          "key": "hint_obstacle_birdhouse",
+          "value": "Yanında eşleştirme yap ya da özel taş kullan: kapak açılır, kuş çıkar. Kuş görünürken her vuruşta bir kuş hedefe uçar, yerine yenisi gelir. Bir hamle vurmazsan kuş içeri girer, kapak kapanır!"
+        },
+        {
+          "key": "hint_obstacle_lampstrip_name",
+          "value": "Lamba Şeridi"
+        },
+        {
+          "key": "hint_obstacle_lampstrip",
+          "value": "Her lambayı yanında AYNI RENKTE eşleşmeyle ya da özel taşla kır. Mor lambalar yalnız özel taşla kırılır. Bazı şeritlerde lambalar her hamleden sonra kayar. Tüm lambaları kır, şerit dağılsın!"
         },
         {
           "key": "hint_obstacle_safe",
@@ -1693,6 +1717,10 @@
           "value": "Altınlar"
         },
         {
+          "key": "shop_offer_bundle_welcome",
+          "value": "Hoş Geldin Paketi"
+        },
+        {
           "key": "shop_offer_bundle_start",
           "value": "Gezginci Çantası"
         },
@@ -1706,11 +1734,11 @@
         },
         {
           "key": "shop_offer_bundle_grand_safe",
-          "value": "Muhteşem Kasa"
+          "value": "Büyük Kasa"
         },
         {
           "key": "shop_offer_bundle_legendary",
-          "value": "Efsanevi Hazine"
+          "value": "Efsanevi Paket"
         },
         {
           "key": "leaderboard_friend_list",
@@ -1795,6 +1823,14 @@
         {
           "key": "team_help",
           "value": "Yardım"
+        },
+        {
+          "key": "profile_tutorial_open",
+          "value": "Profilin açıldı! Avatarını ve adını seç."
+        },
+        {
+          "key": "profile_tutorial_name",
+          "value": "Adını buraya yaz"
         },
         {
           "key": "team_life_progress_label",
@@ -1910,7 +1946,7 @@
         },
         {
           "key": "save_progress_conflict",
-          "value": "Bu hesap başka bir kayda bağlı. O kayda geçilsin mi?"
+          "value": "Bu hesapta başka bir oyun kaydı var. Mevcut oyunun yedeklenecek ve seçtiğin hesabın kaydı yüklenecek. İlerlemeler birleştirilmez."
         },
         {
           "key": "save_progress_linked",
@@ -3175,6 +3211,162 @@
         {
           "key": "progress_goal_FirstTryWin",
           "value": "{0} seviyeyi ilk denemede kazan"
+        },
+        {
+          "key": "auth_network_error",
+          "value": "Bağlantı kurulamadı. İnternetini kontrol edip tekrar dene."
+        },
+        {
+          "key": "auth_switch_from_menu",
+          "value": "Hesap değiştirmek için önce ana menüye dön."
+        },
+        {
+          "key": "auth_backup_required",
+          "value": "Mevcut oyunun henüz yedeklenemedi. Biraz bekleyip tekrar dene."
+        },
+        {
+          "key": "auth_restore_retry",
+          "value": "Hesabın yükleniyor. Bağlantı kesildi; otomatik olarak tekrar denenecek."
+        },
+        {
+          "key": "save_progress_provider_linked",
+          "value": "Bağlı"
+        },
+        {
+          "key": "save_progress_provider_unavailable",
+          "value": "Şu anda kullanılamıyor"
+        },
+        {
+          "key": "ads_unavailable_title",
+          "value": "REKLAM HAZIR DEĞİL"
+        },
+        {
+          "key": "ads_unavailable_body",
+          "value": "Şu anda reklam yüklenemedi. Biraz sonra tekrar deneyebilirsin."
+        },
+        {
+          "key": "settings_ads_privacy",
+          "value": "Reklam gizlilik tercihleri"
+        },
+        {
+          "key": "settings_ads_privacy_sub",
+          "value": "Reklam izinlerini gözden geçir."
+        },
+        {
+          "key": "giftfestival_title",
+          "value": "HEDİYE ŞENLİĞİ"
+        },
+        {
+          "key": "giftfestival_menu_title",
+          "value": "HEDİYE\nŞENLİĞİ"
+        },
+        {
+          "key": "giftfestival_hit",
+          "value": "VUR!"
+        },
+        {
+          "key": "giftfestival_round",
+          "value": "TUR {0}/{1}"
+        },
+        {
+          "key": "giftfestival_select",
+          "value": "Lütfen bir hediye seçin"
+        },
+        {
+          "key": "giftfestival_time_hit",
+          "value": "YEŞİLİ YAKALA, HEDEFİ VUR!"
+        },
+        {
+          "key": "giftfestival_earn_balls",
+          "value": "SEVİYE GEÇ, TOP KAZAN!"
+        },
+        {
+          "key": "giftfestival_ended",
+          "value": "ŞENLİK SONA ERDİ"
+        },
+        {
+          "key": "giftfestival_finished",
+          "value": "BÜTÜN HEDİYELER SENİN!"
+        },
+        {
+          "key": "giftfestival_miss",
+          "value": "ISKA!"
+        },
+        {
+          "key": "giftfestival_perfect",
+          "value": "TAM İSABET!"
+        },
+        {
+          "key": "giftfestival_deflected",
+          "value": "HEDEF ŞAŞTI!"
+        },
+        {
+          "key": "giftfestival_already_open",
+          "value": "BU KUTU ZATEN AÇIK!"
+        },
+        {
+          "key": "giftfestival_round_complete",
+          "value": "TAHTA TAMAMLANDI!"
+        },
+        {
+          "key": "giftfestival_next_board",
+          "value": "Sıradaki tahta seni bekliyor!"
+        },
+        {
+          "key": "giftfestival_skip_intro",
+          "value": "GEÇMEK İÇİN DOKUN"
+        },
+        {
+          "key": "giftfestival_howto",
+          "value": "Bir hediye kutusu seç ve gösterge yeşildeyken VUR!\n\nYeşil: seçtiğin kutu. Sol sarı: bir alt kutu. Sağ sarı: bir üst kutu. Kenarda sapma tahtanın içine döner. Kırmızı: ıska!\n\nHer atış bir top harcar. Açılmış bir kutuya isabet edersen yeni ödül kazanmazsın. Tahtadaki tüm kutuları aç, büyük ödülü al ve daha büyük tahtaya geç.\n\nEtkinliğe katıldıktan sonra kazandığın her bölüm 1 top verir. Kaybedersen biriktirdiğin toplar silinmez. Şenlik 2 gün sürer, ardından 5 gün ara verir. Yeni şenlikte yeniden katılman gerekir.\n\nKutularda altın, joker, güçlendirici veya yıldız var. Yaklaşık dört kutudan biri boş; boş kutu da top harcar ve açılır."
+        },
+        {
+          "key": "giftfestival_ball",
+          "value": "Beyzbol topu"
+        },
+        {
+          "key": "giftfestival_join_message",
+          "value": "Şenliğe katıl, hediye kutularını aç!\n\nKatıldıktan sonra kazandığın her bölüm sana 1 top verir.\n\nHedefini seç, yeşili yakala ve VUR!"
+        },
+        {
+          "key": "giftfestival_join_summary",
+          "value": "Kazandığın her bölüm 1 top! Yeşili yakala, hediyeleri aç!"
+        },
+        {
+          "key": "giftfestival_empty_box",
+          "value": "BOŞ KUTU!"
+        },
+        {
+          "key": "giftfestival_tutorial_select",
+          "value": "İlk topun bizden!\nİşaretli hediyeyi seç."
+        },
+        {
+          "key": "giftfestival_tutorial_hit",
+          "value": "Gösterge yeşile geldiğinde\nVUR! düğmesine dokun."
+        },
+        {
+          "key": "shop_offer_coins_1000",
+          "value": "1.000 Altın"
+        },
+        {
+          "key": "shop_offer_coins_5000",
+          "value": "5.000 Altın"
+        },
+        {
+          "key": "shop_offer_coins_10000",
+          "value": "10.000 Altın"
+        },
+        {
+          "key": "shop_offer_coins_25000",
+          "value": "25.000 Altın"
+        },
+        {
+          "key": "shop_offer_coins_50000",
+          "value": "50.000 Altın"
+        },
+        {
+          "key": "shop_offer_coins_100000",
+          "value": "100.000 Altın"
         }
       ]
     },
@@ -3667,7 +3859,7 @@
         },
         {
           "key": "level_end_fail_continue_cost",
-          "value": "Continue <space=0.5em><sprite name=\"goldmoney\">{0}"
+          "value": "Continue <space=0.25em><sprite name=\"goldmoney\">{0}"
         },
         {
           "key": "level_end_billiard_stuck_title",
@@ -4120,6 +4312,30 @@
         {
           "key": "hint_obstacle_goldmoney_name",
           "value": "Gold Coin"
+        },
+        {
+          "key": "hint_obstacle_goldcoin_name",
+          "value": "Gold Rush"
+        },
+        {
+          "key": "hint_obstacle_goldcoin",
+          "value": "Match next to the gold to collect it. Every coin goes to your wallet, and more keeps falling from above!"
+        },
+        {
+          "key": "hint_obstacle_birdhouse_name",
+          "value": "Cuckoo House"
+        },
+        {
+          "key": "hint_obstacle_birdhouse",
+          "value": "Match next to it or use a special: the door opens and a bird pops out. Every hit while a bird is showing sends it to your goal and a new one appears. Skip it for a move and the bird hides back inside!"
+        },
+        {
+          "key": "hint_obstacle_lampstrip_name",
+          "value": "Lamp Strip"
+        },
+        {
+          "key": "hint_obstacle_lampstrip",
+          "value": "Break each lamp with a match of THE SAME COLOR next to it, or with a special. Purple lamps break only with specials. Some strips shift their lamps after every move. Break all lamps to clear the strip!"
         },
         {
           "key": "hint_obstacle_safe",
@@ -4870,8 +5086,12 @@
           "value": "Gold"
         },
         {
+          "key": "shop_offer_bundle_welcome",
+          "value": "Welcome Pack"
+        },
+        {
           "key": "shop_offer_bundle_start",
-          "value": "Wanderer's Bag"
+          "value": "Traveler's Bag"
         },
         {
           "key": "shop_offer_bundle_hunter_loot",
@@ -4887,7 +5107,7 @@
         },
         {
           "key": "shop_offer_bundle_legendary",
-          "value": "Legendary Treasure"
+          "value": "Legendary Pack"
         },
         {
           "key": "leaderboard_friend_list",
@@ -4972,6 +5192,14 @@
         {
           "key": "team_help",
           "value": "Help"
+        },
+        {
+          "key": "profile_tutorial_open",
+          "value": "Your profile is unlocked! Pick your avatar and name."
+        },
+        {
+          "key": "profile_tutorial_name",
+          "value": "Type your name here"
         },
         {
           "key": "team_life_progress_label",
@@ -5087,7 +5315,7 @@
         },
         {
           "key": "save_progress_conflict",
-          "value": "This account is linked to another save. Switch to that save?"
+          "value": "This account already has a game saved. Your current game will be backed up and the selected account’s game will load. Progress will not be merged."
         },
         {
           "key": "save_progress_linked",
@@ -6352,6 +6580,162 @@
         {
           "key": "progress_goal_FirstTryWin",
           "value": "Win {0} levels on the first attempt"
+        },
+        {
+          "key": "auth_network_error",
+          "value": "Could not connect. Check your internet connection and try again."
+        },
+        {
+          "key": "auth_switch_from_menu",
+          "value": "Return to the main menu before switching accounts."
+        },
+        {
+          "key": "auth_backup_required",
+          "value": "Your current game could not be backed up yet. Wait a moment and try again."
+        },
+        {
+          "key": "auth_restore_retry",
+          "value": "Loading your account. The connection was interrupted; retrying automatically."
+        },
+        {
+          "key": "save_progress_provider_linked",
+          "value": "Connected"
+        },
+        {
+          "key": "save_progress_provider_unavailable",
+          "value": "Currently unavailable"
+        },
+        {
+          "key": "ads_unavailable_title",
+          "value": "AD NOT READY"
+        },
+        {
+          "key": "ads_unavailable_body",
+          "value": "An ad could not be loaded right now. Please try again shortly."
+        },
+        {
+          "key": "settings_ads_privacy",
+          "value": "Ad privacy choices"
+        },
+        {
+          "key": "settings_ads_privacy_sub",
+          "value": "Review your advertising consent."
+        },
+        {
+          "key": "giftfestival_title",
+          "value": "GIFT FESTIVAL"
+        },
+        {
+          "key": "giftfestival_menu_title",
+          "value": "GIFT\nFESTIVAL"
+        },
+        {
+          "key": "giftfestival_hit",
+          "value": "HIT!"
+        },
+        {
+          "key": "giftfestival_round",
+          "value": "ROUND {0}/{1}"
+        },
+        {
+          "key": "giftfestival_select",
+          "value": "Please choose a gift"
+        },
+        {
+          "key": "giftfestival_time_hit",
+          "value": "STOP ON GREEN TO HIT YOUR TARGET!"
+        },
+        {
+          "key": "giftfestival_earn_balls",
+          "value": "WIN LEVELS TO EARN BALLS!"
+        },
+        {
+          "key": "giftfestival_ended",
+          "value": "THE FESTIVAL HAS ENDED"
+        },
+        {
+          "key": "giftfestival_finished",
+          "value": "YOU COLLECTED EVERY GIFT!"
+        },
+        {
+          "key": "giftfestival_miss",
+          "value": "MISS!"
+        },
+        {
+          "key": "giftfestival_perfect",
+          "value": "PERFECT HIT!"
+        },
+        {
+          "key": "giftfestival_deflected",
+          "value": "DEFLECTED!"
+        },
+        {
+          "key": "giftfestival_already_open",
+          "value": "THAT BOX IS ALREADY OPEN!"
+        },
+        {
+          "key": "giftfestival_round_complete",
+          "value": "BOARD COMPLETE!"
+        },
+        {
+          "key": "giftfestival_next_board",
+          "value": "Your next board is ready!"
+        },
+        {
+          "key": "giftfestival_skip_intro",
+          "value": "TAP TO SKIP"
+        },
+        {
+          "key": "giftfestival_howto",
+          "value": "Choose a gift box and HIT while the indicator is on green!\n\nGreen: your chosen box. Left yellow: one box below. Right yellow: one box above. At an edge, deflection turns back into the board. Red: a miss!\n\nEach shot costs one ball. Hitting an already opened box gives no new reward. Open every box to collect the board bonus and advance to a bigger board.\n\nAfter joining, every level you win gives you 1 ball. Losing a level does not remove your banked balls. The festival lasts 2 days, followed by a 5-day break. Join again when the next festival starts.\n\nBoxes contain coins, jokers, boosters or stars. About one in four boxes is empty; an empty box still costs one ball and opens."
+        },
+        {
+          "key": "giftfestival_ball",
+          "value": "Baseball"
+        },
+        {
+          "key": "giftfestival_join_message",
+          "value": "Join the festival and open gift boxes!\n\nAfter joining, every level you win gives you 1 ball.\n\nChoose your target, stop on green and HIT!"
+        },
+        {
+          "key": "giftfestival_join_summary",
+          "value": "Every level won earns 1 ball! Stop on green to collect gifts!"
+        },
+        {
+          "key": "giftfestival_empty_box",
+          "value": "EMPTY BOX!"
+        },
+        {
+          "key": "giftfestival_tutorial_select",
+          "value": "Your first ball is on us!\nChoose the highlighted gift."
+        },
+        {
+          "key": "giftfestival_tutorial_hit",
+          "value": "When the indicator reaches green,\ntap HIT!"
+        },
+        {
+          "key": "shop_offer_coins_1000",
+          "value": "1,000 Coins"
+        },
+        {
+          "key": "shop_offer_coins_5000",
+          "value": "5,000 Coins"
+        },
+        {
+          "key": "shop_offer_coins_10000",
+          "value": "10,000 Coins"
+        },
+        {
+          "key": "shop_offer_coins_25000",
+          "value": "25,000 Coins"
+        },
+        {
+          "key": "shop_offer_coins_50000",
+          "value": "50,000 Coins"
+        },
+        {
+          "key": "shop_offer_coins_100000",
+          "value": "100,000 Coins"
         }
       ]
     }

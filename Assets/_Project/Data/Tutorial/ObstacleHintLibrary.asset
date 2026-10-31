@@ -439,3 +439,21 @@ MonoBehaviour:
     fallbackTitle: Water Channel
     locKey: hint_obstacle_waterchannel
     fallbackText:
+  - id: 77
+    iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_goldcoin_name
+    fallbackTitle: Gold Rush
+    locKey: hint_obstacle_goldcoin
+    fallbackText:
+  - id: 78
+    iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_birdhouse_name
+    fallbackTitle: Cuckoo House
+    locKey: hint_obstacle_birdhouse
+    fallbackText:
+  - id: 79
+    iconOverride: {fileID: 21300000, guid: 48dd5e127f774d97bcd9e89db73e0951, type: 3}
+    titleLocKey: hint_obstacle_lampstrip_name
+    fallbackTitle: Lamp Strip
+    locKey: hint_obstacle_lampstrip
+    fallbackText:

@@ -50,6 +50,9 @@ public sealed class ProfilePageController : MonoBehaviour
     [Tooltip("Seçili müzik parçasının adının yazılacağı metin (MusicTXT).")]
     [SerializeField] private TMP_Text musicNameText;
 
+    /// İsim alanı (profil açılış öğreticisi parmağı buraya yönlendirir).
+    public TMP_InputField NameInput => nameInput;
+
     private int selectedAvatarId;
     private bool stripBuilt;
     private readonly List<AvatarOptionButton> options = new();

@@ -1,5 +1,151 @@
 # Tasarım geri bildirimi
 
+## 131–205 genel inceleme / hedef politikası · 2026-10-31
+
+- **Kullanıcı:** “130dan sonra tüm levelları incele ... 5 ve9daki zorluklar fena değil ...
+  özellikle150den sonra çok kolay heyecan vermiyor ... boardu çok geniş kullanıyorsun.”
+  Yardımcı kullanımına itirazı yok; “özellikle bossduelde ekrana engel koyduysan goals'ta da olsun ...
+  başka levellar için de geçerli ... kullanıcı ekranda ne varsa kırmaya çalışır ... maks5goals.”
+- **Durum:** Açık inceleme/revizyon yetkisi; 131–205 için51asset revizyonu uygulandı.
+  Tek tek yeni düzenler **agent tasarım kararıdır, kullanıcı onayı veya ölçülmüş denge değildir**.
+- **Kalıcı kural:** Yardımcılar da hedefte temsil edilir; max5. Eski RocketBasket/OverrideBatteryBox/
+  opsiyonel EggBird hedefsiz yardımcı kuralı bu yeni talimatla geçersizdir. Kırılmaz üreticiler kendi
+  kuş/anahtar/enerji hedefiyle temsil edilir. Gelecekte üretilmesi garanti olmayan nesneyi tek başına
+  zorunlu hedef yapma. Goal miktarı, başlangıç engellerini sebepsizce erken bitirmesin.
+- **Agent uygulaması:**51değişiklik/24koruma;17maske/boyut revizyonu. Yedi boss5goal ve hedefle
+  uyumlu baskı/gri alet; ilk1–130ve201korundu.5/9maskeleri/hamleleri aynı,179/185aile sadeleşmesi
+  goal limiti nedeniyle. Normal zorlukta alan/açılma/sonraki iş çeşitlendirildi; tek tip dar koridor yok.
+- **Kapsam/sınır:** Eski geniş alan tercihinin önüne son kolaylık geri bildirimi geçer; her seviyeyi
+  dar/Hard yapma zorunluluğu değildir. Önizleme/statik kontrolden kazanma oranı çıkarma.
+  [Kalıcı hafıza](Memory.md), [75level karar kaydı](Batches/131-205-Review-2026-10-31/Review.md).
+
+
+## 202–205 v1 reddi /50 yalnız201 /oyun fikri önce · 2026-10-31
+
+- **Kullanıcı:** “birdhouse da her seviyede50yapmışsın ... bazı yerler için o
+  çok fazla ... boardlar tek düze olmuş ... daha insan gibi düşün ve keyifli
+  olanları yap ... birdhouseun çalışma mantığını bir bak biraz değişiklik var”.
+- **Durum:**202–205v1 reddedildi;aynı büyük dikdörtgen alana birkaç engel grubu
+  koymak yeterli çeşitlilik sayılmadı. V1 asset/meta/PNG/not/betikler
+  `Batches/202-205/Revisions/v1-rejected/` altında saklandı.
+- **Düzeltme:**50yalnız201'e ait açık sayıydı;bu değeri202–205'e genellemek agent
+  hatasıydı. V2kuş hedefleri18/12/16/24;201hedef50ve onaylı şekil korunuyor.
+- **Mekanik doğrulama:**Güncel kaynakta ilk vuruş açar,sonraki isabet kuşu
+  toplar ve kota kaldıkça evi açık tutar. Vuruşsuz hamle kapanmaya yol açar.
+  Normal/scripted ev başına1kuş/hamle,special için bu sınır yok. Hedef seçerken
+  yalnız ev sayısı değil,kaç evin aynı anda normal eşleşmeyle vurulabildiği,
+  diğer hedefler ve vuruş ritmini bölmenin maliyeti düşünülür.
+- **Agent v2 tasarım kararı:**202halka avlu/iki boya omzu;203aynı hücreyi
+  ilerleterek duvarı çökertip kargoyu akıtma;204S biçimli kıyı/sağ kanal çıkışı;
+  205hangi renk mührünü önce açıp roket yardımını ne zaman tüketme kararı.
+  Bunlar kullanıcı onayı veya ölçülmüş eğlence/denge sonucu değildir.
+- **Kalıcı ders/kapsam:**Bir level için istenen sayıyı bütün sete yayma.
+  Sadece engel isimlerini ve miktarlarını değiştirmek yeterli değildir;
+  çalışma alanı,ilk karar,açılma ödülü ve sonraki iş birlikte çeşitlenmeli.
+  Her tahta mutlaka çok hole'lu olsun diye bir kullanıcı kuralı çıkarılmaz.
+
+## 201 onayı / hedef50 ve202–205 kenar yerleşimleri · 2026-10-31
+
+- **Kullanıcı:** “olmuş kuş kafesleri ... 202den205e ... diğer obstaclelarıda
+  kullanarak4level ...12hedefi çok az ... bunu50yap”. Devamında “özellikle2sütunlu”,
+  “bazen sadece kenarlara tek sırada”, “altına taş geçmesi gerekecek ... alt
+  kenarlar veya yan kenarlar tek sütun” yönünü ekledi.
+- **Durum:**201'in kuş evi yerleşimi beğenildi/korunur; yalnız hedef12→50 yapıldı.
+  202–205v1 sonradan tekdüzelik/yük gerekçesiyle reddedildi;üstteki v2kaydı günceldir.
+- **Uygulama:**202'de sağ kenar1×6;203'te alt kenarda iki3×1;204'te sol2×4;
+  205'te iki2×4(tek grup mühürlü). Toplu bloklar yanında kesintisiz kenar
+  sıraları da artık açıkça istenen alternatiflerdir; tekil serpme yapılmadı.
+  Kargo çıkışları BirdHouse ile kapatılmadı; alttaki refill rotaları kontrol edildi.
+- **Agent değerlendirmesi:**201'de çok düşük kuş hedefi, birden fazla ev ve
+  special zincirleriyle çabuk bitebilir; ev sayısı goal miktarı olarak kopyalanmaz.
+  Güncel serviste ilk açılıştan sonra isabet sürdükçe kuşlar yenilenir.50 hedefi
+  kullanıcı istedi; bunun26 hamlede ölçülmüş denge sağladığı iddia edilmez.
+- **Ders/kapsam:** BirdHouse tekrarlarında2sütunlu blok,yan tek sütun,alt tek
+  sıra kompozisyonu kullanılabilir. Kalıcı evler üst dolumu durdurabildiği için
+  her tasarımda alt besleme ve komşu eşleşme yüzleri doğrulanır. Yeni dört taslakta
+  eski ailelerle çeşitlilik var;201'in onaylı şeklini değiştirme izni çıkarılmaz.
+
+## Birdhouse tanıtımı / 201 · çapraz toplu bölgeler · 2026-10-31
+
+- **Kullanıcı:** “birdhouse isimli bir engel oluşturdum. 201.level yapalım bunu
+  tanıtadan ... collectible bir obje ... 2x3 2x4 yada 3x3 gibi gruplar halinde
+  ... ayrı ayrı koyma ... bir grup sol alt bir grup sağ üst köşe”.
+- **Durum:** Yerleşim tercihi açık talimat olarak uygulandı. Sonraki mesajda
+  kullanıcı kuş evlerini beğendi;12 hedefini50'ye çıkardı. Kazanma oranı ölçülmedi.
+- **Uygulama:** İki bitişik2×3 BirdHouse78 grubu, sol alt/sağ üst bölgeler.
+  Kenarda birer taş sütunu bırakıldı; tüm evler normal eşleşmeyle erişilebilir.
+  Evler kırılmadığından goal obstacle78 değil,12 adet Collectible Bird(3).
+- **Agent değerlendirmesi:** Üst grubun iki yanından dolum bütün76 normal yuvaya
+  ulaşıyor;3×3 merkezin yalnız-special erişimini ilk tanıtıma zorlamamak için2×3
+  seçildi. Asıl karar, açılan evlere zamanında ikinci vuruşu planlamak. Bu beklenen
+  oynanış yönüdür; kullanıcı tarafından oynanıp doğrulanmış bir sonuç değildir.
+- **Tekrar kullanılabilir ders/kapsam:** Kuş evi üreticileri tekil serpme yerine
+  okunaklı bitişik gruplar olarak düşünülür. Sonraki açık yönlendirme,kenarda tek
+  sıra/sütunu da bu seçeneklere ekledi. Verilen grup ölçüleri alternatiflerdir; bütün collectible türlerine
+  zorunlu aynı çapraz şablon veya eski levelları değiştirme izni değildir.
+
+## 199 Deniz Kabuğu v3 — jeli mühür altına taşıma · 2026-10-29
+
+- **Kullanıcı:** “level 199 ... kolay olmuş ... 2 ve 3.satıdaki jeli silip ancient
+  seal altına 4 tane jel koysak ... 2. v 3. stırda sadece jel sil diğerli kalsın”.
+- **Durum:** Kolaylık geri bildirimi kaydedildi; istenen yerel revizyon uygulandı.
+  v3 henüz oynanıp onaylanmadı, ölçülmüş kazanma oranı yok.
+- **Uygulama:** Üstten2./3. satırda yalnız dört jel tabanı kaldırıldı; TNT, üç
+  pusula örtüsü ve bütün diğer içerik korundu. Dört jel2×2 Ancient Seal'in altına
+  kondu. Hamle26, hedefler87/17/1 ve mühür sayaçları8/8/8 aynı kaldı.
+- **Agent değerlendirmesi:** Başlangıçta açık jel kalmadığından TNT ilk hamlede
+  jel yayamaz; önce mührün renk işi tamamlanır, kaplama ondan sonra başlar.
+  Bu beklenen zorluk etkisidir; ölçülmüş denge sonucu değildir.
+- **Ders/kapsam:** Jel kaynağını geç açılan örtü altına taşımak kaplama zamanını
+  değiştirir. Bu yalnız199 için istenen düzeltmedir; bütün jel levellarına yeni
+  kural değildir. v2 snapshot'ı `Batches/ProLevels-V1-090-100-199/Revisions/199-v2/`.
+
+## V1 12–15 v2 tasarım onayı — 2026-10-29
+
+- Kullanıcı: “dostum güzel oldu eline sağlık”. Pencere/odalar/yağlı geçiş/üç bent v2 yönü
+  kabul edildi. 11–15 korunur; yeni izin olmadan yeniden tasarlanmaz,16'ya geçilmez.
+- Görsel/tasarım onayıdır; hedef geçiş yüzdelerinin tutturulduğu veya FPS ölçüldüğü anlamına gelmez.
+
+## V1 12–15 ilk taslakları reddedildi — 2026-10-28
+
+- **Kullanıcı:** "dostum bunlar ne ama bunlar ben level demem ne göreli var. ne bir atraksiyonu..."
+- **Durum: reddedildi.** Açık Avlu'nun basit alt U'su, Katmanlı Geçit'in tek L'si, Yağlı Köşe'nin
+  küçük köşe cebi ve Üç Katlı Bent'in düz alt üç sırası kullanıcıya tasarlanmış bir level hissi vermedi.
+- **Somut ders:** Başlangıç seviyesi/Normal olmak, büyük boş dikdörtgene kenar engeli koymak
+  anlamına gelmez. Görsel şekil, ilk oyuncu kararı ve o kararın açtığı yeni alan birlikte kurulmalı.
+  Yalnız teknik mask/hedef/dolum doğruluğu veya "bu kadar açık taş var" sayısı yeterli değil.
+- **Sınır:** Bütün U/L/satır yerleşimleri yasaklanmadı. Her levele hazır special veya yeni mekanik
+  koyma talebi de değil. Bu dört taslakta formun ve açılma olayının eksikliği reddedildi.
+- **v2 agent revizyonu, henüz kullanıcı onayı değil:** 12 pencere + roketle açılan alt avlu;
+  13 iki alt oda ve yeni uzun çalışma kanadı; 14 Z biçimindeki yağlı geçiş; 15 combo ile başlayan
+  üç kaymış bent. Aynı izinli engeller, aynı isim/GUID/katalog;11 korundu. Yeni runtime kodu yok.
+  İlk taslaklar asset/meta/PNG/kod/notlarıyla `Batches/ProLevels-V1-011-015/Revisions/v1/` içinde
+  ret gerekçesiyle saklandı. Yeni görsel/oynanış beğenisi veya ölçülmüş zorluk varsayılmaz.
+
+## Başlangıç akışının yeniden kurulması — ProLevels V1 · 2026-10-28
+
+- **Açık kullanıcı yönlendirmesi:** "yeni levellar prolevels folderı altında levelv1_ olarak ilerliyor";
+  önceki seviyeleri zorluk düzeni iyi olmadığı için kopyalayıp yeni düzene göre düzenliyor.
+  Yeni sıra `ProLevels/LevelCatalogProV1.asset` ile çözülür; eski üretim kataloğu kullanılmaz.
+- **Açık kural:** "bir onluk sette maks 3 min 2 yeni obstacle ... 5 zor 9 daha zor ... 10 lu levellar boss duel".
+  Önceki esnek tanıtım notu yeni V1 akışında bu kurala göre güncellendi. Aşama/varyant ve
+  aile envanteri ayrı tutulur; kullanıcıdan gelmeyen bir kota sayım politikası icat edilmez.
+- **Sıradaki istek:** 12–14 Normal (%55–85), 15 Zor (%35–55); yalnız Sandık1/2/3, Çamur, Yağ.
+  "önce kontrol et bu levellar başlangıç düzeyi levelları". İlk tur hazırlık/incelemeydi;
+  ölçülmüş denge veya tasarım onayı değildir.
+- **Devam isteği:** "sadece11–15 yapmanı istiyorum zaten". Kapsam bu grupla sınırlandı:
+  mevcut11/Yağlı Rampa korundu; boş12–15 yeni tasarlandı.12Açık Avlu29,13Katmanlı Geçit30,
+  14Yağlı Köşe28,15Üç Katlı Bent29 hamle. SonuncuZor, diğerleriNormal.
+  `Batches/ProLevels-V1-011-015/` tasarım/önizleme/koruma kaydıdır. Kullanıcı oynanış veya
+  görsel onayı henüz vermedi;16'ya devam edilmedi.
+- **Agent değerlendirmesi:** 11 yağ tanıtımında 36 yağ ve 23 tek-hit sandık, 80 aktif hücrenin
+  yalnız 21'ini açılışta örtüsüz/etkileşime açık bırakıyor. 12'de yükü rahatlatıp pekiştirmek
+  uygun olabilir. Bu kullanıcı oynanış geri bildirimi veya ölçülmüş zorluk değildir.
+- **Doğrulanan kayıt:** 12–15 katalogda `fileID: 0`, ilgili V1 asset adları henüz yok.
+  1–11'deki beş izinli ID doğrulandı; 10 Boss Duel. Görsel/statik envanter
+  `Reviews/ProLevels-V1-012-015/` altında; 767 mevcut level/katalog asset/meta dosyası aynı.
+  Unity arayüzü, build, bot/kaskat simülasyonu kullanılmadı.
+
 ## 101+ otomatik special engelleme · 2026-10-24
 
 Kullanıcı: “%40-90 agresif olmuş sadece yumuşatalım ... randomize ... %30-70 olabilir”. Önceki isteğin kapsamı 100 sonrası; tamamen kapatma yerine otomatik engelleme 101+ için %30–70 oldu. Önceki levellar ve elle atanmış oranlar korunur. Seviyeye bağlı mevcut karma farklı oranlar verir; aynı seviyenin oranı tekrar denemelerde sabittir, her aday şeklin engellenmesi mevcut rastgele kararla belirlenir. Bu bir geçiş oranı veya special çıkma garantisi değildir; oynanış dengesi henüz ölçülmedi.
@@ -126,3 +272,99 @@ Kullanıcı zor seviye istedi: iki bölgede water channel üstünde nilüfer, 2�
 Uygulama: iki C biçimli kanal, kuşlu2×2 pencereler, dört bağımsız duvar parçası ve çiçek üstü/fener altı iki sütun. Alt yardımcıların atışları birbirine bağlanır. “Boşluk” nilüfersiz oynanabilir pencere olarak açıklandı; opsiyonel soruya yanıt gelmeden bu varsayımla taslak tamamlandı. Kullanıcı onayı veya ölçülmüş denge olarak kaydedilmez.
 
 Ders/kapsam: Bölge ve katman talebini yalnız engel sayısına dönüştürme; açıklanan açılma sırasını ve yardımcı yönlerini de doğrula. Bu özel 189 kompozisyonudur; sonraki her leveli aynı iki gölet/duvar düzenine dönüştürme. 32 hamle ilk Super Hard ayarıdır.
+
+
+## 2026-10-29 — V1 90 / 100 / 199, doğadan şekil ve önce oynanış fikri
+
+**Kullanıcı:** “hemen çizme ... üzerinde insan gibi çok düşün ... neyi oynamaktan keyif
+alırdın onu düşün ... doğadan güzel şekillere uygun tasarlamaya çalışalım”. Bu istek,
+90/100 Boss ve199 Süper Zor için yeni tasarım yetkisidir; eski levelları yeniden
+çizme veya mevcut onayları kaldırma talebi değildir.
+
+**Ders:** Önce görünen şekil, ilk oyuncu kararı ve açılmanın kazandırdığı fayda
+birlikte kurulmalı. Bir doğa adını rastgele engel döşemesine eklemek yeterli değildir.
+Düelloda engellerin temizlenmesi alan/koruma avantajı sunabilir; hepsini yan hedefe
+çevirerek boss sonrası temizlik işi bırakmak gerekmez. Bu son cümle bu üç tasarımdaki
+ajan kararıdır; kullanıcının bütün Boss levelları için koyduğu genel yasak değildir.
+
+**Uygulama / durum:** 90 dalga kıvrımı,100 mıknatıs damarlı yaprak,199 katmanlı deniz
+kabuğu seçildi. Statik/refill ve gerçek sprite incelemesi yapıldı; kullanıcıdan henüz
+beğeni/oynanış onayı yok. Şekil benzerliği ve zorluk ölçümü birbirine karıştırılmaz.
+Önceki onaylı11–15 korunur. Sonraki level bu talepten otomatik yetki almaz.
+
+
+## 199 Deniz Kabuğu v2 — kullanıcı zorluk ve dolu açılış isteği · 2026-10-29
+
+**Kullanıcı:** “bu seviye için biraz kolay oldu ... kabuğun içine tile koyarsan ilk
+açılışda daha şık görünür ...31 ... fazla bir26 ile deneyelim”.31 hamleli v1 için
+zorluk yeterli bulunmadı; kabuk şekli terk edilmiyor, iç normal yuvaların baştan
+dolu görünmesi isteniyor. Bu v2 onayı veya ölçülmüş kazanma oranı değildir.
+
+**Uygulama:** Yalnız199,31→26 hamle; boş18 normal hücre başlangıç taşlarıyla dolu.
+Mevcut GridSpawner pin desteği kullanılır; taşlar normal hareket eder, ilave special
+yok. Rastgele dış renklerle sınırda kendiliğinden eşleşme oluşmasını önlemek için
+mevcut ağız taşının1 rengi de belirlenir. Şekil/engel/hedef/mühür/TNT korunur.
+
+**Ders ve kapsam:** Bir odanın dolum gölgesinde olması, bilinçli başlangıç taşı
+konulamayacağı anlamına gelmez. Görselde taşı çizmek yetmez; runtime spawn desteği,
+başlangıç desteği, renk eşleşmeleri ve sonraki refill ayrı kontrol edilir. İç taşlar
+eşleşme olanağını da artırır;26 hamlenin net zorluk etkisini kullanıcı yeniden oynar.
+Bu199'a özel revizyondur, bütün levellara pin veya hamle azaltma kuralı değildir.
+90/100 ve diğer levellar korunur; eski199 snapshot'ı batch `Revisions/199-v1/` içindedir.
+
+
+## Kolay çıkan seviyelerde tahta tekdüzeliği — kullanıcı · 2026-10-31
+
+**Kullanıcı:** “hamle azaltmaktan çok bordu incelermisin çokda güzel olmamış olabilir boardlar bazen çok
+tekdüze gözükmeye başladım.. engelleri doğru seçmiyor olabilir ... kuralımızı unutma renk uyumu, ufak
+blokların yan yana durup blok olması şık duruyor ama hepsinden önemlisi ilk bakışta insanın bir şekle
+benzetmesi ya da gridin güzel tasarımı çok önemli.” Kaynak: 130–205 Usta bot simi (15 oyun/seviye,
+`~/Desktop/Sim/L130_205_Usta/summary.csv`); %80+ kazanma + bol kalan hamle: 130,131,137,146,161,167,
+172,181,183,191 (+171 kutuplaşmış).
+
+**Durum:** İnceleme isteği (review scope) — asset değişikliği yetkilendirilmedi. Önce görsel/kompozisyon,
+sonra gerekirse hamle. Sim sonucu denge ölçüsüdür, görsel onay değildir.
+
+**Ders:** Kolaylık çoğu zaman tasarım zayıflığıyla birlikte geliyor: geniş düz taş alanı + kenara/alta
+yığılmış birkaç büyük engel (161, 146) hem tekdüze görünür hem kolay oynanır. Hamle kısmak bu
+kompozisyonu düzeltmez. Öncelik sırası: (1) ilk bakışta okunan şekil / güzel ızgara, (2) küçük
+blokların yan yana birleşip bant/kütle oluşturması, (3) renk uyumu (aileler arası ton dengesi),
+(4) en son hamle sayısı.
+
+
+## Hedefte kaynak + ürün çifti yok — kullanıcı · 2026-10-31
+
+**Kullanıcı:** “ben hedefleri değiştirdim saçma hedefler eklenmişti mesela gellauncher ile gel bunlar aynı”.
+131–205 genel revizyonunda (aynı gün) “yardımcılar dahil hedefte temsil, ≤5 goal” uygulanırken bir
+mekaniğin kaynağı ile ürünü ayrı hedef yapılmış; kullanıcı elle düzeltti. **Reddedildi.**
+
+**Kural:** Aynı mekaniğin iki ucu tek hedeftir: Jel Fırlatıcı → Yayılan Jel, Su Deposu → Su Birikintisi,
+Varil → Çamur, Anahtar Makinesi → Anahtar taşı, Kuş Evi → Kuş, Enerji Kabı/Şapka → Enerji. Hedef ürünü
+(oyuncunun gerçekten temizlediği/topladığı şeyi) sayar; kaynak hedefe yazılmaz. Yardımcı engel, oyuncunun
+ayrı bir iş yaptığı başka bir aile değilse hedefe eklenmez; “≤5 goal” üst sınırdır, doldurulacak kota değil.
+
+**Durum:** Kullanıcının düzeltmesinden sonra tarama (ProLevels V1 goals): L138 Su Deposu+Birikinti,
+L144 ve L148 Jel Fırlatıcı+Yayılan Jel hâlâ çift görünüyor — kullanıcıya soruldu, değiştirilmedi.
+
+
+## Tekil küçük engel yok, en az 2×2 — kullanıcı · 2026-10-31
+
+**Kullanıcı:** “koca bir boardda 1,2,3 gibi hücreleri ortaya koyduğumuzda çirkin oluyor.. örneğin rocketbasket
+bir hücreye konmuş ve şekli çok bozuyor. bunlar 2x2 minimumda iyi duruyor”. **Kural:** tek başına 1–3 hücrelik
+engel yerleşimi reddedilir; en az 2×2 küme ya da kompozisyonu tamamlayan uzun kesintisiz bant/sütun. Yardımcı
+engeller (RocketBasket, OverrideBatteryBox, EggBird) dahil. Tasarım Principles'a işlendi.
+Ek (aynı gün): “bazen dikdörtgen şekilde daha iyi 2x3, 2x4 yatayda ya da sütunda”.
+
+## 2026-11-01 · Super Hard kalibrasyonu (199, kullanıcı oyunu)
+- Kaynak: "199 da ise 2 kez başarısız oldum ama bir bir hakla kaldı. 3. de geçtim yani biraz rahat geldi acaba ancient ı 13 mü yapsan"
+- Durum: kabul; mühür 11 → 13/13/13 uygulandı (hamle 24 aynı).
+- Ders: kullanıcı için **Super Hard = 3 denemede geçmek "biraz rahat"**; daha fazla deneme bekleniyor. Zorluğu kaynak
+  engelin (jel kaynağını örten mühür) iş miktarıyla ayarlamak tercih edildi, hamle kesmek değil.
+- Aynı oturum: 197 rahatlatma + 198 olduğu gibi "çok iyi olmuş"; 191 v2 dikey şeritler "çok sevdim"; 196 halka "süper".
+- 135 (Hard) kullanıcı oyunu: "3 kez oynadım birinde geçemedim 2 sinde en az 12 hamle daha vardı ... zor değil".
+  Ders: galibiyette ≥10 hamle artıyorsa bütçe gevşek; Hard için tasarım kaldıracından sonra hamle de kesilir (27 → 22).
+- 2026-11-01 · Yardımcılar hedef değil: "kalkanlar ve roket sepetini hedefe koymuyorum asla onlar yardımcı pilotlar gibi..
+  rocket sepetini bazen koyuyorum". Kabul; Memory.md kural 3'e istisna yazıldı. Kalkan (35) hiç, RocketBasket varsayılan
+  olarak hedef olmaz.
+- 2026-11-01 · "yumurtayı da bazen koyuyorum" → EggBird da RocketBasket gibi: varsayılan hedef değil, kullanıcı bazen ekler; mevcutlara dokunulmaz.
+- 2026-11-01 · Boss fırlatmaları: "eğer hedefte yoksa fırlatmaya devam etsin... hedefte o obje varsa sadece onu fırlatmasın sayacı bozduğu için... arada movable obstacle atması güzel oluyor. onların bitirilmesi zorunlu değil". Kabul; Memory kural 5 tersine çevrildi, 140–200 düzeltildi.

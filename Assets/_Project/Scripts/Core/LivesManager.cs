@@ -46,6 +46,13 @@ public static class LivesManager
     private static DateTime _nextLifeTime;
     private static bool     _initialized;
 
+    public static void ReloadFromPrefs()
+    {
+        _initialized = false;
+        Initialize();
+        OnLivesChanged?.Invoke();
+    }
+
     // ── Olaylar ──────────────────────────────────────────────────────────────
 
     public static event Action OnLivesChanged;
@@ -109,6 +116,19 @@ public static class LivesManager
         _lives += amount;
         Save();
         OnLivesChanged?.Invoke();
+    }
+
+    /// <summary>Persist an event's life reward and its delivery receipt together, before UI callbacks.</summary>
+    public static void AddLivesWithCheckpoint(int amount, string checkpointKey, string checkpoint)
+    {
+        if (RuntimeSimulationSession.IsActive || amount <= 0 || string.IsNullOrEmpty(checkpointKey)) return;
+        // Initialization/offline regen can save. Do it BEFORE staging the paid receipt.
+        EnsureInit();
+        int gain = Mathf.Min(amount, MaxLives - _lives);
+        _lives += gain;
+        PlayerPrefs.SetString(checkpointKey, checkpoint);
+        Save(); // Also commits the receipt at the global cap, without manufacturing extra lives.
+        if (gain > 0) OnLivesChanged?.Invoke();
     }
 
     public static int PendingPurchaseThanks => Mathf.Max(0, PlayerPrefs.GetInt(KeyPendingThanks, 0));

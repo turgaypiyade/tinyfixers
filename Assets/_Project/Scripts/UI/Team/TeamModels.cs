@@ -7,6 +7,7 @@ public sealed class TeamInfo
     public string teamName = "Takım";
     public Sprite emblem;
     public int memberCount;
+    public readonly List<string> realMemberNames = new();
     public int memberCapacity = 50;
     public int giftCurrent;
     public int giftTarget = 100;

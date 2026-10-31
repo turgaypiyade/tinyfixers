@@ -70,7 +70,7 @@ MonoBehaviour:
   - 1494
   eventEnabled: 1
   autoShowJoinPopup: 1
-  minLevelGate: 51
+  minLevelGate: 70
   seasonHours: 72
   settlementMinutes: 10
   onlyYellowTiles: 0

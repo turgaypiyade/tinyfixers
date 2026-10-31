@@ -414,6 +414,8 @@ public class LineSweepService
                 special,
                 intensity: Mathf.Max(1, steps)));
         }
+        if (emitActivationSfx)
+            Haptics.OnComboMoment(Haptics.ComboMoment.RocketLaunch);   // roket kalkışı (yalnız kombo oturumunda)
 
         Transform parentTr = board.LineTravelSpawnParent != null
             ? board.LineTravelSpawnParent

@@ -222,8 +222,11 @@ public class ObstacleHintManager : MonoBehaviour
 
         if (levelData.tubes != null)
         {
+            // Yalnız tahtaya gerçekten basılan tüp sayılır (GridSpawner ile aynı kural): tahta küçültülünce
+            // dışarıda kalan eski tüp kaydı görünmez ama ipucunu tetikliyordu (2026-10-28, seviye 19).
             for (int i = 0; i < levelData.tubes.Length; i++)
-                AddId(ObstacleId.Tube);
+                if (TubeObstacleService.GetCellIndices(levelData.tubes[i], levelData.width, levelData.height) != null)
+                    AddId(ObstacleId.Tube);
         }
 
         if (levelData.magnets != null)

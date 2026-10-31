@@ -11,7 +11,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Microsoft.CodeAnalysis.Scripting;
 string root="Assets/_Project/Scripts/";
-string[] files={"VFX/ObstacleScatterFx.cs","VFX/UiVfxPool.cs","VFX/ObstacleDebrisBounds.cs","VFX/ObstacleShatterFx.cs","VFX/ChestObstacleView.cs","Grid/Board/PaintCanBoxView.cs","Grid/SafeObstacleView.cs","Grid/TarpStatue/TarpStatueView.cs","VFX/WardrobeObstacleView.cs","Grid/RhodesStatueView.cs","UI/WonderDefinition.cs","UI/WonderTaskRegions.cs","UI/WonderRevealView.cs","UI/WonderRestorationLayout.cs","UI/WonderRestorationPieceGraphic.cs","UI/WonderWeldSparkGraphic.cs"};
+string[] files={"VFX/ObstacleScatterFx.cs","VFX/UiVfxPool.cs","VFX/ObstacleDebrisBounds.cs","VFX/ObstacleShatterFx.cs","VFX/ChestObstacleView.cs","Grid/Board/PaintCanBoxView.cs","Grid/SafeObstacleView.cs","Grid/TarpStatue/TarpStatueView.cs","VFX/WardrobeObstacleView.cs","Grid/RhodesStatueView.cs","UI/WonderDefinition.cs","UI/WonderTaskRegions.cs","UI/WonderRevealView.cs","UI/WonderScene.cs","UI/WonderRestorationLayout.cs","UI/WonderRestorationPieceGraphic.cs","UI/WonderWeldSparkGraphic.cs"};
 var trees=files.Select(f=>CSharpSyntaxTree.ParseText(File.ReadAllText(root+f),path:f)).ToList();
 foreach(var f in new[]{"Grid/GridSpawner.cs","Grid/Board/BoardController.cs","Grid/Board/BoardBreakFxService.cs","Grid/TarpStatue/TarpStatueService.cs","Grid/LaserCannon/LaserCannonService.cs"}) {
  var errors=CSharpSyntaxTree.ParseText(File.ReadAllText(root+f)).GetDiagnostics().Where(d=>d.Severity==DiagnosticSeverity.Error);
@@ -119,7 +119,7 @@ public class WardrobeHarness:MonoBehaviour {
 ".Replace("/* FIELDS */",wardrobeFields).Replace("/* METHODS */",wardrobeMethods);
 var rhodesTree=CSharpSyntaxTree.ParseText(File.ReadAllText(root+"Grid/RhodesStatueView.cs"));
 string transition=rhodesTree.GetRoot().DescendantNodes().OfType<Microsoft.CodeAnalysis.CSharp.Syntax.MethodDeclarationSyntax>().Single(m=>m.Identifier.ValueText=="DebrisForTransition").ToFullString();
-string rhodesFlow=string.Join("\n",rhodesTree.GetRoot().DescendantNodes().OfType<Microsoft.CodeAnalysis.CSharp.Syntax.MethodDeclarationSyntax>().Where(m=>new[]{"OnHit","StageForRemaining","HitMotion","ResetAttachments","OnDisable","StartSwing","OnNearbyMatch"}.Contains(m.Identifier.ValueText)).Select(m=>m.ToFullString()));
+string rhodesFlow=string.Join("\n",rhodesTree.GetRoot().DescendantNodes().OfType<Microsoft.CodeAnalysis.CSharp.Syntax.MethodDeclarationSyntax>().Where(m=>new[]{"OnHit","StageForRemaining","HitMotion","ResetAttachments","OnDisable","StartSwing","OnNearbyMatch","TryPlayFinalBreak"}.Contains(m.Identifier.ValueText)).Select(m=>m.ToFullString()));
 string rhodesHarness=@"
 public class RhodesHarness:MonoBehaviour {
  public RectTransform sword=new GameObject().transform,shield=new GameObject().transform;
@@ -140,7 +140,7 @@ var wonderTree=CSharpSyntaxTree.ParseText(File.ReadAllText(root+"UI/WonderReveal
 var torchGate=wonderTree.GetRoot().DescendantNodes().OfType<Microsoft.CodeAnalysis.CSharp.Syntax.MethodDeclarationSyntax>().Single(m=>m.Identifier.ValueText=="HasRhodesTorch").ToFullString();
 var fxTree=CSharpSyntaxTree.ParseText(File.ReadAllText(root+"Grid/Board/BoardBreakFxService.cs"));
 var suppress=fxTree.GetRoot().DescendantNodes().OfType<Microsoft.CodeAnalysis.CSharp.Syntax.MethodDeclarationSyntax>().Single(m=>m.Identifier.ValueText=="ShouldSuppressGenericContentObstacleFx").ToFullString().Replace("private static", "public static");
-string fxHarness="public enum ObstacleId {ColorChest,Wardrobe,KeyGenerator,Hamster,RhodesStatue,TarpStatue,Stone} public class ObstacleVisualChange{public ObstacleId obstacleId;public bool cleared;} public static class FxHarness {"+suppress+torchGate+"}";
+string fxHarness="public enum ObstacleId {BirdHouse,ColorChest,Wardrobe,KeyGenerator,Hamster,RhodesStatue,TarpStatue,Stone} public class ObstacleVisualChange{public ObstacleId obstacleId;public bool cleared;} public static class FxHarness {"+suppress+torchGate+"}";
 var boardTree=CSharpSyntaxTree.ParseText(File.ReadAllText(root+"Grid/Board/BoardController.cs"));
 var reactionMethod=boardTree.GetRoot().DescendantNodes().OfType<Microsoft.CodeAnalysis.CSharp.Syntax.MethodDeclarationSyntax>().Single(m=>m.Identifier.ValueText=="ReactToRejectedRhodesMatch").ToFullString();
 string reactionHarness=@"
@@ -251,6 +251,23 @@ reaction.Notify(new ObstacleDamageRequest{context=ObstacleHitContext.NormalMatch
 foreach(var context in new[]{ObstacleHitContext.SpecialActivation,ObstacleHitContext.Booster,ObstacleHitContext.Scripted})reaction.Notify(new ObstacleDamageRequest{context=context},false);
 reaction.Notify(new ObstacleDamageRequest{context=ObstacleHitContext.NormalMatch},true);Check(reactiveView.reactions==1,""Successful hits and non-match contexts do not add duplicate neighbor recoil"");
 reaction.obstacleStateService.id=ObstacleId.Stone;reaction.Notify(new ObstacleDamageRequest{context=ObstacleHitContext.NormalMatch},false);Check(reactiveView.reactions==1,""Other obstacles do not inherit Rhodes reactions"");
+// Final Rhodes split uses the real production method and pooled shared scatter driver.
+var rb=Board();var ri=new GameObject().AddComponent<Image>();ri.sprite=new Sprite();ri.color=Color.white;
+ri.rectTransform.rect.width=ri.rectTransform.rect.height=200;
+Check(RhodesHarness.TryPlayFinalBreak(rb,ri),""Rhodes final split starts from surviving base art"");
+ObstacleScatterFx rd;rb.TryGetComponent(out rd);
+var flights=(System.Collections.IList)typeof(ObstacleScatterFx).GetField(""flights"",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic).GetValue(rd);
+Check(flights.Count==2,""exactly two large halves, no generic shatter grid"");
+for(int i=0;i<2;i++){
+ var f=flights[i];var ft=f.GetType();var motion=(ObstacleScatterFx.Motion)ft.GetField(""motion"").GetValue(f);
+ var image=(Image)ft.GetField(""image"").GetValue(f);
+ Check(Math.Abs(image.rectTransform.sizeDelta.x-100)<.01&&Math.Abs(image.rectTransform.sizeDelta.y-200)<.01,""halves preserve full statue height and original ratio"");
+ Check(motion.travel.y>0&&motion.gravity>0&&ObstacleScatterFx.Offset(motion,.2f).y>0&&ObstacleScatterFx.Offset(motion,1.2f).y<0,""large half jumps up then falls under gravity"");
+ Check(i==0?motion.travel.x<0:motion.travel.x>0,""halves separate left and right"");
+}
+ri.gameObject.destroyed=true;int halfReturns=UiVfxPool.returned;Time.deltaTime=1.3f;Call(rd,""LateUpdate"");Check(UiVfxPool.returned==halfReturns+2,""both halves survive source destruction then return to pool"");
+ri.gameObject.destroyed=false;RhodesHarness.TryPlayFinalBreak(rb,ri);halfReturns=UiVfxPool.returned;ObstacleScatterFx.Cancel(rb);
+Check(UiVfxPool.returned==halfReturns+2,""final split cancellation returns both halves without orphan effects"");
 Console.WriteLine(""PASS: ""+edgeChecks+"" horizontal trajectory samples including spinning-piece extents and eased throws."");
 Console.WriteLine(""PASS: ""+checks+"" combined production behavior checks, including paired nut separation, larger arcs, empty-cabinet finale, cached-sprite cleanup and Rhodes transition order."");
 ";

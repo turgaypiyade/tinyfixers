@@ -1045,6 +1045,9 @@ public class BoardAnimator
                     Debug.Log($"[PulseClearDebug] FinalizeTileClear tile=({tile.X},{tile.Y}) " + $"type={tile.GetTileType()} special={tile.GetSpecial()} " + $"live={live} specialPhase={isSpecialPhase}");
             }
 
+            if (live && animationMode == ClearAnimationMode.LightningStrike)
+                Haptics.OnLineCellBreak();
+
             if (!skipBreakFxTiles.Contains(tile))
                 board.BreakFx?.PlayTileBreak(tile);
 
@@ -1842,9 +1845,8 @@ public class BoardAnimator
         Vector3 worldCenter;
         if (tileAtCell != null && tileAtCell.IconImage != null && tileAtCell.IconImage.rectTransform != null)
         {
-            Vector3[] corners = new Vector3[4];
-            tileAtCell.IconImage.rectTransform.GetWorldCorners(corners);
-            worldCenter = (corners[0] + corners[2]) * 0.5f;
+            var iconRect = tileAtCell.IconImage.rectTransform;
+            worldCenter = iconRect.TransformPoint(iconRect.rect.center);
         }
         else
         {

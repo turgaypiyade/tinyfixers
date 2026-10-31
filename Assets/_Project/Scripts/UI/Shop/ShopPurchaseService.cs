@@ -4,14 +4,16 @@ using UnityEngine;
 /// <summary>
 /// Mağaza satın almasının TEK giriş noktası (ana menü market'i + oyun içi market aynı yolu kullanır).
 /// Coin/Yıldız bedeli düşülür, teklif kaydedilir (günlük/tek seferlik), içerik ShopRewardGranter ile
-/// verilir. Gerçek-para (TL) teklifleri IAP bağlanana dek "satın alınmış gibi" işlenir
-/// (SimulateRealMoneyPurchases: yalnız editör/dev build) — IAP gelince gerçek akış bağlanacak.
+/// verilir. Cihazdaki gerçek para teklifleri yalnız mağaza onayıyla teslim edilir.
 /// </summary>
 public static class ShopPurchaseService
 {
-    // TODO(IAP): Unity Purchasing bağlanınca RealMoney yalnız mağaza onayıyla Fulfil edilsin.
-    // Şimdilik yalnız editör/dev build'de simüle edilir — yayın build'inde TL paketleri bedava verilmez.
-    public static bool SimulateRealMoneyPurchases => Debug.isDebugBuild;
+    public static bool SimulateRealMoneyPurchases =>
+#if UNITY_EDITOR && !TF_IAP
+        true;
+#else
+        false;
+#endif
 
     /// <summary>Başarılı her alımda (içerik verildikten sonra) tetiklenir.</summary>
     public static event Action<ShopOffer> OnPurchased;
@@ -34,29 +36,37 @@ public static class ShopPurchaseService
 
     /// Mağaza bir gerçek para alımını bildirdi (StoreIap, onaydan ÖNCE): içerik + kayıt + teşekkür + makbuz.
     /// Tekrar teslimi StoreIap işlem kimliğiyle engeller; burası her işlem için bir kez çağrılır.
-    public static void FulfillStorePurchase(ShopOffer offer, string transactionId)
+    internal static bool GrantStorePurchase(ShopOffer offer, string transactionId)
     {
-        if (offer == null) return;
+        if (offer == null || offer.priceType != ShopOffer.PriceType.RealMoney)
+            throw new ArgumentException("A store purchase must match a real-money offer.", nameof(offer));
         ShopState.RecordPurchase(offer);
         ShopRewardGranter.Grant(offer);
         bool thanks = LivesManager.GrantPurchaseThanks(transactionId);
-        if (offer.priceType == ShopOffer.PriceType.RealMoney) LevelAssist.RecordPurchaseCompleted();
-        PublishReceipt(offer, thanks);
+        LevelAssist.RecordPurchaseCompleted();
+        return thanks;
     }
+
+    // StoreIap calls this AFTER saving the fulfilment receipt. UI failures cannot replay delivery.
+    internal static void PublishStoreReceipt(ShopOffer offer, bool thanks) => PublishReceipt(offer, thanks);
 
     /// Arayan için: false dönen TryPurchase bir mağaza penceresi başlattıysa true ("yakında" ipucu gösterilmesin).
     public static bool IsStorePurchasePending => StoreIap.IsPurchasing;
 
     private static void PublishReceipt(ShopOffer offer, bool thanks)
     {
-        OnReceipt?.Invoke(offer, thanks);
-        OnPurchased?.Invoke(offer);
+        if (OnReceipt != null)
+            foreach (Action<ShopOffer, bool> listener in OnReceipt.GetInvocationList())
+                try { listener(offer, thanks); } catch (Exception error) { Debug.LogException(error); }
+        if (OnPurchased != null)
+            foreach (Action<ShopOffer> listener in OnPurchased.GetInvocationList())
+                try { listener(offer); } catch (Exception error) { Debug.LogException(error); }
     }
 
     /// <summary>Teklifi satın almayı dener. İçerik verildiyse true.</summary>
     public static bool TryPurchase(ShopOffer offer)
     {
-        if (offer == null) return false;
+        if (offer == null || !ShopState.IsAvailable(offer)) return false;
 
         switch (offer.priceType)
         {

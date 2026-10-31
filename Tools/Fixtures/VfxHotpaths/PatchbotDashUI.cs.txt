@@ -1,0 +1,43 @@
+class Before {
+
+    private IEnumerator SparkRoutine(
+        GameObject go,
+        RectTransform srt,
+        Image img,
+        Vector2 from,
+        Vector2 to,
+        float customLife = -1f,
+        string poolKey = null)
+    {
+        float life = customLife > 0.05f ? customLife : (impactSparkLife > 0.05f ? impactSparkLife : 0.48f);
+        float local = 0f;
+        Vector3 startScale = Vector3.one;
+        if (srt != null) srt.localScale = startScale;
+        Color startColor = img != null ? img.color : Color.white;
+
+        while (local < life && go != null && srt != null && img != null)
+        {
+            local += Time.deltaTime;
+            float t = Mathf.Clamp01(local / life);
+            float eased = 1f - (1f - t) * (1f - t);   // hızlı patlama, yavaşça durma
+
+            srt.anchoredPosition = Vector2.LerpUnclamped(from, to, eased);
+            // Başlangıçta biraz büyür (pop), sonra küçülüp kaybolur
+            float scaleMul = t < 0.2f ? Mathf.Lerp(0.85f, 1.25f, t / 0.2f) : Mathf.Lerp(1.25f, 0.10f, (t - 0.2f) / 0.8f);
+            srt.localScale = startScale * scaleMul;
+
+            float alpha = t < 0.55f ? 1f : (1f - (t - 0.55f) / 0.45f);
+            img.color = new Color(startColor.r, startColor.g, startColor.b, startColor.a * alpha);
+            yield return null;
+        }
+
+        if (go != null)
+        {
+            if (!string.IsNullOrEmpty(poolKey))
+                UiVfxPool.Return(poolKey, go);
+            else
+                Destroy(go);
+        }
+    }
+
+}

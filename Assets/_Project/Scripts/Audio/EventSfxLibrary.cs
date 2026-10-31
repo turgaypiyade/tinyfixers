@@ -46,4 +46,10 @@ public sealed class EventSfxLibrary : ScriptableObject
     [Header("Kazanma")]
     public EventSfxCue victoryFanfare = new();
     public EventSfxCue confetti = new();
+    [Header("Hediye Şenliği (offline trimmed and gain-staged)")]
+    public EventSfxCue giftFestivalIntro = new();
+    public EventSfxCue giftFestivalThrow = new();
+    public EventSfxCue giftFestivalBatHit = new();
+    public EventSfxCue giftFestivalBallFlight = new();
+    public EventSfxCue giftFestivalGlassBreak = new();
 }

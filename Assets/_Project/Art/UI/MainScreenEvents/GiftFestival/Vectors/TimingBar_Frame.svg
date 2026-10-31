@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="128" viewBox="0 0 800 128">
+<defs>
+<linearGradient id="woodOuter" x1="0" y1="0" x2="0" y2="1" gradientUnits="objectBoundingBox">
+  <stop offset="0" stop-color="#E5A45A"/><stop offset=".23" stop-color="#B86D31"/>
+  <stop offset=".62" stop-color="#8D4B27"/><stop offset="1" stop-color="#5B311E"/>
+</linearGradient>
+<linearGradient id="woodInset" x1="0" y1="0" x2="0" y2="1">
+  <stop offset="0" stop-color="#CE8543"/><stop offset=".5" stop-color="#A45E32"/><stop offset="1" stop-color="#733D26"/>
+</linearGradient>
+<linearGradient id="brass" x1="0" y1="0" x2="0" y2="1">
+  <stop offset="0" stop-color="#FFF0A9"/><stop offset=".24" stop-color="#E5B95A"/>
+  <stop offset=".58" stop-color="#B77A2D"/><stop offset="1" stop-color="#F0CB75"/>
+</linearGradient>
+<linearGradient id="navyInset" x1="0" y1="0" x2="0" y2="1">
+  <stop offset="0" stop-color="#091B31"/><stop offset=".43" stop-color="#1B3553"/>
+  <stop offset="1" stop-color="#0C2037"/>
+</linearGradient></defs>
+<g id="TimingBar-Frame" data-component="TimingBar/Frame">
+  <rect id="contact-shadow" x="5" y="9" width="790" height="114" rx="57" fill="#261726" opacity=".24"/>
+  <rect id="outer-bronze-outline" x="3" y="3" width="794" height="120" rx="60" fill="#4C2B20" stroke="#5E3926" stroke-width="4"/>
+  <rect id="wood-body" x="7" y="5" width="786" height="112" rx="56" fill="url(#woodOuter)" stroke="url(#brass)" stroke-width="5"/>
+  <path id="single-top-highlight" d="M62 17 C210 7 590 7 737 17" stroke="#F7C785" stroke-width="4" stroke-linecap="round" opacity=".48" fill="none"/>
+  <path id="wood-sweep-upper" d="M32 53 C66 31 108 25 153 26 M640 26 C690 27 741 37 769 55" fill="none" stroke="#F4B773" stroke-width="3" stroke-linecap="round" opacity=".25"/>
+  <path id="wood-sweep-lower" d="M35 79 C72 93 112 94 150 91 M643 92 C695 92 746 84 763 72" fill="none" stroke="#4E271F" stroke-width="3" stroke-linecap="round" opacity=".28"/>
+  <rect id="inner-wood-recess" x="37" y="21" width="726" height="82" rx="41" fill="#653B28" stroke="#4D291E" stroke-width="2"/>
+  <rect id="gold-bezel" x="59" y="28" width="682" height="68" rx="34" fill="url(#brass)" stroke="#603C28" stroke-width="2.5"/>
+  <rect id="inner-navy-channel" x="66" y="35" width="668" height="54" rx="27" fill="url(#navyInset)" stroke="#101B2E" stroke-width="2"/>
+  <path id="navy-recess-highlight" d="M94 41 H704" stroke="#7890A2" stroke-width="1.4" opacity=".35" stroke-linecap="round"/>
+  <g id="left-gold-bolt">
+    <circle cx="29" cy="61" r="10.5" fill="#573321"/>
+    <circle cx="29" cy="59" r="7.5" fill="url(#brass)" stroke="#835429" stroke-width="1.2"/>
+    <path d="M26 55 L31 55" stroke="#FFF0B5" stroke-width="1.3" stroke-linecap="round" opacity=".7"/>
+  </g>
+  <g id="right-gold-bolt">
+    <circle cx="771" cy="61" r="10.5" fill="#573321"/>
+    <circle cx="771" cy="59" r="7.5" fill="url(#brass)" stroke="#835429" stroke-width="1.2"/>
+    <path d="M768 55 L773 55" stroke="#FFF0B5" stroke-width="1.3" stroke-linecap="round" opacity=".7"/>
+  </g>
+</g></svg>

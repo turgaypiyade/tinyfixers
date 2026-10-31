@@ -57,6 +57,13 @@ public static class CurrencyLedger
         PlayerPrefs.Save();
     }
 
+    public static void ResetForAccount()
+    {
+        SyncGateOpen = false;
+        foreach (var key in new[] { KCoinsBase, KCoinsDelta, KStarsBase, KStarsDelta, KInit, KEverSynced })
+            PlayerPrefs.DeleteKey(key);
+    }
+
     public static void OpenSyncGate() => SyncGateOpen = true;
 
     // ── Meşru değişim kaydı (PlayerWallet çağırır) ──────────────────────

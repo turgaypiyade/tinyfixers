@@ -18,7 +18,7 @@ public sealed class BridgeCharacterDef
 /// Bridge Repair (Köprü Tamiri) yarış eventinin tüm parametreleri. Asset: Resources/Events/BridgeRepairConfig.asset.
 ///
 /// Kurallar (kullanıcı spec'i, 2026-09-27):
-///  - 30. seviye bitince açılır (<see cref="minLevelGate"/> = oynanacak level ≥ 31).
+///  - 59. seviye bitince açılır (<see cref="minLevelGate"/> = oynanacak level ≥ 60).
 ///  - Haftada <see cref="eventsPerWeek"/> kez RASTGELE günde (tüm cihazlarda aynı gün) <see cref="windowHours"/> saat sürer.
 ///  - <see cref="contestantCount"/> yarışmacı (oyuncu + botlar). Her KAZANILAN level = köprüye 1 parça;
 ///    kaybetmenin cezası YOK. <see cref="levelsToFinish"/> levelde oyuncu için yarış biter.
@@ -34,8 +34,8 @@ public sealed class BridgeRepairConfig : ScriptableObject
     public string eventId = "bridge_repair";
 
     [Header("Kapı & Zamanlama")]
-    [Tooltip("Oynanacak level (CurrentLevel.Global) bu değere ulaşınca açılır. 31 = 30. seviye bitince.")]
-    [Min(1)] public int minLevelGate = 31;
+    [Tooltip("Oynanacak level (CurrentLevel.Global) bu değere ulaşınca açılır. 60 = 59. seviye bitince.")]
+    [Min(1)] public int minLevelGate = 60;
 
     [Tooltip("Haftada kaç kez (farklı günlerde) çıkar. Günler hafta numarasından türetilir → tüm cihazlarda aynı.")]
     [Range(1, 7)] public int eventsPerWeek = 2;

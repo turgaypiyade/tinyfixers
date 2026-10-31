@@ -1,0 +1,54 @@
+public static class Checks {
+ static int count;
+ static void Check(bool ok,string label){count++;if(!ok)throw new Exception(label);}
+ static string Id(int value)=>value.ToString("X24");
+ static string[] products={"FirebaseCore","FirebaseAuth","FirebaseAnalytics","FirebaseFirestore"};
+ static string Fixture(int copies,bool differentVersion=false){
+  var b=new StringBuilder("// !$*UTF8*$!\n{\n\tarchiveVersion = 1;\n\tobjectVersion = 77;\n\tobjects = {\n");
+  for(int i=0;i<copies;i++)for(int n=0;n<4;n++)b.Append("\t\t"+Id(3000+i*4+n)+" /* "+products[n]+" in Frameworks */ = {isa = PBXBuildFile; productRef = "+Id(2000+i*4+n)+" /* "+products[n]+" */; };\n");
+  b.Append("\t\t"+Id(9000)+" /* Embed auth */ = {isa = PBXBuildFile; productRef = "+Id(2001)+"; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };\n");
+  b.Append("\t\t"+Id(1)+" = {\n\t\t\tisa = PBXProject;\n\t\t\tpackageReferences = (\n");
+  for(int i=0;i<copies;i++)b.Append("\t\t\t\t"+Id(1000+i)+" /* firebase-ios-sdk */,\n");
+  b.Append("\t\t\t);\n\t\t};\n");
+  b.Append("\t\t"+Id(2)+" = {\n\t\t\tisa = PBXNativeTarget;\n\t\t\tname = UnityFramework;\n\t\t\tpackageProductDependencies = (\n");
+  for(int i=0;i<copies;i++)for(int n=0;n<4;n++)b.Append("\t\t\t\t"+Id(2000+i*4+n)+" /* "+products[n]+" */,\n");
+  b.Append("\t\t\t);\n\t\t};\n");
+  b.Append("\t\t"+Id(3)+" = {\n\t\t\tisa = PBXFrameworksBuildPhase;\n\t\t\tfiles = (\n");
+  for(int i=0;i<copies;i++)for(int n=0;n<4;n++)b.Append("\t\t\t\t"+Id(3000+i*4+n)+" /* "+products[n]+" */,\n");
+  b.Append("\t\t\t);\n\t\t};\n");
+  b.Append("\t\t"+Id(4)+" = {\n\t\t\tisa = PBXCopyFilesBuildPhase;\n\t\t\tfiles = (\n\t\t\t\t"+Id(9000)+",\n\t\t\t);\n\t\t};\n");
+  // Reuse of the same product by another target is retained, not removed from that target.
+  b.Append("\t\t"+Id(5)+" = {\n\t\t\tisa = PBXNativeTarget;\n\t\t\tname = AuthExtension;\n\t\t\tpackageProductDependencies = (\n\t\t\t\t"+Id(2001)+",\n\t\t\t);\n\t\t};\n");
+  for(int i=0;i<copies;i++){
+   b.Append("\t\t"+Id(1000+i)+" /* XCRemoteSwiftPackageReference */ = {\n\t\t\tisa = XCRemoteSwiftPackageReference;\n\t\t\trepositoryURL = \"https://github.com/firebase/firebase-ios-sdk.git\";\n\t\t\trequirement = {\n\t\t\t\tkind = exactVersion;\n\t\t\t\tversion = "+(differentVersion&&i==copies-1?"13.0.0":"12.15.0")+";\n\t\t\t};\n\t\t};\n");
+   for(int n=0;n<4;n++)b.Append("\t\t"+Id(2000+i*4+n)+" /* "+products[n]+" */ = {\n\t\t\tisa = XCSwiftPackageProductDependency;\n\t\t\tpackage = "+Id(1000+i)+";\n\t\t\tproductName = "+products[n]+";\n\t\t};\n");
+  }
+  b.Append("\t};\n\trootObject = "+Id(1)+";\n}\n");return b.ToString();
+ }
+ static int Occurrences(string s,string pattern)=>Regex.Matches(s,pattern).Count;
+ public static int Run(){
+  foreach(int copies in new[]{1,2,27,50}){
+   string source=Fixture(copies),result=Policy.DeduplicateSwiftPackages(source);
+   Check(Occurrences(result,"isa = XCRemoteSwiftPackageReference;")==1,"One remote reference after repeated export");
+   Check(Occurrences(result,"isa = XCSwiftPackageProductDependency;")==4,"One dependency per Firebase product");
+   Check(Occurrences(result,"isa = PBXBuildFile;")==5,"Four links plus distinct embed settings retained");
+   Check(result.Contains("CodeSignOnCopy"),"Embed attributes preserved");
+   Check(result==Policy.DeduplicateSwiftPackages(result),"Normalizer is idempotent");
+   foreach(string product in products)Check(Occurrences(result,"productName = "+product+";")==1,"All auth/storage/analytics products retained");
+   var lists=Regex.Matches(result,@"(?m)(?:files|packageReferences|packageProductDependencies) = \(\n(?<items>[\s\S]*?)^[ \t]*\);");
+   foreach(Match list in lists){var ids=new HashSet<string>();foreach(Match item in Regex.Matches(list.Groups["items"].Value,@"[A-F0-9]{24}"))Check(ids.Add(item.Value),"No duplicate reference within a phase/target");}
+   Check(result.Contains("name = AuthExtension;")&&Occurrences(result,Id(2001))>=3,"Second target retains the same shared auth product");
+   if(copies==1)Check(result==source,"Clean export remains byte-identical");
+   // Appending another export's entries should collapse to exactly the same output again.
+   var additional=Fixture(2);Check(Policy.DeduplicateSwiftPackages(additional)==Policy.DeduplicateSwiftPackages(Fixture(1)),"Incremental export settles to stable graph");
+  }
+  string different=Policy.DeduplicateSwiftPackages(Fixture(2,true));
+  Check(Occurrences(different,"isa = XCRemoteSwiftPackageReference;")==2,"Different package requirements are never merged");
+  Check(Occurrences(different,"isa = XCSwiftPackageProductDependency;")==8,"Products from different requirements remain distinct");
+  string unrelated="// unrelated export settings must not change\n";
+  Check(Policy.DeduplicateSwiftPackages(unrelated)==unrelated,"Non-SPM content untouched");
+  System.IO.File.WriteAllText("/private/tmp/tinyfixers-ios-auth/NormalizedFixture.pbxproj",Policy.DeduplicateSwiftPackages(Fixture(27)));
+  return count;
+ }
+}
+Checks.Run()

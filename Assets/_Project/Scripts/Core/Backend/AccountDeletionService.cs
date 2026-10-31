@@ -11,7 +11,7 @@ using UnityEngine.SceneManagement;
 /// "Hesabımı Sil" (App Store 5.1.1(v); Gizlilik Politikası §5–6). Sıra:
 ///   1) bulut kayıt itmesi durdurulur (silinen veriyi geri yazmasın),
 ///   2) Firestore'daki kişisel veriler silinir: users/{uid} (save, stats, statsStreams, levels), players/{uid},
-///      sıralama skorları (global + bu hafta), takım üyeliği (+ realMembers −1) ve kişinin takım sohbeti mesajları,
+///      sıralama skorları (global + bu hafta + ülke), takım üyeliği (+ realMembers −1) ve kişinin takım sohbeti mesajları,
 ///   3) Firebase Authentication kullanıcısı silinir (Apple'a bağlıysa ve oturum eskiyse Apple ile yeniden doğrulanır),
 ///   4) cihazdaki kayıt (PlayerPrefs) temizlenir, oturum kapanır, oyun baştan açılır (yeni anonim hesap).
 /// Kural gereği istemci yalnız KENDİ belgelerini silebilir (firestore.rules). Apple token iptali (revoke) sunucu
@@ -26,6 +26,11 @@ public static class AccountDeletionService
     public static void DeleteAccount(Action<bool, string> onDone)
     {
         if (InProgress) return;
+        if (AuthLinkService.IsBusy)
+        {
+            onDone?.Invoke(false, GameLocalization.Get("save_progress_connecting"));
+            return;
+        }
         string uid = FirebaseAuthService.UserId;
         var user = FirebaseAuthService.CurrentUser;
         if (!FirebaseAuthService.IsReady || string.IsNullOrEmpty(uid) || user == null)
@@ -84,6 +89,7 @@ public static class AccountDeletionService
 
         await db.Collection("players").Document(uid).DeleteAsync();
         await db.Document($"leaderboards/global/scores/{uid}").DeleteAsync();
+        await db.Document($"leaderboards/region_{PlayerDirectoryService.DetectRegion()}/scores/{uid}").DeleteAsync();
         await db.Document($"leaderboards/{FirebaseLeaderboardService.CurrentWeekId}/scores/{uid}").DeleteAsync();
     }
 

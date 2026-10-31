@@ -28,7 +28,7 @@ public sealed class SafariConfig : ScriptableObject
 
     [Header("Kapı & Zamanlama")]
     [Tooltip("Bu level ve sonrasında event açılır.")]
-    [Min(1)] public int minLevelGate = 50;
+    [Min(1)] public int minLevelGate = 45;
 
     [Tooltip("Eventin sahneye çıkacağı günler (UTC). Boşsa her gün açık kabul edilir.")]
     public List<DayOfWeek> activeDays = new()

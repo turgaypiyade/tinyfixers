@@ -52,11 +52,18 @@ public sealed class BarrelMudSpreadService
         return result;
     }
 
-    private bool CanPlaceSplatAt(Vector2Int cell, ObstacleId splatObstacleId)
+    public bool CanPlaceSplatAt(Vector2Int cell, ObstacleId splatObstacleId)
     {
         if (cell.x < 0 || cell.x >= board.Width || cell.y < 0 || cell.y >= board.Height) return false;
         if (board.Holes[cell.x, cell.y]) return false;
         var current = obstacles.GetObstacleIdAt(cell.x, cell.y);
+
+        // Zaten çamurlu hücre de hedeftir ("tazeleme"): barrel'ı kıran kombo o çamuru aynı anda
+        // temizliyor olabilir; damla inince hücre çamursuzsa çamur geri gelir (BarrelSpreadAction).
+        // Hariç tutulunca son barrel çevresindeki çamurla birlikte silinip level erken kazanılıyordu
+        // (2026-10-28, Override+PatchBot).
+        if (current == splatObstacleId)
+            return true;
 
         if (current == ObstacleId.None)
         {

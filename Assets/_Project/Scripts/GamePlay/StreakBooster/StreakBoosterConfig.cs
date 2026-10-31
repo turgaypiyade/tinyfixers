@@ -8,7 +8,7 @@ using UnityEngine;
 public sealed class StreakBoosterConfig : MonoBehaviour
 {
     [Tooltip("Bu level ve SONRASINDA streak booster event'i aktif olur (üst üste geçişte special hakkı).")]
-    [SerializeField, Min(1)] private int thresholdLevel = 25;
+    [SerializeField, Min(1)] private int thresholdLevel = 30;
 
     [Tooltip("Fail popup 'kaybedeceklerin' listesinde bu event için gösterilecek ikon.")]
     [SerializeField] private Sprite lossIcon;

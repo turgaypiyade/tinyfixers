@@ -68,8 +68,22 @@ public class PreLevelSpecialPopupController : MonoBehaviour
     [Tooltip("Hedef ikonlarının en büyük ölçeği (1–2 hedef). 3 hedefte %80'i, 4 hedefte %65'i " +
              "kullanılır. 5 hedefte tüm satır kutuya sığacak şekilde orantılı küçülür.")]
     [SerializeField, Min(0.1f)] private float goalPreviewScale = 2.6f;
+
+    [Header("Level Name")]
+    [Tooltip("Başlık plakasında 'LEVEL N' altındaki level ismi (Resources/LevelNames.json); düz, açık sarı (kullanıcı, 2026-10-27). Boşsa başlık stilinden runtime kurulur.")]
+    [SerializeField] private TMP_Text levelNameText;
+    [Tooltip("İsmin plakadaki y konumu (anchoredPosition.y; ana menü ve oyun içi tekrar popup'ı aynı).")]
+    [SerializeField] private float levelNameY = 400f;
+    [SerializeField, Range(20f, 60f)] private float levelNameFontSize = 34f;
+    [SerializeField] private Color levelNameColor = new Color(1f, 0.92f, 0.60f, 1f);
+    [Tooltip("İsim varken 'LEVEL N' başlığının y konumu (anchoredPosition.y). İsimsiz levelde sahnedeki konum kalır.")]
+    [SerializeField] private float titleYWithName = 540f;
+    private Vector2 titleBasePosition;
+    private bool titleBaseCaptured;
     private int previewGoalCount = 1;
     [SerializeField] private Sprite fallbackGoalIcon;
+    [Tooltip("Enerji (Collectible EnergyOrb) hedefinde Icon Override boşsa kullanılır: Şapka Fırlatıcı çekici.")]
+    [SerializeField] private Sprite energyGoalDefaultIcon;
 
     [Header("Special Slots")]
     [SerializeField] private TileIconLibrary tileIconLibrary;
@@ -81,7 +95,6 @@ public class PreLevelSpecialPopupController : MonoBehaviour
     [SerializeField, Min(1)] private int specialsUnlockLevel = 6;
 
     [Header("Audio")]
-    [SerializeField] private AudioSource audioSource;
     [SerializeField] private AudioClip openSfx;
     [SerializeField] private AudioClip selectSfx;
     [SerializeField] private AudioClip continueSfx;
@@ -114,7 +127,11 @@ public class PreLevelSpecialPopupController : MonoBehaviour
             popupRoot = transform as RectTransform;
 
         if (continueButton != null)
+        {
             continueButton.onClick.AddListener(HandleContinueClicked);
+            if (continueSfx != null && continueButton.TryGetComponent(out UiClickSound pressSound) && pressSound.playOnPress)
+                pressSound.clipOverride = continueSfx;
+        }
 
         if (cancelButton != null)
             cancelButton.onClick.AddListener(HandleCancelClicked);
@@ -339,6 +356,7 @@ public class PreLevelSpecialPopupController : MonoBehaviour
 
             TopHudGoalSlot slot = Instantiate(goalSlotPrefab, goalsPreviewRoot);
             slot.Setup(goalIcon, goal.amount, ShouldUseLargeGoalIcon(goal));
+            slot.ApplyNumberFont();   // oyun içi HUD'la aynı sayı fontu (geri alınabilir: Resources/GameNumberFont)
             ApplyGoalPreviewScale(slot);
 
             spawned++;
@@ -505,6 +523,11 @@ public class PreLevelSpecialPopupController : MonoBehaviour
         if (goal.iconOverride != null)
             return goal.iconOverride;
 
+        // Enerji hedefi: override boşsa varsayılan çekiç (yoksa hedef PreLevel'de hiç görünmüyordu).
+        if (goal.targetType == LevelGoalTargetType.Collectible && goal.collectibleId == CollectibleId.EnergyOrb
+            && energyGoalDefaultIcon != null)
+            return energyGoalDefaultIcon;
+
         if (goal.targetType == LevelGoalTargetType.Tile)
         {
             Sprite sprite = tileIconLibrary != null ? tileIconLibrary.Get(goal.tileType) : null;
@@ -527,17 +550,29 @@ public class PreLevelSpecialPopupController : MonoBehaviour
             return preview != null ? preview : fallbackGoalIcon;
         }
 
+        // Engelin ürettiği collectible (kuş evi → kuş): ikon üreticinin hedef ikonudur.
+        if (goal.targetType == LevelGoalTargetType.Collectible)
+        {
+            var producer = CollectibleSources.ProducerOf(goal.collectibleId);
+            var producerDef = producer != ObstacleId.None && levelData != null && levelData.obstacleLibrary != null
+                ? levelData.obstacleLibrary.Get(producer)
+                : null;
+            Sprite producerIcon = producerDef != null ? producerDef.GetGoalIconSprite() : null;
+            if (producerIcon != null) return producerIcon;
+        }
+
         return fallbackGoalIcon;
     }
 
-    private static bool ShouldUseLargeGoalIcon(LevelGoalDefinition goal)
+    private bool ShouldUseLargeGoalIcon(LevelGoalDefinition goal)
     {
         // Büyük kutu yalnız varsayılan (küçük çizilmiş) enerji küresi ikonu içindir. Level özel ikon verdiyse
         // (ör. çekiç) o ikon diğer hedeflerle aynı boyda olmalı — yoksa %36 büyük görünür.
         return goal != null
                && goal.targetType == LevelGoalTargetType.Collectible
                && goal.collectibleId == CollectibleId.EnergyOrb
-               && goal.iconOverride == null;
+               && goal.iconOverride == null
+               && energyGoalDefaultIcon == null;
     }
 
     private ChapterTheme ResolveTheme()
@@ -608,7 +643,8 @@ public class PreLevelSpecialPopupController : MonoBehaviour
         PreLevelSpecialSelectionState.SetSelection(userSelected);
         PreLevelSpecialRuntimeInjector.EnsureForSelection(combined);
         RefreshCounts();
-        PlayOneShot(continueSfx);
+        if (continueButton == null || !continueButton.TryGetComponent(out UiClickSound pressSound) || !pressSound.playOnPress)
+            PlayOneShot(continueSfx);
 
         // Custom intro varsa (kalıcı katmanda, sahne async yüklenirken oynar) onu kullan; bu
         // durumda sahne yüklemesi manager'a aittir, default loading + LoadScene ÇAĞIRMA.
@@ -672,12 +708,61 @@ public class PreLevelSpecialPopupController : MonoBehaviour
             SingleLineText.FitWidth(titleText);   // "Seviye 101" iki satıra kaymasın
         }
 
+        RefreshLevelName(Mathf.Max(1, PlayerPrefs.GetInt(prefsLevelKey, 1)));
+
         if (continueText != null)
+        {
             continueText.text = GameLocalization.Get(
                 retryMode ? continueRetryLocalizationKey : continueLocalizationKey);
+            // Use the authored Regular 400 size; only long translations shrink to fit width.
+            SingleLineText.FitWidth(continueText);
+        }
 
         if (cancelText != null)
             cancelText.text = GameLocalization.Get(cancelLocalizationKey);
+    }
+
+    // Başlık plakasında "LEVEL N" altında level ismi (TR/EN). İsmi olmayan levelde gizlenir, başlık ilk yerinde kalır.
+    private void RefreshLevelName(int level)
+    {
+        if (titleText == null) return;
+        var titleRt = titleText.rectTransform;
+        if (!titleBaseCaptured)
+        {
+            titleBasePosition = titleRt.anchoredPosition;
+            titleBaseCaptured = true;
+        }
+
+        string levelName = LevelNames.Get(level);
+        bool show = !string.IsNullOrEmpty(levelName);
+        if (show) EnsureLevelNameText();
+        show &= levelNameText != null;
+
+        titleRt.anchoredPosition = show ? new Vector2(titleBasePosition.x, titleYWithName) : titleBasePosition;
+        if (levelNameText == null) return;
+        levelNameText.gameObject.SetActive(show);
+        if (!show) return;
+        levelNameText.rectTransform.anchoredPosition = new Vector2(titleBasePosition.x, levelNameY);
+        levelNameText.text = levelName;
+        SingleLineText.FitWidth(levelNameText);   // uzun isim plakadan taşmasın
+    }
+
+    // Prefab'da atanmamışsa başlık yazısını (aynı font + kontur materyali) bir kez kopyalayıp isim yazısı yapar.
+    private void EnsureLevelNameText()
+    {
+        if (levelNameText != null || titleText == null) return;
+        var clone = Instantiate(titleText.gameObject, titleText.transform.parent, false);
+        clone.name = "LevelNameText";
+        if (clone.TryGetComponent(out LocalizedText localized)) Destroy(localized);   // metni biz yazıyoruz
+        if (clone.TryGetComponent(out TextArcEffect arc)) Destroy(arc);               // düz, yaysız
+        levelNameText = clone.GetComponent<TMP_Text>();
+        levelNameText.raycastTarget = false;
+        levelNameText.enableAutoSizing = false;
+        levelNameText.fontSize = levelNameFontSize;
+        levelNameText.color = levelNameColor;
+        levelNameText.alignment = TextAlignmentOptions.Center;
+        levelNameText.textWrappingMode = TextWrappingModes.NoWrap;
+        levelNameText.rectTransform.sizeDelta = new Vector2(titleText.rectTransform.sizeDelta.x * 0.8f, levelNameFontSize * 1.4f);
     }
 
     private void RefreshCounts()
@@ -782,12 +867,16 @@ public class PreLevelSpecialPopupController : MonoBehaviour
             mainScreenCanvasGroup.alpha = 1f;
     }
 
-    private void PlayOneShot(AudioClip clip)
+    // Merkezi tık algılayıcısı yalnız gerçekten özel ses çalan butonu atlar.
+    internal bool HasCustomClickSound(Selectable selectable)
     {
-        if (!GameSettings.SoundEnabled) return;
-        if (audioSource != null && clip != null)
-            audioSource.PlayOneShot(clip);
+        if (selectable == continueButton) return continueSfx != null;
+        if (selectable == cancelButton) return cancelSfx != null;
+        var slot = selectable.GetComponentInParent<PreLevelSpecialSlotView>();
+        return slot != null && slots.Contains(slot) && selectSfx != null;
     }
+
+    private void PlayOneShot(AudioClip clip) => GameEventSfx.PlayUiClip(clip);
 
     private static float EaseOut(float t)
     {

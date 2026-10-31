@@ -5,8 +5,8 @@ using UnityEngine;
 /// <summary>
 /// Oyuncunun arkadaş listesi — kalıcı (PlayerPrefs), tek kaynak. Liderlik panosunun
 /// "Arkadaşlar" sekmesi ve öneri/arama akışı buradan beslenir.
-/// v1: arkadaşlar İSİMLE tutulur (bot evreni); gerçek backend gelince id'ye taşınır,
-/// bu sınıfın API'si değişmez.
+/// Bot arkadaşlar isimle, gerçek arkadaşlar kalıcı UID ile tutulur.
+/// Gerçek profiller dizinden yenilenir; isim değişikliği arkadaş kimliğini değiştirmez.
 /// </summary>
 public static class FriendState
 {
@@ -81,6 +81,27 @@ public static class FriendState
         OnChanged?.Invoke();
     }
 
+    /// <summary>Apply one refresh atomically; identity is UID, never the editable name.</summary>
+    public static void RefreshRealFriends(IReadOnlyList<RemotePlayer> updates)
+    {
+        EnsureLoaded();
+        bool changed = false;
+        foreach (var update in updates)
+        {
+            if (update == null || string.IsNullOrWhiteSpace(update.name)) continue;
+            var friend = realFriends.Find(f => f.uid == update.uid);
+            if (friend == null) continue;
+            int chapter = Mathf.Max(1, update.chapter);
+            if (friend.name == update.name && friend.chapter == chapter) continue;
+            friend.name = update.name;
+            friend.chapter = chapter;
+            changed = true;
+        }
+        if (!changed) return;
+        Save();
+        OnChanged?.Invoke();
+    }
+
     public static bool IsRealFriend(string uid)
     {
         EnsureLoaded();
@@ -120,6 +141,13 @@ public static class FriendState
         const string letters = "ABCDEFGHJKLMNPRSTUVYXZ";
         var rng = new System.Random(Environment.TickCount ^ SystemInfo.deviceUniqueIdentifier.GetHashCode());
         return $"{letters[rng.Next(letters.Length)]}{letters[rng.Next(letters.Length)]}{rng.Next(1000000, 9999999)}";
+    }
+
+    public static void ReloadFromPrefs()
+    {
+        friends = null;
+        realFriends = null;
+        dismissed = null;
     }
 
     private static void EnsureLoaded()

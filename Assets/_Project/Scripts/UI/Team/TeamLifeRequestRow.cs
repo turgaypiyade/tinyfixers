@@ -5,7 +5,8 @@ using UnityEngine.UI;
 
 /// <summary>
 /// Can isteği kartı (sohbet akışında): üst bantta isim + "Can İstiyor!", altta büyük kalp, "Alınan Can:" + ilerleme
-/// çubuğu (current/needed) ve yeşil Yardım butonu. Yardım'a basınca controller'a haber verir; karşılanınca satır kaldırılır.
+/// çubuğu (alınan/5 — bir istek en fazla 5 can toplar) ve yeşil Yardım butonu. Çubuk Progress Event barının
+/// zemin + yeşil dolgu görselleri (9-slice). Yardım'a basınca controller'a haber verir; karşılanınca satır kaldırılır.
 /// Düzen prefab'ın layout gruplarından değil koddan kurulur (EnsureCardLayout, bir kez).
 /// </summary>
 public sealed class TeamLifeRequestRow : MonoBehaviour
@@ -18,13 +19,20 @@ public sealed class TeamLifeRequestRow : MonoBehaviour
     [SerializeField] private TMP_Text progressText;   // "2/5"
     [SerializeField] private Button helpButton;
     [SerializeField] private TMP_Text helpButtonText;
+    [Tooltip("Çubuk zemini — Progress Event barı (BarTrackV2, 9-slice).")]
+    [SerializeField] private Sprite barTrackSprite;
+    [Tooltip("Çubuk dolgusu — Progress Event yeşili (ProgressGreenV2, 9-slice).")]
+    [SerializeField] private Sprite barFillSprite;
 
-    private const float CardHeight = 240f;
-    private const float HeaderHeight = 70f;
+    // Referans orana göre (RM): kart biraz daha yüksek; içerik ölçüleri aynı oranda büyüdü.
+    private const float CardHeight = 264f;
+    private const float HeaderHeight = 74f;
+    private static readonly Vector2 BarSize = new Vector2(320f, 64f);
+    private const float BarInset = 6f;   // zeminin krem kenarı + iç gölgesi; dolgu bunun içinde
     private static readonly Color HeaderTint = new Color(0.90f, 0.79f, 0.60f, 1f);
     private static readonly Color NameColor = new Color(0.55f, 0.24f, 0.12f, 1f);
     private static readonly Color LabelColor = new Color(0.55f, 0.36f, 0.22f, 1f);
-    private static readonly Color BarBack = new Color(0.36f, 0.31f, 0.25f, 0.65f);
+    private static readonly Color BarBack = new Color(0.36f, 0.31f, 0.25f, 0.65f);   // sprite yoksa
 
     private TeamLifeRequest request;
     private Action<TeamLifeRequest> onHelp;
@@ -44,8 +52,11 @@ public sealed class TeamLifeRequestRow : MonoBehaviour
         SingleLineText.Fit(nameText);
         if (tagText != null)  tagText.text  = GameLocalization.Get(mine ? "team_life_request_mine" : "team_life_request_tag");
         if (progressLabel != null) progressLabel.text = GameLocalization.Get("team_life_progress_label");
-        if (progressText != null) progressText.text = r.current + "/" + r.needed;
-        if (progressFill != null) progressFill.fillAmount = r.Progress01;
+        // Bir istek en fazla 5 can toplar: pay her zaman 5 (bot/kendi/gerçek istek aynı).
+        int max = TeamLifeInbox.DonationLimit;
+        int got = Mathf.Clamp(r.current, 0, max);
+        if (progressText != null) progressText.text = got + "/" + max;
+        SetFill((float)got / max);
         if (helpButtonText != null) helpButtonText.text = GameLocalization.Get(helped ? "team_life_sent" : "team_help");
 
         if (helpButton != null)
@@ -63,7 +74,7 @@ public sealed class TeamLifeRequestRow : MonoBehaviour
             theme.ApplyText(tagText, theme.lifeRed, heading: true);
             theme.ApplyText(progressLabel, LabelColor, heading: true);
             theme.ApplyText(progressText, Color.white, heading: true);
-            UITheme.ApplySurface(progressFill, theme.progressFill, theme.ctaGreen);
+            if (barFillSprite == null) UITheme.ApplySurface(progressFill, theme.progressFill, theme.ctaGreen);
             theme.ApplyText(helpButtonText, Color.white, heading: true);
         }
         // Kontur font atandıktan SONRA (TMP font-değişimi tuzağı).
@@ -99,11 +110,12 @@ public sealed class TeamLifeRequestRow : MonoBehaviour
             TextAlignmentOptions.MidlineRight);
 
         float bodyMid = (CardHeight - HeaderHeight - 8f) * 0.5f;
+        float heartSize = 132f * CardHeight / 240f;
         var heart = NewChild("Heart", typeof(Image));
         heart.anchorMin = heart.anchorMax = new Vector2(0f, 0f);
         heart.pivot = new Vector2(0.5f, 0.5f);
-        heart.anchoredPosition = new Vector2(112f, bodyMid);
-        heart.sizeDelta = new Vector2(132f, 132f);
+        heart.anchoredPosition = new Vector2(120f, bodyMid);
+        heart.sizeDelta = new Vector2(heartSize, heartSize);
         var heartImg = heart.GetComponent<Image>();
         heartImg.sprite = UiIcons.Heart;
         heartImg.preserveAspect = true;
@@ -115,17 +127,32 @@ public sealed class TeamLifeRequestRow : MonoBehaviour
             bar.SetParent(root, false);
             bar.anchorMin = bar.anchorMax = new Vector2(0.5f, 0f);
             bar.pivot = new Vector2(0.5f, 0.5f);
-            bar.anchoredPosition = new Vector2(-30f, bodyMid - 22f);
-            bar.sizeDelta = new Vector2(300f, 60f);
+            bar.anchoredPosition = new Vector2(-30f, bodyMid - 26f);
+            bar.sizeDelta = BarSize;
             if (bar.TryGetComponent(out LayoutElement barLe)) barLe.ignoreLayout = true;
-            if (bar.TryGetComponent(out Image barImg)) barImg.color = BarBack;
+            if (bar.TryGetComponent(out Image barImg))
+            {
+                if (barTrackSprite != null) ApplySliced(barImg, barTrackSprite);
+                else barImg.color = BarBack;
+            }
+
+            // Dolgu: sol kenara yaslı, genişliği SetFill verir (Filled kırpma yerine — yuvarlak uç korunur).
+            var fillRt = progressFill.rectTransform;
+            fillRt.anchorMin = new Vector2(0f, 0f);
+            fillRt.anchorMax = new Vector2(0f, 1f);
+            fillRt.pivot = new Vector2(0f, 0.5f);
+            fillRt.offsetMin = new Vector2(BarInset, BarInset);
+            fillRt.offsetMax = new Vector2(BarInset, -BarInset);
+            if (barFillSprite != null) ApplySliced(progressFill, barFillSprite);
+            else progressFill.type = Image.Type.Sliced;
+            progressFill.raycastTarget = false;
         }
 
         var labelRt = NewChild("ProgressLabel", typeof(TextMeshProUGUI));
         labelRt.anchorMin = labelRt.anchorMax = new Vector2(0.5f, 0f);
         labelRt.pivot = new Vector2(0.5f, 0.5f);
-        labelRt.anchoredPosition = new Vector2(-30f, bodyMid + 34f);
-        labelRt.sizeDelta = new Vector2(300f, 40f);
+        labelRt.anchoredPosition = new Vector2(-30f, bodyMid + 36f);
+        labelRt.sizeDelta = new Vector2(BarSize.x, 40f);
         progressLabel = labelRt.GetComponent<TextMeshProUGUI>();
         if (tagText != null) progressLabel.font = tagText.font;
         progressLabel.fontSize = 30f;
@@ -140,7 +167,7 @@ public sealed class TeamLifeRequestRow : MonoBehaviour
             btn.anchorMin = btn.anchorMax = new Vector2(1f, 0f);
             btn.pivot = new Vector2(1f, 0.5f);
             btn.anchoredPosition = new Vector2(-28f, bodyMid);
-            btn.sizeDelta = new Vector2(230f, 96f);
+            btn.sizeDelta = new Vector2(240f, 100f);
             if (btn.TryGetComponent(out LayoutElement btnLe)) btnLe.ignoreLayout = true;
             UiButtons.Apply(helpButton, UiButtons.Kind.GreenPlain, styleLabel: false);
             if (helpButtonText != null)
@@ -162,6 +189,29 @@ public sealed class TeamLifeRequestRow : MonoBehaviour
         foreach (Transform child in transform)
             if (child.TryGetComponent(out HorizontalLayoutGroup h) && child.childCount == 0)
                 child.gameObject.SetActive(false);
+    }
+
+    // 0..1 → dolgu genişliği. Boşken gizli; doluyken en az kendi yüksekliği kadar (yuvarlak uçlar ezilmesin).
+    private void SetFill(float t)
+    {
+        if (progressFill == null) return;
+        var fillRt = progressFill.rectTransform;
+        float innerW = BarSize.x - BarInset * 2f;
+        float innerH = BarSize.y - BarInset * 2f;
+        progressFill.enabled = t > 0f;
+        float w = t > 0f ? Mathf.Max(innerH, innerW * Mathf.Clamp01(t)) : 0f;
+        fillRt.offsetMax = new Vector2(BarInset + w, fillRt.offsetMax.y);
+    }
+
+    private static void ApplySliced(Image image, Sprite sprite)
+    {
+        image.sprite = sprite;
+        image.type = Image.Type.Sliced;
+        image.color = Color.white;
+        image.preserveAspect = false;
+        // Kenarlar yüksekliğe oranlı kalsın (buton ailesiyle aynı ölçekleyici).
+        if (!image.TryGetComponent(out SlicedHeightScaler scaler)) scaler = image.gameObject.AddComponent<SlicedHeightScaler>();
+        scaler.Refresh();
     }
 
     private void Place(TMP_Text text, Vector2 anchor, Vector2 pivot, Vector2 pos, Vector2 size, TextAlignmentOptions align)

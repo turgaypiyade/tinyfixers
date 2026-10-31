@@ -1,0 +1,368 @@
+{
+  "appleSKU": "",
+  "appleTeamID": "",
+  "enableCodelessAutoInitialization": false,
+  "enableUnityGamingServicesAutoInitialization": false,
+  "products": [
+    {
+      "id": "com.yigefep.tinyfixers.bundle_welcome",
+      "storeIDs": [],
+      "screenshotPath": "",
+      "applePriceTier": 0,
+      "pricingTemplateID": "",
+      "payouts": [],
+      "type": 0,
+      "defaultDescription": {
+        "googleLocale": 21,
+        "title": "Welcome Pack",
+        "description": "Wonder Fixers - Welcome Pack"
+      },
+      "descriptions": [
+        {
+          "googleLocale": 83,
+          "title": "Hoş Geldin Paketi",
+          "description": "Wonder Fixers - Hoş Geldin Paketi"
+        }
+      ],
+      "googlePrice": {
+        "data": [
+          199,
+          0,
+          0,
+          131072
+        ],
+        "num": 1.99
+      }
+    },
+    {
+      "id": "com.yigefep.tinyfixers.bundle_start",
+      "type": 0,
+      "storeIDs": [],
+      "defaultDescription": {
+        "googleLocale": 21,
+        "title": "Traveler's Bag",
+        "description": "Wonder Fixers - Traveler's Bag"
+      },
+      "screenshotPath": "",
+      "applePriceTier": 0,
+      "googlePrice": {
+        "data": [
+          999,
+          0,
+          0,
+          131072
+        ],
+        "num": 9.99
+      },
+      "pricingTemplateID": "",
+      "descriptions": [
+        {
+          "googleLocale": 83,
+          "title": "Gezginci Çantası",
+          "description": "Wonder Fixers - Gezginci Çantası"
+        }
+      ],
+      "payouts": []
+    },
+    {
+      "id": "com.yigefep.tinyfixers.bundle_hunter_loot",
+      "type": 0,
+      "storeIDs": [],
+      "defaultDescription": {
+        "googleLocale": 21,
+        "title": "Hunter's Loot",
+        "description": "Wonder Fixers - Hunter's Loot"
+      },
+      "screenshotPath": "",
+      "applePriceTier": 0,
+      "googlePrice": {
+        "data": [
+          1999,
+          0,
+          0,
+          131072
+        ],
+        "num": 19.99
+      },
+      "pricingTemplateID": "",
+      "descriptions": [
+        {
+          "googleLocale": 83,
+          "title": "Avcı Ganimeti",
+          "description": "Wonder Fixers - Avcı Ganimeti"
+        }
+      ],
+      "payouts": []
+    },
+    {
+      "id": "com.yigefep.tinyfixers.bundle_explorer_chest",
+      "type": 0,
+      "storeIDs": [],
+      "defaultDescription": {
+        "googleLocale": 21,
+        "title": "Explorer's Chest",
+        "description": "Wonder Fixers - Explorer's Chest"
+      },
+      "screenshotPath": "",
+      "applePriceTier": 0,
+      "googlePrice": {
+        "data": [
+          3999,
+          0,
+          0,
+          131072
+        ],
+        "num": 39.99
+      },
+      "pricingTemplateID": "",
+      "descriptions": [
+        {
+          "googleLocale": 83,
+          "title": "Kaşif Sandığı",
+          "description": "Wonder Fixers - Kaşif Sandığı"
+        }
+      ],
+      "payouts": []
+    },
+    {
+      "id": "com.yigefep.tinyfixers.bundle_grand_safe",
+      "type": 0,
+      "storeIDs": [],
+      "defaultDescription": {
+        "googleLocale": 21,
+        "title": "Grand Safe",
+        "description": "Wonder Fixers - Grand Safe"
+      },
+      "screenshotPath": "",
+      "applePriceTier": 0,
+      "googlePrice": {
+        "data": [
+          7999,
+          0,
+          0,
+          131072
+        ],
+        "num": 79.99
+      },
+      "pricingTemplateID": "",
+      "descriptions": [
+        {
+          "googleLocale": 83,
+          "title": "Büyük Kasa",
+          "description": "Wonder Fixers - Büyük Kasa"
+        }
+      ],
+      "payouts": []
+    },
+    {
+      "id": "com.yigefep.tinyfixers.bundle_legendary",
+      "type": 0,
+      "storeIDs": [],
+      "defaultDescription": {
+        "googleLocale": 21,
+        "title": "Legendary Pack",
+        "description": "Wonder Fixers - Legendary Pack"
+      },
+      "screenshotPath": "",
+      "applePriceTier": 0,
+      "googlePrice": {
+        "data": [
+          9999,
+          0,
+          0,
+          131072
+        ],
+        "num": 99.99
+      },
+      "pricingTemplateID": "",
+      "descriptions": [
+        {
+          "googleLocale": 83,
+          "title": "Efsanevi Paket",
+          "description": "Wonder Fixers - Efsanevi Paket"
+        }
+      ],
+      "payouts": []
+    },
+    {
+      "id": "com.yigefep.tinyfixers.coins_1000",
+      "type": 0,
+      "storeIDs": [],
+      "defaultDescription": {
+        "googleLocale": 21,
+        "title": "1,000 Coins",
+        "description": "Wonder Fixers - 1,000 Coins"
+      },
+      "screenshotPath": "",
+      "applePriceTier": 0,
+      "googlePrice": {
+        "data": [
+          199,
+          0,
+          0,
+          131072
+        ],
+        "num": 1.99
+      },
+      "pricingTemplateID": "",
+      "descriptions": [
+        {
+          "googleLocale": 83,
+          "title": "1.000 Altın",
+          "description": "Wonder Fixers - 1.000 Altın"
+        }
+      ],
+      "payouts": []
+    },
+    {
+      "id": "com.yigefep.tinyfixers.coins_5000",
+      "type": 0,
+      "storeIDs": [],
+      "defaultDescription": {
+        "googleLocale": 21,
+        "title": "5,000 Coins",
+        "description": "Wonder Fixers - 5,000 Coins"
+      },
+      "screenshotPath": "",
+      "applePriceTier": 0,
+      "googlePrice": {
+        "data": [
+          799,
+          0,
+          0,
+          131072
+        ],
+        "num": 7.99
+      },
+      "pricingTemplateID": "",
+      "descriptions": [
+        {
+          "googleLocale": 83,
+          "title": "5.000 Altın",
+          "description": "Wonder Fixers - 5.000 Altın"
+        }
+      ],
+      "payouts": []
+    },
+    {
+      "id": "com.yigefep.tinyfixers.coins_10000",
+      "type": 0,
+      "storeIDs": [],
+      "defaultDescription": {
+        "googleLocale": 21,
+        "title": "10,000 Coins",
+        "description": "Wonder Fixers - 10,000 Coins"
+      },
+      "screenshotPath": "",
+      "applePriceTier": 0,
+      "googlePrice": {
+        "data": [
+          1499,
+          0,
+          0,
+          131072
+        ],
+        "num": 14.99
+      },
+      "pricingTemplateID": "",
+      "descriptions": [
+        {
+          "googleLocale": 83,
+          "title": "10.000 Altın",
+          "description": "Wonder Fixers - 10.000 Altın"
+        }
+      ],
+      "payouts": []
+    },
+    {
+      "id": "com.yigefep.tinyfixers.coins_25000",
+      "type": 0,
+      "storeIDs": [],
+      "defaultDescription": {
+        "googleLocale": 21,
+        "title": "25,000 Coins",
+        "description": "Wonder Fixers - 25,000 Coins"
+      },
+      "screenshotPath": "",
+      "applePriceTier": 0,
+      "googlePrice": {
+        "data": [
+          2999,
+          0,
+          0,
+          131072
+        ],
+        "num": 29.99
+      },
+      "pricingTemplateID": "",
+      "descriptions": [
+        {
+          "googleLocale": 83,
+          "title": "25.000 Altın",
+          "description": "Wonder Fixers - 25.000 Altın"
+        }
+      ],
+      "payouts": []
+    },
+    {
+      "id": "com.yigefep.tinyfixers.coins_50000",
+      "type": 0,
+      "storeIDs": [],
+      "defaultDescription": {
+        "googleLocale": 21,
+        "title": "50,000 Coins",
+        "description": "Wonder Fixers - 50,000 Coins"
+      },
+      "screenshotPath": "",
+      "applePriceTier": 0,
+      "googlePrice": {
+        "data": [
+          5499,
+          0,
+          0,
+          131072
+        ],
+        "num": 54.99
+      },
+      "pricingTemplateID": "",
+      "descriptions": [
+        {
+          "googleLocale": 83,
+          "title": "50.000 Altın",
+          "description": "Wonder Fixers - 50.000 Altın"
+        }
+      ],
+      "payouts": []
+    },
+    {
+      "id": "com.yigefep.tinyfixers.coins_100000",
+      "type": 0,
+      "storeIDs": [],
+      "defaultDescription": {
+        "googleLocale": 21,
+        "title": "100,000 Coins",
+        "description": "Wonder Fixers - 100,000 Coins"
+      },
+      "screenshotPath": "",
+      "applePriceTier": 0,
+      "googlePrice": {
+        "data": [
+          9999,
+          0,
+          0,
+          131072
+        ],
+        "num": 99.99
+      },
+      "pricingTemplateID": "",
+      "descriptions": [
+        {
+          "googleLocale": 83,
+          "title": "100.000 Altın",
+          "description": "Wonder Fixers - 100.000 Altın"
+        }
+      ],
+      "payouts": []
+    }
+  ]
+}

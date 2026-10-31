@@ -25,6 +25,27 @@ public class GameEventSfxConfig : ScriptableObject
     public AudioClip weldingLoop;
     [Range(0f, 1f)] public float weldingVolume = 1f;
 
+    [Header("UI butonları (UiClickSounds — tüm butonlar merkezi)")]
+    public AudioClip uiTap;
+    public AudioClip uiConfirm;
+    public AudioClip uiBack;
+    public AudioClip uiDenied;
+    [Range(0f, 1f)] public float uiVolume = 1f;
+
+    [Header("Oyun anları")]
+    [Tooltip("Bir hedef sayacı 0'a indiğinde (tik işareti).")]
+    public AudioClip goalComplete;
+    [Tooltip("Son 5 hamle uyarısı (level başına bir kez).")]
+    public AudioClip movesLow;
+    [Tooltip("Övgü kademeleri: 0 GOOD, 1 WOW, 2 GREAT.")]
+    public AudioClip[] praise = new AudioClip[3];
+    [Range(0f, 1f)] public float gameMomentVolume = 1f;
+
+    [Header("Altın")]
+    [Tooltip("Cüzdan sayacı sayarken tıklar — sırayla, hafif perde farkıyla çalınır.")]
+    public AudioClip[] coinTicks;
+    [Range(0f, 1f)] public float coinVolume = 1f;
+
     [Header("Global ses kontrolü")]
     [Tooltip("SFX mixer group (GameAudioMixer). Atanınca mute/açma bu seslere de etki eder.")]
     public AudioMixerGroup sfxGroup;

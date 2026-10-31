@@ -6,9 +6,11 @@ using UnityEngine;
 public sealed class TeamLifeInbox
 {
     private const string SaveKey = "team_life_inbox_v1";
-    private const int DonationLimit = 5;
-    // Kullanıcı kuralı (2026-10-10): 24 saatte bir istek; yeni istek eskisini iptal eder.
-    private static readonly TimeSpan RequestCooldown = TimeSpan.FromHours(24);
+    /// Bir can isteğinde toplanabilecek en fazla can (her takım arkadaşından 1). Kartlardaki "x/5" paydası.
+    public const int DonationLimit = 5;
+    // Kullanıcı kuralı (2026-10-27): takıma yeni katılan 24 saat can isteyemez; sonrasında 4 saatte bir istek.
+    // Yeni istek eskisini iptal eder: gelmeyenler düşer, sayaç 0'dan başlar (en fazla 5).
+    private static readonly TimeSpan RequestCooldown = TimeSpan.FromHours(4);
     private static readonly TimeSpan NewMemberLock = TimeSpan.FromHours(24);
 
     [Serializable]
@@ -58,26 +60,28 @@ public sealed class TeamLifeInbox
     public int RequestReceived => state.requestSenders.Count;
     public int RequestTotal => state.requestSenders.Count + state.requested;
     public long LastRequestTicks => state.lastRequestTicks;
-    // İstek yalnız can eksikken ve 24 saatlik kilit dolunca. Bekleyen (alınmamış) cevaplar ya da
+    // İstek yalnız can eksikken ve zaman kilidi (yeni üye 24 saat / istekler arası 4 saat) dolunca. Bekleyen (alınmamış) cevaplar ya da
     // yarım kalmış eski istek ARTIK BLOKLAMAZ: eskiden can doluyken alınamayan cevaplar butonu
     // sonsuza dek "Canların Hazır"da kilitliyordu.
     public bool CanRequest => LivesManager.Current < LivesManager.MaxLives
                               && RequestLockRemaining(DateTime.UtcNow) <= TimeSpan.Zero;
 
     /// <summary>
-    /// Zaman kilidinin kalanı: takıma yeni katılan 24 saat, istek yapan (bu takımda) 24 saat
-    /// bekler. Zero = kilit yok. Takım değişince state sıfırlandığı için 24 saat takım başınadır.
+    /// Zaman kilidinin kalanı: takıma yeni katılan 24 saat, istek yapan (bu takımda) 4 saat
+    /// bekler. Zero = kilit yok. Takım değişince state sıfırlandığı için kilitler takım başınadır.
     /// </summary>
     public TimeSpan RequestLockRemaining(DateTime now)
     {
-        long unlock = 0;
         long joined = PlayerTeamState.JoinedTicks;
-        if (joined > 0) unlock = Math.Max(unlock, joined + NewMemberLock.Ticks);
-        if (state.lastRequestTicks > 0) unlock = Math.Max(unlock, state.lastRequestTicks + RequestCooldown.Ticks);
-        // Saat geri alınmış/bozuk kayıt: kilit en fazla kendi süresi kadar sürebilir.
-        long remaining = Math.Min(unlock - now.Ticks, NewMemberLock.Ticks);
+        long remaining = Math.Max(
+            LockLeft(joined, NewMemberLock, now),
+            LockLeft(state.lastRequestTicks, RequestCooldown, now));
         return remaining > 0 ? TimeSpan.FromTicks(remaining) : TimeSpan.Zero;
     }
+
+    // Saat geri alınmış/bozuk kayıt: her kilit en fazla kendi süresi kadar sürebilir.
+    private static long LockLeft(long startTicks, TimeSpan duration, DateTime now)
+        => startTicks > 0 ? Math.Min(startTicks + duration.Ticks - now.Ticks, duration.Ticks) : 0;
 
     public TeamLifeInbox(string teamId, Action changed, Func<int, int, int> randomRange = null)
     {

@@ -154,6 +154,8 @@ public sealed class SimObstacleLayer : ISimObstacleQuery
 
     private void StampTube(TubeEntry t)
     {
+        // Oyunla aynı kural (GridSpawner.StampTubeCellsIntoLevel): tahtaya tam sığmayan tüp hiç basılmaz.
+        if (TubeObstacleService.GetCellIndices(t, _width, _height) == null) return;
         int ox = t.originCellIndex % _width, oy = t.originCellIndex / _width;
         int dx = t.direction == TubeDirection.Left ? -1 : t.direction == TubeDirection.Right ? 1 : 0;
         int dy = t.direction == TubeDirection.Up   ? -1 : t.direction == TubeDirection.Down  ? 1 : 0;
@@ -476,6 +478,8 @@ public sealed class SimObstacleLayer : ISimObstacleQuery
         var id  = (ObstacleId)_obstacles[idx];
         if (id == ObstacleId.None) return;
         if (id == ObstacleId.EnergyContainer) return;   // ayrı sistem, tasarımla dışarıda
+        if (id == ObstacleId.BirdHouse) return;         // kırılmaz üretici; kuş kotası simüle edilmiyor
+        if (id == ObstacleId.LampStrip) return;         // lamba rengi/kayma modellenmiyor → engel olarak kalır
 
         var rule = _rules?.Get(id);
         if (rule == null) return;

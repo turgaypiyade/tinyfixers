@@ -72,8 +72,12 @@ public class BoosterSlotView : MonoBehaviour
         if (unifyBadges) ArrangeBadges();
         if (countText != null)
         {
+            GameNumberFont.Apply(countText, scaleSize: false);   // ArrangeBadges kapalıysa da font geçsin
             CrispTextMaterial.Apply(countText);
-            TmpOutline.Apply(countText, 0.26f, new Color(0.35f, 0.04f, 0.06f, 1f));
+            // Kırmızı rozette ince koyu-kırmızı kontur kayboluyordu: daha kalın + sağ-alt gölge
+            // (kural: kontur = rozet kırmızısının koyusu, gölge daha koyusu).
+            TmpOutline.Apply(countText, 0.34f, new Color(0.35f, 0.04f, 0.06f, 1f),
+                new Color(0.20f, 0.02f, 0.03f, 1f), new Vector2(0.4f, -0.55f));
         }
     }
 
@@ -94,10 +98,12 @@ public class BoosterSlotView : MonoBehaviour
             countText.alignment = TextAlignmentOptions.Center;
             countText.textWrappingMode = TextWrappingModes.NoWrap;
             // 1-2 hane sabit 40pt; yalnız 3+ hane sığmazsa küçülür.
-            countText.fontSize = countFontSize;
+            GameNumberFont.Apply(countText, scaleSize: false);   // geri alınabilir: Resources/GameNumberFont
+            float size = GameNumberFont.Size(countFontSize);
+            countText.fontSize = size;
             countText.enableAutoSizing = true;
-            countText.fontSizeMax = countFontSize;
-            countText.fontSizeMin = countFontSize * 0.6f;
+            countText.fontSizeMax = size;
+            countText.fontSizeMin = size * 0.6f;
         }
         // Rozetler ikonun ÜSTÜNDE çizilsin (Unity nesnesinde ?. kullanılmaz — sahte-null tuzağı).
         if (numberBG != null) numberBG.transform.SetAsLastSibling();

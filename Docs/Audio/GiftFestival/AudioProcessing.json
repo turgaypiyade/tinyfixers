@@ -1,0 +1,102 @@
+[
+  {
+    "clip": "Intro",
+    "source": "/Users/turgayp/Downloads/Giftfestival_intro_v2.wav",
+    "sourceSha256": "3712332f64ec16f031c9215b2ac68615b40ab7eb4d6925ecbefb89dc4655bac5",
+    "sourceRangeSeconds": [
+      0.0,
+      3.0
+    ],
+    "gainDb": -0.36,
+    "fadeInSeconds": 0.015,
+    "fadeOutSeconds": 0.12,
+    "highpassHz": 60,
+    "lowpassHz": 14000,
+    "outputDurationSeconds": 3.0,
+    "channels": 2,
+    "tempoFactor": 1.0,
+    "cueVolume": 0.8,
+    "truePeakDbTP": -9.08,
+    "integratedLUFS": -22.02
+  },
+  {
+    "clip": "Throw",
+    "source": "/Users/turgayp/Downloads/GiftFestival_Throw.wav",
+    "sourceSha256": "f537adaf61142ed097e51cf28f2036275f1386f921b8e86acb55c7a156600e4f",
+    "sourceRangeSeconds": [
+      0.018,
+      0.3
+    ],
+    "gainDb": -3.67,
+    "fadeInSeconds": 0.002,
+    "fadeOutSeconds": 0.02,
+    "highpassHz": 100,
+    "lowpassHz": 14000,
+    "outputDurationSeconds": 0.282,
+    "channels": 1,
+    "tempoFactor": 1.0,
+    "cueVolume": 0.85,
+    "truePeakDbTP": -6.0,
+    "integratedLUFS": null
+  },
+  {
+    "clip": "BatHit",
+    "source": "/Users/turgayp/Downloads/GiftFestival_BatHit.wav",
+    "sourceSha256": "167fd2793fd3cdfbda8548c4c69f915b6ec878a46fdccb21972413d515b103ce",
+    "sourceRangeSeconds": [
+      0.0,
+      0.135
+    ],
+    "gainDb": -2.96,
+    "fadeInSeconds": 0.0005,
+    "fadeOutSeconds": 0.015,
+    "highpassHz": 70,
+    "lowpassHz": 14000,
+    "outputDurationSeconds": 0.135,
+    "channels": 1,
+    "tempoFactor": 1.0,
+    "cueVolume": 0.9,
+    "truePeakDbTP": -3.0,
+    "integratedLUFS": null
+  },
+  {
+    "clip": "BallFlight",
+    "source": "/Users/turgayp/Downloads/GiftFestival_BallFlight.wav",
+    "sourceSha256": "6a9d1523013b85c215a914fbd4817f301bb37c7cd8c51e46df104ce62e5ec0d3",
+    "sourceRangeSeconds": [
+      0.105,
+      0.53
+    ],
+    "gainDb": 3.4,
+    "fadeInSeconds": 0.003,
+    "fadeOutSeconds": 0.025,
+    "highpassHz": 100,
+    "lowpassHz": 14000,
+    "outputDurationSeconds": 0.425,
+    "channels": 1,
+    "tempoFactor": 1.0,
+    "cueVolume": 0.65,
+    "truePeakDbTP": -7.0,
+    "integratedLUFS": -27.15
+  },
+  {
+    "clip": "GlassBreak",
+    "source": "/Users/turgayp/Downloads/GiftFestival_GlassBreak.wav",
+    "sourceSha256": "77564a119c3b953c7486bc3d0e217eeb6a471184fde4eb6c799059680c030e04",
+    "sourceRangeSeconds": [
+      0.016,
+      0.59
+    ],
+    "gainDb": -2.61,
+    "fadeInSeconds": 0.002,
+    "fadeOutSeconds": 0.03,
+    "highpassHz": 180,
+    "lowpassHz": 10000,
+    "outputDurationSeconds": 0.574,
+    "channels": 1,
+    "tempoFactor": 1.0,
+    "cueVolume": 0.85,
+    "truePeakDbTP": -4.0,
+    "integratedLUFS": -27.86
+  }
+]

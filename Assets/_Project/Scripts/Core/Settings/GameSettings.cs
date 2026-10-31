@@ -55,15 +55,6 @@ public static class GameSettings
         evt?.Invoke(value);
     }
 
-    /// <summary>
-    /// Vibration kısa titreşim — VibrationEnabled true ise tetikler.
-    /// Mobile platformda Handheld.Vibrate çağırır, editörde no-op.
-    /// </summary>
-    public static void TryVibrate()
-    {
-        if (!VibrationEnabled) return;
-#if UNITY_ANDROID || UNITY_IOS
-        Handheld.Vibrate();
-#endif
-    }
+    /// <summary>Eski giriş noktası: merkezi Haptics'e (orta güç) yönlendirir.</summary>
+    public static void TryVibrate() => Haptics.Play(Haptics.Strength.Medium);
 }

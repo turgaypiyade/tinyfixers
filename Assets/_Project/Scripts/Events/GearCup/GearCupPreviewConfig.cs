@@ -77,7 +77,7 @@ public sealed class GearCupPreviewConfig : ScriptableObject
     [Header("Live event rules")]
     public bool eventEnabled = true;
     public bool autoShowJoinPopup = true;
-    [Min(1)] public int minLevelGate = 51;
+    [Min(1)] public int minLevelGate = 70;
     [Min(1)] public int seasonHours = 72;
     [Range(0, 60)] public int settlementMinutes = 10;
     public bool onlyYellowTiles;

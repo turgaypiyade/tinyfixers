@@ -20,7 +20,10 @@ def load_wonders():
         prefix, rest = text.split("  tasks:\n", 1)
         body, suffix = rest.split("  starCosts:", 1)
         item = {"id": re.search(r"^  wonderId: (.+)", text, re.M)[1], "tasks": [],
-                "outsideTasksSha256": hashlib.sha256((prefix + "  starCosts:" + suffix).encode()).hexdigest()}
+                # The optional baked preview reference is a presentation-only schema addition;
+                # continue comparing all pre-existing non-task data with the original baseline.
+                "outsideTasksSha256": hashlib.sha256((re.sub(r"^  unrestoredTexture:.*\n", "", prefix, flags=re.M)
+                                                       + "  starCosts:" + suffix).encode()).hexdigest()}
         for chunk in body.split("  - name: ")[1:]:
             raw = chunk.split("\n", 1)[0]
             regions = [dict(zip(["x", "y", "width", "height"], map(float, m))) for m in re.findall(

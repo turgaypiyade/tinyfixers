@@ -56,6 +56,12 @@ public class LightningBeam : MonoBehaviour
     private LineRenderer lr;
     private LineRenderer innerLr;
     private GradientColorKey[] innerColorKeys;
+    private Gradient innerGradient;
+    private GradientAlphaKey[] innerAlphaKeys;
+    private Gradient persistentGradient;
+    private GradientColorKey[] persistentColorKeys;
+    private GradientAlphaKey[] persistentAlphaKeys;
+    private Vector3[] positions;
     private float baseStartWidth;
     private float baseEndWidth;
     private float t;
@@ -281,22 +287,20 @@ public class LightningBeam : MonoBehaviour
         if (lr == null)
             return;
 
-        var gradient = new Gradient();
-        gradient.SetKeys(
-            new[]
-            {
-                new GradientColorKey(color, 0f),
-                new GradientColorKey(Color.Lerp(Color.white, color, 0.5f), 0.65f),
-                new GradientColorKey(Color.white, 1f)
-            },
-            new[]
-            {
-                new GradientAlphaKey(color.a, 0f),
-                new GradientAlphaKey(color.a * 0.85f, 0.45f),
-                new GradientAlphaKey(0f, 1f)
-            });
-
-        lr.colorGradient = gradient;
+        if (persistentGradient == null)
+        {
+            persistentGradient = new Gradient();
+            persistentColorKeys = new GradientColorKey[3];
+            persistentAlphaKeys = new GradientAlphaKey[3];
+        }
+        persistentColorKeys[0] = new GradientColorKey(color, 0f);
+        persistentColorKeys[1] = new GradientColorKey(Color.Lerp(Color.white, color, 0.5f), 0.65f);
+        persistentColorKeys[2] = new GradientColorKey(Color.white, 1f);
+        persistentAlphaKeys[0] = new GradientAlphaKey(color.a, 0f);
+        persistentAlphaKeys[1] = new GradientAlphaKey(color.a * 0.85f, 0.45f);
+        persistentAlphaKeys[2] = new GradientAlphaKey(0f, 1f);
+        persistentGradient.SetKeys(persistentColorKeys, persistentAlphaKeys);
+        lr.colorGradient = persistentGradient;
     }
 
     private void UpdatePersistentEndpoints()
@@ -358,6 +362,8 @@ public class LightningBeam : MonoBehaviour
         float timeSeed = liveFlicker ? (Time.time * noiseScale + seed) : seed;
 
         int count = lr.positionCount;
+        if (positions == null || positions.Length != count)
+            positions = new Vector3[count];
         if (innerLr != null && innerLr.positionCount != count)
             innerLr.positionCount = count;
 
@@ -388,10 +394,11 @@ public class LightningBeam : MonoBehaviour
                 pos += side * (nHi * 2f * length * edgeShimmerAmount * edgeFade);
             }
 
-            lr.SetPosition(i, pos);
-            if (innerLr != null)
-                innerLr.SetPosition(i, pos);   // AYNI şekil/hareket — ince random-renkli çekirdek
+            positions[i] = pos;
         }
+        // One native submission per line instead of one per segment, with identical points.
+        lr.SetPositions(positions);
+        if (innerLr != null) innerLr.SetPositions(positions);
     }
 
     // İç çizgiye random renk gradyanını verilen alpha ile uygular (ana çizgiyle beraber söner).
@@ -400,14 +407,15 @@ public class LightningBeam : MonoBehaviour
         if (innerLr == null || innerColorKeys == null || innerColorKeys.Length == 0)
             return;
 
-        float a01 = Mathf.Clamp01(alpha);
-        var alphaKeys = new[]
+        if (innerGradient == null)
         {
-            new GradientAlphaKey(a01, 0f),
-            new GradientAlphaKey(a01, 1f)
-        };
-        var grad = new Gradient();
-        grad.SetKeys(innerColorKeys, alphaKeys);
-        innerLr.colorGradient = grad;
+            innerGradient = new Gradient();
+            innerAlphaKeys = new GradientAlphaKey[2];
+        }
+        float a01 = Mathf.Clamp01(alpha);
+        innerAlphaKeys[0] = new GradientAlphaKey(a01, 0f);
+        innerAlphaKeys[1] = new GradientAlphaKey(a01, 1f);
+        innerGradient.SetKeys(innerColorKeys, innerAlphaKeys);
+        innerLr.colorGradient = innerGradient;
     }
 }

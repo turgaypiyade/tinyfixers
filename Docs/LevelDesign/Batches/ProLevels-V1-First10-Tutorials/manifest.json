@@ -1,0 +1,25 @@
+{
+  "changed": [
+    {
+      "level": 8,
+      "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00000080.asset",
+      "sha256": "3f9cc063a3ed1a1c304c248708de107108452fd90a060fd40edb058bc10c1cf5"
+    },
+    {
+      "level": 9,
+      "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00000090.asset",
+      "sha256": "ba76f9fb92ba7e61c11f5656ef824b77403fdb95c3063b5a8d55f49bb8224d7a"
+    },
+    {
+      "level": 19,
+      "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00000190.asset",
+      "sha256": "54eb7e01e01d0a8858bc296594ff32b6c1f7ab93c78adb8f92157c10aecffc45"
+    },
+    {
+      "level": 22,
+      "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00000220.asset",
+      "sha256": "f1b68c95dd4e8e384a6e2b06b1e3341244e5dabcd6a4dab533c445ecefcc3738"
+    }
+  ],
+  "scope": "Tutorial steps and starting tiles only; all obstacles, masks, goals, moves, names and catalog preserved."
+}

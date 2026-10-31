@@ -1,197 +1,212 @@
-# Level isimleri — 1–189
+# Level isimleri — LevelCatalogProV1 (1–205)
 
-Tek kaynak: [LevelNames.json](../../Assets/_Project/Resources/LevelNames.json). 61 mevcut tasarım ismi korundu, 119 isimsiz levele mevcut hedef/engel ve board kayıtlarına göre isim verildi. Parantez içindeki zorluk/revizyon/tanıtım açıklamaları görünen isme katılmadı. İsimler Türkçedir; oyun UI bağlantısı henüz eklenmedi. Her kayıt gerçek katalogdaki `level` ve `levelKey` ile eşleşir; asset numarası kullanılmaz.
+2026-10-28: Oyun `Settings/ProLevels/LevelCatalogProV1`'e geçti; numaralar YENİ sıradır. Boş seviyeler (4, 8, 106) henüz tasarlanmadığı için isimsizdir. Eski numaralı liste ve eşleşme: Masaüstü Wondi Paylaşım/LevelCatalogProV1_Plan.xlsx.
 
-Yeni level tasarlarken aynı JSON'a isim ekle, bu tabloyu ve ilgili not/önizlemeyi aynı isimde tut. Kullanıcı açıkça istemedikçe mevcut isimleri değiştirme. İsim kataloğu tasarım hafızasının ayrı bir çıktısıdır; 173–180 draft grubunu geri alma aracı isim kataloğunu silmez.
+Tek kaynak: [LevelNames.json](../../Assets/_Project/Resources/LevelNames.json). 61 mevcut tasarım ismi korundu, 119 isimsiz levele mevcut hedef/engel ve board kayıtlarına göre isim verildi. Parantez içindeki zorluk/revizyon/tanıtım açıklamaları görünen isme katılmadı. Her kayıtta `name` (TR) ve `nameEn` (EN) vardır; oyun PreLevel popup'ında başlık plakasında 'LEVEL N' altında cihaz diline göre gösterir (`LevelNames.Get`, 2026-10-27). İngilizce karşılığı olmayan level İngilizce cihazda isimsiz görünür. Her kayıt gerçek katalogdaki `level` ve `levelKey` ile eşleşir; asset numarası kullanılmaz.
+
+Yeni level tasarlarken aynı JSON'a TR + EN isim ekle, bu tabloyu ve ilgili not/önizlemeyi aynı isimde tut. Kullanıcı açıkça istemedikçe mevcut isimleri değiştirme. İsim kataloğu tasarım hafızasının ayrı bir çıktısıdır; 173–180 draft grubunu geri alma aracı isim kataloğunu silmez.
 
 | Level | İsim |
 | --- | --- |
 | 1 | İlk Tamir |
-| 2 | Renkli Başlangıç |
-| 3 | İki Katlı İş |
-| 4 | Çamurlu Avlu |
+| 2 | İki Katlı İş |
+| 3 | Renkli Başlangıç |
 | 5 | Ahşap Basamaklar |
-| 6 | Yağlı Rampa |
+| 6 | Çamurlu Avlu |
 | 7 | Sandık Koridoru |
-| 8 | Turuncu Şeritler |
-| 9 | İlk Sevkiyat |
+| 9 | Saklı Zemin |
 | 10 | Atölye Düellosu |
-| 11 | Kargo Köprüsü |
-| 12 | Mor ve Turuncu |
-| 13 | İki Renkli Onarım |
-| 14 | Mavi Sandıklar |
-| 15 | Kızıl Hat |
-| 16 | Çamurlu Sevkiyat |
-| 17 | Saklı Zemin |
-| 18 | Renkli Kilitler |
-| 19 | Dört Renkli Depo |
+| 11 | Yağlı Rampa |
+| 12 | Açık Avlu |
+| 13 | Katmanlı Geçit |
+| 14 | Yağlı Köşe |
+| 15 | Üç Katlı Bent |
+| 16 | Turuncu Şeritler |
+| 17 | Mavi Sandıklar |
+| 18 | Mor ve Turuncu |
+| 19 | İki Renkli Onarım |
 | 20 | Ustanın Sınavı |
-| 21 | Kaygan Depo |
-| 22 | Şapkalı Atölye |
-| 23 | Enerji Şöleni |
-| 24 | Sandık Meydanı |
-| 25 | Kargo Adaları |
-| 26 | Çamurlu Enerji |
-| 27 | Depo Temizliği |
-| 28 | Kat Kat Onarım |
-| 29 | Eşya Pazarı |
+| 21 | İlk Sevkiyat |
+| 22 | Kargo Köprüsü |
+| 23 | Kargo Şenliği |
+| 24 | Kızıl Hat |
+| 25 | Çamurlu Sevkiyat |
+| 26 | Renkli Kilitler |
+| 27 | Dört Renkli Depo |
+| 28 | Kaygan Depo |
+| 29 | Sandık Meydanı |
 | 30 | İkinci Vardiya |
-| 31 | Boru Hattı |
-| 32 | Sandıklı Tesisat |
-| 33 | Kargo Tüneli |
-| 34 | Mavi Geçiş |
-| 35 | Boru Atölyesi |
-| 36 | On Dolaplı Salon |
-| 37 | Porselen Kanal |
-| 38 | Heykeltıraşın Işığı |
-| 39 | Porselen Vitrin |
+| 31 | Şapkalı Atölye |
+| 32 | Depo Temizliği |
+| 33 | Çamurlu Enerji |
+| 34 | Kargo Adaları |
+| 35 | Enerji Şöleni |
+| 36 | Eşya Pazarı |
+| 37 | Kat Kat Onarım |
+| 38 | On Dolaplı Salon |
+| 39 | Renkli Ambar |
 | 40 | Enerji Düellosu |
-| 41 | Taş Ustası |
-| 42 | Yüklü Tesisat |
-| 43 | Kırılgan Kargo |
-| 44 | Beyaz Salon |
-| 45 | Pusula Meydanı |
-| 46 | İkiz Malzeme |
-| 47 | Fenerli Vitrin |
-| 48 | Çamurlu Fenerler |
-| 49 | Üç Renkli Cephe |
+| 41 | Boru Hattı |
+| 42 | Sandıklı Tesisat |
+| 43 | Kargo Tüneli |
+| 44 | Mavi Geçiş |
+| 45 | Boru Atölyesi |
+| 46 | Porselen Kanal |
+| 47 | Beyaz Salon |
+| 48 | Porselen Vitrin |
+| 49 | Kırılgan Kargo |
 | 50 | Tamirci Arenası |
-| 51 | Pusulanın Işığı |
-| 52 | Dolaplı Fenerlik |
-| 53 | Sandık Sırtı |
-| 54 | Turuncu Avlular |
-| 55 | Gizli Eşya Odası |
-| 56 | Yüklü Boru Hattı |
-| 57 | Katmanlı Depo |
-| 58 | Yeşil Halı |
-| 59 | Porselen Bahçesi |
+| 51 | Heykeltıraşın Işığı |
+| 52 | Turuncu Kilit |
+| 53 | Yüklü Boru Hattı |
+| 54 | Taş Ustası |
+| 55 | Yüklü Tesisat |
+| 56 | Pusula Meydanı |
+| 57 | İkiz Malzeme |
+| 58 | Pusulanın Işığı |
+| 59 | Gizli Eşya Odası |
 | 60 | Yeşil Düello |
-| 61 | Bahçe Sevkiyatı |
-| 62 | Renkli Ambar |
-| 63 | İlk Hazine |
-| 64 | Turuncu Kilit |
-| 65 | Işıklı Sandıklar |
-| 66 | Saklı Kasa |
-| 67 | Hassas Sevkiyat |
-| 68 | Fenerli Rıhtım |
-| 69 | Kargo Şenliği |
+| 61 | Fenerli Vitrin |
+| 62 | Dolaplı Fenerlik |
+| 63 | Sandık Sırtı |
+| 64 | Üç Renkli Cephe |
+| 65 | Çamurlu Fenerler |
+| 66 | Yeşil Halı |
+| 67 | Turuncu Avlular |
+| 68 | Porselen Bahçesi |
+| 69 | Katmanlı Depo |
 | 70 | Usta Meydanı |
-| 71 | Kilitli Atölye |
-| 72 | Çamur Fıçıları |
-| 73 | Bahçedeki Fıçılar |
-| 74 | Çekim Bahçesi |
-| 75 | Taş Kasası |
-| 76 | Anahtar Atölyesi |
-| 77 | Manyetik Bahçe |
-| 78 | Bahçe Vitrini |
-| 79 | Çekim Merkezi |
+| 71 | Altın Yağmuru |
+| 72 | Hassas Sevkiyat |
+| 73 | Bahçe Sevkiyatı |
+| 74 | Işıklı Sandıklar |
+| 75 | Fenerli Rıhtım |
+| 76 | İlk Hazine |
+| 77 | Kızıl Kasa |
+| 78 | Saklı Kasa |
+| 79 | Porselen Dolaplar |
 | 80 | Onarım Düellosu |
-| 81 | Anahtar Yağmuru |
-| 82 | Çift Çekim |
-| 83 | Bahçe Dolabı |
-| 84 | Porselen Dolaplar |
-| 85 | Kızıl Kasa |
-| 86 | Mor İzler |
-| 87 | Enerji Kanatları |
-| 88 | Jel Kanalları |
-| 89 | Gizli Jel Bahçesi |
-| 90 | Mor Düello |
-| 91 | Jelli Restorasyon |
-| 92 | Pusulalı Kasa |
-| 93 | İlk Yağmur |
-| 94 | Yağmurlu Atölye |
-| 95 | Mor Bahçe |
-| 96 | Su Ambarı |
-| 97 | Fıçı İskelesi |
-| 98 | Çim Avlusu |
-| 99 | Fenerlerin Işığı |
-| 100 | Fırtına Düellosu |
-| 101 | İlk Duvar |
-| 102 | Tuğla Odaları |
-| 103 | Mor Surlar |
-| 104 | Fenerli Sur |
-| 105 | Çiçekli Surlar |
-| 106 | Çiçekli Kelebek |
-| 107 | Çiçekli Madalyon |
-| 108 | Jel Kristali |
-| 109 | İkiz Teras |
-| 110 | Çiçekli Kemer |
-| 111 | Mühürlü Kale |
-| 112 | Çelik Bahçe |
-| 113 | Arlekin Uçurtma |
-| 114 | Altıgen Petek |
-| 115 | Damalı Kale |
-| 116 | Kristal Kalp |
-| 117 | Hamster'ın Kalesi |
-| 118 | Su Kuleleri |
-| 119 | Jelli Çelik |
-| 120 | Porsuğun Tacı |
-| 121 | Jel Kartuşları |
-| 122 | Boya Piramidi |
-| 123 | Mor Boyahane |
-| 124 | Renkli Palet |
-| 125 | Şapka Şeritleri |
-| 126 | Antik Mühür |
-| 127 | Piramit Mührü |
-| 128 | Elma Ağacı |
-| 129 | Altın Kupa |
-| 130 | Kalkan |
-| 131 | Gözcü Adaları |
-| 132 | Deney Tüpü Rafı |
-| 133 | Roma Tapınağı |
-| 134 | Roma Tapınağı II |
-| 135 | Bölmeli Pencere |
-| 136 | Gözcü Kulesi |
-| 137 | Anahtarlı Boyahane |
-| 138 | Tuğla Geçidi |
-| 139 | Üç Renkli Oyma |
-| 140 | Kum Saati |
-| 141 | Brandalı Atölye |
-| 142 | Örtülü Surlar |
-| 143 | Lazerli Hazine |
-| 144 | Mor Tesisat |
-| 145 | Kanal Adaları |
-| 146 | Yağlı Anahtar |
-| 147 | Su Feneri |
-| 148 | Çiçekli Yonca |
-| 149 | Mühürlü Dört Kule |
-| 150 | Onarım Kapısı |
-| 151 | Nilüfer Göleti |
-| 152 | Basamaklı Atölye |
-| 153 | İki Avlu |
-| 154 | Renkli Sandıklar |
-| 155 | Nilüfer Tacı |
-| 156 | Kargo Kemerleri |
-| 157 | Üç Atölye |
-| 158 | Kilitli Alet Çantası |
-| 159 | Mor Mozaik |
-| 160 | Kızıl Köprü |
-| 161 | Rodos Atölyesi |
-| 162 | Büyük Restorasyon |
-| 163 | Renkli Onarım |
-| 164 | Mor Akıntı |
-| 165 | Çifte Hazine |
-| 166 | Usta Restoratör |
-| 167 | Lazerli Restorasyon |
-| 168 | Zincir Atölyesi |
-| 169 | Kızıl ve Yeşil |
-| 170 | Kanyon Düellosu |
-| 171 | Renkli Çerçeve |
-| 172 | Boya İskelesi |
-| 173 | Kargo Rıhtımı |
-| 174 | Mor Mercek |
-| 175 | Mühürlü Vitray |
-| 176 | Dolaplı Geçit |
-| 177 | Boru Orgu |
-| 178 | Çiçekli Pusula |
-| 179 | Çelik Kilit |
-| 180 | Kanyon Köprüsü |
-| 181 | Basamaklı Arşiv |
-| 182 | Fener Şenliği |
-| 183 | Fenerli Bent |
-| 184 | Boya Terasları |
-| 185 | Işık Merdiveni |
-| 186 | Zümrüt Vitrin |
-| 187 | Boyalı Akarsu |
-| 188 | Üç Mühürlü Geçit |
-| 189 | İkiz Gölet Kalesi |
+| 81 | Kilitli Atölye |
+| 82 | İkiz Teras |
+| 83 | Çim Avlusu |
+| 84 | Fenerlerin Işığı |
+| 85 | Taş Kasası |
+| 86 | Çamur Fıçıları |
+| 87 | Bahçedeki Fıçılar |
+| 88 | Bahçe Vitrini |
+| 89 | Mor Bahçe |
+| 90 | Dalga Düellosu |
+| 91 | Çekim Bahçesi |
+| 92 | Şapka Şeritleri |
+| 93 | Çekim Merkezi |
+| 94 | Bahçe Dolabı |
+| 95 | Çift Çekim |
+| 96 | Anahtar Atölyesi |
+| 97 | Elma Ağacı |
+| 98 | Anahtar Yağmuru |
+| 99 | Manyetik Bahçe |
+| 100 | Yaprak Düellosu |
+| 101 | Mor İzler |
+| 102 | Jel Kanalları |
+| 103 | Pusulalı Kasa |
+| 104 | Gizli Jel Bahçesi |
+| 105 | Fıçı İskelesi |
+| 107 | Deney Tüpü Rafı |
+| 108 | Altın Kupa |
+| 109 | Üç Renkli Oyma |
+| 110 | Mor Düello |
+| 111 | Enerji Kanatları |
+| 112 | Jel Kristali |
+| 113 | İki Avlu |
+| 114 | Jelli Restorasyon |
+| 115 | Yağlı Anahtar |
+| 116 | İlk Yağmur |
+| 117 | Yağmurlu Atölye |
+| 118 | Su Ambarı |
+| 119 | Renkli Sandıklar |
+| 120 | Fırtına Düellosu |
+| 121 | İlk Duvar |
+| 122 | Tuğla Odaları |
+| 123 | Roma Tapınağı |
+| 124 | Fenerli Sur |
+| 125 | Mor Surlar |
+| 126 | Çiçekli Surlar |
+| 127 | Çiçekli Madalyon |
+| 128 | Mühürlü Kale |
+| 129 | Çiçekli Kelebek |
+| 130 | Çiçekli Kemer |
+| 131 | Çelik Bahçe |
+| 132 | Altıgen Petek |
+| 133 | Arlekin Uçurtma |
+| 134 | Damalı Kale |
+| 135 | Kristal Kalp |
+| 136 | Hamster'ın Kalesi |
+| 137 | Roma Tapınağı II |
+| 138 | Su Kuleleri |
+| 139 | Jelli Çelik |
+| 140 | Porsuğun Tacı |
+| 141 | Jel Kartuşları |
+| 142 | Kilitli Alet Çantası |
+| 143 | Tuğla Geçidi |
+| 144 | Basamaklı Atölye |
+| 145 | Mor Mozaik |
+| 146 | Boya Piramidi |
+| 147 | Renkli Palet |
+| 148 | Mor Boyahane |
+| 149 | Bölmeli Pencere |
+| 150 | Kızıl Köprü |
+| 151 | Antik Mühür |
+| 152 | Kargo Kemerleri |
+| 153 | Piramit Mührü |
+| 154 | Anahtarlı Boyahane |
+| 155 | Mühürlü Dört Kule |
+| 156 | Gözcü Adaları |
+| 157 | Gözcü Kulesi |
+| 158 | Su Feneri |
+| 159 | Lazerli Hazine |
+| 160 | Kalkan |
+| 161 | Brandalı Atölye |
+| 162 | Çiçekli Yonca |
+| 163 | Örtülü Surlar |
+| 164 | Kanal Adaları |
+| 165 | Mor Tesisat |
+| 166 | Nilüfer Göleti |
+| 167 | Üç Atölye |
+| 168 | Renkli Onarım |
+| 169 | Nilüfer Tacı |
+| 170 | Kum Saati |
+| 171 | Rodos Atölyesi |
+| 172 | Mor Akıntı |
+| 173 | Büyük Restorasyon |
+| 174 | Usta Restoratör |
+| 175 | Çifte Hazine |
+| 176 | Kızıl ve Yeşil |
+| 177 | Zincir Atölyesi |
+| 178 | Renkli Çerçeve |
+| 179 | Lazerli Restorasyon |
+| 180 | Onarım Kapısı |
+| 181 | Fener Şenliği |
+| 182 | Mor Mercek |
+| 183 | Boya İskelesi |
+| 184 | Kargo Rıhtımı |
+| 185 | Mühürlü Vitray |
+| 186 | Fenerli Bent |
+| 187 | Çiçekli Pusula |
+| 188 | Boru Orgu |
+| 189 | Dolaplı Geçit |
+| 190 | Kanyon Düellosu |
+| 191 | Işıklı Kapı |
+| 192 | İkiz Gölet Kalesi |
+| 193 | Üç Mühürlü Geçit |
+| 194 | Çelik Kilit |
+| 195 | Boyalı Akarsu |
+| 196 | Işık Çarkı |
+| 197 | Işık Merdiveni |
+| 198 | Zümrüt Vitrin |
+| 199 | Deniz Kabuğu |
+| 200 | Kanyon Köprüsü |
+| 201 | Guguk Bahçesi |
+| 202 | Boyalı Kuş Avlusu |
+| 203 | Kuşlu Sevkiyat |
+| 204 | Kuşlu Akarsu |
+| 205 | Mühürlü Kuş Parkı |

@@ -66,6 +66,10 @@ public sealed class NotificationPermissionPrompt : MonoBehaviour
 
         var skin = CommonPopupSkin.Shared;
         var view = CommonPopupView.Create(transform, GameLocalization.Get("notif_prompt_title"), () => Answer(false));
+        // Kullanıcı ayarı (2026-10-27): başlık kutusu üstten 20 yukarı (Inspector Top = -20), yay 17°.
+        var titleRt = view.Title.rectTransform;
+        titleRt.offsetMax = new Vector2(titleRt.offsetMax.x, 20f);
+        if (view.Title.TryGetComponent(out TextArcEffect arc)) arc.SetArcAngle(17f);
         var body = CommonPopupView.Text(view.Body, "Message", GameLocalization.Get("notif_prompt_body"), 46, skin.bodyTextColor);
         CommonPopupView.Region(body.rectTransform, new Rect(0, 0, 1, 1));
 

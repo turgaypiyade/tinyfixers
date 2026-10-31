@@ -65,6 +65,18 @@ public static class PlayerWallet
         OnCoinsChanged?.Invoke(value);
     }
 
+    /// <summary>Persist an event's star reward, ledger and delivery receipt in the same save.</summary>
+    public static void AddStarsWithCheckpoint(int amount, string checkpointKey, string checkpoint)
+    {
+        if (RuntimeSimulationSession.IsActive || amount <= 0 || string.IsNullOrEmpty(checkpointKey)) return;
+        int value = TotalStars + amount;
+        CurrencyLedger.RecordStars(amount);
+        PlayerPrefs.SetInt(KeyTotalStars, value);
+        PlayerPrefs.SetString(checkpointKey, checkpoint);
+        PlayerPrefs.Save();
+        OnTotalStarsChanged?.Invoke(value);
+    }
+
     // -----------------------------------------------------------------------
     // Stars
 

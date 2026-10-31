@@ -1,0 +1,30 @@
+{
+  "levels": [
+    {
+      "level": 202,
+      "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00002020.asset",
+      "guid": "90d366ecba0e484e847e85f75ed877c2",
+      "sha256": "4d1aed9394bdfc8c44489d8130dafbc20edce5ea8922e06fb0a7f07f0f7086e4"
+    },
+    {
+      "level": 203,
+      "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00002030.asset",
+      "guid": "cf24fe4b55734555bd1753bd4a00712c",
+      "sha256": "5a08b56ad0fcc9ed58b7e1bd34a6453d822768e78219480d391afff77ee1dca0"
+    },
+    {
+      "level": 204,
+      "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00002040.asset",
+      "guid": "d24941283aad4c9996af759a79d2a97b",
+      "sha256": "c0c1881de75a50663f6ad63d56aa3ec5cb50da3fff7bb54f950e4fcdc3b495a5"
+    },
+    {
+      "level": 205,
+      "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00002050.asset",
+      "guid": "ebfc75dd87f24d1797f8058214d9aac1",
+      "sha256": "6d767142033931ee345dc87de7279799f4bc204f21a863b9f909483b82f72c0d"
+    }
+  ],
+  "revision201": "Bird collectible amount only: 12 -> 50",
+  "scope": "V1 202\u2013205 only; no runtime changes, publishing or release baseline."
+}

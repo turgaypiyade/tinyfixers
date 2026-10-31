@@ -810,7 +810,8 @@ public class BoardController : MonoBehaviour
     public event Action<TileType, int> OnTilesCleared;
     // One scored stone, with its clear position captured before its view is pooled.
     internal event Action<TileType, Vector3> OnTileCollectedAt;
-    public event Action<int> OnMoveClearPraise;
+    /// <summary>Bir hamle çok taş temizlediğinde: (temizlenen taş, hamlenin dünya konumu — övgü oradan doğar).</summary>
+    public event Action<int, Vector3> OnMoveClearPraise;
     // Her tekil special aktivasyonu (zincirdekiler dahil) — BossDuel bonus hasarı dinler.
     public event Action<TileSpecial, Vector2Int> OnSpecialActivated;
     public event Action<bool> OnBoosterTargetingChanged;
@@ -822,6 +823,8 @@ public class BoardController : MonoBehaviour
     private bool shakeNextClear;
     private bool isSpecialActivationPhase;
     private int moveClearPraiseCount;
+    private Vector3 moveClearPraiseOrigin;
+    private bool moveClearPraiseHasOrigin;
     private bool moveClearPraiseTracking;
     private bool moveClearPraiseEmitted;
     // Decoupled overlap güvenliği: bu resolve'da herhangi bir special aktivitesi (line sweep:
@@ -1094,7 +1097,10 @@ public class BoardController : MonoBehaviour
     }
 
     // ── Event forwarders for LineSweepService ──
-    internal void RaiseSpecialActivated(TileSpecial special, Vector2Int cell) => OnSpecialActivated?.Invoke(special, cell);
+    internal void RaiseSpecialActivated(TileSpecial special, Vector2Int cell)
+    {
+        OnSpecialActivated?.Invoke(special, cell);
+    }
     internal void OnLineSweepStartedInternal(LightningLineStrike strike, float delay)
     {
         // Bu resolve special dokundu → match-overlap kapansın (special event-senkronu korunur).
@@ -1975,6 +1981,8 @@ public class BoardController : MonoBehaviour
         public bool isHorizontal;
         public BonusLinePlacement(int x, int y, bool isHorizontal) { this.x = x; this.y = y; this.isHorizontal = isHorizontal; }
     }
+
+    private void OnDisable() => Haptics.EndBoard();
 
     private void OnDestroy()
     {
@@ -3439,25 +3447,6 @@ public class BoardController : MonoBehaviour
         SetSelectedTile(tile);
     }
 
-    // Override partner'ına yazılamayan special için: aynı oluşum grubundan partner'a en yakın normal taş.
-    private TileView PickAltCreationWinner(HashSet<TileView> candidates, SpecialCreationService.CreationResult creation,
-        TileView partner)
-    {
-        var group = specialCreationService.GetConsumedTilesForCreation(candidates, creation);   // havuz tamponu: hemen tüket
-        TileView best = null;
-        int bestDist = int.MaxValue;
-        if (group != null)
-            foreach (var t in group)
-            {
-                if (t == null || t == partner || t.GetSpecial() != TileSpecial.None
-                    || t.RuntimeState == TileRuntimeState.Clearing) continue;
-                if (obstacleStateService != null && obstacleStateService.IsMovableObstacleAt(t.X, t.Y)) continue;
-                int d = Mathf.Abs(t.X - partner.X) + Mathf.Abs(t.Y - partner.Y);
-                if (d < bestDist) { bestDist = d; best = t; }
-            }
-        return best;
-    }
-
     bool AreNeighbors(TileView a, TileView b) => Mathf.Abs(a.X - b.X) + Mathf.Abs(a.Y - b.Y) == 1;
 
     private void SetSelectedTile(TileView tile)
@@ -4083,6 +4072,9 @@ public class BoardController : MonoBehaviour
         if (originalSa != TileSpecial.None || originalSb != TileSpecial.None)
         {
             bool bothOriginallySpecial = originalSa != TileSpecial.None && originalSb != TileSpecial.None;
+            // The normal partner may clear in its own match before ResolveSpecialSwap.
+            // Keep the two-source gel decision independently of either pooled TileView.
+            bool gelFromSwapSources = IsGelSpreadSourceTile(a) || IsGelSpreadSourceTile(b);
             ConsumeMove();
 
             // Swap sırasında normal taraf eşleşmesinden oluşan yeni special hücreleri izler.
@@ -4152,16 +4144,10 @@ public class BoardController : MonoBehaviour
                                 && obstacleStateService.IsMovableObstacleAt(creation.winner.X, creation.winner.Y))
                                 continue;
 
-                            // Override partner'ı (Override'la yer değiştiren normal taş) Override her durumda temizler ve
-                            // partner special olursa kombo moduna geçer → special partner'a yazılmaz; grubun partner'a
-                            // en yakın taşına yazılır.
-                            var winner = creation.winner;
-                            if (specialSideIsOverride && winner == normalTile)
-                                winner = PickAltCreationWinner(candidates, creation, normalTile);
-                            if (winner == null)
-                                continue;
-
-                            var created = specialResolver.ApplyCreatedSpecial(winner, creation.special);
+                            // Kullanıcı kuralı: special swap noktasında (partner taşın indiği hücrede) oluşur — Override
+                            // tarafında da. Override o taşı artık partner olarak almaz, yalnız swap anında yakalanan rengini
+                            // süpürür (SpecialResolver OverrideNormal) → yeni special ne temizlenir ne kombo olur.
+                            var created = specialResolver.ApplyCreatedSpecial(creation.winner, creation.special);
                             if (created == null)
                                 continue;
 
@@ -4235,7 +4221,8 @@ public class BoardController : MonoBehaviour
             ForgetGelCarriedBySwap(a, b);
 
             bool specialStartsNow = !actionSequencer.IsPlaying;
-            actionSequencer.Enqueue(specialResolver.ResolveSpecialSwap(a, b, originalSa, originalSb, capturedOverridePartnerType, swapProtectedCells));
+            actionSequencer.Enqueue(specialResolver.ResolveSpecialSwap(a, b, originalSa, originalSb, capturedOverridePartnerType,
+                swapProtectedCells, gelFromSwapSources: gelFromSwapSources));
             if (specialStartsNow)
                 swapHold?.Dispose();   // special başladı ve kendi ayak izini tuttu
             yield return AnimateQueuedActions();
@@ -5244,6 +5231,8 @@ public class BoardController : MonoBehaviour
             ? obstacleResolutionService.ApplyDamage(request)
             : default;
 
+        if (result.didHit) Haptics.OnObstacleHit();
+
         // Adjacent matches already reach this path. Special-only Rhodes keeps all its HP,
         // but its attachments still react; no extra board scan or damage fallback is needed.
         ReactToRejectedRhodesMatch(request, result.didHit);
@@ -5297,6 +5286,13 @@ public class BoardController : MonoBehaviour
     public void TriggerObstacleVisualChange(ObstacleVisualChange change)
     {
         boardBreakFxService?.PlayObstacleBreak(change);
+        ObstacleVisualChanged?.Invoke(change);
+    }
+
+    /// Aynı karede art arda vuruşun ARA adımı (GelLauncher engeli tamamen yok ederken): görsel/aşama güncellenir ama
+    /// vuruş parçacığı + sesi çalmaz — son vuruş ya da kırılma onları bir kez çalar (efekt/ses yığılmasın).
+    internal void TriggerObstacleVisualChangeSilent(ObstacleVisualChange change)
+    {
         ObstacleVisualChanged?.Invoke(change);
     }
 
@@ -5803,6 +5799,14 @@ public class BoardController : MonoBehaviour
 
     private bool IsMaskHole(int x, int y) { if (maskHoles == null || x < 0 || x >= width || y < 0 || y >= height) return false; return maskHoles[x, y]; }
     internal bool IsMaskHoleCell(int x, int y) => IsMaskHole(x, y);
+
+    // Sütunun üstündeki, taş maskesinin (TilesTopClipShape) gizlediği tasarım-boşluğu satır sayısı. Yeni taşın
+    // mantıksal yolu yine tahtanın üstünden başlar (çapraz besleme/kaynak kuralları değişmez); yalnız GÖRSEL başlangıç
+    // bu kadar aşağı alınır ki delikli sütunda taş, maskenin açıldığı hücreye normal sütundaki kadar sürede gelsin.
+    // GridSpawner maske kurulurken yazar; maske kapalıysa 0 (gizli bölge yok → kaydırma yok).
+    private int[] spawnHiddenRows = System.Array.Empty<int>();
+    internal void SetSpawnHiddenRows(int[] rows) => spawnHiddenRows = rows ?? System.Array.Empty<int>();
+    internal int GetSpawnHiddenRows(int x) => x >= 0 && x < spawnHiddenRows.Length ? spawnHiddenRows[x] : 0;
     internal bool IsObstacleBlockedCell(int x, int y) => x >= 0 && x < width && y >= 0 && y < height && obstacleResolutionService != null && obstacleResolutionService.IsBlockedCell(x, y);
     internal bool IsSpawnPassThroughCell(int x, int y) => IsMaskHoleCell(x, y) && !IsObstacleBlockedCell(x, y);
 
@@ -6358,6 +6362,15 @@ public class BoardController : MonoBehaviour
 
     private void BeginMoveClearPraiseTracking()
     {
+        // Hamlenin yeri (övgü efekti buradan yükselir): swap → iki taşın ortası, special dokunuşu → o taş.
+        // lastSwapA/B her iki yolda ConsumeMove'dan hemen önce kurulur.
+        if (lastSwapA != null)
+        {
+            Vector3 a = GetCellWorldCenterPosition(lastSwapA.X, lastSwapA.Y);
+            moveClearPraiseOrigin = lastSwapB != null ? (a + GetCellWorldCenterPosition(lastSwapB.X, lastSwapB.Y)) * 0.5f : a;
+            moveClearPraiseHasOrigin = true;
+        }
+        else moveClearPraiseHasOrigin = false;
         moveClearPraiseCount = 0;
         moveClearPraiseTracking = true;
         moveClearPraiseEmitted = false;
@@ -6378,7 +6391,10 @@ public class BoardController : MonoBehaviour
             return;
 
         EnsureMoveClearPraisePopup();
-        OnMoveClearPraise?.Invoke(cleared);
+        Vector3 origin = moveClearPraiseHasOrigin
+            ? moveClearPraiseOrigin
+            : GetCellWorldCenterPosition(Mathf.Max(0, width / 2), Mathf.Max(0, height / 2));
+        OnMoveClearPraise?.Invoke(cleared, origin);
     }
 
     internal void SyncAllTilesToGridData() { for (int sy = 0; sy < height; sy++) for (int sx = 0; sx < width; sx++) if (tiles[sx, sy] != null) SyncTileData(sx, sy); }

@@ -954,6 +954,7 @@ GameObject:
   - component: {fileID: 2973510542607852048}
   - component: {fileID: 838244540898396519}
   - component: {fileID: 4463746279873303239}
+  - component: {fileID: 714101000000000003}
   m_Layer: 5
   m_Name: ContinueButton
   m_TagString: Untagged
@@ -2673,8 +2674,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Seviye 1
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 5e6309197a20b48f38af13be4a943e86, type: 2}
-  m_sharedMaterial: {fileID: 2100000, guid: 6dddb1d7ba9444ca3b3cc4e6b100483d, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 020a75041a4a04fb28f301a2fa0a06db, type: 2}
+  m_sharedMaterial: {fileID: 2100000, guid: 548eb848717e3412f9166a57d21273d1, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -2682,7 +2683,7 @@ MonoBehaviour:
     serializedVersion: 2
     rgba: 4294967295
   m_fontColor: {r: 1, g: 1, b: 1, a: 1}
-  m_enableVertexGradient: 1
+  m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
     topLeft: {r: 1, g: 1, b: 1, a: 1}
@@ -2698,12 +2699,12 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 93.21429
-  m_fontSizeBase: 93.21429
+  m_fontSize: 100
+  m_fontSizeBase: 100
   m_fontWeight: 400
   m_enableAutoSizing: 0
-  m_fontSizeMin: 18.642857
-  m_fontSizeMax: 74.57143
+  m_fontSizeMin: 60
+  m_fontSizeMax: 100
   m_fontStyle: 0
   m_HorizontalAlignment: 2
   m_VerticalAlignment: 4096
@@ -2715,14 +2716,14 @@ MonoBehaviour:
   m_lineSpacingMax: 0
   m_paragraphSpacing: 0
   m_charWidthMaxAdj: 0
-  m_TextWrappingMode: 1
+  m_TextWrappingMode: 0
   m_wordWrappingRatios: 0.4
   m_overflowMode: 0
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
   m_ActiveFontFeatures: 6e72656b
-  m_enableExtraPadding: 0
+  m_enableExtraPadding: 1
   checkPaddingRequired: 0
   m_isRichText: 1
   m_EmojiFallbackSupport: 1
@@ -3505,13 +3506,19 @@ MonoBehaviour:
   continueButtonImage: {fileID: 6371442825616981080}
   cancelButton: {fileID: 8481270177616820511}
   cancelButtonImage: {fileID: 8533941142774056985}
-  levelCatalog: {fileID: 11400000, guid: 367d7d797cb5d4822954cf3848cac992, type: 2}
+  levelCatalog: {fileID: 11400000, guid: 6791aed5a9bc44f4af246ccebce32906, type: 2}
   fallbackChapter: 1
   goalsPreviewRoot: {fileID: 3310771022297421038}
   goalSlotPrefab: {fileID: 8598178808890510351, guid: 5185880da700e4021a652744b8a70fe0, type: 3}
   maxPreviewGoals: 5
   goalPreviewScale: 2.6
+  levelNameText: {fileID: 0}
+  levelNameY: 400
+  levelNameFontSize: 34
+  levelNameColor: {r: 1, g: 0.92, b: 0.6, a: 1}
+  titleYWithName: 540
   fallbackGoalIcon: {fileID: 0}
+  energyGoalDefaultIcon: {fileID: 21300000, guid: d5c45b75a85134c80890a84f8f2852b4, type: 3}
   tileIconLibrary: {fileID: 11400000, guid: 44f21392c67a14dfbb8782561221acf8, type: 2}
   lineHSlot: {fileID: 336384351059755049}
   pulseCoreSlot: {fileID: 2002999623365644152}
@@ -4181,16 +4188,16 @@ MonoBehaviour:
       m_Calls: []
   m_text: Oyna
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: e46875cde48404fd285b820569c5c432, type: 2}
-  m_sharedMaterial: {fileID: 2100000, guid: db085586f5f2f46bf82427a04fc80c20, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 020a75041a4a04fb28f301a2fa0a06db, type: 2}
+  m_sharedMaterial: {fileID: 2100000, guid: 6f215d26e80fc43a58d441a16851b300, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4294639615
-  m_fontColor: {r: 1, g: 1, b: 0.9803922, a: 1}
-  m_enableVertexGradient: 1
+    rgba: 4294967295
+  m_fontColor: {r: 1, g: 1, b: 1, a: 1}
+  m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
     topLeft: {r: 1, g: 1, b: 1, a: 1}
@@ -4207,10 +4214,10 @@ MonoBehaviour:
     serializedVersion: 2
     rgba: 4294967295
   m_fontSize: 74
-  m_fontSizeBase: 91.03
+  m_fontSizeBase: 74
   m_fontWeight: 400
   m_enableAutoSizing: 1
-  m_fontSizeMin: 36
+  m_fontSizeMin: 40
   m_fontSizeMax: 74
   m_fontStyle: 0
   m_HorizontalAlignment: 2
@@ -4230,7 +4237,7 @@ MonoBehaviour:
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
   m_ActiveFontFeatures: 6e72656b6167696c6b72616d6b6d6b6d
-  m_enableExtraPadding: 0
+  m_enableExtraPadding: 1
   checkPaddingRequired: 0
   m_isRichText: 1
   m_EmojiFallbackSupport: 1
@@ -4245,7 +4252,7 @@ MonoBehaviour:
   m_VertexBufferAutoSizeReduction: 0
   m_useMaxVisibleDescender: 1
   m_pageToDisplay: 1
-  m_margin: {x: 0, y: 0, z: 0, w: 0}
+  m_margin: {x: 34, y: 12, z: 34, w: 20}
   m_isUsingLegacyAnimationComponent: 0
   m_isVolumetricText: 0
   m_hasFontAssetChanged: 0
@@ -4600,3 +4607,18 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   target: {fileID: 9121566470586327935}
   key: prelevel_booster_select
+--- !u!114 &714101000000000003
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2046354031634676808}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c369fc9ad96344f5ebbcfec0f8e2f6db, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::UiClickSound
+  mode: 2
+  playOnPress: 1
+  clipOverride: {fileID: 8300000, guid: 1b262a3d840248f5ad1f17f1062266f1, type: 3}

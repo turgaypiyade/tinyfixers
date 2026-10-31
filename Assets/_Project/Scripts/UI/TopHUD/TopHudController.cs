@@ -34,6 +34,8 @@ public class TopHudController : MonoBehaviour
     [Header("Display")]
     [SerializeField] private string movesPrefix = "MOVES";
     [SerializeField] private Sprite fallbackGoalIcon;
+    [Tooltip("Enerji (Collectible EnergyOrb) hedefinde Icon Override boşsa kullanılır: Şapka Fırlatıcı çekici.")]
+    [SerializeField] private Sprite energyGoalDefaultIcon;
     [SerializeField] private Sprite tubeGoalFallbackIcon;
 
     public RectTransform MovesTextRect => movesText != null ? movesText.rectTransform : null;
@@ -67,6 +69,7 @@ public class TopHudController : MonoBehaviour
 
     private void OnEnable()
     {
+        GameNumberFont.Apply(movesText);   // geri alınabilir deneme: Resources/GameNumberFont (tekrar çağrı güvenli)
         StartCoroutine(InitializeWhenReady());
     }
 
@@ -131,6 +134,7 @@ public class TopHudController : MonoBehaviour
 
         BuildGoals(board.ActiveLevelData);
         HookGelService(board.SpreadingGelService);
+        _lastMovesSeen = board.RemainingMoves;
         RefreshMoves(board.RemainingMoves);
         initialized = true;
     }
@@ -328,12 +332,13 @@ public class TopHudController : MonoBehaviour
         return slot;
     }
 
-    private static bool ShouldUseLargeGoalIcon(LevelGoalDefinition goal)
+    private bool ShouldUseLargeGoalIcon(LevelGoalDefinition goal)
     {
         return goal != null
                && goal.targetType == LevelGoalTargetType.Collectible
                && goal.collectibleId == CollectibleId.EnergyOrb
-               && goal.iconOverride == null;   // özel ikon diğer hedeflerle aynı boyda
+               && goal.iconOverride == null
+               && energyGoalDefaultIcon == null;   // özel ikon diğer hedeflerle aynı boyda
     }
 
     private Sprite ResolveGoalIcon(LevelGoalDefinition goal, int goalIndex)
@@ -361,7 +366,19 @@ public class TopHudController : MonoBehaviour
         }
 
         if (goal.targetType == LevelGoalTargetType.Collectible)
-            return fallbackGoalIcon;
+        {
+            // Engelin ürettiği collectible (kuş evi → kuş): ikon üreticinin hedef ikonudur.
+            var producer = CollectibleSources.ProducerOf(goal.collectibleId);
+            var producerLevel = board != null ? board.ActiveLevelData : null;
+            var producerDef = producer != ObstacleId.None && producerLevel != null && producerLevel.obstacleLibrary != null
+                ? producerLevel.obstacleLibrary.Get(producer)
+                : null;
+            if (producerDef != null && producerDef.GetGoalIconSprite() != null)
+                return producerDef.GetGoalIconSprite();
+
+            return goal.collectibleId == CollectibleId.EnergyOrb && energyGoalDefaultIcon != null
+                ? energyGoalDefaultIcon : fallbackGoalIcon;
+        }
 
         var levelData = board != null ? board.ActiveLevelData : null;
         var obstacleDef = levelData != null && levelData.obstacleLibrary != null
@@ -389,8 +406,15 @@ public class TopHudController : MonoBehaviour
         return sourceGoal != null ? sourceGoal.iconOverride : null;
     }
 
+    // Son 5 hamle uyarısı: yalnız AZALIRKEN 5'e inince (devam ile eklenen hamle çalmaz), hedefler bitmemişse.
+    private const int MovesLowThreshold = 5;
+    private int _lastMovesSeen = -1;
+
     private void HandleMovesChanged(int remainingMoves)
     {
+        if (remainingMoves == MovesLowThreshold && _lastMovesSeen > MovesLowThreshold && !AreAllGoalsCompleted)
+            GameEventSfx.PlayMovesLow();
+        _lastMovesSeen = remainingMoves;
         RefreshMoves(remainingMoves);
     }
 

@@ -8,7 +8,7 @@ using UnityEngine.UI;
 /// <summary>
 /// Mağaza ekranı. Katalogdaki bölümleri + teklifleri içerik akışına basar
 /// (her bölüm: başlık bandı + kartlar). Coin/Yıldız ile satın alma anında işlenir
-/// (PlayerWallet + ShopRewardGranter); gerçek-para (TL) teklifleri v1'de "yakında".
+/// (PlayerWallet + ShopRewardGranter); gerçek para teklifleri StoreIap onayını bekler.
 ///
 /// Panel konvansiyonu: BottomTabController bu panelin GameObject'ini SetActive ile açar.
 /// OnEnable'da içerik (yeniden) kurulur; satın alma sonrası affordability tazelenir.
@@ -35,10 +35,10 @@ public sealed class ShopScreenController : MonoBehaviour
     [SerializeField] private TMP_Text coinBalanceText;
     [SerializeField] private TMP_Text starBalanceText;
 
-    [Header("Gerçek-para (IAP entegre değil)")]
-    [Tooltip("TL teklifine basılınca gösterilecek 'yakında' bilgisi (opsiyonel).")]
+    [Header("Gerçek para")]
+    [Tooltip("Eski 'yakında' alanı; mağaza bağlantısı artık StoreIap tarafından yönetilir ve bu alan gizlenir.")]
     [SerializeField] private GameObject comingSoonHint;
-    [Tooltip("TL teklifine basılınca tetiklenir — IAP entegrasyonunu buraya bağlarsın.")]
+    [Tooltip("Gerçek para teklifine tıklama bildirimi. Satın alma StoreIap'ten başlar; buraya ikinci bir IAP akışı bağlamayın.")]
     [SerializeField] private StringEvent onRealMoneyPurchaseRequested;
 
     [Header("Satın alma geri bildirimi")]
@@ -56,6 +56,7 @@ public sealed class ShopScreenController : MonoBehaviour
         PlayerWallet.OnTotalStarsChanged += RefreshStars;
         ShopPurchaseService.OnPurchased  += HandleAsyncPurchased;
         StoreIap.OnPricesUpdated         += Build;
+        if (comingSoonHint != null) comingSoonHint.SetActive(false);
         if (purchaseToast != null) purchaseToast.SetActive(false);
         Build();
         RefreshBalances();
@@ -151,11 +152,6 @@ public sealed class ShopScreenController : MonoBehaviour
             // Bakiye + uygunluk değişti → kartları tazele.
             Build();
             RefreshBalances();
-        }
-        else if (offer.priceType == ShopOffer.PriceType.RealMoney && comingSoonHint != null
-                 && !ShopPurchaseService.IsStorePurchasePending && !StoreIap.IsAvailable)
-        {
-            comingSoonHint.SetActive(true);
         }
     }
 

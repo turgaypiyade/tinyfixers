@@ -9,6 +9,13 @@ public class PatchbotDashUI : MonoBehaviour
     private const string ImpactSparkPoolKey = "PatchbotDash.ImpactSpark";
     private const string ImpactFlashOuterPoolKey = "PatchbotDash.ImpactFlashOuter";
     private const string ImpactFlashInnerPoolKey = "PatchbotDash.ImpactFlashInner";
+    private const string AfterImagePoolKey = "PatchbotDash.AfterImage";
+
+    private void OnDisable()
+    {
+        UiFxPool.ReleaseGhosts(transform);
+        UiFxPool.ReleasePatchbotSparks(transform);
+    }
 
     private sealed class DashMotionState
     {
@@ -438,11 +445,18 @@ public class PatchbotDashUI : MonoBehaviour
 
     // Görsel varış noktası. Hedef hücre çok-hücreli bir obstacle'a aitse (Safe NxN gibi)
     // drone footprint'in dünya-merkezine iner; hasar yine mantıksal hedef hücreye işler.
-    // Yalnızca DOLU dikdörtgen footprint merkezlenir: ayrık/delikli footprint'te (örn.
-    // uçlarından hit alan magnet) merkez boş hücreye düşebilir → o durumda hücreye inilir.
+    // Magnet uçları ve tüp tabanı doğrudan hedef hücrede gösterilir; düz yol da
+    // dolu dikdörtgen olsa bile borunun merkezine inilmez. Diğer ayrık/delikli
+    // footprint'lerde de hedef hücreye inilir.
     internal static Vector3 AimWorldPosition(BoardController board, int x, int y)
     {
         var obstacleService = board.ObstacleStateService;
+        if (obstacleService != null)
+        {
+            var id = obstacleService.GetObstacleIdAt(x, y);
+            if (id == ObstacleId.Magnet || id == ObstacleId.Tube)
+                return board.GetCellWorldPosition(x, y);
+        }
         int origin = obstacleService != null ? obstacleService.GetObstacleOriginAt(x, y) : -1;
         if (origin < 0)
             return board.GetCellWorldPosition(x, y);
@@ -547,6 +561,7 @@ public class PatchbotDashUI : MonoBehaviour
     {
         // Kalkış anı: spinner yerinde revlerken etrafına roket/kıvılcım demeti saçar.
         SpawnLaunchSparks(start, size);
+        Haptics.OnComboMoment(Haptics.ComboMoment.PatchBotTakeoff);   // yalnız kombo oturumunda titrer
 
         if (duration <= 0f)
         {
@@ -817,7 +832,8 @@ public class PatchbotDashUI : MonoBehaviour
             img.raycastTarget = false;
             img.color = launchSparkColor;
 
-            StartCoroutine(SparkRoutine(go, srt, img, centerAnchored, centerAnchored + dir * dist, launchSparkLife, LaunchSparkPoolKey));
+            UiFxPool.TrackPatchbotSpark(img, transform, centerAnchored, centerAnchored + dir * dist,
+                ResolveSparkLife(launchSparkLife), LaunchSparkPoolKey);
         }
     }
 
@@ -915,7 +931,8 @@ public class PatchbotDashUI : MonoBehaviour
             img.color = sparkColor;
 
             float sparkIndividualLife = life * Random.Range(0.75f, 1.25f);
-            StartCoroutine(SparkRoutine(go, srt, img, centerAnchored, centerAnchored + dir * dist, sparkIndividualLife, ImpactSparkPoolKey));
+            UiFxPool.TrackPatchbotSpark(img, transform, centerAnchored, centerAnchored + dir * dist,
+                ResolveSparkLife(sparkIndividualLife), ImpactSparkPoolKey);
         }
     }
 
@@ -981,45 +998,8 @@ public class PatchbotDashUI : MonoBehaviour
         if (innerGo != null) UiVfxPool.Return(ImpactFlashInnerPoolKey, innerGo);
     }
 
-    private IEnumerator SparkRoutine(
-        GameObject go,
-        RectTransform srt,
-        Image img,
-        Vector2 from,
-        Vector2 to,
-        float customLife = -1f,
-        string poolKey = null)
-    {
-        float life = customLife > 0.05f ? customLife : (impactSparkLife > 0.05f ? impactSparkLife : 0.48f);
-        float local = 0f;
-        Vector3 startScale = Vector3.one;
-        if (srt != null) srt.localScale = startScale;
-        Color startColor = img != null ? img.color : Color.white;
-
-        while (local < life && go != null && srt != null && img != null)
-        {
-            local += Time.deltaTime;
-            float t = Mathf.Clamp01(local / life);
-            float eased = 1f - (1f - t) * (1f - t);   // hızlı patlama, yavaşça durma
-
-            srt.anchoredPosition = Vector2.LerpUnclamped(from, to, eased);
-            // Başlangıçta biraz büyür (pop), sonra küçülüp kaybolur
-            float scaleMul = t < 0.2f ? Mathf.Lerp(0.85f, 1.25f, t / 0.2f) : Mathf.Lerp(1.25f, 0.10f, (t - 0.2f) / 0.8f);
-            srt.localScale = startScale * scaleMul;
-
-            float alpha = t < 0.55f ? 1f : (1f - (t - 0.55f) / 0.45f);
-            img.color = new Color(startColor.r, startColor.g, startColor.b, startColor.a * alpha);
-            yield return null;
-        }
-
-        if (go != null)
-        {
-            if (!string.IsNullOrEmpty(poolKey))
-                UiVfxPool.Return(poolKey, go);
-            else
-                Destroy(go);
-        }
-    }
+    private float ResolveSparkLife(float customLife) => customLife > 0.05f
+        ? customLife : (impactSparkLife > 0.05f ? impactSparkLife : 0.48f);
 
     private static Sprite _sparkSprite;
     private static Sprite GetSparkSprite()
@@ -1302,11 +1282,10 @@ public class PatchbotDashUI : MonoBehaviour
     {
         if (vfxRoot == null || source == null) return;
 
-        var go = new GameObject("PatchbotAfterImage", typeof(RectTransform), typeof(Image));
-        go.transform.SetParent(vfxRoot, false);
-
-        var img = go.GetComponent<Image>();
-        var rt = (RectTransform)go.transform;
+        var img = UiVfxPool.RentImage(AfterImagePoolKey, vfxRoot, "PatchbotAfterImage");
+        if (img == null) return;
+        var go = img.gameObject;
+        var rt = img.rectTransform;
 
         img.sprite = sprite;
         img.raycastTarget = false;
@@ -1322,23 +1301,7 @@ public class PatchbotDashUI : MonoBehaviour
 
         rt.SetSiblingIndex(Mathf.Max(0, source.GetSiblingIndex() - 1));
 
-        StartCoroutine(FadeAndDestroy(go, img, afterLife));
-    }
-
-    private IEnumerator FadeAndDestroy(GameObject go, Image img, float life)
-    {
-        float t = 0f;
-        Color start = img.color;
-
-        while (t < life)
-        {
-            t += Time.deltaTime;
-            float a = Mathf.Lerp(start.a, 0f, t / life);
-            img.color = new Color(start.r, start.g, start.b, a);
-            yield return null;
-        }
-
-        Destroy(go);
+        UiFxPool.TrackLinearGhost(go, AfterImagePoolKey, img, afterLife, transform);
     }
 
     public float EstimateDashDuration(BoardController board, Vector2Int fromCell, Vector2Int toCell, float syncDuration = -1f)

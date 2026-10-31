@@ -488,7 +488,8 @@ public partial class CascadeLogic
                         settleDur,
                         settleStr,
                         board.FallMoveCurve,
-                        spawnOrder: vTile.IsSpawned ? vTile.SpawnOrder : 0
+                        spawnOrder: vTile.IsSpawned ? vTile.SpawnOrder : 0,
+                        spawnHiddenRows: vTile.IsSpawned ? board.GetSpawnHiddenRows(compressedPath[0].x) : 0
                     );
                 }
                 else
@@ -1187,6 +1188,41 @@ public partial class CascadeLogic
         return cargoInColumn * 2 < playableInColumn;
     }
 
+    // Her seçili sütunun başlangıçta içerdiği hareketli engel türleri (level başına bir kez; ilk üretimde alınır —
+    // o ana dek sütunun tamamı temizlenmiş olmaz). Boş liste = sütun her türü kabul eder.
+    private LevelData _columnTypesLevel;
+    private List<ObstacleId>[] _columnTypes;
+
+    private bool ColumnAllowsMovable(LevelData level, int x, ObstacleId id)
+    {
+        if (_columnTypesLevel != level)
+        {
+            _columnTypesLevel = level;
+            _columnTypes = new List<ObstacleId>[level.width];
+            var lib = level.obstacleLibrary;
+            for (int cx = 0; cx < level.width; cx++)
+            {
+                var list = _columnTypes[cx] = new List<ObstacleId>(2);
+                if (level.obstacles == null || lib == null) continue;
+                for (int cy = 0; cy < level.height; cy++)
+                {
+                    int i = cy * level.width + cx;
+                    if (i >= level.obstacles.Length) break;
+                    var oid = (ObstacleId)level.obstacles[i];
+                    if (oid == ObstacleId.None || list.Contains(oid)) continue;
+                    var d = lib.Get(oid);
+                    if (d != null && !d.exitAtBottom && d.IsMovableObstacleForRemainingHits(Mathf.Max(1, d.hits))) list.Add(oid);
+                }
+            }
+        }
+        var types = x >= 0 && x < _columnTypes.Length ? _columnTypes[x] : null;
+        return types == null || types.Count == 0 || types.Contains(id);
+    }
+
+    // Seçili sütun kuralı yüzünden gereken hareketli engel üretilemediğinde, beklemenin başladığı andaki kalan hamle
+    // (-1 = bekleyen yok). LevelData.movableSpawnFallbackMoves hamle geçince başka sütun da açılır.
+    private int _movableColumnBlockedSince = -1;
+
     private bool TryPickMovableGoalToSpawn(
         int x,
         bool movableSpawnedThisPass,
@@ -1219,8 +1255,16 @@ public partial class CascadeLogic
 
             if (!def.IsMovableObstacleForRemainingHits(Mathf.Max(1, def.hits))) continue;
 
+            var lvl = board.ActiveLevelData;
+            bool inSelectedColumn = !def.exitAtBottom && lvl.HasMovableSpawnColumns && lvl.IsMovableSpawnColumn(x);
+            // Sütun kendi türünü üretir: başta bu sütuna konan hareketli engel(ler) varsa yalnız onlar
+            // (turuncu sütuna mor gelmesin — 2026-10-29, V1 106).
+            if (inSelectedColumn && !ColumnAllowsMovable(lvl, x, goal.obstacleId)) continue;
+            // Sütun dolduran engel (Altın) ya da level ayarı "sütun hep dolu": seçili sütunda pass sınırı yok.
+            bool fillsColumn = inSelectedColumn && (def.spawnFillsColumn || lvl.movableSpawnFillColumns);
+
             // Cargo dışındaki movable'lar (plastic vb.): pass başına 1 spawn kuralı.
-            if (!def.exitAtBottom && movableSpawnedThisPass) continue;
+            if (!def.exitAtBottom && !fillsColumn && movableSpawnedThisPass) continue;
 
             if (goal.obstacleId == ObstacleId.PlasticTwoStage && plasticTwoStageSpawnedThisMove)
                 continue;
@@ -1231,6 +1275,15 @@ public partial class CascadeLogic
             plannedSpawnCounts.TryGetValue(goal.obstacleId, out int planned);
             if (alive + planned >= goal.remaining) continue;
 
+            // Tasarımcının seçtiği sütunlar (kargonun kendi çıkış kuralı var). Gerekli engel seçili sütunlardan
+            // fallback hamle sayısı kadar gelemezse diğer sütunlar da açılır (0 = katı).
+            if (!def.exitAtBottom && !board.ActiveLevelData.IsMovableSpawnColumn(x))
+            {
+                int fallback = board.ActiveLevelData.movableSpawnFallbackMoves;
+                if (_movableColumnBlockedSince < 0) _movableColumnBlockedSince = board.RemainingMoves;
+                if (fallback <= 0 || _movableColumnBlockedSince - board.RemainingMoves < fallback) continue;
+            }
+
             if (def.exitAtBottom)
             {
                 if (!CanSpawnExitCargo(x)) continue;
@@ -1239,6 +1292,7 @@ public partial class CascadeLogic
             }
 
             plannedSpawnCounts[goal.obstacleId] = planned + 1;
+            if (!def.exitAtBottom) _movableColumnBlockedSince = -1;
             if (goal.obstacleId == ObstacleId.PlasticTwoStage)
                 plasticTwoStageSpawnedThisMove = true;
 

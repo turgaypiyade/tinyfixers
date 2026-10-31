@@ -537,9 +537,38 @@ public class PulseCoreExplosionFX : MonoBehaviour
     // kez üretilir ve rastgele seçilir; ışınlar zaten her patlamada rastgele açıyla döndüğü için
     // çeşitlilik korunur. İlk VariantsPerKey patlama yine üretir, sonrası bedava.
     private const int VariantsPerKey = 3;
-    private static readonly Dictionary<string, List<Sprite>> variantCache = new();
+    // Explicit value equality also avoids boxing in older mobile ValueTuple hash implementations.
+    private readonly struct VariantKey : System.IEquatable<VariantKey>
+    {
+        public readonly bool rays;
+        public readonly int size;
+        private readonly int count;
+        private readonly float a, b, c, d, e;
 
-    private static Sprite GetOrCreateVariant(string key, System.Func<Texture2D> generate, int size)
+        public VariantKey(bool rays, int size, int count, float a, float b, float c, float d, float e)
+        {
+            this.rays = rays; this.size = size; this.count = count;
+            this.a = a; this.b = b; this.c = c; this.d = d; this.e = e;
+        }
+
+        public bool Equals(VariantKey other) => rays == other.rays && size == other.size && count == other.count
+            && a.Equals(other.a) && b.Equals(other.b) && c.Equals(other.c) && d.Equals(other.d) && e.Equals(other.e);
+        public override bool Equals(object obj) => obj is VariantKey other && Equals(other);
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                int hash = ((rays ? 1 : 0) * 397 ^ size) * 397 ^ count;
+                hash = hash * 397 ^ a.GetHashCode(); hash = hash * 397 ^ b.GetHashCode();
+                hash = hash * 397 ^ c.GetHashCode(); hash = hash * 397 ^ d.GetHashCode();
+                return hash * 397 ^ e.GetHashCode();
+            }
+        }
+    }
+
+    private static readonly Dictionary<VariantKey, List<Sprite>> variantCache = new();
+
+    private static Sprite GetOrCreateVariant(VariantKey key, PulseCoreExplosionFX source)
     {
         if (!variantCache.TryGetValue(key, out var list))
             variantCache[key] = list = new List<Sprite>(VariantsPerKey);
@@ -547,9 +576,10 @@ public class PulseCoreExplosionFX : MonoBehaviour
 
         if (list.Count < VariantsPerKey)
         {
-            var tex = generate();
+            var tex = key.rays ? source.GenerateSunburstTexture(key.size)
+                : source.GenerateNoisyRingTexture(key.size, Random.Range(0f, 1000f));
             tex.hideFlags = HideFlags.DontUnloadUnusedAsset;
-            var sprite = Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 100f);
+            var sprite = Sprite.Create(tex, new Rect(0, 0, key.size, key.size), new Vector2(0.5f, 0.5f), 100f);
             sprite.hideFlags = HideFlags.DontUnloadUnusedAsset;
             list.Add(sprite);
             return sprite;
@@ -594,8 +624,8 @@ public class PulseCoreExplosionFX : MonoBehaviour
         if (sunburstRays == null) return;
 
         int size = Mathf.Max(64, rayTexSize);
-        string key = $"rays:{size}:{rayCount}:{rayThinness}:{raySoftness}:{rayReach}:{rayIrregularity}:{rayIrregFreq}";
-        var sprite = GetOrCreateVariant(key, () => GenerateSunburstTexture(size), size);
+        var key = new VariantKey(true, size, rayCount, rayThinness, raySoftness, rayReach, rayIrregularity, rayIrregFreq);
+        var sprite = GetOrCreateVariant(key, this);
 
         sunburstRays.sprite = sprite;
         sunburstRays.type = Image.Type.Simple;
@@ -672,8 +702,8 @@ public class PulseCoreExplosionFX : MonoBehaviour
         if (shockwaveRing == null) return;
 
         int size = Mathf.Max(32, noiseTexSize);
-        string key = $"ring:{size}:{ringThickness}:{noiseAmplitude}:{noiseFrequency}:{edgeSoftness}";
-        var sprite = GetOrCreateVariant(key, () => GenerateNoisyRingTexture(size, Random.Range(0f, 1000f)), size);
+        var key = new VariantKey(false, size, 0, ringThickness, noiseAmplitude, noiseFrequency, edgeSoftness, 0f);
+        var sprite = GetOrCreateVariant(key, this);
 
         shockwaveRing.sprite = sprite;
         shockwaveRing.type = Image.Type.Simple;

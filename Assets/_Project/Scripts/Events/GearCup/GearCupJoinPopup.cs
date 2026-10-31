@@ -1,3 +1,4 @@
+using System;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -21,11 +22,41 @@ public sealed class GearCupJoinPopup : MonoBehaviour
     private bool layoutPending;
     private bool closing;
     private float nextRefresh;
+    private Func<string> customTitle, customMessage;
+    private Func<TimeSpan> customRemaining;
+    private Action<RectTransform> customHero;
+    private Action customJoin;
+    private Sprite customBackground;
+    private TMP_FontAsset customFont;
 
     // Built once per preview screen and reused after cancel/close. No live event is joined here.
     public static GearCupJoinPopup Create(Transform parent, GearCupPreviewConfig config)
     {
-        var rt = CommonPopupView.NewRect(parent, "GearCupJoinPopup", Vector2.zero);
+        var popup = CreateRoot(parent, config, "GearCupJoinPopup");
+        popup.Build();
+        return popup;
+    }
+
+    // Reuse the exact Gear Cup shell, entrance, actions and layout for another event's invitation.
+    public static GearCupJoinPopup CreateCustom(Transform parent, string name, GearCupPreviewConfig style,
+        Sprite background, TMP_FontAsset font, Func<string> title, Func<string> message,
+        Func<TimeSpan> remaining, Action<RectTransform> hero, Action join)
+    {
+        var popup = CreateRoot(parent, style, name);
+        popup.customBackground = background;
+        popup.customFont = font;
+        popup.customTitle = title;
+        popup.customMessage = message;
+        popup.customRemaining = remaining;
+        popup.customHero = hero;
+        popup.customJoin = join;
+        popup.Build();
+        return popup;
+    }
+
+    private static GearCupJoinPopup CreateRoot(Transform parent, GearCupPreviewConfig config, string name)
+    {
+        var rt = CommonPopupView.NewRect(parent, name, Vector2.zero);
         rt.gameObject.SetActive(false);
         rt.gameObject.tag = "Untagged";
         CommonPopupView.Region(rt, new Rect(0, 0, 1, 1));
@@ -35,7 +66,6 @@ public sealed class GearCupJoinPopup : MonoBehaviour
         rt.gameObject.AddComponent<GraphicRaycaster>();
         var popup = rt.gameObject.AddComponent<GearCupJoinPopup>();
         popup.config = config;
-        popup.Build();
         return popup;
     }
 
@@ -100,8 +130,8 @@ public sealed class GearCupJoinPopup : MonoBehaviour
     private void Refresh()
     {
         if (title == null) return;
-        title.text = GameLocalization.GetOr("gearcup_title", "GEAR CUP");
-        message.text = GameLocalization.GetOr("gearcup_join_message",
+        title.text = customTitle != null ? customTitle() : GameLocalization.GetOr("gearcup_title", "GEAR CUP");
+        message.text = customMessage != null ? customMessage() : GameLocalization.GetOr("gearcup_join_message",
             "Collect gears with your team! The top three teams win rewards.");
         joinLabel.text = GameLocalization.GetOr("event_join_button", "Join");
         laterLabel.text = GameLocalization.GetOr("gearcup_join_later", "Not now");
@@ -110,9 +140,14 @@ public sealed class GearCupJoinPopup : MonoBehaviour
 
     private void RefreshTimer()
     {
-        if (timer != null && owner != null)
+        if (timer != null && (customRemaining != null || owner != null))
+        {
+            TimeSpan remaining = customRemaining != null ? customRemaining() : owner.PreviewTimeRemaining;
+            if (remaining < TimeSpan.Zero) remaining = TimeSpan.Zero;
             timer.text = GameLocalization.GetOr("gearcup_ends_in", "ENDS IN") + "  " +
-                TimeFormat.Countdown(owner.PreviewTimeRemaining);
+                TimeFormat.Countdown(remaining);
+            if (customRemaining != null) joinButton.interactable = !closing && remaining > TimeSpan.Zero;
+        }
     }
 
     private bool BeginClose()
@@ -132,11 +167,13 @@ public sealed class GearCupJoinPopup : MonoBehaviour
     private void CompleteJoin()
     {
         var target = owner;
+        var accepted = customJoin;
         // Exit restores the panel's home position before calling us. Mark only a completed
         // acceptance, so an interrupted popup cannot leave a launch point for another event.
-        if (target != null) EventScreenIris.MarkLaunchPoint(joinButton);
+        if (target != null || accepted != null) EventScreenIris.MarkLaunchPoint(joinButton);
         gameObject.SetActive(false);
-        if (target != null) target.AcceptPreviewJoin();
+        if (accepted != null) accepted();
+        else if (target != null) target.AcceptPreviewJoin();
     }
 
     private void Later()
@@ -164,10 +201,18 @@ public sealed class GearCupJoinPopup : MonoBehaviour
         shell.material = config.joinPopupMaterial;
         shell.raycastTarget = true;
 
-        title = Text(panel, "Title", 76, Color.white, config.headingFont);
+        title = Text(panel, "Title", 76, Color.white, customFont != null ? customFont : config.headingFont);
         CommonPopupView.Region(title.rectTransform, new Rect(0.21f, 0.875f, 0.58f, 0.10f));
         title.textWrappingMode = TextWrappingModes.NoWrap;
-        title.gameObject.AddComponent<TextArcEffect>().SetArcAngle(15f);
+        // Yazı kuralı: kontur/gölge = başlığın oturduğu bandın koyusu. Bant, popup görselinin bu event için
+        // yeniden boyanmış hâli (PopupColorRemap _TargetColor, mavi-mor) — rengi materyalden oku.
+        var band = config.joinPopupMaterial != null && config.joinPopupMaterial.HasProperty("_TargetColor")
+            ? config.joinPopupMaterial.GetColor("_TargetColor") : TextSurfaceStyle.Base(TextSurface.Blue);
+        TextSurfaceStyle.Apply(title, band);
+        DisplayUpperCase.Apply(title);
+        var titleArc = title.gameObject.AddComponent<TextArcEffect>();
+        titleArc.RotateLetters = false;
+        titleArc.SetArcAngle(15f);
         // Reuse the event's exact arena sprite. The rounded mask clips only this static
         // backdrop; the animated hero keeps its separate canvas outside the mask subtree.
         var viewport = Picture("ArenaViewport", panel, config.rowBackground);
@@ -175,22 +220,36 @@ public sealed class GearCupJoinPopup : MonoBehaviour
         viewport.type = Image.Type.Sliced;
         viewport.preserveAspect = false;
         viewport.gameObject.AddComponent<Mask>().showMaskGraphic = false;
-        var arena = Picture("ArenaBackground", viewport.transform, config.background);
+        Sprite arenaSprite = customBackground != null ? customBackground : config.background;
+        var arena = Picture("ArenaBackground", viewport.transform, arenaSprite);
         CommonPopupView.Region(arena.rectTransform, new Rect(0, 0, 1, 1));
         arena.preserveAspect = false;
-        if (config.background != null)
+        if (arenaSprite != null)
         {
             var aspect = arena.gameObject.AddComponent<AspectRatioFitter>();
             aspect.aspectMode = AspectRatioFitter.AspectMode.EnvelopeParent;
-            aspect.aspectRatio = config.background.rect.width / config.background.rect.height;
+            aspect.aspectRatio = arenaSprite.rect.width / arenaSprite.rect.height;
         }
         var body = CommonPopupView.NewRect(panel, "Content", Vector2.zero);
         CommonPopupView.Region(body, new Rect(0.17f, 0.235f, 0.66f, 0.54f));
-        BuildHero(body);
-        message = Text(body, "Message", 38, Color.white, config.bodyFont);
-        Place(message.rectTransform, 0, -225, 570, 150);
-        timer = Text(body, "Countdown", 30, new Color32(200, 230, 255, 255), config.bodyFont);
-        Place(timer.rectTransform, 0, -325, 570, 46);
+        bool customInvitation = customHero != null;
+        if (customInvitation)
+        {
+            // Keep every animation pose inside the arena, including the wide follow-through.
+            body.gameObject.AddComponent<RectMask2D>();
+            customHero(body);
+        }
+        else BuildHero(body);
+        message = Text(body, "Message", 38, customInvitation ? new Color32(28, 44, 105, 255) : Color.white,
+            customFont != null ? customFont : config.bodyFont);
+        if (customInvitation)
+            CommonPopupView.Region(message.rectTransform, new Rect(0.03f, 0.81f, 0.94f, 0.18f));
+        else Place(message.rectTransform, 0, -225, 570, 150);
+        timer = Text(body, "Countdown", 30, customInvitation ? new Color32(59, 40, 126, 255) : new Color32(200, 230, 255, 255),
+            customFont != null ? customFont : config.bodyFont);
+        if (customInvitation)
+            CommonPopupView.Region(timer.rectTransform, new Rect(0.05f, 0.735f, 0.90f, 0.065f));
+        else Place(timer.rectTransform, 0, -325, 570, 46);
         timer.textWrappingMode = TextWrappingModes.NoWrap;
 
         var actions = CommonPopupView.NewRect(panel, "Actions", Vector2.zero);

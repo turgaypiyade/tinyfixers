@@ -13,8 +13,8 @@ using UnityEngine.UI;
 /// 15-20 roket AYNI ANDA uçunca ~0.4 sn'de binlerce obje oluşturulup siliniyordu → iPhone'da
 /// GC + UI rebuild takılması. Görünüm birebir aynı: aynı alfa eğrisi, aynı büyüme, aynı ömür.
 ///
-/// Roket örneği (LineTravelSplitSwapTestUI) iş bitince yok ediliyor; o anda hâlâ sönen ghost'lar
-/// onunla birlikte gider (eskisi gibi) — havuz eksilen objeyi gerektiğinde yeniden üretir.
+/// Roket örneği kapanınca altındaki izler aynı anda kaybolur; bu parçalar root yok edilmeden
+/// havuza döner. Dışarı parent edilmiş izler kendi sürelerini tamamlar.
 /// </summary>
 public sealed class UiFxPool : MonoBehaviour
 {
@@ -40,6 +40,34 @@ public sealed class UiFxPool : MonoBehaviour
         public RectTransform rt;
         public float t, life, alpha0, power;
         public Vector3 scale0, scale1;
+        public Transform owner;
+        public bool cancelWithOwner;
+        public int skipFrame;
+    }
+
+    private struct ChargeSpark
+    {
+        public Image image;
+        public RectTransform rect;
+        public Transform owner;
+        public Vector2 start, drift;
+        public float age, life, size;
+        public int lastFrame;
+    }
+
+    internal const string ChargeSparkKey = "PulseFuseSpark";
+    private const int MaxChargeSparksPerKey = 256;
+
+    private struct PatchbotSpark
+    {
+        public Image image;
+        public RectTransform rect;
+        public Transform owner;
+        public string key;
+        public Vector2 from, to;
+        public Color color;
+        public float age, life;
+        public int lastFrame;
     }
 
     private struct Timed
@@ -55,6 +83,9 @@ public sealed class UiFxPool : MonoBehaviour
     private readonly List<Ghost> ghosts = new(256);
     private readonly List<Timed> timed = new(64);
     private readonly List<PulseFuseSpark> pulseFuseSparks = new(128);
+    private readonly List<ChargeSpark> chargeSparks = new(128);
+    private readonly List<ParticleSystem> particleResetBuffer = new(16);
+    private readonly List<PatchbotSpark> patchbotSparks = new(128);
 
     private static UiFxPool Instance
     {
@@ -102,7 +133,7 @@ public sealed class UiFxPool : MonoBehaviour
 
     /// <summary>Ghost'u söndürme döngüsüne alır (eski FadeOnly ile aynı eğri); bitince havuza döner.</summary>
     public static void TrackGhost(GameObject go, GameObject prefab, Image img, RectTransform rt,
-        float life, float scaleUp, float fadePower)
+        float life, float scaleUp, float fadePower, Transform owner = null)
     {
         Instance.ghosts.Add(new Ghost
         {
@@ -116,7 +147,39 @@ public sealed class UiFxPool : MonoBehaviour
             power = Mathf.Max(0.5f, fadePower),
             scale0 = rt != null ? rt.localScale : Vector3.one,
             scale1 = (rt != null ? rt.localScale : Vector3.one) * scaleUp,
+            owner = owner,
+            skipFrame = -1,
         });
+    }
+
+    /// <summary>PatchBot's original linear fade, including its synchronous first frame.</summary>
+    public static void TrackLinearGhost(GameObject go, string key, Image image, float life, Transform owner)
+    {
+        float duration = Mathf.Max(0.0001f, life);
+        float alpha = image.color.a;
+        var color = image.color;
+        color.a = Mathf.Lerp(alpha, 0f, Time.deltaTime / duration);
+        image.color = color;
+        Instance.ghosts.Add(new Ghost
+        {
+            // Pure alpha fade: leave rt null so the driver never rewrites its unchanged scale.
+            go = go, key = key, img = image, t = Time.deltaTime, life = duration,
+            alpha0 = alpha, power = 1f,
+            owner = owner, cancelWithOwner = true, skipFrame = Time.frameCount
+        });
+    }
+
+    public static void ReleaseGhosts(Transform owner, bool childrenOnly = false)
+    {
+        if (_instance == null) return;
+        var list = _instance.ghosts;
+        for (int i = list.Count - 1; i >= 0; i--)
+        {
+            var ghost = list[i];
+            if (ghost.owner != owner || (childrenOnly && ghost.go != null && !ghost.go.transform.IsChildOf(owner))) continue;
+            if (ghost.go != null) UiVfxPool.Return(ghost.key, ghost.go, MaxGhostsPerKey);
+            RemoveAtSwap(list, i);
+        }
     }
 
     // ── Süreli efekt (impact) ──────────────────────────────────────────────
@@ -145,13 +208,18 @@ public sealed class UiFxPool : MonoBehaviour
         go.transform.SetAsLastSibling();
         go.SetActive(true);
 
-        foreach (var ps in go.GetComponentsInChildren<ParticleSystem>(true))
+        var driver = Instance;
+        driver.particleResetBuffer.Clear();
+        go.GetComponentsInChildren(true, driver.particleResetBuffer);
+        for (int i = 0; i < driver.particleResetBuffer.Count; i++)
         {
+            var ps = driver.particleResetBuffer[i];
             ps.Clear(true);
             ps.Play(true);
         }
+        driver.particleResetBuffer.Clear();
 
-        Instance.timed.Add(new Timed { go = go, key = key, t = 0f, life = life });
+        driver.timed.Add(new Timed { go = go, key = key, t = 0f, life = life });
         return go;
     }
 
@@ -204,12 +272,22 @@ public sealed class UiFxPool : MonoBehaviour
     {
         float dt = Time.deltaTime;   // eski FadeOnly ile aynı zaman kaynağı
         UpdatePulseFuseSparks(dt);
+        UpdateChargeSparks(dt);
+        UpdatePatchbotSparks(dt);
 
         for (int i = ghosts.Count - 1; i >= 0; i--)
         {
             var g = ghosts[i];
             // Roket örneğiyle birlikte yok olduysa havuza dönemez (eskisi gibi) → listeden düş.
             if (g.go == null || g.img == null) { RemoveAtSwap(ghosts, i); continue; }
+
+            if (g.cancelWithOwner && (g.owner == null || !g.owner.gameObject.activeInHierarchy))
+            {
+                UiVfxPool.Return(g.key, g.go, MaxGhostsPerKey);
+                RemoveAtSwap(ghosts, i);
+                continue;
+            }
+            if (g.skipFrame == Time.frameCount) continue;
 
             g.t += dt;
             float u = Mathf.Clamp01(g.t / g.life);
@@ -241,6 +319,122 @@ public sealed class UiFxPool : MonoBehaviour
                 continue;
             }
             timed[i] = e;
+        }
+    }
+
+    internal static void TrackChargeSpark(Image image, Transform owner, float life, float size)
+    {
+        var spark = new ChargeSpark
+        {
+            image = image, rect = image.rectTransform, owner = owner,
+            start = image.rectTransform.anchoredPosition,
+            drift = (Vector2.up * 1.6f + Random.insideUnitCircle).normalized * Random.Range(12f, 30f),
+            life = Mathf.Max(0.0001f, life), size = size, lastFrame = Time.frameCount
+        };
+        // StartCoroutine previously applied its first animation step synchronously.
+        AdvanceChargeSpark(ref spark, Time.deltaTime);
+        Instance.chargeSparks.Add(spark);
+    }
+
+    private static void AdvanceChargeSpark(ref ChargeSpark spark, float dt)
+    {
+        spark.age += dt;
+        float k = spark.age / spark.life;
+        spark.rect.anchoredPosition = spark.start + spark.drift * k;
+        var color = spark.image.color;
+        color.a = Mathf.Clamp01(k < 0.2f ? k / 0.2f : 1f - (k - 0.2f) / 0.8f);
+        spark.image.color = color;
+        spark.rect.sizeDelta = Vector2.one * (spark.size * Mathf.Lerp(0.45f, 1.15f, Mathf.Sin(k * Mathf.PI)));
+    }
+
+    private void UpdateChargeSparks(float dt)
+    {
+        for (int i = chargeSparks.Count - 1; i >= 0; i--)
+        {
+            var spark = chargeSparks[i];
+            if (spark.image == null || spark.rect == null) { RemoveAtSwap(chargeSparks, i); continue; }
+            if (spark.owner == null || !spark.owner.gameObject.activeInHierarchy || !spark.image.gameObject.activeInHierarchy
+                || spark.age >= spark.life)
+            {
+                UiVfxPool.Return(ChargeSparkKey, spark.image.gameObject, MaxChargeSparksPerKey);
+                RemoveAtSwap(chargeSparks, i);
+                continue;
+            }
+            if (spark.lastFrame == Time.frameCount) continue;
+            spark.lastFrame = Time.frameCount;
+            AdvanceChargeSpark(ref spark, dt);
+            chargeSparks[i] = spark;
+        }
+    }
+
+    internal static void ReleaseChargeSparks(Transform owner)
+    {
+        // Teardown must not create the persistent driver. Cancel before the owner can be reused.
+        if (_instance == null) return;
+        var sparks = _instance.chargeSparks;
+        for (int i = sparks.Count - 1; i >= 0; i--)
+        {
+            var spark = sparks[i];
+            if (spark.owner != owner) continue;
+            if (spark.image != null)
+                UiVfxPool.Return(ChargeSparkKey, spark.image.gameObject, MaxChargeSparksPerKey);
+            RemoveAtSwap(sparks, i);
+        }
+    }
+
+    internal static void TrackPatchbotSpark(Image image, Transform owner, Vector2 from, Vector2 to, float life, string key)
+    {
+        var spark = new PatchbotSpark
+        {
+            image = image, rect = image.rectTransform, owner = owner, key = key,
+            from = from, to = to, color = image.color, life = life, lastFrame = Time.frameCount
+        };
+        AdvancePatchbotSpark(ref spark, Time.deltaTime);
+        Instance.patchbotSparks.Add(spark);
+    }
+
+    private static void AdvancePatchbotSpark(ref PatchbotSpark spark, float dt)
+    {
+        spark.age += dt;
+        float t = Mathf.Clamp01(spark.age / spark.life);
+        float eased = 1f - (1f - t) * (1f - t);
+        spark.rect.anchoredPosition = Vector2.LerpUnclamped(spark.from, spark.to, eased);
+        float scale = t < 0.2f ? Mathf.Lerp(0.85f, 1.25f, t / 0.2f) : Mathf.Lerp(1.25f, 0.10f, (t - 0.2f) / 0.8f);
+        spark.rect.localScale = Vector3.one * scale;
+        float alpha = t < 0.55f ? 1f : 1f - (t - 0.55f) / 0.45f;
+        spark.image.color = new Color(spark.color.r, spark.color.g, spark.color.b, spark.color.a * alpha);
+    }
+
+    private void UpdatePatchbotSparks(float dt)
+    {
+        for (int i = patchbotSparks.Count - 1; i >= 0; i--)
+        {
+            var spark = patchbotSparks[i];
+            if (spark.image == null || spark.rect == null) { RemoveAtSwap(patchbotSparks, i); continue; }
+            if (spark.owner == null || !spark.owner.gameObject.activeInHierarchy || !spark.image.gameObject.activeInHierarchy
+                || spark.age >= spark.life)
+            {
+                UiVfxPool.Return(spark.key, spark.image.gameObject);
+                RemoveAtSwap(patchbotSparks, i);
+                continue;
+            }
+            if (spark.lastFrame == Time.frameCount) continue;
+            spark.lastFrame = Time.frameCount;
+            AdvancePatchbotSpark(ref spark, dt);
+            patchbotSparks[i] = spark;
+        }
+    }
+
+    internal static void ReleasePatchbotSparks(Transform owner)
+    {
+        if (_instance == null) return;
+        var sparks = _instance.patchbotSparks;
+        for (int i = sparks.Count - 1; i >= 0; i--)
+        {
+            var spark = sparks[i];
+            if (spark.owner != owner) continue;
+            if (spark.image != null) UiVfxPool.Return(spark.key, spark.image.gameObject);
+            RemoveAtSwap(sparks, i);
         }
     }
 

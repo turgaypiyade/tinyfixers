@@ -1,46 +1,57 @@
 using System.Collections;
-using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
+/// <summary>
+/// Hamle övgüsü (GOOD! / WOW! / GREAT!) — kullanıcı tasarımı (2026-10-27): arka plan/rozet YOK; son hamlenin
+/// yerinden sıcak altın ışık hüzmeleri yükselir; yazı hüzmelerin içinde hologram gibi oluşur (düşük alfa + küçükten
+/// büyüğe + sönümlenen titreşim, 2026-10-27 geri bildirimi: "bir anda çıkmasın"), biraz yükselip yukarı uzayarak söner. Yazı TinyFixers Pop + yazı kuralı (beyaz yüz, kontur/gölge = altın ışığın koyusu).
+/// Tüm parçalar bir kez kurulur ve her övgüde yeniden kullanılır (anlık nesne/materyal üretimi yok).
+/// </summary>
 public sealed class MoveClearPraisePopupController : MonoBehaviour
 {
     [SerializeField] private int minimumClearedTiles = 30;
-    [SerializeField] private Vector2 anchoredPosition = new Vector2(0f, 72f);
-    [Tooltip("Açık: yazı tahtanın sağ/sol/üst bölgelerinden birinde rastgele çıkar (art arda aynı yer değil). Kapalı: sabit anchoredPosition.")]
-    [SerializeField] private bool randomizePosition = true;
-    [SerializeField] private Vector2 badgeSize = new Vector2(390f, 174f);
-    [SerializeField] private float holdDuration = 0.58f;
-    [SerializeField] private TMP_FontAsset preferredFont;
+    [SerializeField, Range(48f, 140f)] private float praiseFontSize = 96f;
+    [Tooltip("Yazının hamle noktasından ne kadar yükseleceği (hücre cinsinden).")]
+    [SerializeField, Range(0f, 3f)] private float riseCells = 1.3f;
+    [SerializeField, Range(0.1f, 1.5f)] private float holdDuration = 0.45f;
+    [Tooltip("Yazının tam oluştuğundaki opaklığı. Hologram hissi + beyaz yüz göze batmasın diye yarı saydam (kullanıcı, 2026-10-27).")]
+    [SerializeField, Range(0.3f, 1f)] private float textOpacity = 0.72f;
 
-    [Header("Praise Lettering")]
-    [SerializeField, Range(0f, 32f)] private float textArcHeight = 13f;
-    [SerializeField, Range(48f, 120f)] private float maxPraiseFontSize = 92f;
-    [SerializeField, Range(0f, 12f)] private float textDepth = 5f;
-    [SerializeField] private Vector2 letteringOffset = new Vector2(8f, 0f);
-    [Tooltip("Yazı yüzü rengi, üst → alt geçiş. Zemin sarı → zıt ton: kırmızı (kullanıcı seçimi). " +
-             "Mavi: üst (0.78, 0.93, 1), alt (0.36, 0.66, 1). Krem: üst (1, 0.97, 0.85), alt (1, 0.88, 0.62).")]
-    [SerializeField] private Color faceTop    = new Color(1f, 0.42f, 0.36f, 1f);   // kırmızı (kullanıcı seçimi)
-    [SerializeField] private Color faceBottom = new Color(0.86f, 0.08f, 0.1f, 1f);
-    [Tooltip("Yüzün ince konturu. Mavi/krem için lacivert: (0.12, 0.12, 0.40).")]
-    [SerializeField] private Color faceOutline = new Color(0.35f, 0.03f, 0.06f, 1f);   // bordo
-    [Tooltip("3D derinlik katmanı üst → alt. Mavi/krem için mor: (0.42, 0.18, 0.72) → (0.27, 0.09, 0.52).")]
-    [SerializeField] private Color depthTop    = new Color(0.62f, 0.05f, 0.08f, 1f);   // koyu kırmızı
-    [SerializeField] private Color depthBottom = new Color(0.42f, 0.02f, 0.05f, 1f);
-    [Tooltip("En dış kalın kontur. Mavi/krem için koyu lacivert: (0.07, 0.06, 0.22).")]
-    [SerializeField] private Color outerOutline = new Color(0.22f, 0.02f, 0.04f, 1f);  // koyu bordo
+    // Altın ışık = yazının "zemini": kontur/gölge bunun koyusu (TextSurfaceStyle).
+    private static readonly Color LightColor = new Color(1f, 0.70f, 0.18f, 1f);
+    private static readonly Color BeamColor = new Color(1f, 0.88f, 0.50f, 0.62f);   // geniş hüzme → alfa biraz düşük
+    private static readonly Color GlowColor = new Color(1f, 0.82f, 0.40f, 0.60f);
+    private static readonly Color SparkColor = new Color(1f, 0.97f, 0.72f, 1f);
+
+    private const int MaxBeams = 5, MaxSparks = 6;
+    private const float InDuration = 0.45f, OutDuration = 0.35f;
+    // Hologram oluşumu: hüzmeler önce çıkar, yazı az sonra içlerinde belirir.
+    private const float MaterializeDelay = 0.06f, MaterializeDuration = 0.42f;
+    private const float MaterializeStartScale = 0.3f;
 
     private BoardController board;
     private Coroutine activeRoutine;
-    private RectTransform activePopup;
-    private TMP_FontAsset resolvedFont;
-    private readonly List<Material> popupMaterials = new List<Material>(3);
+
+    // Bir kez kurulan, yeniden kullanılan parçalar.
+    private RectTransform root;
+    private CanvasGroup group;
+    private TextMeshProUGUI text;
+    private RectTransform textRt;
+    private CanvasGroup textGroup;   // yazı alfası: mesh yeniden kurulmadan (alt-mesh'ler dahil)
+    private PraiseLightGraphic glow;
+    private readonly PraiseLightGraphic[] beams = new PraiseLightGraphic[MaxBeams];
+    private readonly JaggedBadgeGraphic[] sparks = new JaggedBadgeGraphic[MaxSparks];
+    private readonly Vector2[] beamSize = new Vector2[MaxBeams];
+    private readonly float[] beamDelay = new float[MaxBeams];
+    private readonly Vector2[] sparkFrom = new Vector2[MaxSparks];
+    private readonly Vector2[] sparkVelocity = new Vector2[MaxSparks];
+    private readonly float[] sparkSpin = new float[MaxSparks];
 
     public void Bind(BoardController target)
     {
-        // The controller is a persistent host; only its generated popup is temporary.
-        // Authored hosts may be saved inactive in the scene.
+        // The controller is a persistent host; authored hosts may be saved inactive in the scene.
         if (target != null && !gameObject.activeSelf)
             gameObject.SetActive(true);
 
@@ -60,26 +71,21 @@ public sealed class MoveClearPraisePopupController : MonoBehaviour
     {
         if (board != null)
             board.OnMoveClearPraise -= HandleMoveClearPraise;
-
         StopActivePopup();
     }
 
-    private void OnDisable()
-    {
-        // Unity stops host coroutines on deactivation. Also remove the unfinished
-        // popup so it cannot reappear frozen when the Canvas is enabled again.
-        StopActivePopup();
-    }
+    // Unity stops host coroutines on deactivation; hide the half-played effect so it cannot reappear frozen.
+    private void OnDisable() => StopActivePopup();
 
-    private void HandleMoveClearPraise(int clearedTiles)
+    private void HandleMoveClearPraise(int clearedTiles, Vector3 worldOrigin)
     {
-        // C# events can still reach us while a parent Canvas or this component is
-        // disabled. Do not start a coroutine or reopen a hidden screen in that case.
+        // C# events can still reach us while a parent Canvas or this component is disabled.
         if (!isActiveAndEnabled || clearedTiles < minimumClearedTiles)
             return;
 
         StopActivePopup();
-        activeRoutine = StartCoroutine(PlayPopup(clearedTiles));
+        EnsureBuilt();
+        activeRoutine = StartCoroutine(Play(clearedTiles, worldOrigin));
     }
 
     private void StopActivePopup()
@@ -89,397 +95,260 @@ public sealed class MoveClearPraisePopupController : MonoBehaviour
             StopCoroutine(activeRoutine);
             activeRoutine = null;
         }
-
-        DestroyActivePopup();
+        if (root != null) root.gameObject.SetActive(false);
     }
 
-    private IEnumerator PlayPopup(int clearedTiles)
+    // ── Kurulum (bir kez) ──────────────────────────────────────────────────────────────────
+
+    private void EnsureBuilt()
     {
-        RectTransform popup = BuildPopup(clearedTiles);
-        activePopup = popup;
+        if (root != null) return;
 
-        if (!IsAlive(popup))
+        var go = new GameObject("MoveClearPraise", typeof(RectTransform), typeof(CanvasGroup));
+        go.layer = gameObject.layer;
+        root = (RectTransform)go.transform;
+        root.SetParent(transform, false);
+        root.anchorMin = root.anchorMax = new Vector2(0.5f, 0.5f);
+        root.pivot = new Vector2(0.5f, 0.5f);
+        root.sizeDelta = Vector2.zero;
+        group = go.GetComponent<CanvasGroup>();
+        group.blocksRaycasts = false;
+        group.interactable = false;
+
+        glow = NewPart<PraiseLightGraphic>("Glow");
+        glow.Kind = PraiseLightGraphic.Shape.Glow;
+        glow.color = GlowColor;
+        for (int i = 0; i < MaxBeams; i++)
         {
-            ClearRoutineReferences(popup);
-            yield break;
+            beams[i] = NewPart<PraiseLightGraphic>("Beam" + i);
+            beams[i].Kind = PraiseLightGraphic.Shape.Beam;
+            beams[i].color = BeamColor;
+            beams[i].rectTransform.pivot = new Vector2(0.5f, 0f);   // hüzme hamle noktasından yukarı büyür
+        }
+        for (int i = 0; i < MaxSparks; i++)
+        {
+            sparks[i] = NewPart<JaggedBadgeGraphic>("Spark" + i);
+            sparks[i].Spikes = 4;
+            sparks[i].InnerRadius = 0.38f;
+            sparks[i].color = SparkColor;
         }
 
-        var group = popup.GetComponent<CanvasGroup>();
-        if (!IsAlive(popup) || !IsAlive(group))
-        {
-            ClearRoutineReferences(popup);
-            yield break;
-        }
+        var textGo = new GameObject("Label", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI), typeof(CanvasGroup));
+        textGo.layer = go.layer;
+        textRt = (RectTransform)textGo.transform;
+        textRt.SetParent(root, false);
+        textRt.anchorMin = textRt.anchorMax = new Vector2(0.5f, 0.5f);
+        textRt.pivot = new Vector2(0.5f, 0f);
+        textRt.sizeDelta = new Vector2(praiseFontSize * 7f, praiseFontSize * 1.4f);
+        text = textGo.GetComponent<TextMeshProUGUI>();
+        textGroup = textGo.GetComponent<CanvasGroup>();
+        textGroup.blocksRaycasts = false;
+        textGroup.interactable = false;
+        text.fontSize = praiseFontSize;
+        text.alignment = TextAlignmentOptions.Bottom;
+        text.textWrappingMode = TextWrappingModes.NoWrap;
+        text.overflowMode = TextOverflowModes.Overflow;
+        text.raycastTarget = false;
+        TextSurfaceStyle.Apply(text, LightColor);   // Pop + beyaz yüz + altının koyusu kontur/gölge (paylaşılan materyal)
+        text.fontSize = praiseFontSize;              // Apply font değişiminde puntoyu oranlar; övgüde sabit kalsın
 
-        Vector2 home = PickPraisePosition(out float side);
-        popup.anchoredPosition = home;
-        // Yana çıkan yazı dışa doğru hafif eğilir ve dışa-yukarı süzülerek kaybolur.
-        float tilt = Random.Range(-2.5f, 2.5f) - side * 4f;
-        Vector2 start = home + new Vector2(side * -18f, -24f);
-        Vector2 peak = home + new Vector2(0f, 10f);
-        Vector2 end = home + new Vector2(side * 22f, 42f);
-
-        const float inDuration = 0.20f;
-        const float settleDuration = 0.16f;
-        const float outDuration = 0.24f;
-
-        float t = 0f;
-        while (t < inDuration)
-        {
-            if (!IsAlive(popup) || !IsAlive(group))
-            {
-                ClearRoutineReferences(popup);
-                yield break;
-            }
-
-            t += Time.deltaTime;
-            float k = Mathf.Clamp01(t / inDuration);
-            float e = 1f - Mathf.Pow(1f - k, 3f);
-            group.alpha = e;
-            popup.anchoredPosition = Vector2.LerpUnclamped(start, peak, e);
-            popup.localScale = Vector3.one * Mathf.LerpUnclamped(0.48f, 1.08f, e);
-            popup.localRotation = Quaternion.Euler(0f, 0f, Mathf.LerpUnclamped(tilt * 1.8f, tilt, e));
-            yield return null;
-        }
-
-        t = 0f;
-        while (t < settleDuration)
-        {
-            if (!IsAlive(popup))
-            {
-                ClearRoutineReferences(popup);
-                yield break;
-            }
-
-            t += Time.deltaTime;
-            float k = Mathf.Clamp01(t / settleDuration);
-            float e = 1f - Mathf.Pow(1f - k, 2f);
-            popup.anchoredPosition = Vector2.LerpUnclamped(peak, home, e);
-            popup.localScale = Vector3.one * Mathf.LerpUnclamped(1.08f, 1f, e);
-            yield return null;
-        }
-
-        yield return new WaitForSeconds(holdDuration);
-
-        t = 0f;
-        while (t < outDuration)
-        {
-            if (!IsAlive(popup) || !IsAlive(group))
-            {
-                ClearRoutineReferences(popup);
-                yield break;
-            }
-
-            t += Time.deltaTime;
-            float k = Mathf.Clamp01(t / outDuration);
-            group.alpha = 1f - k;
-            popup.anchoredPosition = Vector2.LerpUnclamped(home, end, k);
-            popup.localScale = Vector3.one * Mathf.LerpUnclamped(1f, 0.88f, k);
-            yield return null;
-        }
-
-        DestroyPopup(popup);
-        ClearRoutineReferences(popup);
+        root.gameObject.SetActive(false);
     }
 
-    // Tahta çevresindeki çıkış noktaları (tahta dikdörtgeninin -1..1 kesirleri; y yukarı pozitif).
-    private static readonly Vector2[] PraiseSlots =
+    private T NewPart<T>(string partName) where T : MaskableGraphic
     {
-        new Vector2(-0.62f, 0.62f), new Vector2(0.62f, 0.62f),   // sol üst / sağ üst
-        new Vector2(-0.70f, 0.18f), new Vector2(0.70f, 0.18f),   // sol / sağ
-        new Vector2(0f, 0.72f),                                  // üst orta
-        new Vector2(-0.55f, -0.30f), new Vector2(0.55f, -0.30f), // sol alt / sağ alt
-    };
-    private int lastSlot = -1;
+        var go = new GameObject(partName, typeof(RectTransform), typeof(CanvasRenderer), typeof(T));
+        go.layer = gameObject.layer;
+        var rt = (RectTransform)go.transform;
+        rt.SetParent(root, false);
+        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+        var graphic = go.GetComponent<T>();
+        graphic.raycastTarget = false;
+        return graphic;
+    }
 
-    // side: -1 sol, 0 orta, +1 sağ (giriş/çıkış yönü için).
-    private Vector2 PickPraisePosition(out float side)
+    // ── Oynatma ────────────────────────────────────────────────────────────────────────────
+
+    private IEnumerator Play(int clearedTiles, Vector3 worldOrigin)
     {
-        side = 0f;
+        int tier = PickTier(clearedTiles, out string label);
+        GameEventSfx.PlayPraise(tier);   // 0 GOOD, 1 WOW, 2 GREAT
+        float cell = CellSize();
+        root.gameObject.SetActive(true);
+        root.localScale = Vector3.one;
+        group.alpha = 1f;
+
+        text.text = label;
+        textGroup.alpha = 0f;   // ilk karede yazı gizli başlasın (tam görünür bir kare yanıp sönmesin)
+        root.anchoredPosition = ClampToBoard(ToAnchored(worldOrigin), cell);   // genişlik metin atandıktan sonra belli
+        textRt.anchoredPosition = Vector2.zero;
+        textRt.localScale = Vector3.one * MaterializeStartScale;
+        float textHalf = Mathf.Max(text.preferredWidth * 0.5f, cell);
+
+        int beamCount = tier == 0 ? 3 : tier == 1 ? 4 : 5;
+        int sparkCount = tier == 0 ? 0 : tier == 1 ? 3 : MaxSparks;
+        SetupBeams(beamCount, textHalf, cell);
+        SetupSparks(sparkCount, textHalf, cell);
+        var glowRt = glow.rectTransform;
+        glowRt.sizeDelta = new Vector2(textHalf * 2.2f, cell * 1.1f);
+        glowRt.anchoredPosition = new Vector2(0f, cell * 0.15f);
+
+        // Durağan bekleme yok (kullanıcı, 2026-10-27): yazı oluşur oluşmaz sönmeye başlar ve tüm süre boyunca
+        // yükselmeye devam eder; ekranda kaldığı her an hareketlidir. Toplam süre aynı kalır.
+        float total = InDuration + holdDuration + OutDuration;
+        float fadeStart = MaterializeDelay + MaterializeDuration;
+        float riseTotal = (riseCells + 0.6f) * cell;
+        for (float t = 0f; t < total; t += Time.deltaTime)
+        {
+            float u = t / total;
+            float rise = (u * (2f - u) * 0.7f + u * 0.3f) * riseTotal;   // yavaşlar ama hiç durmaz
+            float outK = Mathf.Clamp01((t - fadeStart) / (total - fadeStart));   // 0 → 1 sönüş
+            textRt.anchoredPosition = new Vector2(0f, rise);
+            float form = AnimateMaterialize(t, out float formScale);
+            textRt.localScale = new Vector3(formScale * (1f - outK * 0.08f), formScale * (1f + outK * 0.18f), 1f);   // yukarı doğru uzayarak söner
+            textGroup.alpha = form * (1f - outK * outK) * textOpacity;   // önce yavaş, sonda hızlı söner
+            AnimateBeams(t, outK);
+            AnimateSparks(t, sparkCount, total);
+            float glowIn = Mathf.Clamp01(t / 0.12f);
+            glow.canvasRenderer.SetAlpha(glowIn * (1f - outK));
+            yield return null;
+        }
+
+        root.gameObject.SetActive(false);
+        activeRoutine = null;
+    }
+
+    // Hologram gibi oluşum: alfa düşükten yükselir, yazı küçükten büyür (hafif aşma), ışık kararsızmış gibi
+    // titreşir ve titreşim yazı netleştikçe söner. Dönüş: alfa çarpanı; formScale: yazı ölçeği.
+    private static float AnimateMaterialize(float t, out float formScale)
+    {
+        float k = Mathf.Clamp01((t - MaterializeDelay) / MaterializeDuration);
+        formScale = Mathf.LerpUnclamped(MaterializeStartScale, 1f, EaseOutBack(k, 0.9f));
+        float alpha = k * k * (3f - 2f * k);                                   // yumuşak artış (düşük alfayla başlar)
+        float flicker = Mathf.Repeat(t * 28f, 1f) < 0.5f ? 1f : 0.55f;        // ~14 Hz hologram titreşimi
+        float settle = 1f - k;                                                 // oluştukça titreşim söner
+        return alpha * Mathf.Lerp(1f, flicker, settle * 0.8f);
+    }
+
+    private void SetupBeams(int count, float textHalf, float cell)
+    {
+        for (int i = 0; i < MaxBeams; i++)
+        {
+            bool on = i < count;
+            beams[i].gameObject.SetActive(on);
+            if (!on) continue;
+            // Hüzmeler yazının genişliğine yayılır; ortadakiler daha uzun.
+            float lane = count == 1 ? 0f : Mathf.Lerp(-0.85f, 0.85f, i / (float)(count - 1));
+            float centerBias = 1f - Mathf.Abs(lane) * 0.35f;
+            beamSize[i] = new Vector2(cell * Random.Range(0.38f, 0.62f), cell * Random.Range(2.4f, 3.2f) * centerBias);
+            beamDelay[i] = Random.Range(0f, 0.08f);
+            var rt = beams[i].rectTransform;
+            rt.anchoredPosition = new Vector2(lane * textHalf + Random.Range(-0.1f, 0.1f) * cell, -cell * 0.35f);
+            rt.sizeDelta = new Vector2(beamSize[i].x, 0f);
+            beams[i].canvasRenderer.SetAlpha(0f);
+        }
+    }
+
+    private void AnimateBeams(float t, float outK)
+    {
+        for (int i = 0; i < MaxBeams; i++)
+        {
+            if (!beams[i].gameObject.activeSelf) continue;
+            float grow = EaseOut(Mathf.Clamp01((t - beamDelay[i]) / 0.22f));
+            var rt = beams[i].rectTransform;
+            // Sönerken incelir ve yukarı doğru uzamaya devam eder.
+            rt.sizeDelta = new Vector2(beamSize[i].x * (1f - outK * 0.7f), beamSize[i].y * (grow + outK * 0.25f));
+            beams[i].canvasRenderer.SetAlpha(grow * (1f - outK));
+        }
+    }
+
+    private void SetupSparks(int count, float textHalf, float cell)
+    {
+        for (int i = 0; i < MaxSparks; i++)
+        {
+            bool on = i < count;
+            sparks[i].gameObject.SetActive(on);
+            if (!on) continue;
+            float size = cell * Random.Range(0.22f, 0.38f);
+            sparks[i].rectTransform.sizeDelta = new Vector2(size, size);
+            sparkFrom[i] = new Vector2(Random.Range(-1f, 1f) * textHalf, Random.Range(-0.2f, 0.4f) * cell);
+            sparkVelocity[i] = new Vector2(Random.Range(-0.6f, 0.6f), Random.Range(1.6f, 2.6f)) * cell;
+            sparkSpin[i] = Random.Range(-220f, 220f);
+            sparks[i].canvasRenderer.SetAlpha(0f);
+        }
+    }
+
+    private void AnimateSparks(float t, int count, float total)
+    {
+        for (int i = 0; i < count; i++)
+        {
+            float k = Mathf.Clamp01((t - 0.08f - i * 0.05f) / (total * 0.8f));
+            var rt = sparks[i].rectTransform;
+            rt.anchoredPosition = sparkFrom[i] + sparkVelocity[i] * EaseOut(k);
+            rt.localRotation = Quaternion.Euler(0f, 0f, sparkSpin[i] * k);
+            float alpha = k <= 0f ? 0f : Mathf.Sin(k * Mathf.PI);   // doğar → parlar → söner
+            sparks[i].canvasRenderer.SetAlpha(alpha);
+            rt.localScale = Vector3.one * (0.6f + 0.4f * alpha);
+        }
+    }
+
+    // ── Konum ──────────────────────────────────────────────────────────────────────────────
+
+    private float CellSize()
+    {
         var host = transform as RectTransform;
-        if (!randomizePosition || host == null || board == null || board.Width <= 0 || board.Height <= 0)
-            return anchoredPosition;
-
-        // Tahtanın host içindeki dikdörtgeni (köşe hücre merkezlerinden).
-        Vector2 a = ToAnchored(host, board.GetCellWorldCenterPosition(0, 0));
-        Vector2 b = ToAnchored(host, board.GetCellWorldCenterPosition(board.Width - 1, board.Height - 1));
-        Vector2 center = (a + b) * 0.5f;
-        Vector2 half = new Vector2(Mathf.Abs(b.x - a.x), Mathf.Abs(b.y - a.y)) * 0.5f;
-        // Hücre boyu host biriminde (host tahtadan farklı ölçekte olabilir); yazı tahta sınırından taşmasın.
-        float cell = board.Width > 1 ? Mathf.Abs(b.x - a.x) / (board.Width - 1) : badgeSize.y;
-        half.x = Mathf.Max(0f, half.x + cell * 0.5f - badgeSize.x * 0.5f);
-        half.y = Mathf.Max(0f, half.y + cell * 0.5f - badgeSize.y * 0.5f);
-
-        int slot = Random.Range(0, PraiseSlots.Length);
-        if (slot == lastSlot) slot = (slot + 1 + Random.Range(0, PraiseSlots.Length - 1)) % PraiseSlots.Length;
-        lastSlot = slot;
-
-        Vector2 f = PraiseSlots[slot];
-        side = Mathf.Abs(f.x) < 0.1f ? 0f : Mathf.Sign(f.x);
-        Vector2 jitter = new Vector2(Random.Range(-18f, 18f), Random.Range(-14f, 14f));
-        return center + new Vector2(f.x * half.x, f.y * half.y) + jitter;
+        if (host == null || board == null || board.Width < 2) return praiseFontSize;
+        Vector2 a = ToAnchored(board.GetCellWorldCenterPosition(0, 0));
+        Vector2 b = ToAnchored(board.GetCellWorldCenterPosition(1, 0));
+        return Mathf.Max(1f, Mathf.Abs(b.x - a.x));
     }
 
-    private static Vector2 ToAnchored(RectTransform host, Vector3 world)
+    // Yazı + yükselme tahtanın dışına taşmasın (üst sıra / kenar hamleleri).
+    private Vector2 ClampToBoard(Vector2 p, float cell)
     {
-        // Popup'ın anchor'ı host'un ortası → anchoredPosition = local - rect.center.
+        if (board == null || board.Width <= 0 || board.Height <= 0) return p;
+        Vector2 a = ToAnchored(board.GetCellWorldCenterPosition(0, 0));
+        Vector2 b = ToAnchored(board.GetCellWorldCenterPosition(board.Width - 1, board.Height - 1));
+        float minX = Mathf.Min(a.x, b.x), maxX = Mathf.Max(a.x, b.x);
+        float minY = Mathf.Min(a.y, b.y), maxY = Mathf.Max(a.y, b.y);
+        float halfText = Mathf.Min(text.preferredWidth * 0.5f, (maxX - minX) * 0.5f);
+        p.x = Mathf.Clamp(p.x, minX + halfText - cell * 0.5f, maxX - halfText + cell * 0.5f);
+        float topRoom = (riseCells + 0.6f) * cell + text.fontSize;
+        p.y = Mathf.Clamp(p.y, minY, Mathf.Max(minY, maxY + cell * 0.5f - topRoom));
+        return p;
+    }
+
+    private Vector2 ToAnchored(Vector3 world)
+    {
+        // Parçaların anchor'ı host'un ortası → anchoredPosition = local - rect.center.
+        var host = (RectTransform)transform;
         Vector2 local = host.InverseTransformPoint(world);
         return local - host.rect.center;
     }
 
-    private void DestroyActivePopup()
+    private static float EaseOut(float t) => 1f - (1f - t) * (1f - t) * (1f - t);
+
+    private static float EaseOutBack(float t, float c1)
     {
-        var popup = activePopup;
-        activePopup = null;
-        DestroyPopup(popup);
+        float c3 = c1 + 1f;
+        float x = t - 1f;
+        return 1f + c3 * x * x * x + c1 * x * x;
     }
 
-    private void DestroyPopup(RectTransform popup)
+    [ContextMenu("Preview WOW (Play Mode)")]
+    private void PreviewWow()
     {
-        foreach (var material in popupMaterials)
-            if (material != null) Destroy(material);
-        popupMaterials.Clear();
-
-        if (!IsAlive(popup))
-            return;
-
-        popup.gameObject.SetActive(false);
-        Destroy(popup.gameObject);
+        if (!Application.isPlaying || board == null) return;
+        HandleMoveClearPraise(45, board.GetCellWorldCenterPosition(board.Width / 2, board.Height - 2));
     }
 
-    private void ClearRoutineReferences(RectTransform popup)
+    // 0 GOOD, 1 WOW, 2 GREAT — efekt büyüklüğü kademeyle artar (hüzme/parıltı sayısı).
+    private static int PickTier(int clearedTiles, out string label)
     {
-        if (activePopup == popup)
-            activePopup = null;
-
-        activeRoutine = null;
-    }
-
-    private static bool IsAlive(UnityEngine.Object obj)
-    {
-        return obj != null;
-    }
-
-    private RectTransform BuildPopup(int clearedTiles)
-    {
-        PickTier(clearedTiles, out string label, out Color fill, out Color rim, out Color accent);
-
-        var root = new GameObject("MoveClearPraise", typeof(RectTransform), typeof(CanvasGroup));
-        var rootRt = root.GetComponent<RectTransform>();
-        rootRt.SetParent(transform, false);
-        rootRt.SetAsLastSibling();
-        rootRt.anchorMin = rootRt.anchorMax = new Vector2(0.5f, 0.5f);
-        rootRt.pivot = new Vector2(0.5f, 0.5f);
-        rootRt.anchoredPosition = anchoredPosition;
-        rootRt.sizeDelta = badgeSize + new Vector2(44f, 42f);
-
-        var group = root.GetComponent<CanvasGroup>();
-        group.alpha = 0f;
-        group.blocksRaycasts = false;
-        group.interactable = false;
-
-        Vector2 burstSize = new Vector2(badgeSize.x * 1.18f, badgeSize.y * 1.45f);
-        CreateJagged("Shadow", rootRt, burstSize + new Vector2(54f, 48f), new Vector2(3f, -8f), new Color(0.25f, 0.08f, 0.015f, 0.24f), 9, 0.51f);
-        CreateJagged("RedRim", rootRt, burstSize + new Vector2(48f, 44f), Vector2.zero, new Color(0.92f, 0.13f, 0.015f, 1f), 9, 0.51f);
-        CreateJagged("OrangeRim", rootRt, burstSize + new Vector2(24f, 22f), Vector2.zero, rim, 9, 0.51f);
-        CreateJagged("Badge", rootRt, burstSize, Vector2.zero, fill, 9, 0.51f);
-        CreateJagged("SparkA", rootRt, new Vector2(34f, 34f), new Vector2(-burstSize.x * 0.44f, burstSize.y * 0.55f), accent, 5, 0.48f);
-        CreateJagged("SparkB", rootRt, new Vector2(26f, 26f), new Vector2(burstSize.x * 0.46f, burstSize.y * 0.44f), accent, 5, 0.48f);
-        CreateJagged("SparkC", rootRt, new Vector2(22f, 22f), new Vector2(burstSize.x * 0.31f, -burstSize.y * 0.55f), accent, 5, 0.48f);
-
-        var font = ResolveFont();
-        // Zemin (patlama) SARI → yazı ZIT renkte: kırmızı yüz + bordo kontur/derinlik (kullanıcı seçimi).
-        // Eskiden krem→turuncu yüz + turuncu derinlik sarı zeminde seçilmiyordu; beyaz da fazla parladı
-        // (kullanıcı, 2026-09-28).
-        // Renkler Inspector'dan (faceTop/Bottom, faceOutline, depthTop/Bottom, outerOutline).
-        float extrusion = textDepth * 1.4f;
-
-        // All three layers use the exact same font size and glyph layout. Their
-        // independent SDF materials keep this styling off the shared font asset.
-        var outline = CreatePraiseText("LetterOutline", rootRt, label, font,
-            letteringOffset + new Vector2(0f, -extrusion - 2f), outerOutline, outerOutline, outerOutline, 0.36f);
-        var depth = CreatePraiseText("LetterDepth", rootRt, label, font,
-            letteringOffset + new Vector2(0f, -extrusion), depthTop, depthBottom, outerOutline, 0.22f);
-        var face = CreatePraiseText("Label", rootRt, label, font, letteringOffset,
-            faceTop, faceBottom,
-            faceOutline, 0.11f);
-
-        face.enableAutoSizing = true;
-        face.fontSizeMin = 38f;
-        face.fontSizeMax = maxPraiseFontSize;
-        face.ForceMeshUpdate();
-        outline.fontSize = depth.fontSize = face.fontSize;
-        outline.ForceMeshUpdate();
-        depth.ForceMeshUpdate();
-
-        return rootRt;
-    }
-
-    private TextMeshProUGUI CreatePraiseText(
-        string name, RectTransform parent, string label, TMP_FontAsset font,
-        Vector2 offset, Color top, Color bottom, Color outlineColor, float outlineWidth)
-    {
-        var go = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
-        var rt = (RectTransform)go.transform;
-        rt.SetParent(parent, false);
-        rt.anchorMin = Vector2.zero;
-        rt.anchorMax = Vector2.one;
-        rt.offsetMin = new Vector2(22f, 12f) + offset;
-        rt.offsetMax = new Vector2(-22f, -12f) + offset;
-
-        var text = go.GetComponent<TextMeshProUGUI>();
-        if (font != null) text.font = font;
-        text.text = label;
-        text.fontStyle = FontStyles.Normal;
-        text.fontSize = maxPraiseFontSize;
-        text.alignment = TextAlignmentOptions.Center;
-        text.textWrappingMode = TextWrappingModes.NoWrap;
-        text.overflowMode = TextOverflowModes.Overflow;
-        text.color = Color.white;
-        text.enableVertexGradient = true;
-        text.colorGradient = new VertexGradient(top, top, bottom, bottom);
-        text.raycastTarget = false;
-        text.extraPadding = true;
-
-        // Own these three materials explicitly; the installed TMP version does
-        // not dispose font-material instances when a popup text is destroyed.
-        ShaderUtilities.GetShaderPropertyIDs();
-        var material = new Material(text.fontSharedMaterial);
-        popupMaterials.Add(material);
-        text.fontSharedMaterial = material;
-        material.SetColor(ShaderUtilities.ID_FaceColor, Color.white);
-        material.SetColor(ShaderUtilities.ID_OutlineColor, outlineColor);
-        material.SetFloat(ShaderUtilities.ID_OutlineWidth, outlineWidth);
-        material.SetFloat(ShaderUtilities.ID_OutlineSoftness, 0f);
-        material.DisableKeyword("UNDERLAY_ON");
-        material.DisableKeyword("UNDERLAY_INNER");
-        text.UpdateMeshPadding();
-        float arc = textArcHeight;
-        text.OnPreRenderText += info => ApplyTextArc(info, arc);
-        return text;
-    }
-
-    private static void ApplyTextArc(TMP_TextInfo info, float height)
-    {
-        if (info.characterCount == 0 || height <= 0f) return;
-
-        float left = float.PositiveInfinity;
-        float right = float.NegativeInfinity;
-        for (int i = 0; i < info.characterCount; i++)
-        {
-            var c = info.characterInfo[i];
-            if (!c.isVisible) continue;
-            left = Mathf.Min(left, c.origin);
-            right = Mathf.Max(right, c.xAdvance);
-        }
-        if (float.IsInfinity(left) || right - left < 1f) return;
-
-        float center = (left + right) * 0.5f;
-        float halfWidth = (right - left) * 0.5f;
-        for (int i = 0; i < info.characterCount; i++)
-        {
-            var c = info.characterInfo[i];
-            if (!c.isVisible) continue;
-            var vertices = info.meshInfo[c.materialReferenceIndex].vertices;
-            int first = c.vertexIndex;
-            float x = (c.origin + c.xAdvance) * 0.5f;
-            float normalized = (x - center) / halfWidth;
-            float lift = height * (1f - normalized * normalized) - height * 0.5f;
-            float angle = Mathf.Atan(-2f * height * normalized / halfWidth) * Mathf.Rad2Deg;
-            Vector3 pivot = new Vector3(x, c.baseLine, 0f);
-            Quaternion rotation = Quaternion.Euler(0f, 0f, angle);
-            for (int v = 0; v < 4; v++)
-                vertices[first + v] = rotation * (vertices[first + v] - pivot)
-                    + pivot + Vector3.up * lift;
-        }
-    }
-
-    [ContextMenu("Preview GREAT (Play Mode)")]
-    private void PreviewGreat()
-    {
-        if (Application.isPlaying)
-            HandleMoveClearPraise(Mathf.Max(50, minimumClearedTiles));
-    }
-
-    private TMP_FontAsset ResolveFont()
-    {
-        if (preferredFont != null)
-            return preferredFont;
-
-        if (resolvedFont != null)
-            return resolvedFont;
-
-        var fonts = Resources.FindObjectsOfTypeAll<TMP_FontAsset>();
-        TMP_FontAsset fallbackInter = null;
-
-        for (int i = 0; i < fonts.Length; i++)
-        {
-            var font = fonts[i];
-            if (font == null || string.IsNullOrEmpty(font.name) || !font.name.StartsWith("Inter_"))
-                continue;
-
-            fallbackInter ??= font;
-
-            if (font.name.Contains("ExtraBold") || font.name.Contains("Bold"))
-            {
-                resolvedFont = font;
-                return resolvedFont;
-            }
-        }
-
-        resolvedFont = fallbackInter;
-        return resolvedFont;
-    }
-
-    private static void CreateJagged(
-        string name,
-        RectTransform parent,
-        Vector2 size,
-        Vector2 position,
-        Color color,
-        int spikes,
-        float innerRadius)
-    {
-        var go = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(JaggedBadgeGraphic));
-        go.transform.SetParent(parent, false);
-
-        var rt = (RectTransform)go.transform;
-        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
-        rt.pivot = new Vector2(0.5f, 0.5f);
-        rt.anchoredPosition = position;
-        rt.sizeDelta = size;
-
-        var graphic = go.GetComponent<JaggedBadgeGraphic>();
-        graphic.color = color;
-        graphic.Spikes = Mathf.Max(4, spikes);
-        graphic.InnerRadius = Mathf.Clamp(innerRadius, 0.35f, 0.95f);
-        graphic.raycastTarget = false;
-    }
-
-    private static void PickTier(int clearedTiles, out string label, out Color fill, out Color rim, out Color accent)
-    {
-        if (clearedTiles >= 50)
-        {
-            label = GameLocalization.Get("praise_great");
-            fill = new Color(1f, 0.84f, 0.12f, 1f);
-            rim = new Color(1f, 0.27f, 0.015f, 1f);
-            accent = new Color(1f, 0.98f, 0.58f, 1f);
-            return;
-        }
-
-        if (clearedTiles >= 40)
-        {
-            label = GameLocalization.Get("praise_wow");
-            fill = new Color(1f, 0.84f, 0.12f, 1f);
-            rim = new Color(1f, 0.27f, 0.015f, 1f);
-            accent = new Color(1f, 0.98f, 0.58f, 1f);
-            return;
-        }
-
+        if (clearedTiles >= 50) { label = GameLocalization.Get("praise_great"); return 2; }
+        if (clearedTiles >= 40) { label = GameLocalization.Get("praise_wow"); return 1; }
         label = GameLocalization.Get("praise_good");
-        fill = new Color(1f, 0.84f, 0.12f, 1f);
-        rim = new Color(1f, 0.27f, 0.015f, 1f);
-        accent = new Color(1f, 0.98f, 0.58f, 1f);
+        return 0;
     }
 }
 

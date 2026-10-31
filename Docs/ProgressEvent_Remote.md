@@ -29,7 +29,7 @@ Firebase Console → Firestore → `config` koleksiyonu → **`progressEvent`** 
 | Alan | Anlam |
 |---|---|
 | `enabled` | false → event kapalı |
-| `minLevel` | Bu level'dan önce event görünmez/saymaz |
+| `minLevel` | Bu level'dan önce event görünmez/saymaz. Uygulamadaki taban (ProgressEventScheduler asset, 20) geçerlidir; sunucu yalnız yükseltebilir |
 | `anchorUtc` | İlk sezonun başlangıcı, UTC (`2026-10-12` ya da `2026-10-12T09:00:00Z`) |
 | `seasonHours` | Sezon süresi (saat, 1–1440) |
 | `ladder.enabled / growthPercent / maxRounds` | Basamak turları |
@@ -83,7 +83,7 @@ hafif oyuncu ilk 2–3 hedefi alır). Telemetri gelince sayıları buna göre ç
 ```json
 {
   "enabled": true,
-  "minLevel": 8,
+  "minLevel": 20,
   "anchorUtc": "2026-10-12",
   "seasonHours": 72,
   "ladder": {
@@ -213,5 +213,5 @@ hafif oyuncu ilk 2–3 hedefi alır). Telemetri gelince sayıları buna göre ç
 Tek satırlık hâli (Console'a yapıştır):
 
 ```
-{"enabled":true,"minLevel":8,"anchorUtc":"2026-10-12","seasonHours":72,"ladder":{"enabled":true,"growthPercent":15,"maxRounds":10},"seasons":[{"id":"tamir","nameTr":"Tamir Haftası","nameEn":"Fix-Up Week","goals":[{"type":"TileCleared_Gear","target":150,"reward":"Coins","amount":50},{"type":"SpecialCreated","target":20,"reward":"Booster_Hammer","amount":1},{"type":"TileCleared_Core","target":250,"reward":"Lives","amount":1,"minutes":15},{"type":"LineAny","target":25,"reward":"Joker_PulseCore","amount":1},{"type":"ObstacleCleared","target":120,"reward":"Coins","amount":200}]},{"id":"hasat","nameTr":"Hasat Görevleri","nameEn":"Harvest Tasks","goals":[{"type":"TileCleared_Plate","target":150,"reward":"Coins","amount":50},{"type":"ObstacleCleared","target":60,"reward":"Booster_Row","amount":1},{"type":"TileCleared_Bolt","target":250,"reward":"Lives","amount":1,"minutes":15},{"type":"LevelWon","target":8,"reward":"Joker_Line","amount":1},{"type":"SpecialCreated","target":40,"reward":"Coins","amount":200}]},{"id":"usta","nameTr":"Usta Yolu","nameEn":"Master Path","goals":[{"type":"TileCleared_Any","target":400,"reward":"Coins","amount":50},{"type":"LineAny","target":15,"reward":"Booster_Column","amount":1},{"type":"FirstTryWin","target":4,"reward":"Lives","amount":1,"minutes":30},{"type":"SpecialCreated","target":30,"reward":"Joker_SystemOverride","amount":1},{"type":"LevelWon","target":10,"reward":"Coins","amount":250}]}]}
+{"enabled":true,"minLevel":20,"anchorUtc":"2026-10-12","seasonHours":72,"ladder":{"enabled":true,"growthPercent":15,"maxRounds":10},"seasons":[{"id":"tamir","nameTr":"Tamir Haftası","nameEn":"Fix-Up Week","goals":[{"type":"TileCleared_Gear","target":150,"reward":"Coins","amount":50},{"type":"SpecialCreated","target":20,"reward":"Booster_Hammer","amount":1},{"type":"TileCleared_Core","target":250,"reward":"Lives","amount":1,"minutes":15},{"type":"LineAny","target":25,"reward":"Joker_PulseCore","amount":1},{"type":"ObstacleCleared","target":120,"reward":"Coins","amount":200}]},{"id":"hasat","nameTr":"Hasat Görevleri","nameEn":"Harvest Tasks","goals":[{"type":"TileCleared_Plate","target":150,"reward":"Coins","amount":50},{"type":"ObstacleCleared","target":60,"reward":"Booster_Row","amount":1},{"type":"TileCleared_Bolt","target":250,"reward":"Lives","amount":1,"minutes":15},{"type":"LevelWon","target":8,"reward":"Joker_Line","amount":1},{"type":"SpecialCreated","target":40,"reward":"Coins","amount":200}]},{"id":"usta","nameTr":"Usta Yolu","nameEn":"Master Path","goals":[{"type":"TileCleared_Any","target":400,"reward":"Coins","amount":50},{"type":"LineAny","target":15,"reward":"Booster_Column","amount":1},{"type":"FirstTryWin","target":4,"reward":"Lives","amount":1,"minutes":30},{"type":"SpecialCreated","target":30,"reward":"Joker_SystemOverride","amount":1},{"type":"LevelWon","target":10,"reward":"Coins","amount":250}]}]}
 ```

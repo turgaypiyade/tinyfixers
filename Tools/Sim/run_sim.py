@@ -18,7 +18,7 @@ import argparse, csv, datetime, json, math, os, plistlib, signal, subprocess, sy
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 APP = os.path.join(ROOT, "Builds", "Sim", "TinyFixersSim.app")
 WIN_EXE = os.path.join(ROOT, "Builds", "Sim", "Win", "TinyFixersSim.exe")
-POLICIES = {"Random": 0, "GoalAware": 1, "Greedy": 2}   # RuntimeBotPolicy (JsonUtility enum = int)
+POLICIES = {"Random": 0, "GoalAware": 1, "Greedy": 2, "Expert": 3, "Auto": 4}   # RuntimeBotPolicy (JsonUtility enum = int); Auto: ≤50 Acemi, 51+ Usta
 
 
 def parse_levels(spec):

@@ -1067,6 +1067,7 @@ public sealed class BossDuelController : MonoBehaviour
 
         if (rt != null) Destroy(rt.gameObject);
         ScreenCrackFx.Play(screenCenter, default, toolThreatCrackScale);
+        Haptics.Play(Haptics.Strength.Heavy);   // boss'un aleti ekran camına çarptı
         PlaySfx(toolThreatGlassSfx != null ? toolThreatGlassSfx : hitSfx, hitVolume);
         var animator = board.boardAnimatorRef;
         if (animator != null && board.ShakeTarget != null)

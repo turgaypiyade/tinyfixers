@@ -1,0 +1,299 @@
+using System;
+using System.Collections.Generic;
+using Firebase.Extensions;
+using Firebase.Firestore;
+using UnityEngine;
+
+/// <summary>
+/// Cloud save (Docs/ProductionPlan.md P1): oyuncu ilerlemesi Firestore
+/// users/{uid}/save/main dokümanında yedeklenir; reinstall/cihaz değişiminde geri gelir.
+///
+/// Akış:
+///  1) Auth hazır olunca bulut dokümanı çekilir.
+///  2) Yeni sıfırlama sürümü kazanır; aynı sürümde daha yüksek seviye geri yüklenir.
+///  3) Restore kararı verilmeden HİÇBİR push yapılmaz (taze kurulumun default'ları
+///     dolu bulutun üstüne yazılmasın). Fetch hata verirse backoff ile denenir.
+///  4) Sonrası: değişim olaylarında (coin/yıldız/skor/arkadaş) + periyodik dirty-check +
+///     uygulama pause/quit anında push. Firestore offline cache'i sayesinde çevrimdışı
+///     push'lar bir sonraki açılışta senkronlanır.
+///
+/// Restore erken (intro/loading sırasında) gelir; o âna dek ekrana bağlanmış eski
+/// değerler olabilir — OnRestored'a abone olan ekranlar kendini tazeler.
+/// </summary>
+public static class FirebaseCloudSaveService
+{
+    private const int SaveVersion = 1;
+    private const float DirtyCheckInterval = 15f;   // sn — dirty ise push
+    private const float FetchRetryDelay = 10f;      // sn — restore fetch backoff
+
+    /// <summary>
+    /// Editör testi: açıkken bulut restore YEREL'i ezmez — local PlayerPrefs kazanır ve buluta itilir.
+    /// Böylece PlayerPrefs Tool'da ne girdiysen (ör. 100 yıldız) onunla başlarsın.
+    /// Cloud-restore'u editörde test etmek istersen false yap. Canlıda (device) etkisiz.
+    /// </summary>
+    public static bool SkipCloudRestoreInEditor = true;
+
+    /// <summary>Buluttan yerel üzerine veri yazıldığında tetiklenir (ekranlar tazelensin).</summary>
+    public static event Action OnRestored;
+
+    /// <summary>Restore kararı verildi mi (başarılı fetch + uygula/it). Push'lar bundan önce kapalı.</summary>
+    public static bool RestoreResolved { get; private set; }
+
+    private static bool dirty;
+    private static bool pushInFlight;
+    private static int lastPushedLevel = -1;
+
+    private static FirebaseFirestore Db => FirebaseFirestore.DefaultInstance;
+
+    private static DocumentReference SaveDoc =>
+        Db.Collection("users").Document(FirebaseAuthService.UserId)
+          .Collection("save").Document("main");
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+    private static void Bootstrap()
+    {
+        if (RuntimeSimulationSession.IsActive) return;
+        var go = new GameObject("CloudSave");
+        UnityEngine.Object.DontDestroyOnLoad(go);
+        go.AddComponent<CloudSaveBehaviour>();
+
+        FirebaseAuthService.OnReady += StartRestore;
+
+        // Oyuncu verisini değiştiren olaylar → dirty (push periyodik atılır).
+        PlayerWallet.OnCoinsChanged += _ => MarkDirty();
+        PlayerWallet.OnTotalStarsChanged += _ => MarkDirty();
+        PlayerWallet.OnTotalScoreChanged += _ => MarkDirty();
+        FriendState.OnChanged += MarkDirty;
+        WonderProgress.OnBackgroundChanged += MarkDirty;   // Journey'den seçilen arka plan
+    }
+
+    /// <summary>Kalıcı oyuncu verisi değişti — bir sonraki döngüde buluta yazılır.</summary>
+    public static void MarkDirty() => dirty = true;
+
+    /// Hesap silinirken itme durur: silinen kayıt eski UID'ye geri yazılmasın (AccountDeletionService).
+    internal static bool SuspendForDeletion;
+
+    /// Hidden level-selector action. Initial restore and older writes must finish first.
+    public static bool TryResetProgress(int maxLevel, out string error)
+    {
+        error = null;
+        if (RuntimeSimulationSession.IsActive || !RestoreResolved || !FirebaseAuthService.IsReady)
+        {
+            error = "Bulut kaydı henüz hazır değil. İnternet bağlantısını kontrol edip tekrar dene.";
+            return false;
+        }
+        if (pushInFlight)
+        {
+            error = "Bulut kaydı sürüyor. Biraz bekleyip tekrar dene.";
+            return false;
+        }
+
+        CloudSaveManifest.BeginProgressReset(maxLevel);
+        ProgressEventService.Instance?.ReloadFromPrefs();
+        MarkDirty();
+        Push();
+        return true;
+    }
+
+    // ── Restore ─────────────────────────────────────────────────────
+
+    private static void StartRestore()
+    {
+        SaveDoc.GetSnapshotAsync().ContinueWithOnMainThread(task =>
+        {
+            if (task.IsFaulted || task.IsCanceled)
+            {
+                if (GameDiagnostics.Backend)
+                    Debug.LogWarning($"[CloudSave] restore fetch hatası, tekrar denenecek: {task.Exception?.GetBaseException().Message}");
+                CloudSaveBehaviour.Instance?.ScheduleRetry(FetchRetryDelay, StartRestore);
+                return;
+            }
+
+            var snap = task.Result;
+            int localLevel = PlayerPrefs.GetInt("current_level", 1);
+
+            // Editörde test: local PlayerPrefs her zaman kazansın (bulut ezmesin),
+            // yereli buluta it. Canlıda (device) normal çakışma politikası çalışır.
+            bool forceLocalWins = false;
+#if UNITY_EDITOR
+            forceLocalWins = SkipCloudRestoreInEditor;
+#endif
+
+            long cloudLevel = 0;
+            bool force = false;
+            bool hasData = false;
+            Dictionary<string, object> cloudData = null;
+            if (snap.Exists)
+            {
+                snap.TryGetValue<long>("level", out cloudLevel);
+                snap.TryGetValue<bool>("force", out force);            // admin override
+                hasData = snap.TryGetValue<Dictionary<string, object>>("data", out cloudData);
+            }
+
+            // A newer reset beats stale progress, then force/level decide within that revision.
+            bool restoreProgress = CloudSaveManifest.ShouldRestoreProgress(
+                cloudData, cloudLevel, localLevel, force, forceLocalWins);
+
+            if (hasData && restoreProgress)
+            {
+                CloudSaveManifest.Apply(cloudData);
+                ProgressEventService.Instance?.ReloadFromPrefs();
+                MusicState.ReloadFromPrefs();
+                // Altın/yıldız: level kararından BAĞIMSIZ olarak bulut-otoriter (base) + offline delta.
+                ReconcileCurrencyFromCloud(hasData, cloudData, forceLocalWins);
+                RestoreResolved = true;
+                CurrencyLedger.OpenSyncGate();
+                if (force) ClearForceFlag();   // tek sefer uygulansın
+                OnRestored?.Invoke();
+                Push();   // offline delta / reconcile edilmiş güvenilir değeri buluta yaz
+            }
+            else
+            {
+                if (CloudSaveManifest.ProgressResetRevision > CloudSaveManifest.ReadProgressResetRevision(cloudData))
+                {
+                    PlayerPrefs.SetInt(CloudSaveManifest.PendingProgressResetKey, 1);
+                    PlayerPrefs.Save();
+                }
+                ReconcileCurrencyFromCloud(hasData, cloudData, forceLocalWins);
+                RestoreResolved = true;
+                CurrencyLedger.OpenSyncGate();
+                OnRestored?.Invoke();   // reconcile coins/stars'ı değiştirmiş olabilir → UI tazelensin
+                Push();
+            }
+        });
+    }
+
+    // Altın/yıldız çakışma çözümü: bulut değeri güvenilir TABAN olur, cihazda biriken offline
+    // delta üstüne eklenir (player_coins = base + delta). Bulutta yoksa yerel taban benimsenir.
+    private static void ReconcileCurrencyFromCloud(bool hasData, Dictionary<string, object> cloudData, bool forceLocalWins)
+    {
+        // Editör testi: yereli koru (PlayerPrefs Tool değerleri bulutla ezilmesin).
+        if (forceLocalWins)
+        {
+            CurrencyLedger.AdoptLocalAsBase();
+            return;
+        }
+
+        if (hasData && cloudData != null && cloudData.TryGetValue("player_coins", out var cc))
+            CurrencyLedger.ApplyCloudCoins(ToInt(cc));
+        else
+            CurrencyLedger.AdoptLocalCoins();
+
+        if (hasData && cloudData != null && cloudData.TryGetValue("player_total_stars", out var cs))
+            CurrencyLedger.ApplyCloudStars(ToInt(cs));
+        else
+            CurrencyLedger.AdoptLocalStars();
+    }
+
+    private static int ToInt(object v) => v is long l ? (int)l : v is int i ? i : 0;
+
+    // ── Push ────────────────────────────────────────────────────────
+
+    /// <summary>Yerel manifest verisini buluta yazar (merge). Restore çözülmeden çalışmaz.</summary>
+    public static void Push()
+    {
+        if (RuntimeSimulationSession.IsActive) return;
+        if (!RestoreResolved || !FirebaseAuthService.IsReady || pushInFlight || SuspendForDeletion) return;
+
+        // Anti-hack: buluta GÜVENİLİR coins/stars (base+delta) gitsin — Collect ham (belki
+        // mid-session hilelenmiş) player_coins'i okumadan önce güvenilir değere hizala.
+        CurrencyLedger.ReconcileForPush();
+        int coinsDeltaSnap = CurrencyLedger.CoinsDelta;
+        int starsDeltaSnap = CurrencyLedger.StarsDelta;
+
+        var data = CloudSaveManifest.Collect();
+        int level = PlayerPrefs.GetInt("current_level", 1);
+        bool replaceResetSnapshot = PlayerPrefs.GetInt(CloudSaveManifest.PendingProgressResetKey, 0) == 1;
+        long resetRevision = CloudSaveManifest.ProgressResetRevision;
+
+        var doc = new Dictionary<string, object>
+        {
+            { "data", data },
+            { "level", level },
+            { "ver", SaveVersion },
+            { "updatedAt", FieldValue.ServerTimestamp },
+        };
+        // MergeAll recursively retains deleted progress keys. Replace only the data map on
+        // reset, preserving unrelated document fields and Firebase configuration elsewhere.
+        if (replaceResetSnapshot) doc["force"] = false;
+        var options = replaceResetSnapshot
+            ? SetOptions.MergeFields("data", "level", "ver", "updatedAt", "force")
+            : SetOptions.MergeAll;
+
+        dirty = false;
+        lastPushedLevel = level;
+        pushInFlight = true;
+
+        // Oyuncu dizini profili de aynı ritimde tazelenir (isim/bölüm/avatar değiştiyse).
+        PlayerDirectoryService.UpsertIfChanged();
+
+        SaveDoc.SetAsync(doc, options).ContinueWithOnMainThread(task =>
+        {
+            pushInFlight = false;
+            if (task.IsFaulted || task.IsCanceled)
+            {
+                dirty = true;   // sıradaki döngüde tekrar dene (offline'da SDK zaten kuyruklar)
+                if (GameDiagnostics.Backend)
+                    Debug.LogWarning($"[CloudSave] push hatası: {task.Exception?.GetBaseException().Message}");
+            }
+            else
+            {
+                // Buluta yazılan delta'yı tabana katla (delta'dan düş) — tekrar sayılmasın.
+                CurrencyLedger.FoldAfterPush(coinsDeltaSnap, starsDeltaSnap);
+                if (replaceResetSnapshot && CloudSaveManifest.ProgressResetRevision == resetRevision)
+                {
+                    PlayerPrefs.DeleteKey(CloudSaveManifest.PendingProgressResetKey);
+                    PlayerPrefs.Save();
+                }
+            }
+        });
+    }
+
+    /// <summary>Admin override uygulandıktan sonra bulutta force=false yapar (tekrar uygulanmasın).</summary>
+    private static void ClearForceFlag()
+    {
+        if (SaveDoc == null) return;
+        SaveDoc.SetAsync(new Dictionary<string, object> { { "force", false } }, SetOptions.MergeAll);
+    }
+
+    // ── Host MonoBehaviour: periyodik dirty-check + pause/quit push ──
+
+    private sealed class CloudSaveBehaviour : MonoBehaviour
+    {
+        public static CloudSaveBehaviour Instance { get; private set; }
+        private float timer;
+
+        private void Awake() => Instance = this;
+
+        private void Update()
+        {
+            timer += Time.unscaledDeltaTime;
+            if (timer < DirtyCheckInterval) return;
+            timer = 0f;
+
+            // current_level'in değişim olayı yok — periyodik karşılaştır.
+            if (!dirty && RestoreResolved &&
+                PlayerPrefs.GetInt("current_level", 1) != lastPushedLevel)
+                dirty = true;
+
+            if (dirty) Push();
+        }
+
+        // Mobilde uygulamadan çıkışın güvenilir sinyali pause'dur; quit her zaman gelmez.
+        private void OnApplicationPause(bool paused)
+        {
+            if (paused) Push();
+        }
+
+        private void OnApplicationQuit() => Push();
+
+        public void ScheduleRetry(float delay, Action action)
+            => StartCoroutine(CoRetry(delay, action));
+
+        private System.Collections.IEnumerator CoRetry(float delay, Action action)
+        {
+            yield return new WaitForSecondsRealtime(delay);
+            action?.Invoke();
+        }
+    }
+}

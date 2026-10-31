@@ -5,11 +5,22 @@ using UnityEngine.UI;
 /// <summary>
 /// Öğretici spot ışığının karartması: tüm paneller TEK mesh'te, kenarları ortak (üst üste binme yok) →
 /// birleşim yerlerinde koyu çizgi ya da ince boşluk oluşmaz. Dikdörtgenler TutorialOverlayController'dan gelir.
+/// İsteğe bağlı delik (UseRaycastHole): delik içindeki dokunuş karartmaya takılmaz, alttaki hedefe geçer.
 /// </summary>
 [RequireComponent(typeof(CanvasRenderer))]
-public sealed class TutorialSpotlightGraphic : MaskableGraphic
+public sealed class TutorialSpotlightGraphic : MaskableGraphic, ICanvasRaycastFilter
 {
     private readonly List<Rect> rects = new();
+
+    public bool UseRaycastHole;
+    public Rect RaycastHole;   // yerel koordinat
+
+    public bool IsRaycastLocationValid(Vector2 screenPoint, Camera eventCamera)
+    {
+        if (!UseRaycastHole) return true;
+        RectTransformUtility.ScreenPointToLocalPointInRectangle(rectTransform, screenPoint, eventCamera, out Vector2 local);
+        return !RaycastHole.Contains(local);
+    }
 
     public void SetRects(List<Rect> source)
     {

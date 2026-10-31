@@ -69,7 +69,11 @@ public class SettingsPanel : MonoBehaviour
 
         if (musicToggle != null)        musicToggle.onValueChanged.AddListener(v => GameSettings.MusicEnabled = v);
         if (soundToggle != null)        soundToggle.onValueChanged.AddListener(v => GameSettings.SoundEnabled = v);
-        if (vibrationToggle != null)    vibrationToggle.onValueChanged.AddListener(v => GameSettings.VibrationEnabled = v);
+        if (vibrationToggle != null)    vibrationToggle.onValueChanged.AddListener(v =>
+        {
+            GameSettings.VibrationEnabled = v;
+            if (v) Haptics.Play(Haptics.Strength.Medium);   // açınca tek tık: oyuncu hisseder
+        });
         if (hintToggle != null)         hintToggle.onValueChanged.AddListener(v => GameSettings.HintEnabled = v);
         if (notificationToggle != null) notificationToggle.onValueChanged.AddListener(v => GameSettings.NotificationEnabled = v);
 
@@ -221,16 +225,22 @@ public class SettingsPanel : MonoBehaviour
     // "Hesabımı Sil" uyarı alt yazılı ayrı bir kart, ardından onay penceresi (Vazgeç → buraya geri döner).
     private void OnTermsClicked()
     {
+        var options = new System.Collections.Generic.List<RuntimeChoicePopup.OfferButton>
+        {
+            new RuntimeChoicePopup.OfferButton(GameLocalization.Get("settings_terms_open_terms"),
+                GameLocalization.Get("legal_card_terms_sub"), () => LegalDocumentView.Show("terms"), keepOpen: true),
+            new RuntimeChoicePopup.OfferButton(GameLocalization.Get("settings_terms_open_privacy"),
+                GameLocalization.Get("legal_card_privacy_sub"), () => LegalDocumentView.Show("privacy"), keepOpen: true),
+        };
+        if (AdService.IsPrivacyOptionsRequired)
+            options.Add(new RuntimeChoicePopup.OfferButton(
+                GameLocalization.GetOr("settings_ads_privacy", "Reklam gizlilik tercihleri"),
+                GameLocalization.GetOr("settings_ads_privacy_sub", "Reklam izinlerini gözden geçir."),
+                () => AdService.ShowPrivacyOptions(() => { if (this != null) OnTermsClicked(); })));
+        options.Add(new RuntimeChoicePopup.OfferButton(GameLocalization.Get("settings_delete_account"),
+            GameLocalization.Get("settings_delete_account_sub"), ConfirmDeleteAccount));
         RuntimeChoicePopup.ShowOffer(GameLocalization.Get("settings_terms_title"), GameLocalization.Get("settings_terms_body"),
-            new[]
-            {
-                new RuntimeChoicePopup.OfferButton(GameLocalization.Get("settings_terms_open_terms"),
-                    GameLocalization.Get("legal_card_terms_sub"), () => LegalDocumentView.Show("terms"), keepOpen: true),
-                new RuntimeChoicePopup.OfferButton(GameLocalization.Get("settings_terms_open_privacy"),
-                    GameLocalization.Get("legal_card_privacy_sub"), () => LegalDocumentView.Show("privacy"), keepOpen: true),
-                new RuntimeChoicePopup.OfferButton(GameLocalization.Get("settings_delete_account"),
-                    GameLocalization.Get("settings_delete_account_sub"), ConfirmDeleteAccount),
-            },
+            options.ToArray(),
             GameLocalization.Get("common_close"), null);
     }
 

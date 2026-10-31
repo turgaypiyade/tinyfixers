@@ -187,6 +187,7 @@ public class BoardBreakFxService
         return change.obstacleId == ObstacleId.ColorChest
             || change.obstacleId == ObstacleId.Wardrobe // whole item throws and four empty-cabinet chunks replace generic particles
             || change.obstacleId == ObstacleId.KeyGenerator
+            || change.obstacleId == ObstacleId.BirdHouse   // kapak/kuş animasyonu BirdHouseService'te
             || change.obstacleId == ObstacleId.Hamster
             || change.obstacleId == ObstacleId.RhodesStatue // staged chunks and the final body shatter own all debris
             || change.obstacleId == ObstacleId.TarpStatue;   // taş parçaları + parçalanma TarpStatueView'da
@@ -243,11 +244,9 @@ public class BoardBreakFxService
         if (clip == null)
             return;
 
-        if (!GameSettings.SoundEnabled)
-            return;
-
-
-        board.SfxSource?.PlayOneShot(clip, vol);
+        // Merkezi ses yolu (AGENTS kuralı): ayar/mixer/teardown BoardAudioDirector'da.
+        if (board.Audio != null)
+            board.Audio.PlayOneShotClip(clip, vol);
     }
 
     private IReadOnlyList<Sprite> ResolveObstacleParticleSprites(ObstacleVisualChange change)

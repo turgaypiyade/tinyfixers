@@ -137,6 +137,32 @@ public sealed class RhodesStatueView : MonoBehaviour
     internal static int DebrisForTransition(int previous, int next)
         => next == previous + 1 && previous >= 1 && previous <= 3 ? previous : 0;
 
+    /// <summary>Final hit: two full-height halves jump apart and fall, like the chest doors.</summary>
+    public static bool TryPlayFinalBreak(BoardController board, Image source)
+    {
+        var root = board != null ? board.UnclippedFxRoot : null;
+        if (root == null || source == null || source.sprite == null) return false;
+        var pieces = ObstacleScatterFx.GetSlices(board, source.sprite, 2, 1);
+        if (pieces == null || pieces.Length != 2) return false;
+        var body = source.rectTransform;
+        Vector2 size = ObstacleScatterFx.SizeIn(root, body);
+        float span = Mathf.Min(size.x, size.y);
+        bool played = false;
+        for (int i = 0; i < 2; i++)
+        {
+            float side = i == 0 ? -1f : 1f;
+            Vector3 world = body.TransformPoint(body.rect.center + new Vector2(side * body.rect.width * 0.25f, 0f));
+            played |= ObstacleScatterFx.Play(board, root, pieces[i], world,
+                new Vector2(size.x * 0.5f, size.y), source.color, "RhodesFinalHalf",
+                new ObstacleScatterFx.Motion
+                {
+                    travel = new Vector2(side * span * 0.55f, span * 2.2f),
+                    gravity = span * 8f, spin = side * 130f, life = 1.25f
+                });
+        }
+        return played;
+    }
+
     private void PlayStoneChips(BoardController board)
     {
         var root = board != null ? board.UnclippedFxRoot : null;

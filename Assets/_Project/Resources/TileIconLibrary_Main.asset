@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::TileIconLibrary
   gear: {fileID: 21300000, guid: eeecba4f60ec04d09965bf4d4c3a0a49, type: 3}
   core: {fileID: 21300000, guid: 08eff3596bce24d5d9f9f47a1e53c7ec, type: 3}
-  bolt: {fileID: 21300000, guid: 61c7ba969b2154f14b32626e233396f0, type: 3}
+  bolt: {fileID: 21300000, guid: 70536964206c4f4cba9727e52831bf86, type: 3}
   plate: {fileID: 21300000, guid: db27638c3082145f39319cecdb591da0, type: 3}
   key: {fileID: 21300000, guid: 38884719e46114284996c0d3e316e882, type: 3}
   lineH: {fileID: 21300000, guid: 2a754af4759b54bd3a1d36f710c306fb, type: 3}

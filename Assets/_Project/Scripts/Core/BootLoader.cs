@@ -117,7 +117,8 @@ public class BootLoader : MonoBehaviour
             if (restoreDone && minDone)
                 break;
 
-            if (timedOut && minDone)
+            if (timedOut && minDone && !LocalAccountData.IsSwitchPending
+                && !LocalAccountData.NeedsReplacement(FirebaseAuthService.UserId))
             {
                 if (!restoreDone)
                 {

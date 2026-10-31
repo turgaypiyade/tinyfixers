@@ -19,6 +19,16 @@ public static class TileClearBurstVfx
     private const string RING_POOL_KEY = "TileClearBurst.Ring";
     private const string STAR_POOL_KEY = "TileClearBurst.Star";
     private const string SHARD_POOL_KEY = "TileClearBurst.Shard";
+    private const int MaxBurstBuffers = 128;
+    private static readonly Stack<BurstBuffer> burstBuffers = new();
+
+    // Each concurrent burst owns its scratch data until completion/cancellation.
+    // Sharing one global list would corrupt overlapping explosions.
+    private sealed class BurstBuffer
+    {
+        public readonly StarInstance[] stars = new StarInstance[RING_STAR_COUNT];
+        public readonly ShardInstance[] shards = new ShardInstance[SHARD_COUNT];
+    }
 
     // ===== AYARLANABİLİR PARAMETRELER =====
     // Halka referans videodan kare kare ölçüldü (60 fps): her taşta ayrı halka KÜÇÜK doğar ve DIŞA büyür.
@@ -77,9 +87,7 @@ public static class TileClearBurstVfx
         missingReference = false;
         try
         {
-            Vector3[] corners = new Vector3[4];
-            targetRt.GetWorldCorners(corners);
-            tileWorldCenter = (corners[0] + corners[2]) * 0.5f;
+            tileWorldCenter = targetRt.TransformPoint(targetRt.rect.center);
         }
         catch (MissingReferenceException)
         {
@@ -123,6 +131,7 @@ public static class TileClearBurstVfx
 
         // Ana efekt root'u
         GameObject rootGo = UiVfxPool.RentRect(BURST_ROOT_POOL_KEY, parent, "ClearBurst");
+        if (rootGo == null) yield break;
         RectTransform rootRt = rootGo.GetComponent<RectTransform>();
         rootRt.SetParent(parent, false);
         rootRt.anchorMin = new Vector2(0.5f, 0.5f);
@@ -154,46 +163,55 @@ public static class TileClearBurstVfx
         var ring = CreateRing(rootRt, tileSize);
 
         // === 2) Halka içi yıldızlar ===
-        var stars = new List<StarInstance>(RING_STAR_COUNT);
+        var buffer = burstBuffers.Count > 0 ? burstBuffers.Pop() : new BurstBuffer();
+        var stars = buffer.stars;
         for (int i = 0; i < RING_STAR_COUNT; i++)
         {
             float angle = (360f / RING_STAR_COUNT) * i + Random.Range(-15f, 15f);
             float dist = tileSize * Random.Range(0.18f, 0.35f);
-            stars.Add(CreateStar(rootRt, tileSize, angle, dist));
+            stars[i] = CreateStar(rootRt, tileSize, angle, dist);
         }
 
         // === 3) Altın shardlar (radyal patlama) ===
-        var shards = new List<ShardInstance>(SHARD_COUNT);
+        var shards = buffer.shards;
         for (int i = 0; i < SHARD_COUNT; i++)
         {
             float angle = (360f / SHARD_COUNT) * i + Random.Range(-20f, 20f);
             float speed = tileSize * SHARD_DISTANCE * Random.Range(0.8f, 1.2f);
-            shards.Add(CreateShard(rootRt, tileSize, angle, speed));
+            shards[i] = CreateShard(rootRt, tileSize, angle, speed);
         }
 
         // === ANİMASYON ===
         // Kısa süreyle çağrılsa da halka kendi ömrünü tamamlar (yarıda kesilip pat diye kaybolmasın);
         // yıldız/shard'lar k=1'de zaten tamamen sönmüş olur.
-        float lifetime = Mathf.Max(duration, RING_DURATION);
-        float t = 0f;
-        while (t < lifetime)
+        try
         {
-            if (rootGo == null) yield break;
-            t += Time.deltaTime;
-            float k = Mathf.Clamp01(t / duration);
+            float lifetime = Mathf.Max(duration, RING_DURATION);
+            float t = 0f;
+            while (t < lifetime)
+            {
+                if (rootGo == null) yield break;
+                t += Time.deltaTime;
+                float k = Mathf.Clamp01(t / duration);
 
-            AnimateRing(ring, Mathf.Clamp01(t / RING_DURATION), tileSize);
-            AnimateStars(stars, k);
-            AnimateShards(shards, k, tileSize);
+                AnimateRing(ring, Mathf.Clamp01(t / RING_DURATION), tileSize);
+                AnimateStars(stars, k);
+                AnimateShards(shards, k, tileSize);
 
-            yield return null;
+                yield return null;
+            }
         }
-
-        ReturnBurst(rootGo, ring, stars, shards);
+        finally
+        {
+            ReturnBurst(rootGo, ring, stars, shards);
+            System.Array.Clear(stars, 0, stars.Length);
+            System.Array.Clear(shards, 0, shards.Length);
+            if (burstBuffers.Count < MaxBurstBuffers) burstBuffers.Push(buffer);
+        }
     }
 
     // ========== RING ==========
-    private class RingInstance
+    private struct RingInstance
     {
         public RectTransform rt;
         public Image image;
@@ -221,7 +239,7 @@ public static class TileClearBurstVfx
     // k = halka zamanı (0..1, RING_DURATION üzerinden).
     private static void AnimateRing(RingInstance ring, float k, int tileSize)
     {
-        if (ring == null || ring.rt == null || ring.image == null) return;
+        if (ring.rt == null || ring.image == null) return;
 
         // Yarıçap: küçük doğ, dışa büyü (hafif ease-out — ölçümde ilk yarıda daha hızlı açılıyor).
         float grow = 1f - Mathf.Pow(1f - k, 1.5f);
@@ -240,7 +258,7 @@ public static class TileClearBurstVfx
     }
 
     // ========== STARS ==========
-    private class StarInstance
+    private struct StarInstance
     {
         public RectTransform rt;
         public Image image;
@@ -281,11 +299,11 @@ public static class TileClearBurstVfx
         };
     }
 
-    private static void AnimateStars(List<StarInstance> stars, float k)
+    private static void AnimateStars(StarInstance[] stars, float k)
     {
         foreach (var s in stars)
         {
-            if (s == null || s.rt == null || s.image == null) continue;
+            if (s.rt == null || s.image == null) continue;
 
             // Scale: 0 → 1.1 → 0
             float scale;
@@ -320,7 +338,7 @@ public static class TileClearBurstVfx
     }
 
     // ========== SHARDS ==========
-    private class ShardInstance
+    private struct ShardInstance
     {
         public RectTransform rt;
         public Image image;
@@ -363,11 +381,11 @@ public static class TileClearBurstVfx
         };
     }
 
-    private static void AnimateShards(List<ShardInstance> shards, float k, int tileSize)
+    private static void AnimateShards(ShardInstance[] shards, float k, int tileSize)
     {
         foreach (var s in shards)
         {
-            if (s == null || s.rt == null || s.image == null) continue;
+            if (s.rt == null || s.image == null) continue;
 
             // Radyal hareket + yerçekimi (k = normalize edilmiş zaman)
             // pos(t) = v0 * t + 0.5 * g * t²
@@ -407,23 +425,23 @@ public static class TileClearBurstVfx
     private static void ReturnBurst(
         GameObject rootGo,
         RingInstance ring,
-        List<StarInstance> stars,
-        List<ShardInstance> shards)
+        StarInstance[] stars,
+        ShardInstance[] shards)
     {
-        if (ring?.rt != null)
+        if (ring.rt != null)
             UiVfxPool.Return(RING_POOL_KEY, ring.rt.gameObject);
 
         if (stars != null)
         {
-            for (int i = 0; i < stars.Count; i++)
-                if (stars[i]?.rt != null)
+            for (int i = 0; i < stars.Length; i++)
+                if (stars[i].rt != null)
                     UiVfxPool.Return(STAR_POOL_KEY, stars[i].rt.gameObject);
         }
 
         if (shards != null)
         {
-            for (int i = 0; i < shards.Count; i++)
-                if (shards[i]?.rt != null)
+            for (int i = 0; i < shards.Length; i++)
+                if (shards[i].rt != null)
                     UiVfxPool.Return(SHARD_POOL_KEY, shards[i].rt.gameObject);
         }
 

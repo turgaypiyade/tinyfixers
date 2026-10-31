@@ -567,6 +567,9 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
     private void OnDisable()
     {
         if (!Application.isPlaying) return;
+        // These children disappeared with the rocket before; preserve that timing,
+        // but return the tracked trail images before their hierarchy is destroyed.
+        UiFxPool.ReleaseGhosts(transform, childrenOnly: true);
         CompleteOnce();
     }
 
@@ -669,7 +672,7 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
         rt.localRotation = sourceRt.localRotation;
         rt.anchoredPosition = anchoredPos;
 
-        UiFxPool.TrackGhost(go, rocketAfterImagePrefab, img, rt, afterImageLife, afterImageScaleUp, afterImageFadePower);
+        UiFxPool.TrackGhost(go, rocketAfterImagePrefab, img, rt, afterImageLife, afterImageScaleUp, afterImageFadePower, transform);
     }
 
     private void PrepareRootForUiPlayback()

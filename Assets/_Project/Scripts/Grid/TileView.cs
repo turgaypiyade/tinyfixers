@@ -271,11 +271,7 @@ public class TileView : MonoBehaviour,
         if (iconImage == null || !gameObject.activeInHierarchy) return;
 
         if (flashRoutine != null)
-        {
-            StopCoroutine(flashRoutine);
-            if (iconImage != null)
-                iconImage.color = originalFlashColor;
-        }
+            StopIconFlash();
 
         originalFlashColor = iconImage.color;
         flashRoutine = StartCoroutine(ResetIconColorAfterDelay(originalFlashColor, blend, duration));
@@ -285,7 +281,7 @@ public class TileView : MonoBehaviour,
     {
         if (iconImage == null) yield break;
         Color flashColor = Color.Lerp(original, Color.white, blend);
-        iconImage.color = flashColor;
+        SetFlashColor(flashColor);
 
         float elapsed = 0f;
         while (elapsed < duration)
@@ -293,13 +289,30 @@ public class TileView : MonoBehaviour,
             elapsed += Time.deltaTime;
             float t = Mathf.Clamp01(elapsed / duration);
             if (iconImage != null)
-                iconImage.color = Color.Lerp(flashColor, original, t);
+                SetFlashColor(Color.Lerp(flashColor, original, t));
             yield return null;
         }
 
         if (iconImage != null)
-            iconImage.color = original;
+            SetFlashColor(original);
         flashRoutine = null;
+    }
+
+    private void SetFlashColor(Color color)
+    {
+        if (iconImage == null) return;
+        // A hit flash owns RGB only. Never restore a zero alpha sampled during
+        // gather, fall/clear or special spin after that animation has finished.
+        color.a = iconImage.color.a;
+        iconImage.color = color;
+    }
+
+    private void StopIconFlash(bool restoreColor = true)
+    {
+        if (flashRoutine == null) return;
+        StopCoroutine(flashRoutine);
+        flashRoutine = null;
+        if (restoreColor) SetFlashColor(originalFlashColor);
     }
 
     public enum TileVisualLayout
@@ -664,6 +677,7 @@ public class TileView : MonoBehaviour,
 
     private void ResetVisualState()
     {
+        StopIconFlash(false);
         ClearSwapLift();
         HiddenBy = null;
         KeepHiddenForCombo = false;
@@ -697,7 +711,7 @@ public class TileView : MonoBehaviour,
     }
 
     public bool IsSpecialCreationRevealPlaying =>
-        specialCreationRevealRoutine != null || specialCreationRevealRoot != null;
+        specialCreationRevealRoutine != null || specialCreationRevealRoot != null || creationSortingUsers > 0;
 
     public bool TryGetCellState(out BoardCellStateSnapshot state)
     {
@@ -2707,6 +2721,8 @@ public class TileView : MonoBehaviour,
             return;
         }
 
+        // A new icon/special must not inherit a pending flash from its previous content.
+        StopIconFlash(false);
         iconImage.sprite = sprite;
         iconImage.color = Color.white;
 

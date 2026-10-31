@@ -35,6 +35,9 @@ public sealed class SpecialChainRunner : BoardAction
     private readonly int areaHalf;
     private readonly float catchOverlap;
     private readonly Func<TileView, List<BoardAction>> resolveOtherSpecial;
+    // Snapshot the consuming combo's source before its tiles are cleared/reused.
+    // Virtual/carried lines have no source TileView at their eventual emission cell.
+    private readonly bool gelFromSource;
 
     // Dolu ise: bu runner FUSED cross emisyonuyla başlar (Line+Pulse, Line+Line...).
     // Combo'lar bunu seed eder; null ise normal solo/zincir davranışı (eski).
@@ -117,7 +120,8 @@ public sealed class SpecialChainRunner : BoardAction
         HashSet<Vector2Int> protectedCells = null,
         List<Vector2Int> virtualPulseBurstCenters = null,
         List<LightningLineStrike> virtualLineSweeps = null,
-        Func<Action<Vector2Int>, IEnumerator> boosterImpactPlayback = null)
+        Func<Action<Vector2Int>, IEnumerator> boosterImpactPlayback = null,
+        bool gelFromSource = false)
     {
         this.board = board;
         this.boosterImpactPlayback = boosterImpactPlayback;
@@ -125,6 +129,7 @@ public sealed class SpecialChainRunner : BoardAction
         this.areaHalf = Mathf.Max(1, areaHalf);
         this.catchOverlap = Mathf.Clamp01(catchOverlapFraction);
         this.resolveOtherSpecial = resolveOtherSpecial;
+        this.gelFromSource = gelFromSource;
         this.root = root ?? this;
         this.linePulseCrossCenter = linePulseCrossCenter;
         this.consumeTiles = consumeTiles;
@@ -158,6 +163,12 @@ public sealed class SpecialChainRunner : BoardAction
     {
         center = cell;
         var obstacles = board.ObstacleStateService;
+        if (obstacles != null)
+        {
+            var id = obstacles.GetObstacleIdAt(cell.x, cell.y);
+            // PatchBot payload stays on the hittable endpoint/base, even on a straight path.
+            if (id == ObstacleId.Magnet || id == ObstacleId.Tube) return false;
+        }
         int origin = obstacles != null ? obstacles.GetObstacleOriginAt(cell.x, cell.y) : -1;
         if (origin < 0) return false;
 
@@ -389,78 +400,17 @@ public sealed class SpecialChainRunner : BoardAction
 
     private IEnumerator RunBoosterImpacts()
     {
-        var reachedCells = new HashSet<Vector2Int>();
-        var hitObstacleOrigins = new HashSet<int>();
-        var clearedByType = new Dictionary<TileType, int>();
-
-        void HitCell(Vector2Int cell)
-        {
-            int x = cell.x, y = cell.y;
-            if (x < 0 || x >= board.Width || y < 0 || y >= board.Height
-                || !reachedCells.Add(cell)) return;
-
-            var obstacles = board.ObstacleStateService;
-            if (obstacles != null && obstacles.IsUnbreakableMovableAt(x, y)) return;
-            if (board.Holes[x, y] && (obstacles == null || !obstacles.HasObstacleAt(x, y))) return;
-
-            // Capture eligibility before damage: breaking a covering obstacle must
-            // not also consume the newly revealed content with the same hit.
-            var tile = board.Tiles[x, y];
-            bool canClear = tile != null && (obstacles == null
-                || (!obstacles.IsCellBlocked(x, y)
-                    && !obstacles.IsInteractionLockedAt(x, y)
-                    && !obstacles.IsMovableObstacleAt(x, y)));
-            TileView chainedSpecial = null;
-            if (canClear)
-            {
-                board.MarkBoosterGelHit(tile);   // joker her vurduğu taşın hücresine jel bırakır
-                if (tile.GetSpecial() != TileSpecial.None)
-                {
-                    if (!root.anchoredCells.ContainsKey(tile)
-                        && !board.IsPendingTriggeredSpecialCell(x, y))
-                    {
-                        AnchorQueued(tile, x, y);
-                        chainedSpecial = tile;
-                    }
-                }
-                else
-                {
-                    board.BreakFx?.PlayTileBreak(tile);
-                    board.ClearAndDestroyTile(tile, clearedByType);
-                    foreach (var pair in clearedByType)
-                        board.NotifyTilesCleared(pair.Key, pair.Value);
-                    clearedByType.Clear();
-                }
-            }
-
-            if (obstacles != null && obstacles.HasObstacleAt(x, y))
-            {
-                bool magnet = obstacles.GetObstacleIdAt(x, y) == ObstacleId.Magnet;
-                bool perCell = obstacles.TakesPerCellHits(x, y);
-                int origin = obstacles.GetObstacleOriginAt(x, y);
-                if ((!magnet || obstacles.IsMagnetEndpoint(x, y))
-                    && (perCell || origin < 0 || !hitObstacleOrigins.Contains(origin)))
-                {
-                    var hit = board.ApplyObstacleDamageAt(x, y, ObstacleHitContext.Booster);
-                    if (hit.didHit)
-                    {
-                        if (!perCell && origin >= 0) hitObstacleOrigins.Add(origin);
-                        board.TriggerObstacleVisualChange(hit.visualChange);
-                    }
-                }
-
-                // Taşsız engel hücresi: vuruş engeli tamamen kaldırdıysa açılan hücre de jel olur.
-                if (tile == null && !obstacles.HasObstacleAt(x, y) && board.Tiles[x, y] == null)
-                    board.PaintGelForBoosterCell(x, y);
-            }
-
-            // Launch after this impact is applied; the special owns its own clear
-            // and runs concurrently with the remainder of the booster animation.
-            if (chainedSpecial != null) LaunchArrivalSubChain(chainedSpecial);
-        }
-
-        yield return boosterImpactPlayback(HitCell);
+        var impacts = new BoosterCellImpactPass(board, ReserveBoosterSpecial, LaunchArrivalSubChain);
+        yield return boosterImpactPlayback(impacts.HitCell);
         yield return RunGravityWithOverlap(hasNext: false);
+    }
+
+    private bool ReserveBoosterSpecial(TileView tile)
+    {
+        if (root.anchoredCells.ContainsKey(tile) || board.IsPendingTriggeredSpecialCell(tile.X, tile.Y))
+            return false;
+        AnchorQueued(tile, tile.X, tile.Y);
+        return true;
     }
 
     private IEnumerator ExplodePulse(
@@ -769,7 +719,7 @@ public sealed class SpecialChainRunner : BoardAction
         clearTiles.Add(line);
 
         // Jel bulaşması (kaynak kuralı): jelli/bulaşık roket yolunda kırdığı her taşa jel bırakır.
-        if (board.IsGelSpreadSourceTile(line))
+        if (gelFromSource || board.IsGelSpreadSourceTile(line))
         {
             board.MarkGelContaminated(clearTiles);
             board.MarkGelContaminated(arrivalSpecials);
@@ -877,6 +827,16 @@ public sealed class SpecialChainRunner : BoardAction
             if (y < 0 || y >= board.Height) continue;
             for (int x = 0; x < board.Width; x++) CollectCell(x, y);
             strikes.Add(new LightningLineStrike(new Vector2Int(cx, y), true));
+        }
+
+        bool carriesGel = gelFromSource;
+        if (!carriesGel && consumeTiles != null)
+            for (int i = 0; i < consumeTiles.Count; i++)
+                if (board.IsGelSpreadSourceTile(consumeTiles[i])) { carriesGel = true; break; }
+        if (carriesGel)
+        {
+            board.MarkGelContaminated(clearTiles);
+            board.MarkGelContaminated(arrivalSpecials);
         }
 
         var stepClear = new MatchClearAction(
@@ -1046,7 +1006,7 @@ public sealed class SpecialChainRunner : BoardAction
     // origin'de tile yok), origin hücredeki special de zincirlenir.
     private IEnumerator SweepLinesSimultaneously(ActionSequencer sequencer, HashSet<TileView> processed, bool linesAreTiles)
     {
-        var lines = new List<(Vector2Int cell, bool horizontal)>();
+        var lines = new List<(Vector2Int cell, bool horizontal, bool carriesGel)>();
         var lineCellSet = new HashSet<Vector2Int>();
         if (linesAreTiles)
         {
@@ -1057,7 +1017,7 @@ public sealed class SpecialChainRunner : BoardAction
                 if (t == null) continue;
                 var sp = t.GetSpecial();
                 if (sp != TileSpecial.LineH && sp != TileSpecial.LineV) continue;
-                lines.Add((cell, sp == TileSpecial.LineH));
+                lines.Add((cell, sp == TileSpecial.LineH, gelFromSource || board.IsGelSpreadSourceTile(t)));
                 lineCellSet.Add(cell);
             }
         }
@@ -1067,7 +1027,7 @@ public sealed class SpecialChainRunner : BoardAction
             {
                 var cell = strike.originCell;
                 if (cell.x < 0 || cell.x >= board.Width || cell.y < 0 || cell.y >= board.Height) continue;
-                lines.Add((cell, strike.isHorizontal));
+                lines.Add((cell, strike.isHorizontal, gelFromSource));
                 // lineCellSet boş kalır: origin'de tile yok; orada special varsa zincirlenir.
             }
         }
@@ -1080,15 +1040,20 @@ public sealed class SpecialChainRunner : BoardAction
         var arrivalSpecials = new List<TileView>();
         var strikes = new List<LightningLineStrike>();
 
-        void CollectCell(int x, int y)
+        void CollectCell(int x, int y, bool carriesGel)
         {
             if (!SpecialUtils.CanAffectCell(board, x, y)) return; // blocker'lar lightning sweep ile vurulur
             var cell = new Vector2Int(x, y);
-            if (!affectedCells.Add(cell)) return; // satır/sütun kesişimi: hücre bir kez
+            bool firstHit = affectedCells.Add(cell);
 
             var tile = board.Tiles[x, y];
             if (tile == null || IsCaged(tile)) return;
             if (board.ObstacleStateService != null && board.ObstacleStateService.IsMovableObstacleAt(x, y)) return;
+
+            // A wet line can share a cell with a dry line. Preserve its gel even if
+            // the dry line collected that cell first; still clear/trigger only once.
+            if (carriesGel) tile.GelContaminated = true;
+            if (!firstHit) return;
 
             // Implant line'ın KENDİSİ → temizlenir (tüketilir). Başka special → arrival ile zincir.
             if (!lineCellSet.Contains(cell) && tile.GetSpecial() != TileSpecial.None && !processed.Contains(tile))
@@ -1103,12 +1068,14 @@ public sealed class SpecialChainRunner : BoardAction
             visualTargets.Add(tile);
         }
 
-        foreach (var (cell, horizontal) in lines)
+        // All source states were captured before target marking: one simultaneous
+        // wet line must not retroactively contaminate a dry line's whole emission.
+        foreach (var (cell, horizontal, carriesGel) in lines)
         {
             if (horizontal)
-                for (int x = 0; x < board.Width; x++) CollectCell(x, cell.y);
+                for (int x = 0; x < board.Width; x++) CollectCell(x, cell.y, carriesGel);
             else
-                for (int y = 0; y < board.Height; y++) CollectCell(cell.x, y);
+                for (int y = 0; y < board.Height; y++) CollectCell(cell.x, y, carriesGel);
 
             strikes.Add(new LightningLineStrike(cell, horizontal));
         }

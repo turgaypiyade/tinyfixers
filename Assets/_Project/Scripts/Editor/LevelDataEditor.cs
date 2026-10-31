@@ -16,6 +16,7 @@ public class LevelDataEditor : Editor
     private int selectedTarpSize = TarpStatueEntry.TarpStatueMinSize;         // kare boyut (2/3/4)
     // Duvar (Wall) numaralı fırça: aynı numaralı BİTİŞİK duvar hücreleri tek parça (tek origin).
     private int selectedWallPiece = 1;
+    private int selectedLampColor = LampStripColor.Yellow;   // lamba şeridi fırçasının lamba rengi
     private bool showBossOilSettings;
 
     // Safe (kasa) settings — tıklanan hücre sol-üst origin; WxH bölgeyi kaplar.
@@ -99,6 +100,8 @@ public class LevelDataEditor : Editor
         );
 
         EditorGUILayout.Space(6);
+        DrawTutorialSection(level);
+        EditorGUILayout.Space(6);
 
         mode = (PaintMode)GUILayout.Toolbar((int)mode, new[] { "Mask", "Obstacle", "Tube", "Magnet", "Tiles", "Safe", "Overlay", "Erase", "Ancient Seal", "Kanal" });
 
@@ -128,6 +131,49 @@ public class LevelDataEditor : Editor
 
         if (GUI.changed)
             EditorUtility.SetDirty(level);
+    }
+
+    // Öğretici adımları önceden bu özel inspector'da hiç çizilmiyordu: kopyalanan level öğreticiyi
+    // görünmeden taşıyordu (2026-10-28, level 4 / 8). Burada görünür + tek tıkla temizlenir.
+    private void DrawTutorialSection(LevelData level)
+    {
+        int steps = level.tutorialSteps != null ? level.tutorialSteps.Length : 0;
+        int pins = CountNonZero(level.pinnedTileTypes) + CountNonZero(level.pinnedSpecialTypes);
+        bool combo = level.comboTutorial != ComboTutorialId.None;
+
+        EditorGUILayout.LabelField("Tutorial", EditorStyles.boldLabel);
+        if (steps == 0 && pins == 0 && !combo)
+        {
+            EditorGUILayout.HelpBox("Bu levelda öğretici yok.", MessageType.None);
+        }
+        else
+        {
+            EditorGUILayout.HelpBox($"Bu levelda öğretici var: {steps} adım, {pins} pinli hücre" + (combo ? ", combo öğreticisi" : "") +
+                ". Level kopyalayarak yaptıysan büyük ihtimalle eski leveldan geldi.", MessageType.Warning);
+            if (GUILayout.Button("Tutorial'ı temizle (adımlar + pinler + combo)"))
+            {
+                Undo.RecordObject(level, "Tutorial'ı temizle");
+                level.tutorialSteps = System.Array.Empty<TutorialStep>();
+                if (level.pinnedTileTypes != null) System.Array.Clear(level.pinnedTileTypes, 0, level.pinnedTileTypes.Length);
+                if (level.pinnedSpecialTypes != null) System.Array.Clear(level.pinnedSpecialTypes, 0, level.pinnedSpecialTypes.Length);
+                level.comboTutorial = ComboTutorialId.None;
+                EditorUtility.SetDirty(level);
+                GUIUtility.ExitGUI();
+            }
+        }
+
+        serializedObject.Update();
+        EditorGUILayout.PropertyField(serializedObject.FindProperty("tutorialSteps"), new GUIContent("Tutorial Steps"), true);
+        EditorGUILayout.PropertyField(serializedObject.FindProperty("comboTutorial"), new GUIContent("Combo Tutorial"));
+        serializedObject.ApplyModifiedProperties();
+    }
+
+    private static int CountNonZero(int[] values)
+    {
+        if (values == null) return 0;
+        int n = 0;
+        foreach (int v in values) if (v != 0) n++;
+        return n;
     }
 
     private void DrawSettings(LevelData level)
@@ -487,6 +533,19 @@ public class LevelDataEditor : Editor
                     break;
                 case LevelGoalTargetType.Collectible:
                     goal.collectibleId = (CollectibleId)EditorGUILayout.EnumPopup("Collectible", goal.collectibleId);
+                    if (goal.collectibleId == CollectibleId.Bird)
+                        EditorGUILayout.HelpBox("Kuş hedefi: tahtaya Guguk Kuşu Evi (BirdHouse) koy. Amount = toplam kuş; evler bu sayı dolana kadar kuş verir (ev başına sayaç yok).", MessageType.Info);
+                    // Enerji hedefi Icon Override boşsa oyunda varsayılan çekiç gösterilir (TopHud/PreLevel energyGoalDefaultIcon).
+                    // Bilgi + tek tıkla çekici açıkça atama.
+                    if (goal.collectibleId == CollectibleId.EnergyOrb && goal.iconOverride == null)
+                    {
+                        EditorGUILayout.HelpBox("Icon Override boş: oyunda varsayılan Şapka Fırlatıcı çekici gösterilir. Farklı ikon istersen ata.", MessageType.Info);
+                        if (GUILayout.Button("Çekiç ikonunu ata (Şapka Fırlatıcı)"))
+                        {
+                            var hammer = AssetDatabase.LoadAssetAtPath<Sprite>(AssetDatabase.GUIDToAssetPath("d5c45b75a85134c80890a84f8f2852b4"));
+                            if (hammer != null) { Undo.RecordObject(level, "Enerji ikonu"); goal.iconOverride = hammer; EditorUtility.SetDirty(level); }
+                        }
+                    }
                     break;
             }
 
@@ -879,6 +938,8 @@ public class LevelDataEditor : Editor
             EditorGUILayout.HelpBox($"Selected: {selectedObstacle}  |  Size: {selDef.size.x}x{selDef.size.y}  |  Library Max Hits: {Mathf.Max(1, selDef.hits)}  |  {stageInfo}", MessageType.None);
             if (IsWallId(selectedObstacle))
                 DrawWallPieceBrush(level);
+            if (selectedObstacle == ObstacleId.LampStrip)
+                DrawLampStripBrush(level);
             if (isColorCrate)
                 showSharedCrateStageRules = EditorGUILayout.Foldout(showSharedCrateStageRules, "Ortak kütüphane kuralları (tüm levellar)", true);
             if (!isColorCrate || showSharedCrateStageRules)
@@ -911,7 +972,70 @@ public class LevelDataEditor : Editor
     }
 
     // Numaralı fırçayla parçalanan duvar türleri (aynı numara + aynı tür + bitişik = tek parça).
-    private static bool IsWallId(ObstacleId id) => id == ObstacleId.Wall || id == ObstacleId.MetalWall;
+    private static bool IsWallId(ObstacleId id) =>
+        id == ObstacleId.Wall || id == ObstacleId.MetalWall || id == ObstacleId.LampStrip;
+
+    private static readonly string[] LampColorNames = { "Sarı", "Kırmızı", "Mavi", "Yeşil", "Mor" };
+    private static readonly Color[] LampColorSwatches =
+    {
+        Color.clear, new Color(1f, 0.78f, 0.1f), new Color(0.95f, 0.22f, 0.2f), new Color(0.2f, 0.52f, 1f),
+        new Color(0.25f, 0.78f, 0.3f), new Color(0.65f, 0.3f, 1f),
+    };
+
+    // Lamba şeridi fırçası: lamba rengi + seçili parçanın kayma ayarı + dallanma denetimi.
+    private void DrawLampStripBrush(LevelData level)
+    {
+        EditorGUILayout.Space(4);
+        EditorGUILayout.LabelField("Lamba Şeridi", EditorStyles.boldLabel);
+        EditorGUILayout.HelpBox(
+            "Boyadığın hücreye seçili renkte lamba konur; boyalı hücreye tekrar tıklamak rengini değiştirir. Renkli lamba " +
+            "yanındaki AYNI RENK eşleşme ya da special ile kırılır; mor lamba yalnız special ile. Şekil düz, L, zikzak ya " +
+            "da halka olabilir; DALLANMA (T, artı) olmaz — gerekirse iki ayrı parça kullan.", MessageType.Info);
+        selectedLampColor = GUILayout.Toolbar(selectedLampColor - 1, LampColorNames) + 1;
+
+        var settings = level.lampStripSettings ?? System.Array.Empty<LampStripSettings>();
+        int at = System.Array.FindIndex(settings, e => e.pieceId == selectedWallPiece);
+        var cur = at >= 0 ? settings[at] : new LampStripSettings { pieceId = selectedWallPiece };
+        EditorGUI.BeginChangeCheck();
+        cur.shift = EditorGUILayout.Toggle(new GUIContent($"Parça {selectedWallPiece}: Kayar",
+            "Açık: her oyuncu hamlesi bitince lambalar yol boyunca 1 hücre kayar (döngü). Kapalı: tanıtım, sabit."), cur.shift);
+        using (new EditorGUI.DisabledScope(!cur.shift))
+            cur.reverse = EditorGUILayout.Toggle(new GUIContent("Ters Yön",
+                "Kapalı = ileri: yolun sol-üst ucundan diğer uca (yatayda sağa, dikeyde aşağı). Açık = geri."), cur.reverse);
+        if (EditorGUI.EndChangeCheck())
+        {
+            Undo.RecordObject(level, "Lamba şeridi ayarı");
+            var list = new System.Collections.Generic.List<LampStripSettings>(settings);
+            if (at >= 0) list[at] = cur; else list.Add(cur);
+            level.lampStripSettings = list.ToArray();
+            EditorUtility.SetDirty(level);
+        }
+
+        string branched = BranchedLampPieces(level);
+        if (branched.Length > 0)
+            EditorGUILayout.HelpBox($"Dallanan lamba şeridi parçası: {branched}. Kayma yolu belirsiz — iki ayrı parçaya böl.",
+                MessageType.Error);
+    }
+
+    // 3+ komşulu hücresi olan (T / artı) lamba şeridi parçalarının numaraları.
+    private static string BranchedLampPieces(LevelData level)
+    {
+        if (level.obstacles == null || level.obstacleOrigins == null) return "";
+        var bad = new System.Collections.Generic.SortedSet<int>();
+        for (int i = 0; i < level.obstacles.Length; i++)
+        {
+            if ((ObstacleId)level.obstacles[i] != ObstacleId.LampStrip) continue;
+            int x = i % level.width, y = i / level.width, n = 0, o = level.obstacleOrigins[i];
+            bool Same(int nx, int ny) => level.InBounds(nx, ny) && (ObstacleId)level.obstacles[level.Index(nx, ny)] ==
+                ObstacleId.LampStrip && level.obstacleOrigins[level.Index(nx, ny)] == o;
+            if (Same(x - 1, y)) n++;
+            if (Same(x + 1, y)) n++;
+            if (Same(x, y - 1)) n++;
+            if (Same(x, y + 1)) n++;
+            if (n > 2 && level.wallPieceIds != null && i < level.wallPieceIds.Length) bad.Add(level.wallPieceIds[i]);
+        }
+        return string.Join(", ", bad);
+    }
 
     private static Color WallPieceColor(int piece)
     {
@@ -958,8 +1082,48 @@ public class LevelDataEditor : Editor
         }
     }
 
+    // Hareketli engel (plastik vb.) üretim sütunları: tahtanın üstünde, sütunlarla hizalı onay kutuları.
+    // Hiçbiri seçili değilse her sütundan gelir (eski davranış).
+    private void DrawMovableSpawnColumns(LevelData level)
+    {
+        if (level.movableSpawnColumns == null || level.movableSpawnColumns.Length != level.width)
+        {
+            var resized = new bool[level.width];
+            if (level.movableSpawnColumns != null)
+                System.Array.Copy(level.movableSpawnColumns, resized, Mathf.Min(level.width, level.movableSpawnColumns.Length));
+            level.movableSpawnColumns = resized;
+        }
+
+        int selected = 0;
+        foreach (bool b in level.movableSpawnColumns) if (b) selected++;
+        EditorGUILayout.LabelField(new GUIContent(
+            selected == 0 ? "Hareketli engel sütunları: hepsi (seçim yok)" : $"Hareketli engel sütunları: {selected} sütun seçili",
+            "Plastik gibi hareketli engeller hedef için yalnız işaretli sütunlardan düşer. Hiçbiri işaretli değilse her sütundan gelir."));
+        Rect row = GUILayoutUtility.GetRect(level.width * cellPx + 12, 18);
+        for (int x = 0; x < level.width; x++)
+        {
+            var r = new Rect(row.x + 6 + x * cellPx + (cellPx - 16) * 0.5f, row.y, 16, 16);
+            bool v = EditorGUI.Toggle(r, level.movableSpawnColumns[x]);
+            if (v != level.movableSpawnColumns[x])
+            {
+                Undo.RecordObject(level, "Hareketli engel sütunu");
+                level.movableSpawnColumns[x] = v;
+                EditorUtility.SetDirty(level);
+            }
+        }
+        if (selected > 0)
+        {
+            level.movableSpawnFillColumns = EditorGUILayout.Toggle(new GUIContent("Sütun hep dolu kalsın",
+                "Açık: seçili sütunlar hep hareketli engelle dolu kalır ve her sütun başta kendisine konan türü üretir " +
+                "(turuncu sütun → turuncu). Kapalı: geçiş başına 1 engel, karışık akış."), level.movableSpawnFillColumns);
+            level.movableSpawnFallbackMoves = Mathf.Max(0, EditorGUILayout.IntField(new GUIContent("Başka sütun açılması (hamle)",
+                "Seçili sütunlardan gerekli engel bu kadar hamle gelemezse başka sütundan da düşer. 0 = katı."), level.movableSpawnFallbackMoves));
+        }
+    }
+
     private void DrawGrid(LevelData level)
     {
+        DrawMovableSpawnColumns(level);
         EditorGUILayout.LabelField("Board", EditorStyles.boldLabel);
         Rect area = GUILayoutUtility.GetRect(level.width * cellPx + 12, level.height * cellPx + 12);
         EditorGUI.DrawRect(area, boardBg);
@@ -1361,6 +1525,17 @@ public class LevelDataEditor : Editor
             var c = WallPieceColor(piece);
             EditorGUI.DrawRect(r, new Color(c.r, c.g, c.b, 0.45f));
             GUI.Label(r, piece.ToString(), label);
+            if (wallId == ObstacleId.LampStrip)
+            {
+                int lc = level.lampColorByCell != null && idx < level.lampColorByCell.Length ? level.lampColorByCell[idx] : 0;
+                if (lc > 0 && lc < LampColorSwatches.Length)
+                {
+                    float d = r.width * 0.42f;
+                    var dot = new Rect(r.center.x - d * 0.5f, r.center.y - d * 0.5f, d, d);
+                    EditorGUI.DrawRect(dot, LampColorSwatches[lc]);
+                    GUI.Label(dot, piece.ToString(), label);
+                }
+            }
 
             const float t = 2f;
             var edge = new Color(0.1f, 0.05f, 0.02f, 1f);
@@ -1955,6 +2130,8 @@ public class LevelDataEditor : Editor
         if (level.hamsterSatietyByCell != null && idx < level.hamsterSatietyByCell.Length)
             level.hamsterSatietyByCell[idx] = 0;
         bool wasWall = IsWallId((ObstacleId)level.obstacles[idx]);
+        if (level.lampColorByCell != null && idx < level.lampColorByCell.Length)
+            level.lampColorByCell[idx] = 0;
         level.obstacles[idx] = (int)ObstacleId.None;
         level.obstacleOrigins[idx] = -1;
         if (wasWall) RecomputeWallOrigins(level);   // silinen hücre parçayı ikiye bölmüş olabilir
@@ -1982,6 +2159,21 @@ public class LevelDataEditor : Editor
             if (level.wallPieceIds == null || level.wallPieceIds.Length != level.width * level.height)
                 RecomputeWallOrigins(level);   // diziyi boyutlandırır
             level.wallPieceIds[wIdx] = Mathf.Max(1, selectedWallPiece);
+            if (id == ObstacleId.LampStrip)
+            {
+                int n = level.width * level.height;
+                if (level.lampColorByCell == null || level.lampColorByCell.Length != n)
+                {
+                    var old = level.lampColorByCell;
+                    level.lampColorByCell = new int[n];
+                    if (old != null) System.Array.Copy(old, level.lampColorByCell, Mathf.Min(n, old.Length));
+                }
+                level.lampColorByCell[wIdx] = selectedLampColor;
+            }
+            else if (level.lampColorByCell != null && wIdx < level.lampColorByCell.Length)
+            {
+                level.lampColorByCell[wIdx] = 0;
+            }
             RecomputeWallOrigins(level);
             return;
         }

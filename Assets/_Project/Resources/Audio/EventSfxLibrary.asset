@@ -93,3 +93,33 @@ MonoBehaviour:
     volume: 0.8
     pitchJitter: 0.05
     maxDuration: 1.5
+  giftFestivalIntro:
+    clips:
+    - {fileID: 8300000, guid: 8ca3e0fa56495391a6585bcef95918b6, type: 3}
+    volume: 0.8
+    pitchJitter: 0
+    maxDuration: 0
+  giftFestivalThrow:
+    clips:
+    - {fileID: 8300000, guid: 95ca2b120cd75effb41547c0b919fec2, type: 3}
+    volume: 0.85
+    pitchJitter: 0
+    maxDuration: 0
+  giftFestivalBatHit:
+    clips:
+    - {fileID: 8300000, guid: e8196643f1ec5f4bbbaf078392705bca, type: 3}
+    volume: 0.9
+    pitchJitter: 0
+    maxDuration: 0
+  giftFestivalBallFlight:
+    clips:
+    - {fileID: 8300000, guid: 3301fb684a115c39a5fb06f6a0ab7543, type: 3}
+    volume: 0.65
+    pitchJitter: 0
+    maxDuration: 0
+  giftFestivalGlassBreak:
+    clips:
+    - {fileID: 8300000, guid: 69131df5fae556a2ab1689e890c39a65, type: 3}
+    volume: 0.85
+    pitchJitter: 0
+    maxDuration: 0

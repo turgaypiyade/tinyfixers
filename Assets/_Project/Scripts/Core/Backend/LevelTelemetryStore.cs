@@ -25,6 +25,12 @@ public static class LevelTelemetryStore
         return loaded;
     }
 
+    public static void ResetForAccount(string uid)
+    {
+        state = new LevelTelemetryState { streamId = Guid.NewGuid().ToString("N"), ownerId = uid };
+        Save();
+    }
+
     private static void Save()
     {
         PlayerPrefs.SetString(Key, JsonUtility.ToJson(State));

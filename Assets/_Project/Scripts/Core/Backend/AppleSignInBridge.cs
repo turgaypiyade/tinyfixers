@@ -1,9 +1,9 @@
 using System;
-using System.Security.Cryptography;
 using System.Text;
 using AppleAuth;
 using AppleAuth.Enums;
 using AppleAuth.Interfaces;
+using AppleAuth.Extensions;
 using AppleAuth.Native;
 using Firebase.Auth;
 using UnityEngine;
@@ -18,7 +18,8 @@ using UnityEngine;
 public sealed class AppleSignInBridge : MonoBehaviour
 {
     private static AppleAuthManager manager;
-    private static string rawNonce;
+    private static AppleSignInBridge instance;
+    private static bool pending;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void Bootstrap()
@@ -29,15 +30,17 @@ public sealed class AppleSignInBridge : MonoBehaviour
 #if !TF_APPLE_SIGNIN_CAPABILITY
         return;
 #else
-        if (!AppleAuthManager.IsCurrentPlatformSupported)
+        if (RuntimeSimulationSession.IsActive || instance != null || !AppleAuthManager.IsCurrentPlatformSupported)
             return;   // editor/Android: Apple butonu "Yakında" kalır
 
         var go = new GameObject("AppleSignInBridge");
         DontDestroyOnLoad(go);
-        go.AddComponent<AppleSignInBridge>();
+        instance = go.AddComponent<AppleSignInBridge>();
+        instance.enabled = false;
 
         manager = new AppleAuthManager(new PayloadDeserializer());
         AuthLinkService.AppleTokenProvider = Fetch;
+        AuthLinkService.NotifyAvailabilityChanged();
 #endif
     }
 
@@ -46,22 +49,28 @@ public sealed class AppleSignInBridge : MonoBehaviour
 
     private static void Fetch(Action<Credential, string> callback)
     {
-        if (manager == null)
+        if (manager == null || instance == null || pending)
         {
             callback(null, GameLocalization.Get("auth_apple_unsupported"));
             return;
         }
 
         // Firebase, replay koruması için SHA256(nonce) Apple'a / raw nonce kendisine ister.
-        rawNonce = GenerateNonce(32);
+        string rawNonce = AuthNonce.Create();
+        pending = true;
+        instance.enabled = true;
         var loginArgs = new AppleAuthLoginArgs(
             LoginOptions.IncludeEmail | LoginOptions.IncludeFullName,
-            Sha256(rawNonce));
+            AuthNonce.Sha256(rawNonce));
 
+        try
+        {
         manager.LoginWithAppleId(
             loginArgs,
             credential =>
             {
+                pending = false;
+                if (instance != null) instance.enabled = false;
                 var apple = credential as IAppleIDCredential;
                 if (apple?.IdentityToken == null)
                 {
@@ -76,29 +85,29 @@ public sealed class AppleSignInBridge : MonoBehaviour
 
                 callback(OAuthProvider.GetCredential("apple.com", idToken, rawNonce, authCode), null);
             },
-            error => callback(null, null));   // kullanıcı iptali → sessiz kapan
+            error =>
+            {
+                pending = false;
+                if (instance != null) instance.enabled = false;
+                callback(null, error.GetAuthorizationErrorCode() == AuthorizationErrorCode.Canceled
+                    ? null : GameLocalization.Get("auth_apple_failed"));
+            });
+        }
+        catch
+        {
+            pending = false;
+            if (instance != null) instance.enabled = false;
+            callback(null, GameLocalization.Get("auth_apple_failed"));
+        }
     }
 
-    private static string GenerateNonce(int length)
+    private void OnDestroy()
     {
-        const string chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._";
-        var bytes = new byte[length];
-        using (var rng = RandomNumberGenerator.Create())
-            rng.GetBytes(bytes);
-
-        var sb = new StringBuilder(length);
-        foreach (var b in bytes)
-            sb.Append(chars[b % chars.Length]);
-        return sb.ToString();
-    }
-
-    private static string Sha256(string input)
-    {
-        using var sha = SHA256.Create();
-        var hash = sha.ComputeHash(Encoding.UTF8.GetBytes(input));
-        var sb = new StringBuilder(hash.Length * 2);
-        foreach (var b in hash)
-            sb.Append(b.ToString("x2"));
-        return sb.ToString();
+        if (instance != this) return;
+        instance = null;
+        manager = null;
+        pending = false;
+        AuthLinkService.AppleTokenProvider = null;
+        AuthLinkService.NotifyAvailabilityChanged();
     }
 }

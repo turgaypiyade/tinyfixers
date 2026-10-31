@@ -20,7 +20,7 @@ using UnityEngine;
 public static class LevelCatalogCsvTool
 {
     private const char Sep = ';';
-    private const string DefaultCatalogPath = "Assets/_Project/Settings/LevelCatalogPro.asset";
+    private const string DefaultCatalogPath = "Assets/_Project/Settings/ProLevels/LevelCatalogProV1.asset";
 
     // ── Export ───────────────────────────────────────────────────────────────
 

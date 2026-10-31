@@ -17,6 +17,15 @@ public static class PlayerStatsCloudReporter
     private static bool sending, ownerMismatchLogged;
     private static int failures;
 
+    internal static void ResetForAccount()
+    {
+        unflushedSeconds = 0f;
+        retryAfter = 0f;
+        failures = 0;
+        ownerMismatchLogged = false;
+        // An older request keeps its slot until completion; its UID/stream guard rejects its ack.
+    }
+
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     private static void Bootstrap()
     {
@@ -41,7 +50,7 @@ public static class PlayerStatsCloudReporter
     private static void FlushPending()
     {
         if (RuntimeSimulationSession.IsActive || sending || !FirebaseAuthService.IsReady
-            || Time.realtimeSinceStartup < retryAfter) return;
+            || !FirebaseCloudSaveService.RestoreResolved || Time.realtimeSinceStartup < retryAfter) return;
         string uid = FirebaseAuthService.UserId;
         if (!LevelTelemetryStore.BindOwner(uid))
         {
@@ -97,6 +106,7 @@ public static class PlayerStatsCloudReporter
                     Failed(task.Exception?.GetBaseException().Message ?? "cancelled");
                     return;
                 }
+                if (FirebaseAuthService.UserId != uid || LevelTelemetryStore.StreamId != stream) return;
                 LevelTelemetryStore.Acknowledge(payload.sequence);
                 failures = 0;
                 retryAfter = 0f;

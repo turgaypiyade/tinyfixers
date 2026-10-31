@@ -1,0 +1,5704 @@
+[
+  {
+    "level": 131,
+    "name": "Çelik Bahçe",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00001310.asset",
+    "changed": false,
+    "notes": [],
+    "before": {
+      "width": 9,
+      "height": 11,
+      "moves": 26,
+      "active": 87,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 56,
+          "collectibleId": 1,
+          "amount": 2
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 30,
+          "collectibleId": 1,
+          "amount": 9
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 42,
+          "collectibleId": 1,
+          "amount": 10
+        }
+      ]
+    },
+    "after": {
+      "width": 9,
+      "height": 11,
+      "moves": 26,
+      "active": 87,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 56,
+          "collectibleId": 1,
+          "amount": 2,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 30,
+          "collectibleId": 1,
+          "amount": 9,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 42,
+          "collectibleId": 1,
+          "amount": 10,
+          "iconOverride": "{fileID: 0}"
+        }
+      ]
+    }
+  },
+  {
+    "level": 132,
+    "name": "Altıgen Petek",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00001320.asset",
+    "changed": true,
+    "notes": [
+      "Hedef dışı türler ve eksik miktarlar görünür hedeflere eklendi; maske/hamle/konumlar korundu."
+    ],
+    "before": {
+      "width": 9,
+      "height": 11,
+      "moves": 27,
+      "active": 75,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 56,
+          "collectibleId": 1,
+          "amount": 2
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 40,
+          "collectibleId": 1,
+          "amount": 12
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 7,
+          "collectibleId": 1,
+          "amount": 12
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 42,
+          "collectibleId": 1,
+          "amount": 10
+        }
+      ]
+    },
+    "after": {
+      "width": 9,
+      "height": 11,
+      "moves": 27,
+      "active": 75,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 56,
+          "collectibleId": 1,
+          "amount": 2,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 40,
+          "collectibleId": 1,
+          "amount": 12,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 7,
+          "collectibleId": 1,
+          "amount": 12,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 42,
+          "collectibleId": 1,
+          "amount": 10,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 45,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 0}",
+          "amount": 1
+        }
+      ]
+    }
+  },
+  {
+    "level": 133,
+    "name": "Arlekin Uçurtma",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00001330.asset",
+    "changed": false,
+    "notes": [],
+    "before": {
+      "width": 9,
+      "height": 11,
+      "moves": 28,
+      "active": 99,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 56,
+          "collectibleId": 1,
+          "amount": 2
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 12,
+          "collectibleId": 1,
+          "amount": 15
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 11,
+          "collectibleId": 1,
+          "amount": 15
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 42,
+          "collectibleId": 1,
+          "amount": 12
+        }
+      ]
+    },
+    "after": {
+      "width": 9,
+      "height": 11,
+      "moves": 28,
+      "active": 99,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 56,
+          "collectibleId": 1,
+          "amount": 2,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 12,
+          "collectibleId": 1,
+          "amount": 15,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 11,
+          "collectibleId": 1,
+          "amount": 15,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 42,
+          "collectibleId": 1,
+          "amount": 12,
+          "iconOverride": "{fileID: 0}"
+        }
+      ]
+    }
+  },
+  {
+    "level": 134,
+    "name": "Damalı Kale",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00001340.asset",
+    "changed": true,
+    "notes": [
+      "Hedef dışı türler ve eksik miktarlar görünür hedeflere eklendi; maske/hamle/konumlar korundu."
+    ],
+    "before": {
+      "width": 9,
+      "height": 11,
+      "moves": 24,
+      "active": 99,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 56,
+          "collectibleId": 1,
+          "amount": 6
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 30,
+          "collectibleId": 1,
+          "amount": 12
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 40,
+          "collectibleId": 1,
+          "amount": 13
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 25,
+          "collectibleId": 1,
+          "amount": 25
+        }
+      ]
+    },
+    "after": {
+      "width": 9,
+      "height": 11,
+      "moves": 24,
+      "active": 99,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 56,
+          "collectibleId": 1,
+          "amount": 6,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 30,
+          "collectibleId": 1,
+          "amount": 12,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 40,
+          "collectibleId": 1,
+          "amount": 13,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 25,
+          "collectibleId": 1,
+          "amount": 25,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 28,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 0}",
+          "amount": 16
+        }
+      ]
+    }
+  },
+  {
+    "level": 135,
+    "name": "Kristal Kalp",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00001350.asset",
+    "changed": true,
+    "notes": [
+      "Hedef dışı türler ve eksik miktarlar görünür hedeflere eklendi; maske/hamle/konumlar korundu."
+    ],
+    "before": {
+      "width": 9,
+      "height": 11,
+      "moves": 27,
+      "active": 68,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 46,
+          "collectibleId": 1,
+          "amount": 68
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 28,
+          "collectibleId": 1,
+          "amount": 14
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 56,
+          "collectibleId": 1,
+          "amount": 2
+        }
+      ]
+    },
+    "after": {
+      "width": 9,
+      "height": 11,
+      "moves": 27,
+      "active": 68,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 46,
+          "collectibleId": 1,
+          "amount": 68,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 28,
+          "collectibleId": 1,
+          "amount": 14,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 56,
+          "collectibleId": 1,
+          "amount": 2,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 45,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 0}",
+          "amount": 2
+        }
+      ]
+    }
+  },
+  {
+    "level": 136,
+    "name": "Hamster'ın Kalesi",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00001360.asset",
+    "changed": true,
+    "notes": [
+      "İki benzer hareketli tür tek iki-aşamalı şeritte birleşti; taş ve duvar hedefleri için beş slot kaldı."
+    ],
+    "before": {
+      "width": 9,
+      "height": 11,
+      "moves": 28,
+      "active": 99,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 57,
+          "collectibleId": 1,
+          "amount": 1
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 56,
+          "collectibleId": 1,
+          "amount": 3
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 30,
+          "collectibleId": 1,
+          "amount": 8
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 40,
+          "collectibleId": 1,
+          "amount": 8
+        }
+      ]
+    },
+    "after": {
+      "width": 9,
+      "height": 11,
+      "moves": 28,
+      "active": 99,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 57,
+          "collectibleId": 1,
+          "amount": 1,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 56,
+          "collectibleId": 1,
+          "amount": 3,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 40,
+          "collectibleId": 1,
+          "amount": 16,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 28,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 0}",
+          "amount": 8
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 55,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 0}",
+          "amount": 2
+        }
+      ]
+    }
+  },
+  {
+    "level": 137,
+    "name": "Roma Tapınağı II",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00001370.asset",
+    "changed": false,
+    "notes": [],
+    "before": {
+      "width": 9,
+      "height": 11,
+      "moves": 26,
+      "active": 99,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 26,
+          "collectibleId": 1,
+          "amount": 4
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 55,
+          "collectibleId": 1,
+          "amount": 6
+        }
+      ]
+    },
+    "after": {
+      "width": 9,
+      "height": 11,
+      "moves": 26,
+      "active": 99,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 26,
+          "collectibleId": 1,
+          "amount": 4,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 55,
+          "collectibleId": 1,
+          "amount": 6,
+          "iconOverride": "{fileID: 0}"
+        }
+      ]
+    }
+  },
+  {
+    "level": 138,
+    "name": "Su Kuleleri",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00001380.asset",
+    "changed": true,
+    "notes": [
+      "Hedef dışı türler ve eksik miktarlar görünür hedeflere eklendi; maske/hamle/konumlar korundu."
+    ],
+    "before": {
+      "width": 9,
+      "height": 11,
+      "moves": 28,
+      "active": 99,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 52,
+          "collectibleId": 1,
+          "amount": 4
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 56,
+          "collectibleId": 1,
+          "amount": 4
+        }
+      ]
+    },
+    "after": {
+      "width": 9,
+      "height": 11,
+      "moves": 28,
+      "active": 99,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 52,
+          "collectibleId": 1,
+          "amount": 4,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 56,
+          "collectibleId": 1,
+          "amount": 4,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 53,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 0}",
+          "amount": 32
+        }
+      ]
+    }
+  },
+  {
+    "level": 139,
+    "name": "Jelli Çelik",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00001390.asset",
+    "changed": false,
+    "notes": [],
+    "before": {
+      "width": 9,
+      "height": 11,
+      "moves": 32,
+      "active": 99,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 46,
+          "collectibleId": 1,
+          "amount": 99
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 56,
+          "collectibleId": 1,
+          "amount": 11
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 42,
+          "collectibleId": 1,
+          "amount": 39
+        }
+      ]
+    },
+    "after": {
+      "width": 9,
+      "height": 11,
+      "moves": 32,
+      "active": 99,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 46,
+          "collectibleId": 1,
+          "amount": 99,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 56,
+          "collectibleId": 1,
+          "amount": 11,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 42,
+          "collectibleId": 1,
+          "amount": 39,
+          "iconOverride": "{fileID: 0}"
+        }
+      ]
+    }
+  },
+  {
+    "level": 140,
+    "name": "Porsuğun Tacı",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00001400.asset",
+    "changed": true,
+    "notes": [
+      "Üst çalışma alanı kademeli kısaldı; sepet/hamster yerine iki aşamalı şerit, kalkan, metal, geri sayımlı alet ve boss.",
+      "Geri sayımlı alet mekaniği korundu: tek gri tür ve başlangıçta bir hedef. Rastgele baskı yalnız gösterilen türlerden. Beş slot için fazla aileler birleştirildi; boss HP/dalgalar/saldırı sayıları aynı."
+    ],
+    "before": {
+      "width": 9,
+      "height": 10,
+      "moves": 30,
+      "active": 90,
+      "goals": [
+        {
+          "targetType": 2,
+          "tileType": 0,
+          "obstacleId": 1,
+          "collectibleId": 2,
+          "amount": 450
+        }
+      ]
+    },
+    "after": {
+      "width": 9,
+      "height": 10,
+      "moves": 30,
+      "active": 82,
+      "goals": [
+        {
+          "targetType": 2,
+          "tileType": 0,
+          "obstacleId": 1,
+          "collectibleId": 2,
+          "amount": 450,
+          "iconOverride": "{fileID: 21300000, guid: bd8a2a2aabdf46fcabea5eb683bc76d9, type: 3}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 35,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 0}",
+          "amount": 4
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 40,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 0}",
+          "amount": 30
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 47,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 0}",
+          "amount": 1
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 56,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 0}",
+          "amount": 3
+        }
+      ]
+    }
+  },
+  {
+    "level": 141,
+    "name": "Jel Kartuşları",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00001410.asset",
+    "changed": true,
+    "notes": [
+      "Kartuş/kapı/oyma açılışı beş hedefte toplandı; üç ayrı yardımcı dolgu ailesi kaldırıldı."
+    ],
+    "before": {
+      "width": 9,
+      "height": 11,
+      "moves": 28,
+      "active": 99,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 46,
+          "collectibleId": 1,
+          "amount": 99
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 21,
+          "collectibleId": 1,
+          "amount": 2
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 27,
+          "collectibleId": 1,
+          "amount": 4
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 28,
+          "collectibleId": 1,
+          "amount": 16
+        }
+      ]
+    },
+    "after": {
+      "width": 9,
+      "height": 11,
+      "moves": 28,
+      "active": 99,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 46,
+          "collectibleId": 1,
+          "amount": 99,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 21,
+          "collectibleId": 1,
+          "amount": 2,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 27,
+          "collectibleId": 1,
+          "amount": 4,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 28,
+          "collectibleId": 1,
+          "amount": 25,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 59,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 0}",
+          "amount": 2
+        }
+      ]
+    }
+  },
+  {
+    "level": 142,
+    "name": "Kilitli Alet Çantası",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00001420.asset",
+    "changed": true,
+    "notes": [
+      "Hedef dışı türler ve eksik miktarlar görünür hedeflere eklendi; maske/hamle/konumlar korundu."
+    ],
+    "before": {
+      "width": 9,
+      "height": 11,
+      "moves": 32,
+      "active": 73,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 33,
+          "collectibleId": 0,
+          "amount": 2
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 5,
+          "collectibleId": 0,
+          "amount": 22
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 25,
+          "collectibleId": 0,
+          "amount": 24
+        }
+      ]
+    },
+    "after": {
+      "width": 9,
+      "height": 11,
+      "moves": 32,
+      "active": 73,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 33,
+          "collectibleId": 0,
+          "amount": 2,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 5,
+          "collectibleId": 0,
+          "amount": 22,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 25,
+          "collectibleId": 0,
+          "amount": 24,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 30,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 0}",
+          "amount": 7
+        }
+      ]
+    }
+  },
+  {
+    "level": 143,
+    "name": "Tuğla Geçidi",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00001430.asset",
+    "changed": true,
+    "notes": [
+      "Hedef dışı türler ve eksik miktarlar görünür hedeflere eklendi; maske/hamle/konumlar korundu."
+    ],
+    "before": {
+      "width": 9,
+      "height": 9,
+      "moves": 27,
+      "active": 76,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 4,
+          "collectibleId": 1,
+          "amount": 8
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 55,
+          "collectibleId": 1,
+          "amount": 8
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 40,
+          "collectibleId": 1,
+          "amount": 4
+        }
+      ]
+    },
+    "after": {
+      "width": 9,
+      "height": 9,
+      "moves": 27,
+      "active": 76,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 4,
+          "collectibleId": 1,
+          "amount": 8,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 55,
+          "collectibleId": 1,
+          "amount": 8,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 40,
+          "collectibleId": 1,
+          "amount": 36,
+          "iconOverride": "{fileID: 0}"
+        }
+      ]
+    }
+  },
+  {
+    "level": 144,
+    "name": "Basamaklı Atölye",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00001440.asset",
+    "changed": true,
+    "notes": [
+      "Hedef dışı türler ve eksik miktarlar görünür hedeflere eklendi; maske/hamle/konumlar korundu."
+    ],
+    "before": {
+      "width": 9,
+      "height": 11,
+      "moves": 30,
+      "active": 88,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 40,
+          "collectibleId": 0,
+          "amount": 27
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 28,
+          "collectibleId": 0,
+          "amount": 27
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 59,
+          "collectibleId": 0,
+          "amount": 3
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 46,
+          "collectibleId": 1,
+          "amount": 88
+        }
+      ]
+    },
+    "after": {
+      "width": 9,
+      "height": 11,
+      "moves": 30,
+      "active": 88,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 40,
+          "collectibleId": 0,
+          "amount": 27,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 28,
+          "collectibleId": 0,
+          "amount": 27,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 59,
+          "collectibleId": 0,
+          "amount": 3,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 46,
+          "collectibleId": 1,
+          "amount": 88,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 45,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 0}",
+          "amount": 4
+        }
+      ]
+    }
+  },
+  {
+    "level": 145,
+    "name": "Mor Mozaik",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00001450.asset",
+    "changed": true,
+    "notes": [
+      "Hedef dışı türler ve eksik miktarlar görünür hedeflere eklendi; maske/hamle/konumlar korundu."
+    ],
+    "before": {
+      "width": 9,
+      "height": 11,
+      "moves": 32,
+      "active": 69,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 46,
+          "collectibleId": 0,
+          "amount": 69
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 39,
+          "collectibleId": 0,
+          "amount": 24
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 7,
+          "collectibleId": 0,
+          "amount": 12
+        }
+      ]
+    },
+    "after": {
+      "width": 9,
+      "height": 11,
+      "moves": 32,
+      "active": 69,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 46,
+          "collectibleId": 0,
+          "amount": 69,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 39,
+          "collectibleId": 0,
+          "amount": 24,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 7,
+          "collectibleId": 0,
+          "amount": 12,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 45,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 0}",
+          "amount": 2
+        }
+      ]
+    }
+  },
+  {
+    "level": 146,
+    "name": "Boya Piramidi",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00001460.asset",
+    "changed": false,
+    "notes": [],
+    "before": {
+      "width": 8,
+      "height": 8,
+      "moves": 24,
+      "active": 64,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 63,
+          "collectibleId": 1,
+          "amount": 6
+        }
+      ]
+    },
+    "after": {
+      "width": 8,
+      "height": 8,
+      "moves": 24,
+      "active": 64,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 63,
+          "collectibleId": 1,
+          "amount": 6,
+          "iconOverride": "{fileID: 0}"
+        }
+      ]
+    }
+  },
+  {
+    "level": 147,
+    "name": "Renkli Palet",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00001470.asset",
+    "changed": false,
+    "notes": [],
+    "before": {
+      "width": 9,
+      "height": 9,
+      "moves": 27,
+      "active": 61,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 4,
+          "collectibleId": 1,
+          "amount": 21
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 7,
+          "collectibleId": 1,
+          "amount": 15
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 63,
+          "collectibleId": 1,
+          "amount": 5
+        }
+      ]
+    },
+    "after": {
+      "width": 9,
+      "height": 9,
+      "moves": 27,
+      "active": 61,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 4,
+          "collectibleId": 1,
+          "amount": 21,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 7,
+          "collectibleId": 1,
+          "amount": 15,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 63,
+          "collectibleId": 1,
+          "amount": 5,
+          "iconOverride": "{fileID: 0}"
+        }
+      ]
+    }
+  },
+  {
+    "level": 148,
+    "name": "Mor Boyahane",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00001480.asset",
+    "changed": true,
+    "notes": [
+      "Hedef dışı türler ve eksik miktarlar görünür hedeflere eklendi; maske/hamle/konumlar korundu."
+    ],
+    "before": {
+      "width": 8,
+      "height": 11,
+      "moves": 28,
+      "active": 88,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 46,
+          "collectibleId": 1,
+          "amount": 76
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 63,
+          "collectibleId": 1,
+          "amount": 10
+        },
+        {
+          "targetType": 2,
+          "tileType": 0,
+          "obstacleId": 1,
+          "collectibleId": 1,
+          "amount": 40
+        }
+      ]
+    },
+    "after": {
+      "width": 8,
+      "height": 11,
+      "moves": 28,
+      "active": 88,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 46,
+          "collectibleId": 1,
+          "amount": 76,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 63,
+          "collectibleId": 1,
+          "amount": 10,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 2,
+          "tileType": 0,
+          "obstacleId": 1,
+          "collectibleId": 1,
+          "amount": 40,
+          "iconOverride": "{fileID: -4636114995939134412, guid: 3767602825f9446c0b26afbe4d9fb476, type: 3}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 59,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 0}",
+          "amount": 2
+        }
+      ]
+    }
+  },
+  {
+    "level": 149,
+    "name": "Bölmeli Pencere",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00001490.asset",
+    "changed": false,
+    "notes": [],
+    "before": {
+      "width": 9,
+      "height": 9,
+      "moves": 31,
+      "active": 64,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 4,
+          "collectibleId": 1,
+          "amount": 10
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 6,
+          "collectibleId": 1,
+          "amount": 15
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 39,
+          "collectibleId": 1,
+          "amount": 24
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 63,
+          "collectibleId": 1,
+          "amount": 1
+        }
+      ]
+    },
+    "after": {
+      "width": 9,
+      "height": 9,
+      "moves": 31,
+      "active": 64,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 4,
+          "collectibleId": 1,
+          "amount": 10,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 6,
+          "collectibleId": 1,
+          "amount": 15,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 39,
+          "collectibleId": 1,
+          "amount": 24,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 63,
+          "collectibleId": 1,
+          "amount": 1,
+          "iconOverride": "{fileID: 0}"
+        }
+      ]
+    }
+  },
+  {
+    "level": 150,
+    "name": "Kızıl Köprü",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00001500.asset",
+    "changed": true,
+    "notes": [
+      "Kalkan/yumurta yardımcıları kırmızı ailede birleşti; köprünün oyma yükü korundu. Çamur/alet ve boss ile beş hedef.",
+      "Geri sayımlı alet mekaniği korundu: tek gri tür ve başlangıçta bir hedef. Rastgele baskı yalnız gösterilen türlerden. Beş slot için fazla aileler birleştirildi; boss HP/dalgalar/saldırı sayıları aynı."
+    ],
+    "before": {
+      "width": 9,
+      "height": 10,
+      "moves": 30,
+      "active": 75,
+      "goals": [
+        {
+          "targetType": 2,
+          "tileType": 0,
+          "obstacleId": 1,
+          "collectibleId": 2,
+          "amount": 540
+        }
+      ]
+    },
+    "after": {
+      "width": 9,
+      "height": 10,
+      "moves": 30,
+      "active": 75,
+      "goals": [
+        {
+          "targetType": 2,
+          "tileType": 0,
+          "obstacleId": 1,
+          "collectibleId": 2,
+          "amount": 540,
+          "iconOverride": "{fileID: 21300000, guid: bd8a2a2aabdf46fcabea5eb683bc76d9, type: 3}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 12,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 0}",
+          "amount": 20
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 25,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 0}",
+          "amount": 12
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 28,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 0}",
+          "amount": 12
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 47,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 0}",
+          "amount": 1
+        }
+      ]
+    }
+  },
+  {
+    "level": 151,
+    "name": "Antik Mühür",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00001510.asset",
+    "changed": true,
+    "notes": [
+      "Mühür altındaki hedefsiz bonus altın, mevcut GoldCoin hedef engeline dönüştü; mühür sonrası iş de zorunlu.",
+      "Mühür tanıtımı korundu; gereksiz üst/alt çalışma alanı 99→73 hücreye sıkıştı."
+    ],
+    "before": {
+      "width": 9,
+      "height": 11,
+      "moves": 25,
+      "active": 99,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 64,
+          "collectibleId": 1,
+          "amount": 1
+        }
+      ]
+    },
+    "after": {
+      "width": 9,
+      "height": 9,
+      "moves": 25,
+      "active": 73,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 64,
+          "collectibleId": 1,
+          "amount": 1,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 77,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 0}",
+          "amount": 25
+        }
+      ]
+    }
+  },
+  {
+    "level": 152,
+    "name": "Kargo Kemerleri",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00001520.asset",
+    "changed": true,
+    "notes": [
+      "Mühür altındaki hedefsiz bonus altın, mevcut GoldCoin hedef engeline dönüştü; mühür sonrası iş de zorunlu.",
+      "İki kemerin açık kenar cepleri kesildi; 30→28 hamle ve mühür sonrası altın toplama."
+    ],
+    "before": {
+      "width": 9,
+      "height": 11,
+      "moves": 30,
+      "active": 99,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 64,
+          "collectibleId": 0,
+          "amount": 2
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 28,
+          "collectibleId": 0,
+          "amount": 22
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 25,
+          "collectibleId": 0,
+          "amount": 22
+        }
+      ]
+    },
+    "after": {
+      "width": 9,
+      "height": 11,
+      "moves": 28,
+      "active": 95,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 64,
+          "collectibleId": 0,
+          "amount": 2,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 28,
+          "collectibleId": 0,
+          "amount": 22,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 25,
+          "collectibleId": 0,
+          "amount": 22,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 77,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 0}",
+          "amount": 18
+        }
+      ]
+    }
+  },
+  {
+    "level": 153,
+    "name": "Piramit Mührü",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00001530.asset",
+    "changed": false,
+    "notes": [],
+    "before": {
+      "width": 9,
+      "height": 11,
+      "moves": 26,
+      "active": 87,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 64,
+          "collectibleId": 1,
+          "amount": 1
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 42,
+          "collectibleId": 1,
+          "amount": 16
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 21,
+          "collectibleId": 1,
+          "amount": 4
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 55,
+          "collectibleId": 1,
+          "amount": 3
+        }
+      ]
+    },
+    "after": {
+      "width": 9,
+      "height": 11,
+      "moves": 26,
+      "active": 87,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 64,
+          "collectibleId": 1,
+          "amount": 1,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 42,
+          "collectibleId": 1,
+          "amount": 16,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 21,
+          "collectibleId": 1,
+          "amount": 4,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 55,
+          "collectibleId": 1,
+          "amount": 3,
+          "iconOverride": "{fileID: 0}"
+        }
+      ]
+    }
+  },
+  {
+    "level": 154,
+    "name": "Anahtarlı Boyahane",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00001540.asset",
+    "changed": true,
+    "notes": [
+      "Hedef dışı türler ve eksik miktarlar görünür hedeflere eklendi; maske/hamle/konumlar korundu."
+    ],
+    "before": {
+      "width": 9,
+      "height": 11,
+      "moves": 34,
+      "active": 88,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 6,
+          "collectibleId": 1,
+          "amount": 21
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 44,
+          "collectibleId": 1,
+          "amount": 30
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 63,
+          "collectibleId": 1,
+          "amount": 4
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 46,
+          "collectibleId": 1,
+          "amount": 78
+        }
+      ]
+    },
+    "after": {
+      "width": 9,
+      "height": 11,
+      "moves": 34,
+      "active": 88,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 6,
+          "collectibleId": 1,
+          "amount": 21,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 44,
+          "collectibleId": 1,
+          "amount": 30,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 63,
+          "collectibleId": 1,
+          "amount": 4,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 46,
+          "collectibleId": 1,
+          "amount": 78,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 59,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 0}",
+          "amount": 1
+        }
+      ]
+    }
+  },
+  {
+    "level": 155,
+    "name": "Mühürlü Dört Kule",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00001550.asset",
+    "changed": true,
+    "notes": [
+      "Hedef dışı türler ve eksik miktarlar görünür hedeflere eklendi; maske/hamle/konumlar korundu."
+    ],
+    "before": {
+      "width": 9,
+      "height": 11,
+      "moves": 30,
+      "active": 69,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 64,
+          "collectibleId": 1,
+          "amount": 4
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 28,
+          "collectibleId": 1,
+          "amount": 36
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 46,
+          "collectibleId": 1,
+          "amount": 69
+        }
+      ]
+    },
+    "after": {
+      "width": 9,
+      "height": 11,
+      "moves": 30,
+      "active": 69,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 64,
+          "collectibleId": 1,
+          "amount": 4,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 28,
+          "collectibleId": 1,
+          "amount": 36,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 46,
+          "collectibleId": 1,
+          "amount": 69,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 45,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 0}",
+          "amount": 36
+        }
+      ]
+    }
+  },
+  {
+    "level": 156,
+    "name": "Gözcü Adaları",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00001560.asset",
+    "changed": true,
+    "notes": [
+      "Hedef dışı türler ve eksik miktarlar görünür hedeflere eklendi; maske/hamle/konumlar korundu."
+    ],
+    "before": {
+      "width": 9,
+      "height": 11,
+      "moves": 26,
+      "active": 87,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 40,
+          "collectibleId": 1,
+          "amount": 12
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 25,
+          "collectibleId": 1,
+          "amount": 16
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 42,
+          "collectibleId": 1,
+          "amount": 10
+        }
+      ]
+    },
+    "after": {
+      "width": 9,
+      "height": 11,
+      "moves": 26,
+      "active": 87,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 40,
+          "collectibleId": 1,
+          "amount": 12,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 25,
+          "collectibleId": 1,
+          "amount": 16,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 42,
+          "collectibleId": 1,
+          "amount": 10,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 65,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 0}",
+          "amount": 2
+        }
+      ]
+    }
+  },
+  {
+    "level": 157,
+    "name": "Gözcü Kulesi",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00001570.asset",
+    "changed": false,
+    "notes": [],
+    "before": {
+      "width": 9,
+      "height": 10,
+      "moves": 35,
+      "active": 74,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 5,
+          "collectibleId": 1,
+          "amount": 15
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 6,
+          "collectibleId": 1,
+          "amount": 15
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 39,
+          "collectibleId": 1,
+          "amount": 16
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 42,
+          "collectibleId": 1,
+          "amount": 12
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 65,
+          "collectibleId": 1,
+          "amount": 1
+        }
+      ]
+    },
+    "after": {
+      "width": 9,
+      "height": 10,
+      "moves": 35,
+      "active": 74,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 5,
+          "collectibleId": 1,
+          "amount": 15,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 6,
+          "collectibleId": 1,
+          "amount": 15,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 39,
+          "collectibleId": 1,
+          "amount": 16,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 42,
+          "collectibleId": 1,
+          "amount": 12,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 65,
+          "collectibleId": 1,
+          "amount": 1,
+          "iconOverride": "{fileID: 0}"
+        }
+      ]
+    }
+  },
+  {
+    "level": 158,
+    "name": "Su Feneri",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00001580.asset",
+    "changed": true,
+    "notes": [
+      "Hedef dışı türler ve eksik miktarlar görünür hedeflere eklendi; maske/hamle/konumlar korundu."
+    ],
+    "before": {
+      "width": 9,
+      "height": 11,
+      "moves": 30,
+      "active": 75,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 21,
+          "collectibleId": 1,
+          "amount": 2
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 52,
+          "collectibleId": 1,
+          "amount": 2
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 44,
+          "collectibleId": 1,
+          "amount": 24
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 65,
+          "collectibleId": 1,
+          "amount": 2
+        }
+      ]
+    },
+    "after": {
+      "width": 9,
+      "height": 11,
+      "moves": 30,
+      "active": 75,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 21,
+          "collectibleId": 1,
+          "amount": 2,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 52,
+          "collectibleId": 1,
+          "amount": 2,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 44,
+          "collectibleId": 1,
+          "amount": 24,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 65,
+          "collectibleId": 1,
+          "amount": 2,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 53,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 0}",
+          "amount": 16
+        }
+      ]
+    }
+  },
+  {
+    "level": 159,
+    "name": "Lazerli Hazine",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00001590.asset",
+    "changed": false,
+    "notes": [],
+    "before": {
+      "width": 8,
+      "height": 11,
+      "moves": 26,
+      "active": 70,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 65,
+          "collectibleId": 1,
+          "amount": 3
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 30,
+          "collectibleId": 1,
+          "amount": 32
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 64,
+          "collectibleId": 1,
+          "amount": 1
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 25,
+          "collectibleId": 1,
+          "amount": 32
+        }
+      ]
+    },
+    "after": {
+      "width": 8,
+      "height": 11,
+      "moves": 26,
+      "active": 70,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 65,
+          "collectibleId": 1,
+          "amount": 3,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 30,
+          "collectibleId": 1,
+          "amount": 32,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 64,
+          "collectibleId": 1,
+          "amount": 1,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 25,
+          "collectibleId": 1,
+          "amount": 32,
+          "iconOverride": "{fileID: 0}"
+        }
+      ]
+    }
+  },
+  {
+    "level": 160,
+    "name": "Kalkan",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00001600.asset",
+    "changed": true,
+    "notes": [
+      "Beş hedef için mühür altı kalkan ve çim çamurda birleşti; geri sayımlı alet korunurken bossun attığı çamur da aynı hedefte izlenir.",
+      "Geri sayımlı alet mekaniği korundu: tek gri tür ve başlangıçta bir hedef. Rastgele baskı yalnız gösterilen türlerden. Beş slot için fazla aileler birleştirildi; boss HP/dalgalar/saldırı sayıları aynı."
+    ],
+    "before": {
+      "width": 9,
+      "height": 10,
+      "moves": 30,
+      "active": 76,
+      "goals": [
+        {
+          "targetType": 2,
+          "tileType": 0,
+          "obstacleId": 1,
+          "collectibleId": 2,
+          "amount": 460
+        }
+      ]
+    },
+    "after": {
+      "width": 9,
+      "height": 10,
+      "moves": 30,
+      "active": 76,
+      "goals": [
+        {
+          "targetType": 2,
+          "tileType": 0,
+          "obstacleId": 1,
+          "collectibleId": 2,
+          "amount": 460,
+          "iconOverride": "{fileID: 21300000, guid: bd8a2a2aabdf46fcabea5eb683bc76d9, type: 3}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 5,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 0}",
+          "amount": 18
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 25,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 0}",
+          "amount": 21
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 47,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 0}",
+          "amount": 1
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 64,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 0}",
+          "amount": 1
+        }
+      ]
+    }
+  },
+  {
+    "level": 161,
+    "name": "Brandalı Atölye",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00001610.asset",
+    "changed": false,
+    "notes": [],
+    "before": {
+      "width": 9,
+      "height": 10,
+      "moves": 24,
+      "active": 86,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 68,
+          "collectibleId": 1,
+          "amount": 2
+        }
+      ]
+    },
+    "after": {
+      "width": 9,
+      "height": 10,
+      "moves": 24,
+      "active": 86,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 68,
+          "collectibleId": 1,
+          "amount": 2,
+          "iconOverride": "{fileID: 0}"
+        }
+      ]
+    }
+  },
+  {
+    "level": 162,
+    "name": "Çiçekli Yonca",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00001620.asset",
+    "changed": true,
+    "notes": [
+      "Dört zorunlu işi olan yonca silueti korundu; 32→30 hamle."
+    ],
+    "before": {
+      "width": 9,
+      "height": 11,
+      "moves": 32,
+      "active": 77,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 27,
+          "collectibleId": 1,
+          "amount": 2
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 63,
+          "collectibleId": 1,
+          "amount": 2
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 42,
+          "collectibleId": 1,
+          "amount": 24
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 68,
+          "collectibleId": 1,
+          "amount": 1
+        }
+      ]
+    },
+    "after": {
+      "width": 9,
+      "height": 11,
+      "moves": 30,
+      "active": 77,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 27,
+          "collectibleId": 1,
+          "amount": 2,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 63,
+          "collectibleId": 1,
+          "amount": 2,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 42,
+          "collectibleId": 1,
+          "amount": 24,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 68,
+          "collectibleId": 1,
+          "amount": 1,
+          "iconOverride": "{fileID: 0}"
+        }
+      ]
+    }
+  },
+  {
+    "level": 163,
+    "name": "Örtülü Surlar",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00001630.asset",
+    "changed": false,
+    "notes": [],
+    "before": {
+      "width": 9,
+      "height": 11,
+      "moves": 25,
+      "active": 96,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 68,
+          "collectibleId": 1,
+          "amount": 4
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 56,
+          "collectibleId": 1,
+          "amount": 1
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 55,
+          "collectibleId": 1,
+          "amount": 2
+        }
+      ]
+    },
+    "after": {
+      "width": 9,
+      "height": 11,
+      "moves": 25,
+      "active": 96,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 68,
+          "collectibleId": 1,
+          "amount": 4,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 56,
+          "collectibleId": 1,
+          "amount": 1,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 55,
+          "collectibleId": 1,
+          "amount": 2,
+          "iconOverride": "{fileID: 0}"
+        }
+      ]
+    }
+  },
+  {
+    "level": 164,
+    "name": "Kanal Adaları",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00001640.asset",
+    "changed": false,
+    "notes": [],
+    "before": {
+      "width": 9,
+      "height": 11,
+      "moves": 30,
+      "active": 75,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 68,
+          "collectibleId": 1,
+          "amount": 2
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 39,
+          "collectibleId": 1,
+          "amount": 16
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 64,
+          "collectibleId": 1,
+          "amount": 2
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 65,
+          "collectibleId": 1,
+          "amount": 2
+        }
+      ]
+    },
+    "after": {
+      "width": 9,
+      "height": 11,
+      "moves": 30,
+      "active": 75,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 68,
+          "collectibleId": 1,
+          "amount": 2,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 39,
+          "collectibleId": 1,
+          "amount": 16,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 64,
+          "collectibleId": 1,
+          "amount": 2,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 65,
+          "collectibleId": 1,
+          "amount": 2,
+          "iconOverride": "{fileID: 0}"
+        }
+      ]
+    }
+  },
+  {
+    "level": 165,
+    "name": "Mor Tesisat",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00001650.asset",
+    "changed": false,
+    "notes": [],
+    "before": {
+      "width": 8,
+      "height": 10,
+      "moves": 28,
+      "active": 64,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 26,
+          "collectibleId": 1,
+          "amount": 6
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 21,
+          "collectibleId": 1,
+          "amount": 2
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 68,
+          "collectibleId": 1,
+          "amount": 2
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 46,
+          "collectibleId": 1,
+          "amount": 64
+        }
+      ]
+    },
+    "after": {
+      "width": 8,
+      "height": 10,
+      "moves": 28,
+      "active": 64,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 26,
+          "collectibleId": 1,
+          "amount": 6,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 21,
+          "collectibleId": 1,
+          "amount": 2,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 68,
+          "collectibleId": 1,
+          "amount": 2,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 46,
+          "collectibleId": 1,
+          "amount": 64,
+          "iconOverride": "{fileID: 0}"
+        }
+      ]
+    }
+  },
+  {
+    "level": 166,
+    "name": "Nilüfer Göleti",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00001660.asset",
+    "changed": true,
+    "notes": [
+      "Hedef dışı türler ve eksik miktarlar görünür hedeflere eklendi; maske/hamle/konumlar korundu."
+    ],
+    "before": {
+      "width": 9,
+      "height": 11,
+      "moves": 32,
+      "active": 73,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 69,
+          "collectibleId": 0,
+          "amount": 15
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 25,
+          "collectibleId": 0,
+          "amount": 14
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 30,
+          "collectibleId": 0,
+          "amount": 12
+        }
+      ]
+    },
+    "after": {
+      "width": 9,
+      "height": 11,
+      "moves": 32,
+      "active": 73,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 69,
+          "collectibleId": 0,
+          "amount": 15,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 25,
+          "collectibleId": 0,
+          "amount": 14,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 30,
+          "collectibleId": 0,
+          "amount": 12,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 38,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 0}",
+          "amount": 2
+        }
+      ]
+    }
+  },
+  {
+    "level": 167,
+    "name": "Üç Atölye",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00001670.asset",
+    "changed": false,
+    "notes": [],
+    "before": {
+      "width": 8,
+      "height": 9,
+      "moves": 36,
+      "active": 70,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 63,
+          "collectibleId": 0,
+          "amount": 3
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 68,
+          "collectibleId": 0,
+          "amount": 3
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 30,
+          "collectibleId": 0,
+          "amount": 18
+        },
+        {
+          "targetType": 2,
+          "tileType": 0,
+          "obstacleId": 0,
+          "collectibleId": 1,
+          "amount": 24
+        }
+      ]
+    },
+    "after": {
+      "width": 8,
+      "height": 9,
+      "moves": 36,
+      "active": 70,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 63,
+          "collectibleId": 0,
+          "amount": 3,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 68,
+          "collectibleId": 0,
+          "amount": 3,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 30,
+          "collectibleId": 0,
+          "amount": 18,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 2,
+          "tileType": 0,
+          "obstacleId": 0,
+          "collectibleId": 1,
+          "amount": 24,
+          "iconOverride": "{fileID: 6254762350746623236, guid: 3767602825f9446c0b26afbe4d9fb476, type: 3}"
+        }
+      ]
+    }
+  },
+  {
+    "level": 168,
+    "name": "Renkli Onarım",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00001680.asset",
+    "changed": true,
+    "notes": [
+      "Boya avlusunda üst boş sıra kalktı; merkezdeki yarık iki eşleşme şeridi arasında seçim yaratır."
+    ],
+    "before": {
+      "width": 9,
+      "height": 11,
+      "moves": 28,
+      "active": 99,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 63,
+          "collectibleId": 0,
+          "amount": 4
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 25,
+          "collectibleId": 0,
+          "amount": 24
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 30,
+          "collectibleId": 0,
+          "amount": 24
+        }
+      ]
+    },
+    "after": {
+      "width": 9,
+      "height": 10,
+      "moves": 28,
+      "active": 87,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 63,
+          "collectibleId": 0,
+          "amount": 4,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 25,
+          "collectibleId": 0,
+          "amount": 24,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 30,
+          "collectibleId": 0,
+          "amount": 24,
+          "iconOverride": "{fileID: 0}"
+        }
+      ]
+    }
+  },
+  {
+    "level": 169,
+    "name": "Nilüfer Tacı",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00001690.asset",
+    "changed": true,
+    "notes": [
+      "Hedef dışı türler ve eksik miktarlar görünür hedeflere eklendi; maske/hamle/konumlar korundu."
+    ],
+    "before": {
+      "width": 9,
+      "height": 11,
+      "moves": 26,
+      "active": 63,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 69,
+          "collectibleId": 0,
+          "amount": 8
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 25,
+          "collectibleId": 0,
+          "amount": 22
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 14,
+          "collectibleId": 0,
+          "amount": 6
+        }
+      ]
+    },
+    "after": {
+      "width": 9,
+      "height": 11,
+      "moves": 26,
+      "active": 63,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 69,
+          "collectibleId": 0,
+          "amount": 8,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 25,
+          "collectibleId": 0,
+          "amount": 22,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 14,
+          "collectibleId": 0,
+          "amount": 6,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 6,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 0}",
+          "amount": 6
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 28,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 0}",
+          "amount": 22
+        }
+      ]
+    }
+  },
+  {
+    "level": 170,
+    "name": "Kum Saati",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00001700.asset",
+    "changed": true,
+    "notes": [
+      "Boş ilk satır kaldırıldı; Boss board 11→10 satır. Kalkan altlığı oyma tabanına katıldı; çamur/lazer/oyma/alet ve boss hedefleri.",
+      "Geri sayımlı alet mekaniği korundu: tek gri tür ve başlangıçta bir hedef. Rastgele baskı yalnız gösterilen türlerden. Beş slot için fazla aileler birleştirildi; boss HP/dalgalar/saldırı sayıları aynı."
+    ],
+    "before": {
+      "width": 9,
+      "height": 11,
+      "moves": 30,
+      "active": 72,
+      "goals": [
+        {
+          "targetType": 2,
+          "tileType": 0,
+          "obstacleId": 1,
+          "collectibleId": 2,
+          "amount": 500
+        }
+      ]
+    },
+    "after": {
+      "width": 9,
+      "height": 10,
+      "moves": 30,
+      "active": 72,
+      "goals": [
+        {
+          "targetType": 2,
+          "tileType": 0,
+          "obstacleId": 1,
+          "collectibleId": 2,
+          "amount": 500,
+          "iconOverride": "{fileID: 21300000, guid: bd8a2a2aabdf46fcabea5eb683bc76d9, type: 3}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 25,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 0}",
+          "amount": 27
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 28,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 0}",
+          "amount": 13
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 47,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 0}",
+          "amount": 1
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 65,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 0}",
+          "amount": 2
+        }
+      ]
+    }
+  },
+  {
+    "level": 171,
+    "name": "Rodos Atölyesi",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00001710.asset",
+    "changed": false,
+    "notes": [],
+    "before": {
+      "width": 9,
+      "height": 11,
+      "moves": 30,
+      "active": 91,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 70,
+          "collectibleId": 0,
+          "amount": 8
+        }
+      ]
+    },
+    "after": {
+      "width": 9,
+      "height": 11,
+      "moves": 30,
+      "active": 91,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 70,
+          "collectibleId": 0,
+          "amount": 8,
+          "iconOverride": "{fileID: 0}"
+        }
+      ]
+    }
+  },
+  {
+    "level": 172,
+    "name": "Mor Akıntı",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00001720.asset",
+    "changed": true,
+    "notes": [
+      "Mor akıntıda 2×2 iç boşluk ve kartuş/plastik hedefleri; bedelsiz geniş merkez azaltıldı."
+    ],
+    "before": {
+      "width": 9,
+      "height": 11,
+      "moves": 26,
+      "active": 99,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 46,
+          "collectibleId": 0,
+          "amount": 99
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 39,
+          "collectibleId": 0,
+          "amount": 20
+        }
+      ]
+    },
+    "after": {
+      "width": 9,
+      "height": 11,
+      "moves": 26,
+      "active": 95,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 46,
+          "collectibleId": 0,
+          "amount": 95,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 39,
+          "collectibleId": 0,
+          "amount": 20,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 7,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 0}",
+          "amount": 16
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 59,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 0}",
+          "amount": 2
+        }
+      ]
+    }
+  },
+  {
+    "level": 173,
+    "name": "Büyük Restorasyon",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00001730.asset",
+    "changed": true,
+    "notes": [
+      "İki yardım ailesi yerine turuncu bölge ve zorunlu şarj kutusu; tüm görünen yük beş hedefte."
+    ],
+    "before": {
+      "width": 9,
+      "height": 11,
+      "moves": 24,
+      "active": 99,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 70,
+          "collectibleId": 0,
+          "amount": 4
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 25,
+          "collectibleId": 0,
+          "amount": 20
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 5,
+          "collectibleId": 0,
+          "amount": 14
+        }
+      ]
+    },
+    "after": {
+      "width": 9,
+      "height": 11,
+      "moves": 24,
+      "active": 99,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 70,
+          "collectibleId": 0,
+          "amount": 4,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 25,
+          "collectibleId": 0,
+          "amount": 20,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 5,
+          "collectibleId": 0,
+          "amount": 14,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 8,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 0}",
+          "amount": 24
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 43,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 0}",
+          "amount": 1
+        }
+      ]
+    }
+  },
+  {
+    "level": 174,
+    "name": "Usta Restoratör",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00001740.asset",
+    "changed": true,
+    "notes": [
+      "Üst orta giriş ve alt orta açıklık daraldı; pusulalar ve sepetler artık bitirilir."
+    ],
+    "before": {
+      "width": 9,
+      "height": 11,
+      "moves": 24,
+      "active": 99,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 70,
+          "collectibleId": 0,
+          "amount": 2
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 25,
+          "collectibleId": 0,
+          "amount": 24
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 6,
+          "collectibleId": 0,
+          "amount": 12
+        }
+      ]
+    },
+    "after": {
+      "width": 9,
+      "height": 11,
+      "moves": 24,
+      "active": 94,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 70,
+          "collectibleId": 0,
+          "amount": 2,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 25,
+          "collectibleId": 0,
+          "amount": 24,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 6,
+          "collectibleId": 0,
+          "amount": 12,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 38,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 0}",
+          "amount": 2
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 39,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 0}",
+          "amount": 24
+        }
+      ]
+    }
+  },
+  {
+    "level": 175,
+    "name": "Çifte Hazine",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00001750.asset",
+    "changed": false,
+    "notes": [],
+    "before": {
+      "width": 9,
+      "height": 9,
+      "moves": 36,
+      "active": 55,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 34,
+          "collectibleId": 0,
+          "amount": 12
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 5,
+          "collectibleId": 0,
+          "amount": 20
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 4,
+          "collectibleId": 0,
+          "amount": 9
+        }
+      ]
+    },
+    "after": {
+      "width": 9,
+      "height": 9,
+      "moves": 36,
+      "active": 55,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 34,
+          "collectibleId": 0,
+          "amount": 12,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 5,
+          "collectibleId": 0,
+          "amount": 20,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 4,
+          "collectibleId": 0,
+          "amount": 9,
+          "iconOverride": "{fileID: 0}"
+        }
+      ]
+    }
+  },
+  {
+    "level": 176,
+    "name": "Kızıl ve Yeşil",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00001760.asset",
+    "changed": true,
+    "notes": [
+      "İlk renk sandığı dersi aynı iki bantla 9×10→7×7; 80 yerine 39 açık çalışma hücresi."
+    ],
+    "before": {
+      "width": 9,
+      "height": 10,
+      "moves": 26,
+      "active": 90,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 72,
+          "collectibleId": 0,
+          "amount": 5
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 74,
+          "collectibleId": 0,
+          "amount": 5
+        }
+      ]
+    },
+    "after": {
+      "width": 7,
+      "height": 7,
+      "moves": 26,
+      "active": 49,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 72,
+          "collectibleId": 0,
+          "amount": 5,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 74,
+          "collectibleId": 0,
+          "amount": 5,
+          "iconOverride": "{fileID: 0}"
+        }
+      ]
+    }
+  },
+  {
+    "level": 177,
+    "name": "Zincir Atölyesi",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00001770.asset",
+    "changed": true,
+    "notes": [
+      "Beş hedefe sığan dolap/roket atölyesi; bedelsiz toplu patlama yerine bitişik sandık işi, orta geçiş seçimi."
+    ],
+    "before": {
+      "width": 9,
+      "height": 11,
+      "moves": 32,
+      "active": 99,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 27,
+          "collectibleId": 0,
+          "amount": 2
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 5,
+          "collectibleId": 0,
+          "amount": 26
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 25,
+          "collectibleId": 0,
+          "amount": 26
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 40,
+          "collectibleId": 0,
+          "amount": 6
+        }
+      ]
+    },
+    "after": {
+      "width": 9,
+      "height": 11,
+      "moves": 30,
+      "active": 92,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 27,
+          "collectibleId": 0,
+          "amount": 2,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 5,
+          "collectibleId": 0,
+          "amount": 30,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 25,
+          "collectibleId": 0,
+          "amount": 26,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 40,
+          "collectibleId": 0,
+          "amount": 8,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 38,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 0}",
+          "amount": 2
+        }
+      ]
+    }
+  },
+  {
+    "level": 178,
+    "name": "Renkli Çerçeve",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00001780.asset",
+    "changed": true,
+    "notes": [
+      "Renkli çerçevenin üstteki üç boş sırası çıktı; hedefler/hamleler korundu, başlangıç alanı kısaldı."
+    ],
+    "before": {
+      "width": 9,
+      "height": 11,
+      "moves": 28,
+      "active": 99,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 72,
+          "collectibleId": 0,
+          "amount": 6
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 74,
+          "collectibleId": 0,
+          "amount": 6
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 73,
+          "collectibleId": 0,
+          "amount": 6
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 71,
+          "collectibleId": 0,
+          "amount": 6
+        }
+      ]
+    },
+    "after": {
+      "width": 9,
+      "height": 8,
+      "moves": 28,
+      "active": 66,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 72,
+          "collectibleId": 0,
+          "amount": 6,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 74,
+          "collectibleId": 0,
+          "amount": 6,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 73,
+          "collectibleId": 0,
+          "amount": 6,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 71,
+          "collectibleId": 0,
+          "amount": 6,
+          "iconOverride": "{fileID: 0}"
+        }
+      ]
+    }
+  },
+  {
+    "level": 179,
+    "name": "Lazerli Restorasyon",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00001790.asset",
+    "changed": true,
+    "notes": [
+      "Super Hard düzeni/40 hamle korundu; altıncı tür hamster kalktı, lazerler beşinci hedefte açıkça gösterildi."
+    ],
+    "before": {
+      "width": 9,
+      "height": 11,
+      "moves": 40,
+      "active": 95,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 46,
+          "collectibleId": 0,
+          "amount": 95
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 56,
+          "collectibleId": 0,
+          "amount": 2
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 26,
+          "collectibleId": 0,
+          "amount": 4
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 70,
+          "collectibleId": 0,
+          "amount": 4
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 57,
+          "collectibleId": 0,
+          "amount": 4
+        }
+      ]
+    },
+    "after": {
+      "width": 9,
+      "height": 11,
+      "moves": 40,
+      "active": 95,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 46,
+          "collectibleId": 0,
+          "amount": 95,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 56,
+          "collectibleId": 0,
+          "amount": 2,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 26,
+          "collectibleId": 0,
+          "amount": 4,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 70,
+          "collectibleId": 0,
+          "amount": 4,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 65,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 0}",
+          "amount": 4
+        }
+      ]
+    }
+  },
+  {
+    "level": 180,
+    "name": "Onarım Kapısı",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00001800.asset",
+    "changed": true,
+    "notes": [
+      "Tarp altı ve yan çim alanı çamurda birleşti; geri sayımlı aletle boss dahil beş hedef ve uyumlu çamur baskısı.",
+      "Geri sayımlı alet mekaniği korundu: tek gri tür ve başlangıçta bir hedef. Rastgele baskı yalnız gösterilen türlerden. Beş slot için fazla aileler birleştirildi; boss HP/dalgalar/saldırı sayıları aynı."
+    ],
+    "before": {
+      "width": 9,
+      "height": 10,
+      "moves": 30,
+      "active": 74,
+      "goals": [
+        {
+          "targetType": 2,
+          "tileType": 0,
+          "obstacleId": 1,
+          "collectibleId": 2,
+          "amount": 520
+        }
+      ]
+    },
+    "after": {
+      "width": 9,
+      "height": 10,
+      "moves": 30,
+      "active": 74,
+      "goals": [
+        {
+          "targetType": 2,
+          "tileType": 0,
+          "obstacleId": 1,
+          "collectibleId": 2,
+          "amount": 520,
+          "iconOverride": "{fileID: 21300000, guid: bd8a2a2aabdf46fcabea5eb683bc76d9, type: 3}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 25,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 0}",
+          "amount": 18
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 47,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 0}",
+          "amount": 1
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 63,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 0}",
+          "amount": 2
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 68,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 0}",
+          "amount": 1
+        }
+      ]
+    }
+  },
+  {
+    "level": 181,
+    "name": "Fener Şenliği",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00001810.asset",
+    "changed": false,
+    "notes": [],
+    "before": {
+      "width": 9,
+      "height": 11,
+      "moves": 28,
+      "active": 81,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 75,
+          "collectibleId": 0,
+          "amount": 30
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 30,
+          "collectibleId": 0,
+          "amount": 21
+        }
+      ]
+    },
+    "after": {
+      "width": 9,
+      "height": 11,
+      "moves": 28,
+      "active": 81,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 75,
+          "collectibleId": 0,
+          "amount": 30,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 30,
+          "collectibleId": 0,
+          "amount": 21,
+          "iconOverride": "{fileID: 0}"
+        }
+      ]
+    }
+  },
+  {
+    "level": 182,
+    "name": "Mor Mercek",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00001820.asset",
+    "changed": true,
+    "notes": [
+      "Hedef dışı türler ve eksik miktarlar görünür hedeflere eklendi; maske/hamle/konumlar korundu."
+    ],
+    "before": {
+      "width": 9,
+      "height": 11,
+      "moves": 28,
+      "active": 87,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 46,
+          "collectibleId": 0,
+          "amount": 87
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 39,
+          "collectibleId": 0,
+          "amount": 31
+        }
+      ]
+    },
+    "after": {
+      "width": 9,
+      "height": 11,
+      "moves": 28,
+      "active": 87,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 46,
+          "collectibleId": 0,
+          "amount": 87,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 39,
+          "collectibleId": 0,
+          "amount": 31,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 59,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 0}",
+          "amount": 2
+        }
+      ]
+    }
+  },
+  {
+    "level": 183,
+    "name": "Boya İskelesi",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00001830.asset",
+    "changed": true,
+    "notes": [
+      "Orta hareketli bölge tek mor aile oldu; su deposunun ürettiği su dahil tüm yük beş hedefe sığar."
+    ],
+    "before": {
+      "width": 9,
+      "height": 11,
+      "moves": 29,
+      "active": 87,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 28,
+          "collectibleId": 0,
+          "amount": 12
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 63,
+          "collectibleId": 0,
+          "amount": 4
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 7,
+          "collectibleId": 0,
+          "amount": 9
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 52,
+          "collectibleId": 0,
+          "amount": 2
+        }
+      ]
+    },
+    "after": {
+      "width": 9,
+      "height": 11,
+      "moves": 29,
+      "active": 87,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 28,
+          "collectibleId": 0,
+          "amount": 12,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 63,
+          "collectibleId": 0,
+          "amount": 4,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 7,
+          "collectibleId": 0,
+          "amount": 18,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 52,
+          "collectibleId": 0,
+          "amount": 2,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 53,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 0}",
+          "amount": 16
+        }
+      ]
+    }
+  },
+  {
+    "level": 184,
+    "name": "Kargo Rıhtımı",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00001840.asset",
+    "changed": true,
+    "notes": [
+      "Kargo rıhtımının iki boş üst sırası kalktı; kapalı çıkışlar ve iki kargo kanadı korunur."
+    ],
+    "before": {
+      "width": 9,
+      "height": 11,
+      "moves": 28,
+      "active": 92,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 34,
+          "collectibleId": 0,
+          "amount": 4
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 40,
+          "collectibleId": 0,
+          "amount": 24
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 25,
+          "collectibleId": 0,
+          "amount": 12
+        }
+      ]
+    },
+    "after": {
+      "width": 9,
+      "height": 9,
+      "moves": 27,
+      "active": 76,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 34,
+          "collectibleId": 0,
+          "amount": 4,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 40,
+          "collectibleId": 0,
+          "amount": 24,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 25,
+          "collectibleId": 0,
+          "amount": 12,
+          "iconOverride": "{fileID: 0}"
+        }
+      ]
+    }
+  },
+  {
+    "level": 185,
+    "name": "Mühürlü Vitray",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00001850.asset",
+    "changed": true,
+    "notes": [
+      "Hard hamle/maske korundu; alt iki renk bölgesi tek sarı aile, çamur/tarp dahil toplam beş hedef."
+    ],
+    "before": {
+      "width": 9,
+      "height": 11,
+      "moves": 28,
+      "active": 81,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 25,
+          "collectibleId": 0,
+          "amount": 30
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 68,
+          "collectibleId": 0,
+          "amount": 1
+        }
+      ]
+    },
+    "after": {
+      "width": 9,
+      "height": 11,
+      "moves": 28,
+      "active": 81,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 25,
+          "collectibleId": 0,
+          "amount": 30,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 68,
+          "collectibleId": 0,
+          "amount": 1,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 71,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 0}",
+          "amount": 18
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 72,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 0}",
+          "amount": 6
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 74,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 0}",
+          "amount": 6
+        }
+      ]
+    }
+  },
+  {
+    "level": 186,
+    "name": "Fenerli Bent",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00001860.asset",
+    "changed": true,
+    "notes": [
+      "Kanal tanıtımının üst sağ boş terası kesildi; kaynak/çıkış ve fener sütunu aynı, 28→26 hamle."
+    ],
+    "before": {
+      "width": 9,
+      "height": 11,
+      "moves": 28,
+      "active": 99,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 76,
+          "collectibleId": 0,
+          "amount": 1
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 75,
+          "collectibleId": 0,
+          "amount": 24
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 28,
+          "collectibleId": 0,
+          "amount": 12
+        }
+      ]
+    },
+    "after": {
+      "width": 9,
+      "height": 11,
+      "moves": 26,
+      "active": 91,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 76,
+          "collectibleId": 0,
+          "amount": 1,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 75,
+          "collectibleId": 0,
+          "amount": 24,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 28,
+          "collectibleId": 0,
+          "amount": 12,
+          "iconOverride": "{fileID: 0}"
+        }
+      ]
+    }
+  },
+  {
+    "level": 187,
+    "name": "Çiçekli Pusula",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00001870.asset",
+    "changed": false,
+    "notes": [],
+    "before": {
+      "width": 9,
+      "height": 11,
+      "moves": 29,
+      "active": 59,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 69,
+          "collectibleId": 0,
+          "amount": 4
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 14,
+          "collectibleId": 0,
+          "amount": 8
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 30,
+          "collectibleId": 0,
+          "amount": 16
+        }
+      ]
+    },
+    "after": {
+      "width": 9,
+      "height": 11,
+      "moves": 29,
+      "active": 59,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 69,
+          "collectibleId": 0,
+          "amount": 4,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 14,
+          "collectibleId": 0,
+          "amount": 8,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 30,
+          "collectibleId": 0,
+          "amount": 16,
+          "iconOverride": "{fileID: 0}"
+        }
+      ]
+    }
+  },
+  {
+    "level": 188,
+    "name": "Boru Orgu",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00001880.asset",
+    "changed": true,
+    "notes": [
+      "Boru orgunun üç boş üst sırası kalktı; anahtar hedefi üreticileri de temsil eder, tüplerin uçları korunur."
+    ],
+    "before": {
+      "width": 9,
+      "height": 11,
+      "moves": 27,
+      "active": 99,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 26,
+          "collectibleId": 0,
+          "amount": 4
+        },
+        {
+          "targetType": 0,
+          "tileType": 9,
+          "obstacleId": 0,
+          "collectibleId": 0,
+          "amount": 16
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 30,
+          "collectibleId": 0,
+          "amount": 4
+        }
+      ]
+    },
+    "after": {
+      "width": 9,
+      "height": 8,
+      "moves": 26,
+      "active": 70,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 26,
+          "collectibleId": 0,
+          "amount": 4,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 0,
+          "tileType": 9,
+          "obstacleId": 0,
+          "collectibleId": 0,
+          "amount": 16,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 30,
+          "collectibleId": 0,
+          "amount": 4,
+          "iconOverride": "{fileID: 0}"
+        }
+      ]
+    }
+  },
+  {
+    "level": 189,
+    "name": "Dolaplı Geçit",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00001890.asset",
+    "changed": false,
+    "notes": [],
+    "before": {
+      "width": 9,
+      "height": 11,
+      "moves": 30,
+      "active": 83,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 27,
+          "collectibleId": 0,
+          "amount": 4
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 40,
+          "collectibleId": 0,
+          "amount": 10
+        },
+        {
+          "targetType": 2,
+          "tileType": 0,
+          "obstacleId": 0,
+          "collectibleId": 1,
+          "amount": 24
+        }
+      ]
+    },
+    "after": {
+      "width": 9,
+      "height": 11,
+      "moves": 30,
+      "active": 83,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 27,
+          "collectibleId": 0,
+          "amount": 4,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 40,
+          "collectibleId": 0,
+          "amount": 10,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 2,
+          "tileType": 0,
+          "obstacleId": 0,
+          "collectibleId": 1,
+          "amount": 24,
+          "iconOverride": "{fileID: 21300000, guid: d5c45b75a85134c80890a84f8f2852b4, type: 3}"
+        }
+      ]
+    }
+  },
+  {
+    "level": 190,
+    "name": "Kanyon Düellosu",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00001900.asset",
+    "changed": true,
+    "notes": [
+      "Düello 7 sütuna indi; kırmızı/yeşil/çamur/geri sayımlı alet ve boss beşlisi, baskı çamur hedefine bağlı.",
+      "Geri sayımlı alet mekaniği korundu: tek gri tür ve başlangıçta bir hedef. Rastgele baskı yalnız gösterilen türlerden. Beş slot için fazla aileler birleştirildi; boss HP/dalgalar/saldırı sayıları aynı."
+    ],
+    "before": {
+      "width": 9,
+      "height": 10,
+      "moves": 30,
+      "active": 86,
+      "goals": [
+        {
+          "targetType": 2,
+          "tileType": 0,
+          "obstacleId": 1,
+          "collectibleId": 2,
+          "amount": 560
+        }
+      ]
+    },
+    "after": {
+      "width": 7,
+      "height": 10,
+      "moves": 30,
+      "active": 70,
+      "goals": [
+        {
+          "targetType": 2,
+          "tileType": 0,
+          "obstacleId": 1,
+          "collectibleId": 2,
+          "amount": 560,
+          "iconOverride": "{fileID: 21300000, guid: bd8a2a2aabdf46fcabea5eb683bc76d9, type: 3}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 25,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 0}",
+          "amount": 8
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 47,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 0}",
+          "amount": 1
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 72,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 0}",
+          "amount": 6
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 74,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 0}",
+          "amount": 6
+        }
+      ]
+    }
+  },
+  {
+    "level": 191,
+    "name": "Boya Terasları",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00001910.asset",
+    "changed": false,
+    "notes": [],
+    "before": {
+      "width": 9,
+      "height": 11,
+      "moves": 28,
+      "active": 73,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 63,
+          "collectibleId": 0,
+          "amount": 4
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 76,
+          "collectibleId": 0,
+          "amount": 2
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 39,
+          "collectibleId": 0,
+          "amount": 8
+        }
+      ]
+    },
+    "after": {
+      "width": 9,
+      "height": 11,
+      "moves": 28,
+      "active": 73,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 63,
+          "collectibleId": 0,
+          "amount": 4,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 76,
+          "collectibleId": 0,
+          "amount": 2,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 39,
+          "collectibleId": 0,
+          "amount": 8,
+          "iconOverride": "{fileID: 0}"
+        }
+      ]
+    }
+  },
+  {
+    "level": 192,
+    "name": "İkiz Gölet Kalesi",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00001920.asset",
+    "changed": true,
+    "notes": [
+      "Hedef dışı türler ve eksik miktarlar görünür hedeflere eklendi; maske/hamle/konumlar korundu."
+    ],
+    "before": {
+      "width": 9,
+      "height": 10,
+      "moves": 32,
+      "active": 90,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 76,
+          "collectibleId": 0,
+          "amount": 2
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 69,
+          "collectibleId": 0,
+          "amount": 40
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 44,
+          "collectibleId": 0,
+          "amount": 23
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 75,
+          "collectibleId": 0,
+          "amount": 20
+        }
+      ]
+    },
+    "after": {
+      "width": 9,
+      "height": 10,
+      "moves": 32,
+      "active": 90,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 76,
+          "collectibleId": 0,
+          "amount": 2,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 69,
+          "collectibleId": 0,
+          "amount": 40,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 44,
+          "collectibleId": 0,
+          "amount": 23,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 75,
+          "collectibleId": 0,
+          "amount": 20,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 45,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 0}",
+          "amount": 18
+        }
+      ]
+    }
+  },
+  {
+    "level": 193,
+    "name": "Üç Mühürlü Geçit",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00001930.asset",
+    "changed": false,
+    "notes": [],
+    "before": {
+      "width": 9,
+      "height": 11,
+      "moves": 28,
+      "active": 95,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 64,
+          "collectibleId": 0,
+          "amount": 3
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 34,
+          "collectibleId": 0,
+          "amount": 6
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 40,
+          "collectibleId": 0,
+          "amount": 21
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 39,
+          "collectibleId": 0,
+          "amount": 9
+        }
+      ]
+    },
+    "after": {
+      "width": 9,
+      "height": 11,
+      "moves": 28,
+      "active": 95,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 64,
+          "collectibleId": 0,
+          "amount": 3,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 34,
+          "collectibleId": 0,
+          "amount": 6,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 40,
+          "collectibleId": 0,
+          "amount": 21,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 39,
+          "collectibleId": 0,
+          "amount": 9,
+          "iconOverride": "{fileID: 0}"
+        }
+      ]
+    }
+  },
+  {
+    "level": 194,
+    "name": "Çelik Kilit",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00001940.asset",
+    "changed": true,
+    "notes": [
+      "Yedi tür beşe indi: kırmızı kapak bölgesi, metal, Rodos, pusula, çamur. Kapaklar 2→1 başlangıç aşamasıyla bitirilebilir yükte."
+    ],
+    "before": {
+      "width": 9,
+      "height": 11,
+      "moves": 31,
+      "active": 74,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 25,
+          "collectibleId": 0,
+          "amount": 24
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 70,
+          "collectibleId": 0,
+          "amount": 2
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 56,
+          "collectibleId": 0,
+          "amount": 3
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 39,
+          "collectibleId": 0,
+          "amount": 16
+        }
+      ]
+    },
+    "after": {
+      "width": 9,
+      "height": 11,
+      "moves": 31,
+      "active": 74,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 25,
+          "collectibleId": 0,
+          "amount": 24,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 70,
+          "collectibleId": 0,
+          "amount": 2,
+          "iconOverride": "{fileID: 21300000, guid: e92dcda3082b4b11b1d0adaca71d3e48, type: 3}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 56,
+          "collectibleId": 0,
+          "amount": 3,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 39,
+          "collectibleId": 0,
+          "amount": 16,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 72,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 0}",
+          "amount": 24
+        }
+      ]
+    }
+  },
+  {
+    "level": 195,
+    "name": "Boyalı Akarsu",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00001950.asset",
+    "changed": true,
+    "notes": [
+      "Hedef dışı türler ve eksik miktarlar görünür hedeflere eklendi; maske/hamle/konumlar korundu."
+    ],
+    "before": {
+      "width": 9,
+      "height": 11,
+      "moves": 24,
+      "active": 86,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 63,
+          "collectibleId": 0,
+          "amount": 3
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 58,
+          "collectibleId": 0,
+          "amount": 34
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 7,
+          "collectibleId": 0,
+          "amount": 22
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 76,
+          "collectibleId": 0,
+          "amount": 4
+        }
+      ]
+    },
+    "after": {
+      "width": 9,
+      "height": 11,
+      "moves": 24,
+      "active": 86,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 63,
+          "collectibleId": 0,
+          "amount": 3,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 58,
+          "collectibleId": 0,
+          "amount": 34,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 7,
+          "collectibleId": 0,
+          "amount": 22,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 76,
+          "collectibleId": 0,
+          "amount": 4,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 42,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 0}",
+          "amount": 34
+        }
+      ]
+    }
+  },
+  {
+    "level": 196,
+    "name": "Basamaklı Arşiv",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00001960.asset",
+    "changed": true,
+    "notes": [
+      "Basamaklı arşivin iki bedelsiz üst sırası ve sağ üst köşesi kesildi; açılan her dolap yeni alan sağlar."
+    ],
+    "before": {
+      "width": 9,
+      "height": 11,
+      "moves": 26,
+      "active": 99,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 21,
+          "collectibleId": 0,
+          "amount": 6
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 27,
+          "collectibleId": 0,
+          "amount": 4
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 28,
+          "collectibleId": 0,
+          "amount": 16
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 25,
+          "collectibleId": 0,
+          "amount": 40
+        }
+      ]
+    },
+    "after": {
+      "width": 9,
+      "height": 9,
+      "moves": 26,
+      "active": 78,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 21,
+          "collectibleId": 0,
+          "amount": 6,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 27,
+          "collectibleId": 0,
+          "amount": 4,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 28,
+          "collectibleId": 0,
+          "amount": 16,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 25,
+          "collectibleId": 0,
+          "amount": 40,
+          "iconOverride": "{fileID: 0}"
+        }
+      ]
+    }
+  },
+  {
+    "level": 197,
+    "name": "Işık Merdiveni",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00001970.asset",
+    "changed": true,
+    "notes": [
+      "Hedef dışı türler ve eksik miktarlar görünür hedeflere eklendi; maske/hamle/konumlar korundu."
+    ],
+    "before": {
+      "width": 9,
+      "height": 11,
+      "moves": 32,
+      "active": 79,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 75,
+          "collectibleId": 0,
+          "amount": 24
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 40,
+          "collectibleId": 0,
+          "amount": 21
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 28,
+          "collectibleId": 0,
+          "amount": 9
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 44,
+          "collectibleId": 0,
+          "amount": 30
+        }
+      ]
+    },
+    "after": {
+      "width": 9,
+      "height": 11,
+      "moves": 32,
+      "active": 79,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 75,
+          "collectibleId": 0,
+          "amount": 24,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 40,
+          "collectibleId": 0,
+          "amount": 24,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 28,
+          "collectibleId": 0,
+          "amount": 9,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 44,
+          "collectibleId": 0,
+          "amount": 30,
+          "iconOverride": "{fileID: 0}"
+        }
+      ]
+    }
+  },
+  {
+    "level": 198,
+    "name": "Zümrüt Vitrin",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00001980.asset",
+    "changed": false,
+    "notes": [],
+    "before": {
+      "width": 9,
+      "height": 11,
+      "moves": 17,
+      "active": 76,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 27,
+          "collectibleId": 0,
+          "amount": 4
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 45,
+          "collectibleId": 0,
+          "amount": 8
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 29,
+          "collectibleId": 0,
+          "amount": 2
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 74,
+          "collectibleId": 0,
+          "amount": 16
+        }
+      ]
+    },
+    "after": {
+      "width": 9,
+      "height": 11,
+      "moves": 17,
+      "active": 76,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 27,
+          "collectibleId": 0,
+          "amount": 4,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 45,
+          "collectibleId": 0,
+          "amount": 8,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 29,
+          "collectibleId": 0,
+          "amount": 2,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 74,
+          "collectibleId": 0,
+          "amount": 16,
+          "iconOverride": "{fileID: 0}"
+        }
+      ]
+    }
+  },
+  {
+    "level": 199,
+    "name": "Deniz Kabuğu",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00001990.asset",
+    "changed": true,
+    "notes": [
+      "Hedef dışı türler ve eksik miktarlar görünür hedeflere eklendi; maske/hamle/konumlar korundu."
+    ],
+    "before": {
+      "width": 9,
+      "height": 11,
+      "moves": 26,
+      "active": 87,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 46,
+          "collectibleId": 0,
+          "amount": 87
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 39,
+          "collectibleId": 0,
+          "amount": 17
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 64,
+          "collectibleId": 0,
+          "amount": 1
+        }
+      ]
+    },
+    "after": {
+      "width": 9,
+      "height": 11,
+      "moves": 26,
+      "active": 87,
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 46,
+          "collectibleId": 0,
+          "amount": 87,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 39,
+          "collectibleId": 0,
+          "amount": 17,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 64,
+          "collectibleId": 0,
+          "amount": 1,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 28,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 0}",
+          "amount": 17
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 45,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 0}",
+          "amount": 4
+        }
+      ]
+    }
+  },
+  {
+    "level": 200,
+    "name": "Kanyon Köprüsü",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00002000.asset",
+    "changed": true,
+    "notes": [
+      "Kanyonun üst cepleri küçüldü; boss/mavi/yumurta/kalkan/geri sayımlı alet hedefleri atılan türlerle eşleşir.",
+      "Geri sayımlı alet mekaniği korundu: tek gri tür ve başlangıçta bir hedef. Rastgele baskı yalnız gösterilen türlerden. Beş slot için fazla aileler birleştirildi; boss HP/dalgalar/saldırı sayıları aynı."
+    ],
+    "before": {
+      "width": 9,
+      "height": 10,
+      "moves": 30,
+      "active": 84,
+      "goals": [
+        {
+          "targetType": 2,
+          "tileType": 0,
+          "obstacleId": 1,
+          "collectibleId": 2,
+          "amount": 580
+        }
+      ]
+    },
+    "after": {
+      "width": 9,
+      "height": 10,
+      "moves": 30,
+      "active": 78,
+      "goals": [
+        {
+          "targetType": 2,
+          "tileType": 0,
+          "obstacleId": 1,
+          "collectibleId": 2,
+          "amount": 580,
+          "iconOverride": "{fileID: 21300000, guid: bd8a2a2aabdf46fcabea5eb683bc76d9, type: 3}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 11,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 0}",
+          "amount": 18
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 35,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 0}",
+          "amount": 4
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 45,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 0}",
+          "amount": 2
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 47,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 0}",
+          "amount": 1
+        }
+      ]
+    }
+  },
+  {
+    "level": 201,
+    "name": "Guguk Bahçesi",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00002010.asset",
+    "changed": false,
+    "notes": [],
+    "before": {
+      "width": 9,
+      "height": 10,
+      "moves": 26,
+      "active": 88,
+      "goals": [
+        {
+          "targetType": 2,
+          "tileType": 0,
+          "obstacleId": 0,
+          "collectibleId": 3,
+          "amount": 50
+        }
+      ]
+    },
+    "after": {
+      "width": 9,
+      "height": 10,
+      "moves": 26,
+      "active": 88,
+      "goals": [
+        {
+          "targetType": 2,
+          "tileType": 0,
+          "obstacleId": 0,
+          "collectibleId": 3,
+          "amount": 50,
+          "iconOverride": "{fileID: 0}"
+        }
+      ]
+    }
+  },
+  {
+    "level": 202,
+    "name": "Boyalı Kuş Avlusu",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00002020.asset",
+    "changed": true,
+    "notes": [
+      "Halka avlunun üst tacı daraldı; iki sıralı zorunlu çamur işi ile kuş ritmi boya kasaları arasında bölünür."
+    ],
+    "before": {
+      "width": 9,
+      "height": 9,
+      "moves": 26,
+      "active": 63,
+      "goals": [
+        {
+          "targetType": 2,
+          "tileType": 0,
+          "obstacleId": 0,
+          "collectibleId": 3,
+          "amount": 18
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 63,
+          "collectibleId": 0,
+          "amount": 2
+        }
+      ]
+    },
+    "after": {
+      "width": 9,
+      "height": 9,
+      "moves": 25,
+      "active": 59,
+      "goals": [
+        {
+          "targetType": 2,
+          "tileType": 0,
+          "obstacleId": 0,
+          "collectibleId": 3,
+          "amount": 18,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 63,
+          "collectibleId": 0,
+          "amount": 2,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 25,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 0}",
+          "amount": 10
+        }
+      ]
+    }
+  },
+  {
+    "level": 203,
+    "name": "Kuşlu Sevkiyat",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00002030.asset",
+    "changed": true,
+    "notes": [
+      "Duvar sonrası iki kargo ayağında çamur işi eklendi; kuş/duvar/kargo açılışını tek hamle zinciriyle bitirmek yetmez."
+    ],
+    "before": {
+      "width": 9,
+      "height": 10,
+      "moves": 27,
+      "active": 62,
+      "goals": [
+        {
+          "targetType": 2,
+          "tileType": 0,
+          "obstacleId": 0,
+          "collectibleId": 3,
+          "amount": 12
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 34,
+          "collectibleId": 0,
+          "amount": 4
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 55,
+          "collectibleId": 0,
+          "amount": 1
+        }
+      ]
+    },
+    "after": {
+      "width": 9,
+      "height": 10,
+      "moves": 25,
+      "active": 62,
+      "goals": [
+        {
+          "targetType": 2,
+          "tileType": 0,
+          "obstacleId": 0,
+          "collectibleId": 3,
+          "amount": 12,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 34,
+          "collectibleId": 0,
+          "amount": 4,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 55,
+          "collectibleId": 0,
+          "amount": 1,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 25,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 0}",
+          "amount": 8
+        }
+      ]
+    }
+  },
+  {
+    "level": 204,
+    "name": "Kuşlu Akarsu",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00002040.asset",
+    "changed": true,
+    "notes": [
+      "S kıyısı korundu; dip fener grubu 3×3 oldu, hedef 6→9 ve 28→26 hamle."
+    ],
+    "before": {
+      "width": 9,
+      "height": 11,
+      "moves": 28,
+      "active": 74,
+      "goals": [
+        {
+          "targetType": 2,
+          "tileType": 0,
+          "obstacleId": 0,
+          "collectibleId": 3,
+          "amount": 16
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 76,
+          "collectibleId": 0,
+          "amount": 1
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 75,
+          "collectibleId": 0,
+          "amount": 6
+        }
+      ]
+    },
+    "after": {
+      "width": 9,
+      "height": 11,
+      "moves": 26,
+      "active": 74,
+      "goals": [
+        {
+          "targetType": 2,
+          "tileType": 0,
+          "obstacleId": 0,
+          "collectibleId": 3,
+          "amount": 16,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 76,
+          "collectibleId": 0,
+          "amount": 1,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 75,
+          "collectibleId": 0,
+          "amount": 9,
+          "iconOverride": "{fileID: 0}"
+        }
+      ]
+    }
+  },
+  {
+    "level": 205,
+    "name": "Mühürlü Kuş Parkı",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00002050.asset",
+    "changed": true,
+    "notes": [
+      "Hedef dışı türler ve eksik miktarlar görünür hedeflere eklendi; maske/hamle/konumlar korundu."
+    ],
+    "before": {
+      "width": 9,
+      "height": 11,
+      "moves": 27,
+      "active": 77,
+      "goals": [
+        {
+          "targetType": 2,
+          "tileType": 0,
+          "obstacleId": 0,
+          "collectibleId": 3,
+          "amount": 24
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 64,
+          "collectibleId": 0,
+          "amount": 2
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 39,
+          "collectibleId": 0,
+          "amount": 8
+        }
+      ]
+    },
+    "after": {
+      "width": 9,
+      "height": 11,
+      "moves": 27,
+      "active": 77,
+      "goals": [
+        {
+          "targetType": 2,
+          "tileType": 0,
+          "obstacleId": 0,
+          "collectibleId": 3,
+          "amount": 24,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 64,
+          "collectibleId": 0,
+          "amount": 2,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 39,
+          "collectibleId": 0,
+          "amount": 8,
+          "iconOverride": "{fileID: 0}"
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 38,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 0}",
+          "amount": 1
+        }
+      ]
+    }
+  }
+]

@@ -36,6 +36,8 @@ public static class LivesRefillOffer
             closeLabel ?? GameLocalization.Get("common_close"),
             null,
             defaultFrame: true);
+        RuntimeChoicePopup.SetTitleArc(15f);   // kullanıcı ayarı (2026-10-27): "Canın Bitti" başlığı 15°
+        RuntimeChoicePopup.NudgeTitle(22f);    // bantta aşağıda kalıyordu → ortaya
     }
 
     private static void BuyPack(int packAmount, int packCost, Action onLivesAdded)

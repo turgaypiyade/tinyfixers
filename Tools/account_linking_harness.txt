@@ -1,0 +1,115 @@
+using System;using System.Linq;using System.Collections;using System.Collections.Generic;using System.IO;using System.Reflection;using System.Threading.Tasks;using System.Security.Cryptography;using System.Text;
+public enum RuntimeInitializeLoadType {AfterSceneLoad}
+public class RuntimeInitializeOnLoadMethodAttribute:Attribute {public RuntimeInitializeOnLoadMethodAttribute(RuntimeInitializeLoadType t){}}
+public class MonoBehaviour {public static void DontDestroyOnLoad(object o){}public static List<IEnumerator> retries=new List<IEnumerator>();public object StartCoroutine(IEnumerator e){retries.Add(e);return null;}}
+public class GameObject {public GameObject(string n){}public T AddComponent<T>(){var value=(T)Activator.CreateInstance(typeof(T),true);typeof(T).GetMethod("Awake",BindingFlags.NonPublic|BindingFlags.Instance)?.Invoke(value,null);return value;}}
+public class WaitForSecondsRealtime {public WaitForSecondsRealtime(float t){}}
+public static class Time {public static float unscaledDeltaTime=0.01f;}
+public static class Application {public static string persistentDataPath;}
+public static class JsonUtility {public static string ToJson(object o)=>new System.Web.Script.Serialization.JavaScriptSerializer().Serialize(o);}
+public static class SceneManager {public static int loads;public static void LoadScene(string s){loads++;}}
+public static class Debug {public static void LogWarning(object o){} }
+public static class GameDiagnostics {public static bool Backend=false;}
+public static class RuntimeSimulationSession {public static bool IsActive;}
+public static class Mathf {public static int Max(int a,int b)=>Math.Max(a,b);public static int Min(int a,int b)=>Math.Min(a,b);}
+public static class GameLocalization {public static string Get(string s)=>s;}
+public static class PlayerPrefs {
+ public static Dictionary<string,object> data=new Dictionary<string,object>();public static int saves;
+ public static bool HasKey(string k)=>data.ContainsKey(k);public static int GetInt(string k,int d=0)=>data.ContainsKey(k)?(int)data[k]:d;
+ public static string GetString(string k,string d="")=>data.ContainsKey(k)?(string)data[k]:d;
+ public static void SetInt(string k,int v)=>data[k]=v;public static void SetString(string k,string v)=>data[k]=v;
+ public static void DeleteKey(string k)=>data.Remove(k);public static void Save(){saves++;}
+}
+public static class PlayerWallet {public static event Action<int> OnCoinsChanged,OnTotalStarsChanged,OnTotalScoreChanged;}
+public static class PlayerProfile {public static event Action OnChanged;}
+public static class FriendState {public static event Action OnChanged;public static int reloads;public static void ReloadFromPrefs(){reloads++;}}
+public static class LivesManager {public static int reloads;public static void ReloadFromPrefs(){reloads++;}}
+public static class BackendServices {public static int resets;public static void ResetTeam(){resets++;}}
+public static class WonderProgress {public static event Action OnBackgroundChanged;}
+public sealed class ProgressEventService {public static ProgressEventService Instance;public void ReloadFromPrefs(){}}
+public static class MusicState {public static void ReloadFromPrefs(){}}
+public static class PlayerDirectoryService {public static void UpsertIfChanged(){}}
+public static class LevelAttemptStats {public static bool HasActiveAttempt;}
+public static class LevelTelemetryStore {public static string owner;public static void ResetForAccount(string uid){owner=uid;}}
+public static class PlayerStatsCloudReporter {public static void ResetForAccount(){}}
+public static class CloudSaveManifest {
+ public const string PendingProgressResetKey="progress_reset_pending";public static long ProgressResetRevision=>0;
+ public static long ReadProgressResetRevision(IDictionary<string,object> d)=>0;
+ public static Dictionary<string,object> Collect(){var d=new Dictionary<string,object>();foreach(var k in new[]{"current_level","player_coins","player_total_stars","player_total_score","player_name","friends_real","iap_processed_transactions"})if(PlayerPrefs.HasKey(k))d[k]=PlayerPrefs.data[k] is int n?(object)(long)n:PlayerPrefs.data[k];return d;}
+ public static void Apply(IDictionary<string,object> d){foreach(var kv in d){if(kv.Value is long l)PlayerPrefs.SetInt(kv.Key,(int)l);else if(kv.Value is int i)PlayerPrefs.SetInt(kv.Key,i);else if(kv.Value is string s)PlayerPrefs.SetString(kv.Key,s);}PlayerPrefs.Save();}
+ public static bool ShouldRestoreProgress(IDictionary<string,object> d,long cloud,int local,bool force,bool editor)=>force||(!editor&&cloud>local);
+ public static void BeginProgressReset(int n){}
+}
+public enum Source {Default,Server,Cache}
+public static class SetOptions {public static object MergeAll=new object();public static object MergeFields(params string[] p)=>new object();}
+public static class FieldValue {public static object ServerTimestamp=new object();}
+public class DocumentSnapshot {public bool Exists=true;public Dictionary<string,object> data;public bool TryGetValue<T>(string k,out T value){object raw;if(data!=null&&data.TryGetValue(k,out raw)&&raw is T){value=(T)raw;return true;}value=default(T);return false;}}
+public class CollectionReference {public string path;public CollectionReference(string p){path=p;}public DocumentReference Document(string id)=>new DocumentReference(path+"/"+id);}
+public class DocumentReference {public string path;public DocumentReference(string p){path=p;}public CollectionReference Collection(string p)=>new CollectionReference(path+"/"+p);public Task<DocumentSnapshot> GetSnapshotAsync(Source source=Source.Default)=>FirebaseFirestore.Read(path,source);public Task SetAsync(Dictionary<string,object> d,object opts)=>FirebaseFirestore.Write(path,d);}
+public class FirebaseFirestore {
+ public static FirebaseFirestore DefaultInstance=new FirebaseFirestore();public CollectionReference Collection(string p)=>new CollectionReference(p);
+ public static Dictionary<string,Dictionary<string,object>> docs=new Dictionary<string,Dictionary<string,object>>();public static List<string> writes=new List<string>();public static List<Source> reads=new List<Source>();public static bool failWrite,failRead;
+ public static Task Write(string p,Dictionary<string,object> d){if(failWrite)return Task.FromException(new Exception("write failed"));writes.Add(p);docs[p]=d;return Task.CompletedTask;}
+ public static Task<DocumentSnapshot> Read(string p,Source source){reads.Add(source);if(failRead)return Task.FromException<DocumentSnapshot>(new Exception("offline"));return Task.FromResult(docs.ContainsKey(p)?new DocumentSnapshot{data=docs[p]}:new DocumentSnapshot{Exists=false});}
+}
+public enum AuthError {CredentialAlreadyInUse=1,EmailAlreadyInUse=2,NetworkRequestFailed=3,InternalError=4}
+public class FirebaseException:Exception {public int ErrorCode;public FirebaseException(AuthError code,string m="failed"):base(m){ErrorCode=(int)code;}}
+public class Credential {public string ProviderId="google.com";public bool IsValid()=>true;}
+public class UserInfo {public Credential UpdatedCredential;}
+public class FirebaseAccountLinkException:FirebaseException {public UserInfo UserInfo;public FirebaseAccountLinkException(Credential next):base(AuthError.CredentialAlreadyInUse){UserInfo=new UserInfo{UpdatedCredential=next};}}
+public class ProviderInfo {public string ProviderId;}
+public class AuthResult {public FirebaseUser User;}
+public class FirebaseUser {public string UserId;public bool IsAnonymous=true;public List<ProviderInfo> ProviderData=new List<ProviderInfo>();public int links;public Task<AuthResult> LinkWithCredentialAsync(Credential c){links++;var error=FirebaseAuth.nextLinkError;FirebaseAuth.nextLinkError=null;if(error!=null)return Task.FromException<AuthResult>(error);IsAnonymous=false;ProviderData.Add(new ProviderInfo{ProviderId=c.ProviderId});return Task.FromResult(new AuthResult{User=this});}}
+public class FirebaseAuth {
+ public static FirebaseAuth DefaultInstance=new FirebaseAuth();public FirebaseUser CurrentUser;
+ public static Exception nextLinkError;public static bool failSignIn;public static int signIns;public static FirebaseUser destination;public static Action onSignIn;
+ public Task<FirebaseUser> SignInWithCredentialAsync(Credential c){signIns++;onSignIn?.Invoke();if(failSignIn)return Task.FromException<FirebaseUser>(new Exception("sign in failed"));CurrentUser=destination;return Task.FromResult(CurrentUser);}
+}
+public static class FirebaseAuthService {
+ public static bool IsReady;public static string UserId;public static FirebaseUser CurrentUser=>FirebaseAuth.DefaultInstance.CurrentUser;
+ static Action onReady;public static event Action OnReady {add{onReady+=value;if(IsReady)value();}remove{onReady-=value;}}
+ public static void Ready(FirebaseUser u){FirebaseAuth.DefaultInstance.CurrentUser=u;Complete(u);}
+ /* AUTH SESSION METHODS */
+}
+public static class Extensions {
+ public static Queue<Action> queue=new Queue<Action>();
+ public static void ContinueWithOnMainThread(Task task,Action<Task> action){queue.Enqueue(()=>action(task));}
+ public static void ContinueWithOnMainThread<T>(Task<T> task,Action<Task<T>> action){queue.Enqueue(()=>action(task));}
+ public static void Pump(){int guard=0;while(queue.Count>0){if(++guard>150)throw new Exception("callback loop");queue.Dequeue()();}}
+}
+/* CURRENCY */
+/* LOCAL DATA */
+/* CLOUD SAVE */
+/* AUTH LINK */
+/* NONCE */
+int checks=0;Action<bool,string> Check=(ok,why)=>{checks++;if(!ok)throw new Exception(why);};
+Action Pump=()=>Extensions.Pump();
+Application.persistentDataPath=Path.Combine(Path.GetTempPath(),"tinyfixers-auth-regression-"+Guid.NewGuid().ToString("N"));
+var sourceUser=new FirebaseUser{UserId="source"};FirebaseAuthService.Ready(sourceUser);
+FirebaseFirestore.docs["users/source/save/main"]=new Dictionary<string,object>{{"level",50L},{"data",new Dictionary<string,object>{{"current_level",50L},{"player_coins",900L},{"player_total_stars",12L},{"player_name","Source"},{"friends_real","source-friend"}}}};
+typeof(FirebaseCloudSaveService).GetMethod("Bootstrap",BindingFlags.NonPublic|BindingFlags.Static).Invoke(null,null);Pump();
+Check(FirebaseCloudSaveService.RestoreResolved&&LocalAccountData.Owner=="source","boot binds local ownership after restore");
+int success=0,conflicts=0,canceled=0,failures=0;Credential collision=null;
+AuthLinkService.OnLinked+=p=>success++;AuthLinkService.OnLinkConflict+=(p,c)=>{conflicts++;collision=c;};AuthLinkService.OnCanceled+=()=>canceled++;AuthLinkService.OnLinkFailed+=(p,m)=>failures++;
+AuthLinkService.GoogleTokenProvider=c=>{c(null,null);c(new Credential(),null);};AuthLinkService.Link(AuthLinkService.Provider.Google);Pump();Check(canceled==1&&sourceUser.links==0&&!AuthLinkService.IsBusy,"cancel is quiet and duplicate callbacks cannot link");
+AuthLinkService.GoogleTokenProvider=c=>c(new Credential(),null);AuthLinkService.Link(AuthLinkService.Provider.Google);Pump();Check(success==1&&FirebaseAuthService.UserId=="source","link preserves UID and completes once");int links=sourceUser.links;AuthLinkService.Link(AuthLinkService.Provider.Google);Check(sourceUser.links==links,"already-linked provider does not show another provider UI");
+sourceUser.ProviderData.Clear();var original=new Credential();var updated=new Credential();FirebaseAuth.nextLinkError=new FirebaseAccountLinkException(updated);AuthLinkService.GoogleTokenProvider=c=>c(original,null);AuthLinkService.Link(AuthLinkService.Provider.Google);Pump();Check(conflicts==1&&collision==updated,"Apple-style replacement credential is retained on collision");
+int before=FirebaseAuth.signIns;AuthLinkService.SwitchToExisting(AuthLinkService.Provider.Google,original);Pump();Check(FirebaseAuth.signIns==before,"stale single-use credential cannot switch account");
+LevelAttemptStats.HasActiveAttempt=true;AuthLinkService.SwitchToExisting(AuthLinkService.Provider.Google,updated);Pump();Check(FirebaseAuth.signIns==before,"cannot replace identity in an active level");LevelAttemptStats.HasActiveAttempt=false;
+FirebaseFirestore.failWrite=true;AuthLinkService.SwitchToExisting(AuthLinkService.Provider.Google,updated);Pump();Check(FirebaseAuth.signIns==before&&FirebaseAuthService.UserId=="source"&&!AuthLinkService.IsBusy,"failed backup prevents auth switch and preserves playable source");FirebaseFirestore.failWrite=false;
+PlayerPrefs.SetString("settings_sound","off");PlayerPrefs.SetString("iap_processed_transactions","source-receipt");
+FirebaseAuth.destination=new FirebaseUser{UserId="target",IsAnonymous=false};
+FirebaseFirestore.docs["users/target/save/main"]=new Dictionary<string,object>{{"level",3L},{"data",new Dictionary<string,object>{{"current_level",3L},{"player_coins",20L},{"player_total_stars",2L},{"iap_processed_transactions","target-receipt"}}}};
+FirebaseAuth.onSignIn=()=>{Check(!FirebaseAuthService.IsReady&&!FirebaseCloudSaveService.RestoreResolved,"all upload gates close before SDK changes identity");Check((long)((Dictionary<string,object>)FirebaseFirestore.docs["users/source/save/main"]["data"])["current_level"]==50L,"source acknowledged before changing identity");FirebaseFirestore.failRead=true;};
+AuthLinkService.SwitchToExisting(AuthLinkService.Provider.Google,updated);Pump();
+Check(AuthLinkService.IsBusy&&!FirebaseCloudSaveService.RestoreResolved,"network failure keeps target writes gated and retry pending");Check(PlayerPrefs.GetInt("current_level")==50,"source data retained until target server read succeeds");Check(!FirebaseFirestore.writes.Contains("users/target/save/main"),"old source progress never pushed to target while target read fails");Check(LocalAccountData.IsSwitchPending,"switch marker survives process restart");Check(FirebaseFirestore.reads.Last()==Source.Server,"different UID requires authoritative server read");
+FirebaseFirestore.failRead=false;typeof(FirebaseCloudSaveService).GetMethod("StartRestore",BindingFlags.NonPublic|BindingFlags.Static).Invoke(null,null);Pump();
+Check(FirebaseAuthService.UserId=="target"&&LocalAccountData.Owner=="target","SDK and shared identity agree after restore");Check(!AuthLinkService.IsBusy&&FirebaseCloudSaveService.RestoreResolved&&!LocalAccountData.IsSwitchPending,"gates reopen only after replacement completes");Check(PlayerPrefs.GetInt("current_level")==3,"target lower progress replaces higher source without merging");Check(PlayerPrefs.GetInt("player_coins")==20&&PlayerPrefs.GetInt("player_total_stars")==2,"target wallet excludes source wallet and offline deltas");Check(!PlayerPrefs.HasKey("player_name")&&!PlayerPrefs.HasKey("friends_real"),"missing target fields cannot retain source identity or friends");Check(PlayerPrefs.GetString("settings_sound")=="off","device preferences preserved");Check(PlayerPrefs.GetString("iap_processed_transactions").Split('|').OrderBy(x=>x).SequenceEqual(new[]{"source-receipt","target-receipt"}),"device purchase receipts remain deduplicated across identities");Check(FriendState.reloads==1&&LivesManager.reloads==1&&BackendServices.resets==1,"account-dependent caches reset once");Check(LevelTelemetryStore.owner=="target","telemetry rebound without carrying old stream");Check(SceneManager.loads==1,"menu reload follows a completed restore");Check(Directory.GetFiles(Path.Combine(Application.persistentDataPath,"account-recovery"),"*.json").Length==1,"source recovery copy remains device-local");
+var archived=File.ReadAllText(Directory.GetFiles(Path.Combine(Application.persistentDataPath,"account-recovery"),"*.json")[0]);Check(archived.Contains("Source")&&archived.Contains("source-friend")&&!archived.Contains("accessToken"),"recovery copy contains source game data, never credentials");
+// A textual error that resembles a collision must never authorize account replacement.
+FirebaseAuthService.CurrentUser.ProviderData.Clear();FirebaseAuth.nextLinkError=new FirebaseException(AuthError.InternalError,"already in use");int oldConflicts=conflicts;AuthLinkService.Link(AuthLinkService.Provider.Google);Pump();Check(conflicts==oldConflicts&&!AuthLinkService.IsBusy,"only typed collision errors permit switch confirmation");
+FirebaseAuthService.IsReady=false;links=FirebaseAuthService.CurrentUser.links;AuthLinkService.Link(AuthLinkService.Provider.Google);Check(FirebaseAuthService.CurrentUser.links==links,"auth not ready never invokes provider or SDK");FirebaseAuthService.IsReady=true;
+RuntimeSimulationSession.IsActive=true;Check(!AuthLinkService.CanStart,"simulation cannot open account login");RuntimeSimulationSession.IsActive=false;
+Check(AuthNonce.Sha256("abc")=="ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad","nonce hash matches SHA-256 known answer");var nonces=new HashSet<string>();for(int i=0;i<256;i++)nonces.Add(AuthNonce.Create());Check(nonces.Count==256&&nonces.All(n=>n.Length==43),"fresh 256-bit URL-safe nonce per request");
+Directory.Delete(Application.persistentDataPath,true);
+Console.WriteLine("PASS: "+checks+" account-link/ownership/backup/restore regressions; SDK doubled, no real account or cloud writes.");

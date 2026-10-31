@@ -116,6 +116,7 @@ public class PulsePulseExplosionVfx : MonoBehaviour
     [SerializeField] private Color sparkColorB = new Color(1.00f, 0.20f, 0.05f, 1f);
 
     private Animator animator;
+    private RectTransform chargeContainer;
     private int _crackBaseIdx = -1;
     private int _crackOverlayIdx = -1;
 
@@ -150,6 +151,14 @@ public class PulsePulseExplosionVfx : MonoBehaviour
         StartCoroutine(CoCharge());
     }
 
+    private void OnDisable()
+    {
+        StopAllCoroutines();
+        UiFxPool.ReleaseChargeSparks(transform);
+        if (chargeContainer != null) Destroy(chargeContainer.gameObject);
+        chargeContainer = null;
+    }
+
     public void PlayStreaks()
     {
         // Geriye uyumluluk — Start() zaten başlatıyor
@@ -163,7 +172,7 @@ public class PulsePulseExplosionVfx : MonoBehaviour
         var parent = transform as RectTransform;
         if (!parent) yield break;
 
-        var container = CreateContainer(parent);
+        var container = chargeContainer = CreateContainer(parent);
 
         // Glow (arkada)
         Image glowImg = null;
@@ -315,7 +324,9 @@ public class PulsePulseExplosionVfx : MonoBehaviour
             UpdateCrackFireOverlay(crackFireImg, crackFireOverlayImg, totalElapsed / chargeDuration, totalElapsed);
         });
 
+        UiFxPool.ReleaseChargeSparks(transform);
         Destroy(container.gameObject);
+        chargeContainer = null;
     }
 
     // ────────────────────────────────────────────────
@@ -680,7 +691,8 @@ public class PulsePulseExplosionVfx : MonoBehaviour
 
         // Havuzdan: şarj boyunca ~0.018 sn'de bir kıvılcım doğuyor (bomba başına saniyede 55+);
         // PulseCore combo/zincirinde birkaç bomba aynı anda → new GameObject/Destroy fırtınası olmasın.
-        var img = UiVfxPool.RentImage(FuseSparkPoolKey, parentBombRt, "_FuseSpark");
+        var img = UiVfxPool.RentImage(UiFxPool.ChargeSparkKey, parentBombRt, "_FuseSpark");
+        if (img == null) return;
         var sparkRt = img.rectTransform;
         sparkRt.SetAsLastSibling();
 
@@ -701,49 +713,8 @@ public class PulsePulseExplosionVfx : MonoBehaviour
         }
         img.color = baseCol;
 
-        StartCoroutine(CoAnimateChargeSpark(sparkRt, img, size));
+        UiFxPool.TrackChargeSpark(img, transform, sparkLifetime, size);
     }
-
-    private IEnumerator CoAnimateChargeSpark(RectTransform sparkRt, Image img, float baseSize)
-    {
-        if (sparkRt == null || img == null) yield break;
-
-        Vector2 startPos = sparkRt.anchoredPosition;
-        // Fitilden yukarı ve hafif dışarı doğru kıvılcım savrulması
-        Vector2 drift = (Vector2.up * 1.6f + Random.insideUnitCircle).normalized * Random.Range(12f, 30f);
-        float elapsed = 0f;
-
-        while (elapsed < sparkLifetime)
-        {
-            if (sparkRt == null || img == null) yield break;
-
-            elapsed += Time.deltaTime;
-            float k = elapsed / sparkLifetime;
-
-            sparkRt.anchoredPosition = startPos + drift * k;
-
-            // Hızlı parlama, sonra sönme
-            float alpha = k < 0.2f
-                ? k / 0.2f
-                : 1f - (k - 0.2f) / 0.8f;
-
-            var c = img.color;
-            c.a = Mathf.Clamp01(alpha);
-            img.color = c;
-
-            // Boyut dalgalanması
-            float scale = Mathf.Sin(k * Mathf.PI);
-            sparkRt.sizeDelta = Vector2.one * (baseSize * Mathf.Lerp(0.45f, 1.15f, scale));
-
-            yield return null;
-        }
-
-        if (sparkRt != null)
-            UiVfxPool.Return(FuseSparkPoolKey, sparkRt.gameObject, FuseSparkPoolMax);
-    }
-
-    private const string FuseSparkPoolKey = "PulseFuseSpark";
-    private const int FuseSparkPoolMax = 256;
 
     // ────────────────────────────────────────────────
     //  Utility

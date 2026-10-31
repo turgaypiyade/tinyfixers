@@ -216,6 +216,37 @@ public static class FirebaseTeamCloud
 
     // ── yardımcılar ─────────────────────────────────────────────────
 
+    private static string lastProfileSignature;
+    private static bool profileWriteInFlight;
+
+    /// <summary>Rename the current member without resetting joinedAt or membership counts.</summary>
+    public static void SyncSelfProfileIfChanged()
+    {
+        if (RuntimeSimulationSession.IsActive || !FirebaseAuthService.IsReady
+            || !FirebaseCloudSaveService.RestoreResolved || FirebaseCloudSaveService.SuspendForDeletion
+            || !PlayerTeamState.HasTeam || string.IsNullOrEmpty(PlayerTeamState.TeamId)
+            || profileWriteInFlight) return;
+        string uid = FirebaseAuthService.UserId, teamId = PlayerTeamState.TeamId;
+        string name = PlayerProfile.PlayerName;
+        string signature = $"{uid}|{teamId}|{name}";
+        if (signature == lastProfileSignature) return;
+        profileWriteInFlight = true;
+        TeamDoc(teamId).Collection("members").Document(uid)
+            .SetAsync(new Dictionary<string, object> { { "name", name } }, SetOptions.MergeAll)
+            .ContinueWithOnMainThread(task =>
+            {
+                profileWriteInFlight = false;
+                if (task.IsFaulted || task.IsCanceled)
+                {
+                    if (GameDiagnostics.Backend)
+                        Debug.LogWarning($"[TeamCloud] profile sync deferred: {task.Exception?.GetBaseException().Message}");
+                    return;
+                }
+                lastProfileSignature = signature;
+                SyncSelfProfileIfChanged();
+            });
+    }
+
     private static void AddSelfMember(DocumentReference teamDoc)
     {
         if (!FirebaseAuthService.IsReady) return;

@@ -11,6 +11,9 @@ public class TopHudGoalSlot : MonoBehaviour
     [SerializeField] private Vector2 largeIconSize = new Vector2(95f, 95f);
 
     private static readonly Color CountOutline = new Color(0.20f, 0.08f, 0.10f, 1f);
+    // Kullanıcı önerisi (2026-10-27): gölge x'te sağa, y'de aşağı — rakam krem zeminden kalksın.
+    private static readonly Color CountShadow = new Color(0.12f, 0.04f, 0.05f, 1f);
+    private static readonly Vector2 CountShadowOffset = new Vector2(0.45f, -0.6f);
 
     /// <summary>
     /// YALNIZ oyun içi HUD: büyük ikon + net, konturlu sayı. Prefab (GoalSlot) Level öncesi pencerede de
@@ -20,12 +23,17 @@ public class TopHudGoalSlot : MonoBehaviour
     {
         ApplyIconSize(iconSize);
         if (countText == null) return;
-        countText.fontSize = countFontSize;
-        if (countText.enableAutoSizing) countText.fontSizeMax = countFontSize;
+        GameNumberFont.Apply(countText, scaleSize: false);   // geri alınabilir: Resources/GameNumberFont
+        countText.fontSize = GameNumberFont.Size(countFontSize);
+        if (countText.enableAutoSizing) countText.fontSizeMax = countText.fontSize;
         // Fontun yumuşak konturlu (buğulu) varsayılan materyali yerine net materyal + keskin koyu kontur.
         CrispTextMaterial.Apply(countText);
-        TmpOutline.Apply(countText, 0.28f, CountOutline);
+        TmpOutline.Apply(countText, 0.28f, CountOutline, CountShadow, CountShadowOffset);
     }
+
+    /// <summary>Sayıyı oyun sayı fontuna geçirir; prefab'ın görünümü (renk/kontur) korunur. HUD dışı kullanım
+    /// (PreLevel önizlemesi) için — HUD zaten ApplyHudStyle'da geçirir. Yeni örnekte bir kez çağrılır.</summary>
+    public void ApplyNumberFont() => GameNumberFont.Apply(countText);
 
     public void Setup(Sprite sprite, int remaining, bool useLargeIcon = false)
     {
@@ -54,9 +62,14 @@ public class TopHudGoalSlot : MonoBehaviour
             Mathf.Max(1f, size.y));
     }
 
+    private int _lastRemaining = -1;
+
     public void SetRemaining(int remaining)
     {
         bool completed = remaining <= 0;
+        // Sayaç oyun içinde 0'a indi (yalnız >0 → 0 geçişi; kurulum / zaten bitmiş hedef ses çalmaz).
+        if (completed && _lastRemaining > 0) GameEventSfx.PlayGoalComplete();
+        _lastRemaining = remaining;
 
         if (countText != null)
         {

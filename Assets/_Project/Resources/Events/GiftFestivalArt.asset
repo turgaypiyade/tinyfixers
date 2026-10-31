@@ -1,0 +1,58 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a216a5031bf794091aed415453041210, type: 3}
+  m_Name: GiftFestivalArt
+  m_EditorClassIdentifier: Assembly-CSharp::GiftFestivalArt
+  menuLogo: {fileID: 21300000, guid: 682f0ae8afb36413aa7d79d0aa7b04cc, type: 3}
+  background: {fileID: 21300000, guid: cf2b55dec2d35a009a2da8a003d04347, type: 3}
+  topSign: {fileID: 21300000, guid: e34a53181a505584afd4974e40470c35, type: 3}
+  board: {fileID: 21300000, guid: 9885757b82895923954eea56cb4c528c, type: 3}
+  glass: {fileID: 21300000, guid: 6f123ae0f7165c64ba0cfc370ce0cd74, type: 3}
+  giftSymbol: {fileID: 21300000, guid: 512bb7360ac95633be47f3d588b9a5f2, type: 3}
+  introPanorama: {fileID: 21300000, guid: 80346c431b96b4950a3ff97a138c00eb, type: 3}
+  ball: {fileID: 21300000, guid: 67cb9bb665525b0eab5a229aa36e90f7, type: 3}
+  hitNormal: {fileID: 21300000, guid: f5ca1d7b979359578650125894563f5d, type: 3}
+  hitFrame: {fileID: 21300000, guid: e5ea14b6dd5c54c0ac7a5cbf36c713d7, type: 3}
+  hitPressed: {fileID: 21300000, guid: 424cc7d4620b5d34826c1a37eaa0bd5b, type: 3}
+  metalCorners:
+  - {fileID: 21300000, guid: c8f907820e7f5383b2d99b0da7809ca7, type: 3}
+  - {fileID: 21300001, guid: c8f907820e7f5383b2d99b0da7809ca7, type: 3}
+  - {fileID: 21300002, guid: c8f907820e7f5383b2d99b0da7809ca7, type: 3}
+  - {fileID: 21300003, guid: c8f907820e7f5383b2d99b0da7809ca7, type: 3}
+  targetCorners:
+  - {fileID: 21300000, guid: a6fe85d82c945e3487e656fa1fe6a4d0, type: 3}
+  - {fileID: 21300001, guid: a6fe85d82c945e3487e656fa1fe6a4d0, type: 3}
+  - {fileID: 21300002, guid: a6fe85d82c945e3487e656fa1fe6a4d0, type: 3}
+  - {fileID: 21300003, guid: a6fe85d82c945e3487e656fa1fe6a4d0, type: 3}
+  ballSpin:
+  - {fileID: 21300000, guid: 027caeac9c1f55cab27b1b6e22ff37e6, type: 3}
+  - {fileID: 21300001, guid: 027caeac9c1f55cab27b1b6e22ff37e6, type: 3}
+  - {fileID: 21300002, guid: 027caeac9c1f55cab27b1b6e22ff37e6, type: 3}
+  - {fileID: 21300003, guid: 027caeac9c1f55cab27b1b6e22ff37e6, type: 3}
+  - {fileID: 21300004, guid: 027caeac9c1f55cab27b1b6e22ff37e6, type: 3}
+  bearFrames:
+  - {fileID: 21300000, guid: df1763a8584c59c58168edcc62f9adad, type: 3}
+  - {fileID: 21300000, guid: 4a20e5312abc5d37ac96f3ace68c863a, type: 3}
+  - {fileID: 21300000, guid: c4e850f0f39e514c8a7be5053d8f3d0e, type: 3}
+  - {fileID: 21300000, guid: 0ba767953937593fa80985004c4338d7, type: 3}
+  - {fileID: 21300000, guid: 562e734494f6593699e809ac7eb81062, type: 3}
+  - {fileID: 21300000, guid: 6bc4cef06f025fb28bff76a51a53d250, type: 3}
+  rabbitFrames:
+  - {fileID: 21300000, guid: e519905de6525ef4ae0af99952609ae8, type: 3}
+  - {fileID: 21300000, guid: 1d343db8d1985500a322b4ba5696da64, type: 3}
+  - {fileID: 21300000, guid: d4bec1d7b2b55b9cb813b2cda0f24899, type: 3}
+  - {fileID: 21300000, guid: ae8fb537b17652c6bfece38a487e1753, type: 3}
+  - {fileID: 21300000, guid: 0a248abce6d35157b1b65b36ff427a4c, type: 3}
+  closeIcon: {fileID: 21300000, guid: 8fb720f1c5fe84fceaa7533ae6712d06, type: 3}
+  font: {fileID: 11400000, guid: 020a75041a4a04fb28f301a2fa0a06db, type: 2}
+  fontMaterial: {fileID: 2100000, guid: 232a0859d918b48b6b3575c8e23ffacc, type: 2}
+  disabledButtonMaterial: {fileID: 2100000, guid: 8d9e3d0aff7c5632a219a5ca26a241e0, type: 2}

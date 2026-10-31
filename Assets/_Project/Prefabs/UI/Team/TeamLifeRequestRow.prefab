@@ -1409,6 +1409,8 @@ MonoBehaviour:
   progressText: {fileID: 1793821197602877402}
   helpButton: {fileID: 7295889134227590499}
   helpButtonText: {fileID: 6185378951209801104}
+  barTrackSprite: {fileID: 21300000, guid: 2dfb0619dc5da4e948629a5dfd956c56, type: 3}
+  barFillSprite: {fileID: 21300000, guid: 151808f2523f44cf78121002d7429fe7, type: 3}
 --- !u!1 &8619677958175029459
 GameObject:
   m_ObjectHideFlags: 0

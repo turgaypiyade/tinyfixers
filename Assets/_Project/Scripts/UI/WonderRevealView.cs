@@ -91,6 +91,8 @@ public class WonderRevealView : MonoBehaviour
     static readonly int TaskBoundsId = Shader.PropertyToID("_TaskBounds");
     static readonly int TaskAnimId = Shader.PropertyToID("_TaskAnim");
     static readonly int ContextRevealId = Shader.PropertyToID("_ContextReveal");
+    static readonly int UnrestoredTexId = Shader.PropertyToID("_UnrestoredTex");
+    static readonly int UseUnrestoredTexId = Shader.PropertyToID("_UseUnrestoredTex");
 
     Image WelderImage
     {
@@ -141,6 +143,16 @@ public class WonderRevealView : MonoBehaviour
     {
         EnsureMaterial();
         if (_mat != null && shader != null) _mat.shader = shader;
+    }
+
+    /// <summary>Borrow an imported texture; no runtime blur, texture allocation or extra UI layer.
+    /// Null restores the legacy patina. The asset is owned by Unity, not this view.</summary>
+    public void ConfigureUnrestoredTexture(Texture2D texture)
+    {
+        EnsureMaterial();
+        if (_mat == null) return;
+        _mat.SetTexture(UnrestoredTexId, texture);
+        _mat.SetFloat(UseUnrestoredTexId, texture != null ? 1f : 0f);
     }
 
 #if UNITY_EDITOR
@@ -218,6 +230,7 @@ public class WonderRevealView : MonoBehaviour
         wonderId = wonder.wonderId;
         totalStages = Mathf.Max(1, wonder.TaskCount);
         useRustRestoration = true;
+        ConfigureUnrestoredTexture(wonder.unrestoredTexture);
         SetTaskRegions(WonderTaskRegions.From(wonder));
         SetRevealImmediate(progress);
     }

@@ -36,7 +36,7 @@ public static class PreLevelSpecialInventory
     {
         return special switch
         {
-            TileSpecial.LineH => LineHKey,
+            TileSpecial.LineH or TileSpecial.LineV => LineHKey, // Both orientations use the visible shared line inventory.
             TileSpecial.PulseCore => PulseCoreKey,
             TileSpecial.SystemOverride => OverrideKey,
             _ => "prelevel_special_unknown_count"

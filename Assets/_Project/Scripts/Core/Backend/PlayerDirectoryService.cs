@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Firebase.Extensions;
 using Firebase.Firestore;
 using UnityEngine;
@@ -16,8 +17,8 @@ public sealed class RemotePlayer
 
 /// <summary>
 /// Gerçek oyuncu dizini (Docs/ProductionPlan.md P3): players/{uid} dokümanı.
-/// — Boot'ta (auth sonrası) kendi profilini upsert eder; cloud-save push döngüsü
-///   değişiklikte tazeler (UpsertIfChanged).
+/// — Auth + restore tamamlandıktan sonra profil/skor değişiminde tazelenir;
+///   mevcut cloud-save tikinde başarısız bağımsız yazımlar yeniden denenir.
 /// — Arkadaş kodu araması BURADAN gerçek oyuncu bulur (bot değil).
 /// Alanlar: name, nameLower, friendCode, chapter, region, avatarId, updatedAt.
 /// </summary>
@@ -25,25 +26,45 @@ public static class PlayerDirectoryService
 {
     private static FirebaseFirestore Db => FirebaseFirestore.DefaultInstance;
     private static string lastUpsertSignature;
+    private static bool upsertInFlight, friendsRefreshInFlight;
+    private static float nextFriendsRefresh;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void Bootstrap()
-        => FirebaseAuthService.OnReady += () => UpsertIfChanged();
+    {
+        if (RuntimeSimulationSession.IsActive) return;
+        FirebaseAuthService.OnReady -= UpsertIfChanged;
+        FirebaseAuthService.OnReady += UpsertIfChanged;
+        FirebaseCloudSaveService.OnRestored -= UpsertIfChanged;
+        FirebaseCloudSaveService.OnRestored += UpsertIfChanged;
+        PlayerProfile.OnChanged -= UpsertIfChanged;
+        PlayerProfile.OnChanged += UpsertIfChanged;
+        PlayerWallet.OnTotalScoreChanged -= OnScoreChanged;
+        PlayerWallet.OnTotalScoreChanged += OnScoreChanged;
+    }
+
+    private static void OnScoreChanged(int _) => UpsertIfChanged();
 
     /// <summary>Profil alanları son yazımdan beri değiştiyse players/{uid} dokümanını tazeler.</summary>
     public static void UpsertIfChanged()
     {
-        if (!FirebaseAuthService.IsReady) return;
+        if (RuntimeSimulationSession.IsActive || !FirebaseAuthService.IsReady
+            || !FirebaseCloudSaveService.RestoreResolved || FirebaseCloudSaveService.SuspendForDeletion) return;
 
+        // Independent projections must also retry when the directory itself is unchanged.
+        FirebaseLeaderboardService.PublishOwnScoreIfChanged();
+        FirebaseTeamCloud.SyncSelfProfileIfChanged();
+        if (upsertInFlight) return;
+        string uid = FirebaseAuthService.UserId;
         string name = PlayerProfile.PlayerName;
         int chapter = Mathf.Max(1, PlayerPrefs.GetInt("current_level", 1));
         int avatarId = PlayerPrefs.GetInt("player_avatar_id", 0);
         string region = DetectRegion();
         string code = FriendState.MyCode;
 
-        string signature = $"{name}|{chapter}|{avatarId}|{region}|{code}";
+        string signature = $"{uid}|{name}|{chapter}|{avatarId}|{region}|{code}";
         if (signature == lastUpsertSignature) return;
-        lastUpsertSignature = signature;
+        upsertInFlight = true;
 
         var doc = new Dictionary<string, object>
         {
@@ -56,18 +77,58 @@ public static class PlayerDirectoryService
             { "updatedAt", FieldValue.ServerTimestamp },
         };
 
-        Db.Collection("players").Document(FirebaseAuthService.UserId)
+        Db.Collection("players").Document(uid)
           .SetAsync(doc, SetOptions.MergeAll)
           .ContinueWithOnMainThread(task =>
           {
+              upsertInFlight = false;
               if (task.IsFaulted || task.IsCanceled)
               {
-                  lastUpsertSignature = null;   // sonraki döngüde tekrar dene
                   if (GameDiagnostics.Backend)
                       Debug.LogWarning($"[PlayerDirectory] upsert hatası: {task.Exception?.GetBaseException().Message}");
+                  return;
               }
+              lastUpsertSignature = signature; // only acknowledged writes suppress retries
+              UpsertIfChanged(); // coalesce profile edits made while this write was pending
           });
     }
+
+    /// <summary>Refresh existing friends by stable UID; never adds strangers or removes on read failure.</summary>
+    public static void RefreshFriends()
+    {
+        if (RuntimeSimulationSession.IsActive || !FirebaseAuthService.IsReady || friendsRefreshInFlight
+            || Time.realtimeSinceStartup < nextFriendsRefresh) return;
+        var friends = FriendState.RealFriends;
+        if (friends.Count == 0) return;
+        friendsRefreshInFlight = true;
+        nextFriendsRefresh = Time.realtimeSinceStartup + 15f;
+        string owner = FirebaseAuthService.UserId;
+        var reads = new Task<DocumentSnapshot>[friends.Count];
+        for (int i = 0; i < friends.Count; i++)
+            reads[i] = Db.Collection("players").Document(friends[i].uid).GetSnapshotAsync();
+        // One failed profile must not discard successful refreshes for other friends.
+        Task.WhenAll(reads).ContinueWithOnMainThread(_ =>
+        {
+            if (FirebaseAuthService.UserId == owner)
+            {
+                var updates = new List<RemotePlayer>(reads.Length);
+                foreach (var read in reads)
+                    if (read.Status == TaskStatus.RanToCompletion && read.Result.Exists)
+                        updates.Add(Parse(read.Result));
+                FriendState.RefreshRealFriends(updates);
+            }
+            friendsRefreshInFlight = false;
+        });
+    }
+
+    private static RemotePlayer Parse(DocumentSnapshot snap) => new RemotePlayer
+    {
+        uid = snap.Id,
+        name = snap.ContainsField("name") ? snap.GetValue<string>("name") : "Oyuncu",
+        chapter = snap.ContainsField("chapter") ? (int)snap.GetValue<long>("chapter") : 1,
+        region = snap.ContainsField("region") ? snap.GetValue<string>("region") : "",
+        avatarId = snap.ContainsField("avatarId") ? (int)snap.GetValue<long>("avatarId") : 0,
+    };
 
     /// <summary>
     /// Arkadaş koduyla GERÇEK oyuncu arar. callback(null) = bulunamadı/hata.
@@ -101,14 +162,7 @@ public static class PlayerDirectoryService
 
             foreach (var snap in task.Result.Documents)
             {
-                callback?.Invoke(new RemotePlayer
-                {
-                    uid = snap.Id,
-                    name = snap.ContainsField("name") ? snap.GetValue<string>("name") : "Oyuncu",
-                    chapter = snap.ContainsField("chapter") ? (int)snap.GetValue<long>("chapter") : 1,
-                    region = snap.ContainsField("region") ? snap.GetValue<string>("region") : "",
-                    avatarId = snap.ContainsField("avatarId") ? (int)snap.GetValue<long>("avatarId") : 0,
-                });
+                callback?.Invoke(Parse(snap));
                 return;
             }
             callback?.Invoke(null);

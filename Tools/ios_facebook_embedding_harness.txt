@@ -1,0 +1,48 @@
+public enum BuildTarget {iOS,Android}
+public class BuildFailedException:Exception {public BuildFailedException(string message):base(message){}}
+public class PostProcessBuildAttribute:Attribute {public PostProcessBuildAttribute(int order){}}
+public static class Checks {
+ static int count;
+ static void Check(bool ok,string label){count++;if(!ok)throw new Exception(label);}
+ public static int Run(){
+  string output="/private/tmp/tinyfixers-ios-facebook-test-"+Guid.NewGuid().ToString("N");Directory.CreateDirectory(output);
+  var project=new PBXProject();project.ReadFromString(File.ReadAllText("Tools/ios_facebook_embedding_fixture.pbxproj"));
+  string before=project.WriteToString();File.WriteAllText("/private/tmp/tinyfixers-ios-auth/FacebookBefore.pbxproj",before);
+  Check(IosFacebookFrameworkEmbedPostProcess.Configure(project,output)==0,"No Facebook Pods leaves project unchanged");
+  Check(project.WriteToString()==before,"No-op export is byte-identical");
+  Directory.CreateDirectory(Path.Combine(output,"Pods","FBAEMKit"));
+  bool failed=false;try{IosFacebookFrameworkEmbedPostProcess.Configure(project,output);}catch(BuildFailedException){failed=true;}
+  Check(failed&&project.WriteToString()==before,"Incomplete Pods fail before any build phase is changed");
+  string[] names={"FBAEMKit","FBSDKCoreKit","FBSDKCoreKit_Basics","FBSDKGamingServicesKit","FBSDKLoginKit","FBSDKShareKit"};
+  foreach(string name in names)Directory.CreateDirectory(Path.Combine(output,"Pods",name,"XCFrameworks",name+".xcframework"));
+  string app=project.GetUnityMainTargetGuid(),unity=project.GetUnityFrameworkTargetGuid();
+  Check(!string.IsNullOrEmpty(app)&&!string.IsNullOrEmpty(unity)&&app!=unity,"Actual Unity PBX parser resolves app and framework separately");
+  string frameworkPhase=project.GetFrameworksBuildPhaseByTarget(unity);
+  string[] frameworkPhases=project.GetAllBuildPhasesForTarget(unity);
+  for(int cycle=0;cycle<25;cycle++){
+   Check(IosFacebookFrameworkEmbedPostProcess.Configure(project,output)==6,"All six dynamic SDK dependencies are embedded");
+   string text=project.WriteToString();File.WriteAllText("/private/tmp/tinyfixers-ios-auth/FacebookEmbedFixture.pbxproj",text);
+   Check(Regex.Matches(text,"CodeSignOnCopy").Count==6,"Exactly six CodeSignOnCopy entries, including repeated export");
+   Check(Regex.Matches(text,"RemoveHeadersOnCopy").Count==6,"Framework headers removed from shipped copies");
+   foreach(string name in names){
+    string id=project.FindFileGuidByProjectPath("Frameworks/TinyFixersFacebook/"+name+".framework");
+    Check(!string.IsNullOrEmpty(id),"Stable framework file reference exists: "+name);
+    Check(text.Contains("$(PODS_XCFRAMEWORKS_BUILD_DIR)/"+name+"/"+name+".framework"),"Uses Pods-selected platform slice: "+name);
+   }
+   Check(project.GetAllBuildPhasesForTarget(unity).SequenceEqual(frameworkPhases),"UnityFramework link/phase ownership is unchanged");
+   Check(project.GetFrameworksBuildPhaseByTarget(unity)==frameworkPhase,"Existing UnityFramework phase retained");
+   Check(Regex.Matches(text,"ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES").Count==2,"Debug and release app configs embed Swift runtime");
+   Check(Regex.Matches(text,"ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = NO").Count==1,"UnityFramework Swift setting is preserved");
+   Check(text.Contains("@loader_path/Frameworks")&&text.Contains("$(inherited)"),"Existing inherited/custom runpaths are preserved");
+   Check(Regex.Matches(text,"@executable_path/Frameworks").Count==2,"Exactly one app framework runpath per configuration after repeated exports");
+   foreach(string configName in new[]{"Debug","Release"}){string paths=project.GetBuildPropertyForConfig(project.BuildConfigByName(app,configName),"LD_RUNPATH_SEARCH_PATHS");Check(paths.Contains("$(inherited)")&&paths.Contains("@loader_path/Frameworks"),"Each configuration retains original runpaths");}
+  }
+  IosFacebookFrameworkEmbedPostProcess.OnPostprocessBuild(BuildTarget.Android,"/should/not/be/opened");
+  Check(true,"Android hook returns before reading an export");
+  File.WriteAllText("/private/tmp/tinyfixers-ios-auth/FacebookEmbedFixture.pbxproj",project.WriteToString());
+  // Only synthetic empty directories created by this test are removed.
+  Directory.Delete(output,true);
+  return count;
+ }
+}
+Checks.Run()

@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: BridgeRepairConfig
   m_EditorClassIdentifier: Assembly-CSharp::BridgeRepairConfig
   eventId: bridge_repair
-  minLevelGate: 31
+  minLevelGate: 60
   eventsPerWeek: 2
   windowHours: 24
   excludedDays: 

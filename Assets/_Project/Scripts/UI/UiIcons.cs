@@ -15,6 +15,8 @@ public static class UiIcons
     public static Sprite Info      => Load("Icon_Info");
     public static Sprite Invite    => Load("Icon_Invite");
     public static Sprite Heart     => Load("Icon_Heart");
+    /// Aşağıyı gösteren öğretici parmağı (parmak ucu altta, sol-ortada).
+    public static Sprite Finger    => Load("FingerTutorial");
 
     /// <summary>
     /// Butonun SOLUNA ikon koyar, yazıyı ikondan sonrasına kaydırır (ikon + yazı butonlar: "Can İste", "Mesaj").

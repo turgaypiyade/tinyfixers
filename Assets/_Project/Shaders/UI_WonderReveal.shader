@@ -7,6 +7,8 @@ Shader "UI/WonderReveal"
     {
         [PerRendererData] _MainTex ("Sprite Texture", 2D) = "white" {}
         _Color ("Tint", Color) = (1,1,1,1)
+        [NoScaleOffset] _UnrestoredTex ("Baked blurred restoration preview", 2D) = "gray" {}
+        [HideInInspector] _UseUnrestoredTex ("Use baked preview", Float) = 0
 
         _Reveal        ("Reveal (0..1)", Range(0,1)) = 1
 
@@ -106,6 +108,8 @@ Shader "UI/WonderReveal"
             float4 _ClipRect;
 
             sampler2D _MainTex;
+            sampler2D _UnrestoredTex;
+            float _UseUnrestoredTex;
             fixed4 _Color;
 
             float  _Reveal;
@@ -179,6 +183,11 @@ Shader "UI/WonderReveal"
 
             float3 weatheredImage(float2 uv, float3 photo)
             {
+                // Uniform branch: one prefiltered texture sample replaces procedural patina.
+                // UV is sprite-local, so the small standalone texture also works with atlased art.
+                UNITY_BRANCH
+                if (_UseUnrestoredTex > 0.5)
+                    return tex2D(_UnrestoredTex, uv).rgb;
                 float broad = patinaNoise(uv * float2(5.0, 8.0));
                 float fine = patinaNoise(uv * float2(32.0, 53.0));
                 float patina = broad * 0.7 + fine * 0.3;

@@ -8,7 +8,7 @@ using UnityEngine.UI;
 /// </summary>
 public static class UiButtons
 {
-    public enum Kind { Orange, Green, Blue, Red, Purple, SquareRed, SquareGreen, GreenPlain }
+    public enum Kind { Orange, Green, Blue, Red, Purple, SquareRed, SquareGreen, GreenPlain, GrayPlain }
 
     private static Sprite Load(string name) => Resources.Load<Sprite>("UIButtons/" + name);
 
@@ -23,6 +23,8 @@ public static class UiButtons
         Kind.SquareGreen => Load("BtnSq_Green"),
         // Popup'ların yeşil ana butonu (GreenButonwoStroke, 9-slice kenarlı) — Can İste / Gönder / Kabul / Yardım.
         Kind.GreenPlain  => CommonPopupSkin.Shared.continueButton,
+        // GreenPlain'in açık gri eşi (aynı 9-slice): kullanılamaz/bekleyen buton (ör. kilitli "Can İste").
+        Kind.GrayPlain   => Load("Btn_GrayPlain"),
         _ => null,
     };
 
@@ -34,6 +36,7 @@ public static class UiButtons
         Kind.Blue        => new Color(0.05f, 0.18f, 0.55f),
         Kind.Red or Kind.SquareRed     => new Color(0.50f, 0.04f, 0.08f),
         Kind.Purple      => new Color(0.30f, 0.08f, 0.50f),
+        Kind.GrayPlain   => new Color(0.36f, 0.38f, 0.42f),
         _ => Color.black,
     };
 
@@ -81,10 +84,28 @@ public static class UiButtons
     public static void StyleLabel(TMP_Text label, Kind kind)
     {
         if (label == null) return;
+        // Yazı kuralı: TinyFixers Pop, beyaz yüz, kontur/gölge = buton renginin koyusu (TextSurfaceStyle).
+        if (CommonPopupSkin.Shared.titleFont != null)
+        {
+            TextSurfaceStyle.Apply(label, SurfaceOf(kind));
+            return;
+        }
         label.color = Color.white;
         // Kapalı panel içindeki butonlarda TMP materyali yok → doğrudan outlineWidth NRE verir.
         TmpOutline.Apply(label, 0.2f, OutlineOf(kind));
     }
+
+    // Buton görselinin ana rengi (kontur/gölge bunun koyusundan türetilir).
+    public static Color SurfaceOf(Kind kind) => kind switch
+    {
+        Kind.Orange => TextSurfaceStyle.Base(TextSurface.Orange),
+        Kind.Green or Kind.SquareGreen or Kind.GreenPlain => TextSurfaceStyle.Base(TextSurface.Green),
+        Kind.Blue => TextSurfaceStyle.Base(TextSurface.Blue),
+        Kind.Red or Kind.SquareRed => TextSurfaceStyle.Base(TextSurface.Red),
+        Kind.Purple => TextSurfaceStyle.Base(TextSurface.Purple),
+        Kind.GrayPlain => new Color(0.56f, 0.58f, 0.63f),
+        _ => TextSurfaceStyle.Base(TextSurface.Maroon),
+    };
 
     /// <summary>Yalnız Image'ı (ör. sekme zemini) verilen buton görseline çevirir.</summary>
     public static void Apply(Image image, Kind kind)

@@ -107,6 +107,7 @@ public class InGameQuickSettings : MonoBehaviour
     private void OnVibrationClicked()
     {
         GameSettings.VibrationEnabled = !GameSettings.VibrationEnabled;
+        if (GameSettings.VibrationEnabled) Haptics.Play(Haptics.Strength.Medium);   // açınca tek tık: oyuncu hisseder
         RefreshIcons();
     }
 

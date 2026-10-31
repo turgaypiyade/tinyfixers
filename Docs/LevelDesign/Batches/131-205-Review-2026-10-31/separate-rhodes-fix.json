@@ -1,0 +1,9 @@
+{
+  "reason": "User reported final halves still invisible during level-review task; actual destruction-before-visual event-order fix.",
+  "files": {
+    "Assets/_Project/Scripts/Grid/GridSpawner.cs": {
+      "before": "1816d66d2b1f9eb9bcf9ad6f96bbd286be2051790c0cd27d96613cd1dc3ff609",
+      "after": "686000ee1b0eb7a4914b2d5a8ed72294a14eea4ecfbfe563728bec3fc147d9fa"
+    }
+  }
+}

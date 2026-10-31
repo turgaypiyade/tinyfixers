@@ -1,0 +1,80 @@
+    private void HandleObstacleDestroyed(int originIndex, ObstacleId obstacleId)
+    {
+        if (obstacleId == ObstacleId.Safe)
+            RemoveSafeCellClickProxiesForOrigin(originIndex);
+        if (obstacleId == ObstacleId.AncientSeal)
+            RemoveAncientSealCellClickProxiesForOrigin(originIndex);
+
+        if (obstacleId == ObstacleId.EnergyContainer)
+        {
+            // Don't destroy the image — EnergyContainerFx will apply the exhausted
+            // visual on the same GameObject. Just stop tracking it here.
+            if (IsTrackedObstacleViewFor(originIndex, obstacleId))
+            {
+                obstacleViewsByOrigin.Remove(originIndex);
+                obstacleDefsByOrigin.Remove(originIndex);
+            }
+            return;
+        }
+
+        if (obstacleId == ObstacleId.OverrideBatteryBox)
+        {
+            // Detonasyon VIEW'ını HEMEN oynatma — seri kuyruk (BoardController) sırası gelince
+            // OnRequestObbDetonationView ile tetikler. View'ı beklemede tut (çoklu kutu aynı anda
+            // patlamasın). Kuyruk tek kutuda da geçerli; tek frame gecikmeyle tetiklenir.
+            if (_overrideBatteryBoxViews.TryGetValue(originIndex, out var view) && view != null)
+                _pendingObbDetonationViews[originIndex] = view;
+
+            obstacleViewsByOrigin.Remove(originIndex);
+            obstacleDefsByOrigin.Remove(originIndex);
+            _overrideBatteryBoxViews.Remove(originIndex);
+            ApplyUnderTileCellBgTint();
+            return;
+        }
+
+        // Jel fırlatıcı: görseli SİLME — ateşleme animasyonu (sıkışma → atılma → kapak) gerçek görselde
+        // oynar. Bu olay görsel-değişim olayından ÖNCE gelir; burada silinince devir hiç olmuyor,
+        // sıkışma görünmüyordu. Devri burada yap (BoardController aksiyonu bu olaydan SONRA başlatır).
+        if (BoardController.IsGelLauncher(obstacleId) && IsTrackedObstacleViewFor(originIndex, obstacleId))
+        {
+            if (obstacleViewsByOrigin.TryGetValue(originIndex, out var gelImage) && gelImage != null)
+            {
+                StopObstacleHitShake(originIndex, gelImage.rectTransform);
+                GelLauncherFx.HandOverBody(originIndex, gelImage);
+                StartCoroutine(DestroyGelBodyIfUnclaimed(originIndex, gelImage));
+            }
+            obstacleViewsByOrigin.Remove(originIndex);
+            obstacleDefsByOrigin.Remove(originIndex);
+            ApplyUnderTileCellBgTint();
+            return;
+        }
+
+        // Brandalı heykel: hangi olay önce gelirse (yok edildi / görsel temizlendi) görseli finale devreder.
+        if (obstacleId == ObstacleId.TarpStatue && IsTrackedObstacleViewFor(originIndex, obstacleId)
+            && obstacleViewsByOrigin.TryGetValue(originIndex, out var tarpImage) && tarpImage != null
+            && TarpStatueService.TryPlayFinale(board, originIndex, tarpImage))
+        {
+            StopObstacleHitShake(originIndex, tarpImage.rectTransform);
+            obstacleViewsByOrigin.Remove(originIndex);
+            obstacleDefsByOrigin.Remove(originIndex);
+            ApplyUnderTileCellBgTint();
+            return;
+        }
+
+        if (IsTrackedObstacleViewFor(originIndex, obstacleId))
+        {
+            if (obstacleViewsByOrigin.TryGetValue(originIndex, out var image) && image != null)
+            {
+                if (obstacleId != ObstacleId.Grass || waterLilyService == null
+                    || !waterLilyService.TryPlayGrassBreak(originIndex, image))
+                    Destroy(image.gameObject);
+            }
+
+            obstacleViewsByOrigin.Remove(originIndex);
+            obstacleDefsByOrigin.Remove(originIndex);
+        }
+        _chestViews.Remove(originIndex);
+        _batteryBoxViews.Remove(originIndex);
+        _overrideBatteryBoxViews.Remove(originIndex);
+        ApplyUnderTileCellBgTint();
+    }

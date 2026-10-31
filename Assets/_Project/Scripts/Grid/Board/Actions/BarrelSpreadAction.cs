@@ -62,9 +62,17 @@ public sealed class BarrelSpreadAction : BoardAction
                 // hemen görür (yanlış/kaymış hücreye stamp veya boş hücreye düşüş olmaz). View + goal
                 // bildirimi damla varışında kalır → progressive görsel korunur.
                 var committed = new HashSet<Vector2Int>();
+                // Kırılma anında zaten çamurlu hücreler: damla inişinde çamur o an yoksa (aynı kombo
+                // temizlediyse) yeniden basılır; hâlâ çamursa dokunulmaz.
+                var refresh = new HashSet<Vector2Int>();
                 for (int t = 0; t < targets.Count; t++)
                 {
                     var c = targets[t];
+                    if (obstacles.IsMudAt(c.x, c.y))
+                    {
+                        refresh.Add(c);
+                        continue;
+                    }
                     if (obstacles.TrySpawnSingleCellObstacleAtOrBeneathOverTile(c.x, c.y, ObstacleId.Mud))
                     {
                         committed.Add(c);
@@ -76,6 +84,14 @@ public sealed class BarrelSpreadAction : BoardAction
 
                 void OnLand(Vector2Int cell)
                 {
+                    if (refresh.Contains(cell) && !obstacles.IsMudAt(cell.x, cell.y)
+                        && spread.CanPlaceSplatAt(cell, ObstacleId.Mud)
+                        && obstacles.TrySpawnSingleCellObstacleAtOrBeneathOverTile(cell.x, cell.y, ObstacleId.Mud))
+                    {
+                        committed.Add(cell);
+                        if (obstacles.IsMudAt(cell.x, cell.y)) obstacles.GrantRevealGrace(cell.x, cell.y);
+                    }
+
                     // Yalnız up-front commit edilen VE hâlâ mud olan hücre için view/goal bildir
                     // (async pencerede cascade mud'ı temizlemiş olabilir → phantom view oluşturma).
                     if (committed.Contains(cell) && obstacles.IsMudAt(cell.x, cell.y))

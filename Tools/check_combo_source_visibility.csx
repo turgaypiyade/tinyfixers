@@ -29,6 +29,7 @@ public class WaitForSeconds {public float seconds;public WaitForSeconds(float s)
 public static class Time {public static float deltaTime=.02f;}
 public static class Mathf {public static float Clamp(float n,float a,float b)=>Math.Max(a,Math.Min(n,b));public static float Clamp01(float n)=>Clamp(n,0,1);public static float Max(float a,float b)=>Math.Max(a,b);public static float Lerp(float a,float b,float k)=>a+(b-a)*Clamp01(k);}
 public class TileView {
+ void StopIconFlash(bool restoreColor=true){}
  public int LifetimeVersion=1;public GameObject gameObject=new GameObject();public RectTransform RectTransform=new RectTransform();public Transform transform=>RectTransform;
  public Image iconImage=new Image();public Image IconImage=>iconImage;public bool KeepHiddenForCombo;public string HiddenBy;
  StopView propellerView,overrideSpecialView,fuseSparkleView;int lastAppliedTileSize;

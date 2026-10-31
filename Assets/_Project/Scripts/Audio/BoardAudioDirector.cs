@@ -11,6 +11,10 @@ public class BoardAudioDirector : MonoBehaviour
     [SerializeField] private bool listenToBoardBehaviorEvents = true;
 
     private readonly Dictionary<string, float> lastPlayTimes = new Dictionary<string, float>(16);
+    // Aynı clip aynı anda N kez başlarsa fazda toplanır (3 kopya ≈ +9.5 dB): tek match'te 3-5 sandık vurulunca
+    // ses ayarı ne olursa olsun patlıyordu. Bu pencerede aynı clip tek kez çalar.
+    private const float SameClipWindow = 0.06f;
+    private readonly Dictionary<AudioClip, float> lastClipTimes = new Dictionary<AudioClip, float>(32);
     private float suppressFallsUntil = -999f;
 
     private struct ResolvedPlay
@@ -135,6 +139,11 @@ public class BoardAudioDirector : MonoBehaviour
         AudioSource src = transientSource != null ? transientSource : accentSource;
         if (src == null)
             return;
+
+        float now = Time.unscaledTime;
+        if (lastClipTimes.TryGetValue(clip, out float last) && now - last < SameClipWindow)
+            return;
+        lastClipTimes[clip] = now;
 
         src.PlayOneShot(clip, Mathf.Clamp(volume, 0f, 1.5f));
     }

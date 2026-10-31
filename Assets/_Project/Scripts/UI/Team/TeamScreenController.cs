@@ -85,10 +85,11 @@ public sealed class TeamScreenController : MonoBehaviour
         if (service != null) service.OnChanged -= OnServiceChanged;
         service = BackendServices.Team;
         service.OnChanged += OnServiceChanged;   // gerçek sohbette canlı mesaj akışı
-        Refresh();
+        Refresh(snapToBottom: true);
     }
 
-    private void OnServiceChanged() => Refresh();
+    // Veri değişimi (Yardım'a basma, gelen mesaj): okunan yer korunur; yalnız zaten en alttaysa altta kalır.
+    private void OnServiceChanged() => Refresh(snapToBottom: false);
 
     private void OnDisable()
     {
@@ -133,8 +134,13 @@ public sealed class TeamScreenController : MonoBehaviour
 
     // Alt bar (RM düzeni): solda büyük yeşil "Can İste" (kalp ikonlu, geri sayım 2. satırda), sağda iki kare buton:
     // hızlı mesaj (turkuaz, gülen yüz) ve mesaj yaz (mavi, konuşma balonu).
-    private const float BarButtonHeight = 112f;
-    private const float RequestLifeWidth = 440f;
+    // Yeşil buton görseli (GreenButonwoStroke 289x116) kendi oranına yakın kullanılır; yükseklik artınca
+    // sağdaki kare butonlar ve ikonlar aynı ölçüde büyür (hepsi BarButtonHeight'tan).
+    private const float BarButtonHeight = 128f;
+    private const float RequestLifeWidth = 400f;
+    private static readonly Color LockedHeartTint = new Color(0.42f, 0.42f, 0.47f, 1f);
+    private Image requestLifeHeart;
+    private int requestLifeStyle = -1;   // 1 yeşil (istenebilir), 0 gri (kilitli) — gereksiz yeniden boyamayı önler
     private static readonly Color QuickTint = new Color(0.62f, 1f, 0.95f, 1f);   // mavi kapsül → turkuaz
     private static readonly string[] QuickMessageKeys = { "team_quick_1", "team_quick_2", "team_quick_3", "team_quick_4" };
     // Yalnız EmojiOne setinde gerçekten olanlar (1f60a yok → "?" kutusu çıkıyordu).
@@ -146,7 +152,16 @@ public sealed class TeamScreenController : MonoBehaviour
         UiButtons.Apply(requestLifeButton, UiButtons.Kind.GreenPlain);   // popup'ların yeşil ana butonu
         UiButtons.Apply(messageButton, UiButtons.Kind.Blue);
         UiButtons.Apply(messagePostButton, UiButtons.Kind.GreenPlain);
-        UiIcons.SetLeadingIcon(requestLifeButton, UiIcons.Heart);
+        UiIcons.SetLeadingIcon(requestLifeButton, UiIcons.Heart, size: BarButtonHeight * 0.72f, leftPad: 24f);
+        if (requestLifeButton != null)
+        {
+            var heart = requestLifeButton.transform.Find("LeadIcon");
+            if (heart != null) requestLifeHeart = heart.GetComponent<Image>();
+            // Kilitli hâli gri görselle gösterilir; Button'ın koyu karartma tonu üstüne binmesin.
+            var colors = requestLifeButton.colors;
+            colors.disabledColor = Color.white;
+            requestLifeButton.colors = colors;
+        }
 
         var bar = requestLifeButton != null ? requestLifeButton.transform.parent : null;
         if (bar == null) return;
@@ -205,7 +220,7 @@ public sealed class TeamScreenController : MonoBehaviour
         img.raycastTarget = false;
         var rt = img.rectTransform;
         rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
-        rt.sizeDelta = new Vector2(BarButtonHeight * 0.62f, BarButtonHeight * 0.62f);
+        rt.sizeDelta = new Vector2(BarButtonHeight * 0.62f, BarButtonHeight * 0.62f);   // buton büyüdükçe ikon da
         rt.anchoredPosition = Vector2.zero;
     }
 
@@ -228,7 +243,7 @@ public sealed class TeamScreenController : MonoBehaviour
         var label = labelGo.GetComponent<TextMeshProUGUI>();
         label.richText = true;
         label.text = "<sprite name=\"1f604\">";   // TMP varsayılan sprite seti (EmojiOne)
-        label.fontSize = 62f;
+        label.fontSize = BarButtonHeight * 0.55f;
         label.alignment = TextAlignmentOptions.Center;
         label.raycastTarget = false;
         var lrt = label.rectTransform;
@@ -251,7 +266,7 @@ public sealed class TeamScreenController : MonoBehaviour
             {
                 if (this == null || service == null) return;
                 service.SendMessage(text);
-                BuildFeed();
+                BuildFeed(snapToBottom: true);
             });
         }
         RuntimeChoicePopup.ShowOffer(GameLocalization.Get("team_quick_title"), GameLocalization.Get("team_quick_body"),
@@ -277,14 +292,31 @@ public sealed class TeamScreenController : MonoBehaviour
         return btn;
     }
 
-    private void ShowTeamInfo()
+    private void ShowTeamInfo() => ShowTeamInfoPage(0);
+
+    private void ShowTeamInfoPage(int page)
     {
         var info = service?.GetTeamInfo();
         string title = info != null && !string.IsNullOrEmpty(info.teamName) ? info.teamName : GameLocalization.Get("team_info_title");
         string body = info != null ? GameLocalization.Get("team_capacity") + ": " + info.MemberLabel : "";
-        RuntimeChoicePopup.Show(title, body,
-            new RuntimeChoicePopup.Choice(GameLocalization.Get("team_leave"), () => { if (this != null) ShowLeaveConfirm(); }),
-            new RuntimeChoicePopup.Choice(GameLocalization.Get("common_close"), null, primary: true));
+        const int pageSize = 8;
+        int count = info != null ? info.realMemberNames.Count : 0;
+        int pages = Mathf.Max(1, (count + pageSize - 1) / pageSize);
+        page = Mathf.Clamp(page, 0, pages - 1);
+        if (count > 0)
+        {
+            body += "\n\n" + string.Join("\n", info.realMemberNames.GetRange(page * pageSize,
+                Mathf.Min(pageSize, count - page * pageSize)));
+            if (pages > 1) body += $"\n({page + 1}/{pages})";
+        }
+        var choices = new List<RuntimeChoicePopup.Choice>();
+        if (pages > 1)
+            choices.Add(new RuntimeChoicePopup.Choice("→", () =>
+            { if (this != null) ShowTeamInfoPage((page + 1) % pages); }));
+        choices.Add(new RuntimeChoicePopup.Choice(GameLocalization.Get("team_leave"), () =>
+        { if (this != null) ShowLeaveConfirm(); }));
+        choices.Add(new RuntimeChoicePopup.Choice(GameLocalization.Get("common_close"), null, primary: true));
+        RuntimeChoicePopup.Show(title, body, choices.ToArray());
     }
 
     // ── Takımdan ayrıl (onaylı) ─────────────────────────────────────
@@ -315,7 +347,7 @@ public sealed class TeamScreenController : MonoBehaviour
         image.preserveAspect = sprite != null;
     }
 
-    private void Refresh()
+    private void Refresh(bool snapToBottom)
     {
         if (service == null) return;
         var info = service.GetTeamInfo();
@@ -337,17 +369,28 @@ public sealed class TeamScreenController : MonoBehaviour
             if (memberCountText != null) memberCountText.text = info.MemberLabel;
         }
 
-        BuildFeed();
+        BuildFeed(snapToBottom);
         RefreshLifeControls();
     }
 
-    private void BuildFeed()
+    private void BuildFeed(bool snapToBottom = true)
     {
-        foreach (var go in feed) if (go != null) Destroy(go);
+        // Yeniden kurulumda okunan yer korunsun: içerik üstten pivotlu → anchoredPosition.y = üstten kaydırma.
+        bool keepPosition = !snapToBottom && scrollRect != null && contentContainer != null
+                            && scrollRect.verticalNormalizedPosition > 0.01f;
+        float scrollY = contentContainer != null ? contentContainer.anchoredPosition.y : 0f;
+
+        // Destroy kare sonuna ertelenir: eski satırlar o ana dek layout'ta kalıp içeriği bir kare iki katı
+        // uzatıyor, kaydırma ona göre hesaplanıp sonra geri "oturuyordu". Hemen kapat → layout görmez.
+        foreach (var go in feed) if (go != null) { go.SetActive(false); Destroy(go); }
         feed.Clear();
         lifeReplyRows.Clear();
         if (contentContainer == null) return;
-        if (contentContainer.TryGetComponent(out VerticalLayoutGroup feedLayout)) feedLayout.spacing = 24f;   // ferah akış
+        if (contentContainer.TryGetComponent(out VerticalLayoutGroup feedLayout))
+        {
+            feedLayout.spacing = 24f;   // ferah akış
+            feedLayout.padding.left = feedLayout.padding.right = FeedSideMargin;   // kartlar kenardan nefes alsın
+        }
 
         if (chatRowPrefab != null)
         {
@@ -383,7 +426,19 @@ public sealed class TeamScreenController : MonoBehaviour
             }
         }
 
-        SnapToBottom();
+        if (keepPosition) RestoreScroll(scrollY);
+        else SnapToBottom();
+    }
+
+    private const int FeedSideMargin = 44;
+
+    private void RestoreScroll(float scrollY)
+    {
+        LayoutRebuilder.ForceRebuildLayoutImmediate(contentContainer);
+        var viewport = scrollRect.viewport != null ? scrollRect.viewport : (RectTransform)scrollRect.transform;
+        float max = Mathf.Max(0f, contentContainer.rect.height - viewport.rect.height);
+        contentContainer.anchoredPosition = new Vector2(contentContainer.anchoredPosition.x, Mathf.Clamp(scrollY, 0f, max));
+        scrollRect.StopMovement();
     }
 
     // Can isteği kartı: takım arkadaşının isteği (Yardım → 1 can) ya da kendi aktif isteğim (toplanan/istenen).
@@ -441,7 +496,7 @@ public sealed class TeamScreenController : MonoBehaviour
                 realLifeRequest = request,
             };
         }
-        // Kendi isteğim: 24 saatlik istek süresi boyunca kart olarak (kaç can geldi).
+        // Kendi isteğim: en fazla 24 saat kart olarak (kaç can geldi); yeni istek (4 saat sonra) kartı sıfırlar.
         var inboxMine = service.LifeInbox;
         if (inboxMine.LastRequestTicks > 0 && inboxMine.RequestTotal > 0
             && System.DateTime.UtcNow.Ticks - inboxMine.LastRequestTicks < System.TimeSpan.TicksPerDay)
@@ -482,19 +537,29 @@ public sealed class TeamScreenController : MonoBehaviour
             RefreshLifeControls();
     }
 
+    // Buton her zaman "Can İste": istenebilirken yeşil; istenemiyorsa (yeni üye 24 saat / istek 4 saat kilidi / can dolu) açık gri,
+    // kilit sürüyorsa altında kalan süre.
     private void RefreshLifeControls()
     {
         var inbox = service?.LifeInbox;
-        bool full = LivesManager.Current >= LivesManager.MaxLives;
+        bool can = inbox != null && inbox.CanRequest;
         var lockLeft = inbox != null ? inbox.RequestLockRemaining(System.DateTime.UtcNow) : System.TimeSpan.Zero;
-        if (requestLifeButton != null) requestLifeButton.interactable = inbox != null && inbox.CanRequest;
+        if (requestLifeButton != null)
+        {
+            requestLifeButton.interactable = can;
+            int style = can ? 1 : 0;
+            if (style != requestLifeStyle)
+            {
+                requestLifeStyle = style;
+                var kind = can ? UiButtons.Kind.GreenPlain : UiButtons.Kind.GrayPlain;
+                UiButtons.Apply(requestLifeButton, kind, styleLabel: false);
+                UiButtons.StyleLabel(requestLifeLabel, kind);
+                if (requestLifeHeart != null) requestLifeHeart.color = can ? Color.white : LockedHeartTint;
+            }
+        }
         if (requestLifeLabel != null)
-            requestLifeLabel.text = full ? GameLocalization.GetFormat("team_lives_full", LivesManager.MaxLives)
-                : inbox != null && inbox.CanRequest ? defaultRequestLifeLabel
-                : inbox != null && inbox.Pending > 0 ? GameLocalization.Get("team_lives_ready")
-                : inbox != null && inbox.IsWaiting ? GameLocalization.Get("team_lives_waiting")
-                : lockLeft > System.TimeSpan.Zero
-                    ? $"{defaultRequestLifeLabel}\n<size=70%>{(int)lockLeft.TotalHours:00}:{lockLeft.Minutes:00}:{lockLeft.Seconds:00}</size>"
+            requestLifeLabel.text = !can && lockLeft > System.TimeSpan.Zero
+                ? $"{defaultRequestLifeLabel}\n<size=62%>{(int)lockLeft.TotalHours:00}:{lockLeft.Minutes:00}:{lockLeft.Seconds:00}</size>"
                 : defaultRequestLifeLabel;
         foreach (var row in lifeReplyRows)
             if (row != null) row.RefreshLifeReply();
@@ -503,6 +568,7 @@ public sealed class TeamScreenController : MonoBehaviour
     private void SnapToBottom()
     {
         if (scrollRect == null) return;
+        if (contentContainer != null) LayoutRebuilder.ForceRebuildLayoutImmediate(contentContainer);
         Canvas.ForceUpdateCanvases();
         scrollRect.verticalNormalizedPosition = 0f;   // en yeni mesaj altta
     }
@@ -540,7 +606,7 @@ public sealed class TeamScreenController : MonoBehaviour
 
         service.SendMessage(text);
         messageInput.text = "";
-        BuildFeed();
+        BuildFeed(snapToBottom: true);
         if (messageInputRoot != null) messageInputRoot.SetActive(false);
     }
 }

@@ -228,10 +228,20 @@ public class ProgressEventService : MonoBehaviour, IProgressEventService
         return null;
     }
 
+    // Açılış seviyesi: uygulamadaki taban (scheduler asset'i, şu an 20) her kaynakta geçerli; sunucu
+    // (config/progressEvent minLevel) yalnız YÜKSELTEBİLİR — eski/yanlış bir sunucu değeri event'i erken açmasın.
     private void UpdateLevelGate()
     {
-        int minLevel = remoteSeason != null ? remoteSeason.MinLevel : 1;
+        int minLevel = Mathf.Max(LocalMinLevel(), remoteSeason != null ? remoteSeason.MinLevel : 1);
         levelGateOpen = PlayerPrefs.GetInt("current_level", 1) >= minLevel;
+    }
+
+    private int LocalMinLevel()
+    {
+        if (scheduler?.events == null) return 1;
+        foreach (var e in scheduler.events)
+            if (e?.config != null && e.schedule != null) return Mathf.Max(1, e.schedule.minLevel);
+        return 1;
     }
 
     // ── IProgressEventService ────────────────────────────────────

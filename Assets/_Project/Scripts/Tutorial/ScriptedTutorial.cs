@@ -103,6 +103,17 @@ public sealed class ScriptedTutorial : MonoBehaviour
                 continue;
             }
 
+            // Adımın hamlesi bu tahtada gerçekten oynanabilir mi? (Level kopyalanınca öğretici başka tahtaya
+            // taşınabiliyor; geçersiz hamleye kilitlenen tahta oynanamaz — 2026-10-28, yeni level 4.)
+            // Değilse öğreticinin TAMAMI atlanır: sonraki adımlar ilk adımın oluşturacağı special'a dayanır.
+            if (!IsPlayableMove(from, to))
+            {
+                if (GameDiagnostics.CriticalErrors)
+                    Debug.LogWarning($"[ScriptedTutorial] Level {levelNumber} adım {i}: hamle bu tahtada eşleşme yapmıyor; öğretici atlandı.");
+                for (int k = i; k < steps.Length; k++) MarkSeen(levelNumber, k);
+                break;
+            }
+
             // İlk adım başlayınca rezerv kalkar: oyuncunun hamlesinden sonra tahta normal oynar.
             if (i == 0) reserved.Clear();
 
@@ -133,7 +144,11 @@ public sealed class ScriptedTutorial : MonoBehaviour
         {
             from = TileAt(step.fromCell % width, step.fromCell / width);
             to = TileAt(step.toCell % width, step.toCell / width);
-            return from != null && to != null;
+            if (from == null || to == null) return false;
+            if (step.id == TutorialId.SpecialCombo)
+                return from.GetSpecial() != TileSpecial.None && to.GetSpecial() != TileSpecial.None;
+            var special = from.GetSpecial() != TileSpecial.None ? from.GetSpecial() : to.GetSpecial();
+            return IsActivationSpecial(step.id, special);
         }
 
         // Otomatik: tahtadaki ilk special + ona komşu oynanabilir normal taş (sağ, sol, alt, üst sırasıyla).
@@ -142,6 +157,7 @@ public sealed class ScriptedTutorial : MonoBehaviour
         {
             var t = board.Tiles[x, y];
             if (t == null || t.GetSpecial() == TileSpecial.None || t.IsSpecialLocked) continue;
+            if (!IsActivationSpecial(step.id, t.GetSpecial())) continue;
             for (int d = 0; d < 4; d++)
             {
                 int nx = x + (d == 0 ? 1 : d == 1 ? -1 : 0), ny = y + (d == 2 ? 1 : d == 3 ? -1 : 0);
@@ -153,6 +169,26 @@ public sealed class ScriptedTutorial : MonoBehaviour
             }
         }
         return false;
+    }
+
+    // A cascade may create another special above the one just taught. Activation
+    // must demonstrate the requested kind, rather than the first special in scan order.
+    private static bool IsActivationSpecial(TutorialId id, TileSpecial special) => id switch
+    {
+        TutorialId.LineHActivated => special == TileSpecial.LineH || special == TileSpecial.LineV,
+        TutorialId.PulseCoreActivated => special == TileSpecial.PulseCore,
+        TutorialId.PatchBotActivated => special == TileSpecial.PatchBot,
+        TutorialId.OverrideActivated => special == TileSpecial.SystemOverride,
+        _ => true,
+    };
+
+    // Komşu iki taş ve değişim ya bir special içerir ya da en az bir 3'lü / 2x2 oluşturur.
+    private bool IsPlayableMove(TileView from, TileView to)
+    {
+        if (from == null || to == null) return false;
+        if (Mathf.Abs(from.X - to.X) + Mathf.Abs(from.Y - to.Y) != 1) return false;
+        if (from.GetSpecial() != TileSpecial.None || to.GetSpecial() != TileSpecial.None) return true;
+        return FocusCells(from, to).Count > 2;   // yalnız iki taş kaldıysa eşleşme yok
     }
 
     private TileView TileAt(int x, int y)

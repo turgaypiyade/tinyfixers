@@ -19,6 +19,13 @@ public static class EventSfx
     private static AudioSource s_loop;
     private static Runner s_runner;
 
+    /// <summary>Token ownership prevents an old screen from stopping a voice subsequently reused by the pool.</summary>
+    public readonly struct Handle
+    {
+        internal readonly int Index, Token;
+        internal Handle(int index, int token) { Index = index; Token = token; }
+    }
+
     public static EventSfxLibrary Library
     {
         get
@@ -35,13 +42,17 @@ public static class EventSfx
     /// <param name="durationOverride">>0 ise cue'nun maxDuration'ı yerine bu süre (ör. yürüyüş süresi).</param>
     public static void Play(Func<EventSfxLibrary, EventSfxCue> pick, float volumeScale = 1f, float pitch = 1f,
         float durationOverride = 0f)
+        => PlayTracked(pick, volumeScale, pitch, durationOverride);
+
+    public static Handle PlayTracked(Func<EventSfxLibrary, EventSfxCue> pick, float volumeScale = 1f, float pitch = 1f,
+        float durationOverride = 0f)
     {
         var lib = Library;
-        if (lib == null || !GameSettings.SoundEnabled) return;
+        if (lib == null || pick == null || !GameSettings.SoundEnabled) return default;
         var cue = pick(lib);
-        if (cue == null || cue.clips == null || cue.clips.Length == 0) return;
+        if (cue == null || cue.clips == null || cue.clips.Length == 0) return default;
         var clip = cue.clips[UnityEngine.Random.Range(0, cue.clips.Length)];
-        if (clip == null) return;
+        if (clip == null) return default;
 
         Ensure();
         int i = PickSource();
@@ -50,12 +61,25 @@ public static class EventSfx
         src.Stop();
         src.clip = clip;
         src.volume = Mathf.Clamp01(cue.volume * volumeScale);
-        src.pitch = pitch * (1f + UnityEngine.Random.Range(-cue.pitchJitter, cue.pitchJitter));
+        src.pitch = Mathf.Clamp(pitch * (1f + UnityEngine.Random.Range(-cue.pitchJitter, cue.pitchJitter)), 0.1f, 3f);
+        src.mute = !GameSettings.SoundEnabled;
         src.Play();
 
         float limit = durationOverride > 0f ? durationOverride : cue.maxDuration;
         if (limit > 0f && limit < clip.length)
             s_runner.StartCoroutine(StopAfter(i, token, limit, src.volume));
+        return new Handle(i, token);
+    }
+
+    public static void Stop(Handle handle)
+    {
+        if (handle.Token == 0 || s_pool == null || handle.Index < 0 || handle.Index >= s_pool.Length
+            || s_tokens[handle.Index] != handle.Token) return;
+        ++s_tokens[handle.Index];
+        var source = s_pool[handle.Index];
+        if (source == null) return;
+        source.Stop();
+        source.clip = null;
     }
 
     public static void StartAmbient()
@@ -67,6 +91,7 @@ public static class EventSfx
         s_loop.clip = lib.ambientLoop;
         s_loop.volume = lib.ambientVolume;
         s_loop.loop = true;
+        s_loop.mute = !GameSettings.SoundEnabled;
         s_loop.Play();
     }
 
@@ -120,7 +145,44 @@ public static class EventSfx
             if (group != null) src.outputAudioMixerGroup = group;
             if (i < PoolSize) s_pool[i] = src; else s_loop = src;
         }
+        s_runner.ApplySound(GameSettings.SoundEnabled);
     }
 
-    private sealed class Runner : MonoBehaviour { }
+    private sealed class Runner : MonoBehaviour
+    {
+        private void OnEnable()
+        {
+            GameSettings.OnSoundChanged += ApplySound;
+            ApplySound(GameSettings.SoundEnabled);
+        }
+
+        public void ApplySound(bool enabled)
+        {
+            if (!enabled) StopAllCoroutines();
+            if (s_pool != null)
+                for (int i = 0; i < s_pool.Length; i++)
+                {
+                    var source = s_pool[i];
+                    if (source == null) continue;
+                    source.mute = !enabled;
+                    if (enabled) continue;
+                    ++s_tokens[i];
+                    source.Stop(); source.clip = null;
+                }
+            if (s_loop != null) s_loop.mute = !enabled;
+        }
+
+        private void OnDisable()
+        {
+            GameSettings.OnSoundChanged -= ApplySound;
+            ApplySound(false);
+            if (s_loop != null) s_loop.Stop();
+        }
+
+        private void OnDestroy()
+        {
+            if (s_runner != this) return;
+            s_runner = null; s_pool = null; s_tokens = null; s_loop = null;
+        }
+    }
 }

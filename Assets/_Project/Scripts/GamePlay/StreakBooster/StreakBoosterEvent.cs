@@ -16,7 +16,7 @@ using UnityEngine;
 public static class StreakBoosterEvent
 {
     // Bu level ve sonrasında event aktif. Inspector'dan değiştirilebilir (StreakBoosterConfig.Awake set eder).
-    public static int ThresholdLevel = 25;
+    public static int ThresholdLevel = 30;
 
     public const int MaxStage = 3;
 

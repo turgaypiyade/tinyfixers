@@ -1,0 +1,172 @@
+fileFormatVersion: 2
+guid: 027caeac9c1f55cab27b1b6e22ff37e6
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: 21300000
+    second: Spin0
+  - first:
+      213: 21300001
+    second: Spin1
+  - first:
+      213: 21300002
+    second: Spin2
+  - first:
+      213: 21300003
+    second: Spin3
+  - first:
+      213: 21300004
+    second: Spin4
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    enableMipMap: 0
+    sRGBTexture: 1
+  isReadable: 0
+  streamingMipmaps: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 1
+    aniso: 1
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  compressionQuality: 75
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 0
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteGenerateFallbackPhysicsShape: 0
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  textureType: 8
+  textureShape: 1
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 75
+    overridden: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: Spin0
+      rect:
+        serializedVersion: 2
+        x: 5
+        y: 151
+        width: 426
+        height: 440
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      bones: []
+      spriteID: a187e345d0bf595aaaaba8d883262502
+      internalID: 21300000
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Spin1
+      rect:
+        serializedVersion: 2
+        x: 437
+        y: 151
+        width: 426
+        height: 440
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      bones: []
+      spriteID: 7a40c18f82795959b06e5a3bd12e319b
+      internalID: 21300001
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Spin2
+      rect:
+        serializedVersion: 2
+        x: 865
+        y: 151
+        width: 426
+        height: 440
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      bones: []
+      spriteID: d66a56de09d354b6bd01d336f37be923
+      internalID: 21300002
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Spin3
+      rect:
+        serializedVersion: 2
+        x: 1302
+        y: 151
+        width: 426
+        height: 440
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      bones: []
+      spriteID: 657a8e4b865c5daeb575013c93dd7f85
+      internalID: 21300003
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Spin4
+      rect:
+        serializedVersion: 2
+        x: 1742
+        y: 151
+        width: 426
+        height: 440
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      bones: []
+      spriteID: 467848d076a85e3ca1e271649c2e0a2b
+      internalID: 21300004
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    physicsShape: []
+    bones: []
+    secondaryTextures: []
+    nameFileIdTable:
+      Spin0: 21300000
+      Spin1: 21300001
+      Spin2: 21300002
+      Spin3: 21300003
+      Spin4: 21300004
+  userData: GiftFestival supplied artwork; original pixels preserved
+  assetBundleName: 
+  assetBundleVariant: 

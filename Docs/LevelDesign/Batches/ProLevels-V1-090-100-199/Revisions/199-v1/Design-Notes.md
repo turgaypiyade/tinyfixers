@@ -1,0 +1,108 @@
+# ProLevels V1 — 90 / 100 / 199
+
+2026-10-29. Kullanıcının yeni tasarım isteği: acele yerleştirme yerine oynama keyfi,
+görünür açılma olayı ve doğadan şekiller. Üç tasarım **inceleme taslağıdır**; kullanıcı
+onayı, oynanış dengesi veya ölçülmüş kazanma oranı henüz yok.
+
+![Üç tasarım](Levels090-100-199.png)
+
+| V1 | İsim / EN | Tahta | Hamle | Ana fikir |
+| --- | --- | --- | --- | --- |
+| 90 | Dalga Düellosu / Tidal Duel | 9×10, 65 aktif | 30 | Kayalık kıvrım açıldıkça büyüyen düello alanı |
+| 100 | Yaprak Düellosu / Leaf Duel | 9×10, 70 aktif | 32 | Yaprağın orta mıknatıs damarı ve yan damarlar |
+| 199 | Deniz Kabuğu / Seashell | 9×11, 87 aktif | 31 | Özel vuruşlu iç spiral, oyma dış kabuk ve jel kaplama |
+
+## 90 — Dalga Düellosu
+
+- Maske dalganın kıvrımını ve sağdaki açık koyu oluşturur. Başlangıçta 44 normal taş
+  yuvası, 13 üç-vuruşlu SculptingStone28, tek RocketBasket38 ve alt dudakta 6 oyuncu
+  kalkanı35 vardır. 1 yuva başlangıçta dolmaz; önizlemede boş bırakıldı.
+- İlk karar: açık solda büyük eşleşme kurmak mı, kıvrımın ağzındaki sepeti şarj edip
+  kayaları aşındırmak mı? Sepet kırmızı/sarı/mavi eşleşmelerde birer roket verir;
+  her vuruşta tüm roketleri fırlatma ayarı kapalıdır. Hazır special yoktur.
+- Kıvrım ve sepet tamamen açıldığında normal dolum yuvası 44→59 olur. Bu bir
+  karşı-olgusal geometri kontrolüdür; tek hamle veya garantili roket hedefi değildir.
+- Tek bitiş hedefi **420 BossDamage**. Üç rakip: **126 / 139 / 155 HP**;
+  karşılık hasarları **7 / 8 / 8**, oyuncu HP **180**. İlk rakip engel atmaz;
+  sonraki ikisi her 4 karşı saldırıda 1 / 2 engel atar. Havuz Oil14 + Porcelain30,
+  baskı tavanı6, yağ yayılma tavanı8. Alet tehdidi kapalı.
+- Kayaların hepsini temizlemek ayrıca zorunlu hedef değildir; düello bittiğinde
+  kalan engelleri temizlemeye zorlayan bir son bölüm yoktur.
+
+## 100 — Yaprak Düellosu
+
+- Yaprak silueti, ortasında 7 hücrelik tek mıknatıs yolu ve ona yaklaşan 12
+  iki-aşamalı sandıktan oluşan iki bağlı yan damar. Sapın altında 6 kalkan35.
+  Başlangıçta 33 normal taş yuvası; alt bölgede 12 yuva gerçekten boş.
+- Üst mıknatıs ucu hemen komşu taşlardan vurulabilir. Alt uç başlangıçta yan damar
+  arkasındadır; damar açılınca normal vuruş erişimi oluşur. Mıknatısı birleştirince
+  merkezde uzun, dolum alan bir taş hattı kazanılır (normal yuvalar 33→44).
+- Mıknatısın yanına üretilen special'ı bekletmek kafeslenme riski taşır. Karar yalnız
+  daha çok vuruş yapmak değil: special'ı şimdi kullanmak veya damarı önce açmaktır.
+- Tek bitiş hedefi **480 BossDamage**. Üç rakip **144 / 158 / 178 HP**;
+  karşılık hasarları **7 / 8 / 9**, oyuncu HP **210**. Her4 karşı saldırıda
+  1 / 1 / 2 engel; havuz Oil14 + Porcelain30 + PlasticTwoStage40.
+  Baskı tavanı7, yağ yayılma tavanı10. Alet tehdidi ve hazır special yok.
+- Mıknatıs ve sandıklar alan kazanma araçlarıdır; ayrıca son temizlik hedefi değildir.
+
+## 199 — Deniz Kabuğu
+
+- Yuvarlatılmış dış maske içinde 34 hücrelik kesintisiz spiral: 17 adet üç-vuruşlu
+  SculptingStone28 ve 17 adet yalnız-special, tek-vuruşlu SculptingSpecial39.
+  Komşuluk vuruşunun 39'u açacağı varsayılmadı; güncel library kontrol edildi.
+- Üstte jel üzerindeki tek hazır TNT, sabit üç pusulanın oluşturduğu zayıf ağzın
+  üstünde durur. Alttaki katı kapak sayesinde başlangıçta düşmez. Güncel PulseCore
+  5×5 alanı bu üç kapıyı kapsar; çevredeki oyma taşları da hasar alabilir.
+- Başlangıçta 1 açık jel + üç pusulanın altında 3 örtülü jel seed'i bulunur. Sıvı
+  altta, pusula `stackedObstacles` üstündedir. Açılışta 26 normal taş + 1 hazır TNT,
+  4 tabana oturmuş yumurta-kuş ve 18 dolum gölgesindeki boş yuva vardır.
+- Ağız açıldığında dolum bağlı normal yuvalar **27→41** olur. TNT harcanır; açılmış
+  odaların renkleri önizlemede temsilidir, kaskat sonucu olduğu iddia edilmez.
+- Merkezdeki tek 2×2 AncientSeal64 **8 kırmızı → 8 sarı → 8 yeşil** toplar.
+  Alt sıradaki dört EggBird45 orta/son bölümde yardımcı uçuşlar sağlar. Yumurtalara
+  doğrudan temizlik hedefi eklenmedi; kuş hedeflerinin rastgeleliği korunur.
+- Hedefler **87 jel kaplama / 17 pusula / 1 antik mühür**. Jel hedefi hole'ları
+  dışlar, sonradan açılan oyma taşı ve mühür hücrelerini kapsar. Jelsiz special'ın
+  otomatik jel yayacağı varsayılmaz. Dış kabuğu açmak tek başına bitiş değildir.
+- 31 hamle ilk Süper Zor ayarıdır. Zorluk, katman/kaplama işinin ve special kaynağının
+  birlikte planlanmasından gelir; imkânsızlığın veya kazanılabilirliğin kanıtı değildir.
+
+## Tekrar, ilerleme ve koruma
+
+- Aktif V1 kataloğunda 90 için89, 100 için99, 199 için197 önceki bağlı kayıt
+  tarandı. Konum, yansımalar ve kendi sınırlarına kırpılmış engel kütleleri incelendi.
+  Sayısal benzerlik bir yenilik/beğeni yüzdesi olarak kullanılmadı.
+- [15 tahta karşılaştırması](../../Reviews/ProLevels-V1-090-100-199/Comparison.png)
+  ve [inceleme notu](../../Reviews/ProLevels-V1-090-100-199/Review.md).
+- Seçilen bütün engeller V1'de daha önce kullanılmıştır; yeni mekanik tanıtılmaz.
+  İlk kullanım kayıtları `obstacle-unlocks.json` içindedir. 199 kullanıcının verdiği
+  havuzun dışına çıkmaz; yeni ColorCrate71–74 kullanılmaz.
+- Yeni assetler `ProLevels/LevelV1_00000900.asset`, `00001000.asset`, `00001990.asset`.
+  Yalnız üç boş katalog referansı dolduruldu. Gerçek anahtarlar **LevelCL_090 /
+  LevelCL_0100 / LevelCL_0199** korundu; TR/EN isimler bu anahtarlarla eklendi.
+- 3.098 mevcut asset/kod/kaynak dosyası hash ile korundu. Önceki isimler ve katalog
+  kayıtları birebir korunur. Kullanıcının onayladığı11–15 ve önceki190/200 değişmedi.
+  Snapshot'lar `Before/`; yeni dosya GUID/hash kaydı `manifest.json`.
+
+## Performans ve doğrulama sınırı
+
+- Yeni runtime, VFX, ses, board taraması veya pooling kodu yazılmadı. Merkezî ses
+  sistemine ve mevcut köşe/border çözümüne dokunulmadı. Boss'lar10 satır sınırında.
+- Yük sınırlı tutuldu: 90'da1 sepet (toplam3 roket), 100'de1 mıknatıs yolu,
+  199'da1 mühür ve4 kuş (en fazla12 dalış). GelLauncher/WaterTank/çok sayıda
+  üretici veya tüm-board yardımcı patlama zinciri eklenmedi.
+- Mevcut maliyetler yok sayılmadı: RocketBasketLaunchAction atış başına geçici
+  listeler kullanır; EggBirdHatchAction hedef havuzuyla birlikte board'u tarar ve
+  geçici listeler/HashSet yaratır; kuş görsellerinin oluşturma/yok etme maliyeti var.
+  Magnet cage/carrier görsellerinde de mevcut GameObject üretimi bulunur. Bunlar
+  bu görevde yeniden uygulanmadı; bütün efektlerin havuzlu olduğu iddia edilmez.
+- Magnet OnDisable abonelikleri/kafes görsellerini ve bekleyen rutinini temizler.
+  AncientSeal OnDisable aboneliği kaldırır, uçuş işlerini Dispose eder ve break
+  hold'ları bırakır; EggBird eylemi board/level kimliğini kontrol edip finally'de
+  uçuşu temizler. Bunlar kaynak incelemesidir; cihaz teardown testi değildir.
+- `audit.py --assets`: array uzunlukları, mask/bağlılık, origins/footprints,
+  katmanlar, goal miktarları, YAML ayrıştırma, custom path, wave verisi, isim/GUID,
+  başlangıç special/movable konumları, kapak sonrası dolum ve önceki dosya koruması
+  geçti. PNG'ler açılıp incelendi.
+- **Unity Play/build, bot/kaskat simülasyonu, remote yayın/release baseline yok.
+  Gerçek telefon FPS'i ve kazanma oranı ölçülmedi.**

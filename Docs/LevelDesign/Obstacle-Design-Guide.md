@@ -2,6 +2,43 @@
 
 108 hazırlanırken mevcut kod, `ObstacleLibrary.asset` ve `LevelCatalogPro.asset` üzerinden çıkarıldı. Tasarım amaçlı yaşayan nottur; eski dokümanlarla çelişirse güncel servis kodu ve asset ayarları esas alınır. Yeni engel veya davranış değiştiğinde güncellenir.
 
+## BirdHouse78 / Collectible Bird3 — V1 ilk tanıtım201 (2026-10-31)
+
+- Güncel `BirdHouseService` ve library:1×1 sabit, hücreyi bloke eder; kırılmaz,
+  köşeden taş geçişine izin verir. Ev ilk vuruşta açılır. Kuş dışarıdayken aynı
+  hamlenin zincirinde ya da sonraki hamlede ikinci vuruş kuşu HUD hedefine gönderir.
+  Güncel serviste başarılı toplama sonrası kota kaldıkça ev açık kalır,yeni kuş
+  çıkar. Sonraki hamle yerleşirken vuruş gelmediyse kuş geri girer; süre gerçek saniye
+  sayacı değildir. Normal/scripted vuruşlarda ev başına hamlede en fazla1 kuş;
+  special/joker vuruşları bu sınıra takılmaz.
+- Goal **Collectible Bird3** olur; ev sayısı veya kırılma goal'ü78 değildir.
+  Evler ortak goal kotasına kadar yeniden kuş üretir. Hedef dolunca hepsi kapanır,
+  kararır ve yeni vuruş almaz. Goal yoksa kuş üretmez. Tek bir eve birden çok kez
+  dönülebilir;50 kuş hedefi12 ayrı evin her birini kullanma zorunluluğu değildir.
+- Kullanıcı bitişik2×3/2×4/3×3 gibi gruplar istedi. İlk tanıtımda karşılıklı
+  köşe bölgelerinde iki2×3 grup seçildi; normal eşleşme ve refill için grubun iki
+  yanında birer taş şeridi bırakıldı.3×3 grubun iç evi yalnız special ile
+  erişilebileceğinden sonraki daha zor tasarımlarda bilinçli kullanılabilir.
+- 202–205 için kullanıcı **yan kenar tek sütun,alt kenar tek sıra,iki sütunlu
+  blok** seçeneklerini açıkça istedi. Kenar sıraları bitişik tutulur; kalıcı
+  üreticiler kargo çıkışını veya alttaki normal taşların tüm beslemesini kapatmaz.
+  Toplu çift sütunda iki yan yüz,tek alt sırada üst yüz normal eşleşmeye açılır.
+  201'in hedefi kullanıcı tarafından12→50 revize edildi; tekrar kuş üreten ev
+  sayısıyla collectible hedef miktarı eşitlenmez.
+- **50 yalnız201 içindir.** Kullanıcı202–205'te aynı yüksek kotayı yanlış buldu.
+  Güncel v2 hedefleri18/12/16/24; sırasıyla3/3/4/6ev ve ek hedefler vardır.
+  İlk açılıştan sonra isabet serisi ucuz üretim sağlayabilir,ancak bölgeler
+  arasında dolaşmak evleri kapatır. Normal kaynakta ev başına hamle tavanı ve
+  özel kaynakta tavan olmaması birlikte düşünülür. Bunlar ölçülmüş denge sayılmaz.
+- `fillsShadowBeneath=false`: üst grup altında gölge varsa kendiliğinden taş var
+  sanma; açık yan besleme veya bilinçli başlangıç pinleri ayrıca doğrulanmalı.
+  Üstüne katı örtü konabilir; bu girişte örtü/sıvı/başka engel yok.
+- Hint78 ve TR/EN `hint_obstacle_birdhouse*` zaten mevcut. Tek shared Update,
+  ev başına bir kez kurulan görsel parçalar, kuş uçuş havuzu ve merkezi
+  `board.Audio.PlayOneShotClip` kullanır. Idle'da Update kapanır; teardown abonelik
+  ve uçuş işlerini temizler. Yeni seviyenin hazırlanması runtime/VFX değişikliği
+  gerektirmedi; ilk parça/ev/flyer allocation'ları hâlâ vardır, cihaz FPS ölçülmedi.
+
 ## Seçim ilkesi
 
 O ana kadar açılmış bütün engeller tasarım havuzudur. Son tanıtılan engeller her levelde zorunlu değildir. Bölgesel renk uyumu, toplu geometrik yerleşim, oynanış çeşitliliği ve yardım/zorluk dengesi birlikte değerlendirilir. Aşağıdaki ilk seviye değerleri katalogdaki ilk authored/goal kullanımını gösterir; ayrı bir tutorial takvimi değildir. Dinamik doğan engeller ayrıca değerlendirilmelidir.
@@ -29,11 +66,11 @@ Uçuştaki taşlar ihtiyaçtan düşülerek rezerve edilir; bir mührün ihtiyac
 
 ## Yardımcı engeller
 
-Kullanıcının hedef politikası: **RocketBasket ve OverrideBatteryBox doğrudan goal yapılmaz.** EggBird yardımcı rolündeyse hedef zorunluluğu yoktur; tüm yumurtalar kırılmadan level tamamlanabilir. EggBird ancak özel olarak temizleme amacı seçildiğinde goal olur. Yardımcılar mümkün olduğunda bitişik bir grup halinde düzenlenir. Tam-board jel gibi ayrı hedefler, yardımcıların kapladığı hücrelere erişimi yine gerektirebilir; doğrudan yardımcı goal'ü olmaması bu dolaylı gereksinimi kaldırmaz.
+**2026-10-31 güncel kullanıcı politikası:** Yardımcılar dahil tahtaya konan engeller hedefte temsil edilir; toplam en fazla 5 goal. RocketBasket ve OverrideBatteryBox tükenip kalktığında origin başına bir, EggBird kırıldığında bir hedef kredisi verebilir. Eski hedefsiz yardımcı tercihi geçersizdir. Kalıcı BirdHouse/KeyGenerator/HatLauncher gibi üreticiler ise kırma hedefi yerine kendi collectible/üretim hedefiyle temsil edilir. Yardımcılar mümkün olduğunda bitişik bir grup halinde düzenlenir.
 
 | Engel | Güncel davranış | Tasarımda kullanım |
 |---|---|---|
-| RocketBasket · 38 | Varsayılan kırmızı/sarı/mavi olmak üzere 3 roket. Komşu normal eşleşme yalnız yüklü aynı renk roketi ateşler; special/booster kalan roketlerden birini ateşleyebilir. Boşalınca kalkar; normalde ayrı hedef yapılmaz. | Zor bölgelere yardım sağlayan erişilebilir bir odak. Yakınında yeterli eşleşme alanı ve gerekli renk havuzu bırak. |
+| RocketBasket · 38 | Varsayılan kırmızı/sarı/mavi olmak üzere 3 roket. Komşu normal eşleşme yalnız yüklü aynı renk roketi ateşler; special/booster kalan roketlerden birini ateşleyebilir. Boşalınca kalkar; güncel politikada sepet adediyle hedeflenir. | Zor bölgelere yardım sağlayan erişilebilir bir odak. Yakınında yeterli eşleşme alanı ve gerekli renk havuzu bırak. |
 | OverrideBatteryBox · 43 | 2×2, dört rengin şarjı ayrı. Güncel library `hits=3`: renk başına 3, toplam 12 şarj vuruşu. Dolunca board genelinde bir vuruşluk dalga; normal taşları temizler, specials zincirlenebilir. Çok katmanlı her engeli tek seferde yok etmez. | Daha çok hazırlık isteyen güçlü yardım. Dört renk havuzunu ve çevresinde şarj edilebilir alanı koru. |
 | EggBird · 45 | Hareketli, iki vuruş: çatla → kuşlar çık. Üç uygun hedef seçilir; mümkünse farklı, eşit rastgele, hedef önceliği yok. Hedef başına tek vuruş; ilave komşu splash yok. | Küçük bir engeli temizlemekle yardım ödülü bir arada. Belirli bir engeli kesin vuracağı varsayılmaz. |
 

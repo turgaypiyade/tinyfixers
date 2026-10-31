@@ -163,8 +163,11 @@ public sealed class CommonPopupView : MonoBehaviour
                 skin.titleGradientBottom, skin.titleGradientBottom);
         }
         text.textWrappingMode = TextWrappingModes.NoWrap;
+        // Başlık dili (kullanıcı kararı 2026-10-27): BÜYÜK HARF (dile duyarlı: tr i → İ), hafif yay, harfler dönmez.
+        DisplayUpperCase.Apply(text);
         var arc = text.GetComponent<TextArcEffect>();
         if (arc == null) arc = text.gameObject.AddComponent<TextArcEffect>();
+        arc.RotateLetters = false;
         arc.SetArcAngle(skin.titleArcDegrees);
     }
 

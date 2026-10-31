@@ -64,6 +64,14 @@ public sealed class TextArcEffect : MonoBehaviour
         Apply();
     }
 
+    /// <summary>Harfler yay eğimine göre tek tek dönsün mü. Kendi eğimi olan display fontlarında (TinyFixers Pop)
+    /// kapalı: döndürme harflerin eğimiyle üst üste binip satırı yamuk gösteriyordu.</summary>
+    public bool RotateLetters
+    {
+        get => rotateLetters;
+        set { if (rotateLetters == value) return; rotateLetters = value; Apply(); }
+    }
+
     /// <summary>Kısa/uzun başlıklarda aynı toplam yay açısını korur.</summary>
     public void SetArcAngle(float degrees)
     {

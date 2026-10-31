@@ -6,9 +6,9 @@ using UnityEngine.UI;
 /// <summary>
 /// Kırılan jel fırlatıcının (ObstacleId.GelLauncherUp/Down/Left/Right) atışı. Pres sonuna kadar sıkışır
 /// (<see cref="GelLauncherPressView"/>), baskı plakası ağızdan fırlar ve tahta kenarına kadar hücre hücre uçar; vardığı her hücre için
-/// <see cref="GelLauncherBlastAction"/> sıraya girer (engel kalmayana kadar vurur, sonra taşı kırar /
-/// special'ı tetikler). Kapak <see cref="GelLagCells"/> hücre çıkınca jel kartuşun TABANINDAN yola çıkar,
-/// önce kartuşun iki hücresini sonra yolu kapaktan biraz hızlı boyar; o an engelle kapalı hücreler
+/// Lift ile ortak <see cref="BoosterCellImpactPass"/> isabeti uygular — Lift'ten farkı: yoldaki engeller TAMAMEN
+/// yok edilir (yığın dahil; canı düşmeyen üretici engelde tek vuruş); engel kendi kuralına göre hasar alır, açık taş kırılır, special tetiklenir ve açılan hücre jel olur. Kapak <see cref="GelLagCells"/> hücre çıkınca jel kartuşun TABANINDAN yola çıkar,
+/// kartuşun iki hücresini boyar; yol hücreleri kapak vardığında boyanır; o an engelle kapalı hücreler
 /// patlamalar bitince boyanır. Tüp kaybolurken parçalar ve buhar saçılır.
 ///
 /// WaterTankSpreadAction kalıbı: BoardController.HandleObstacleDestroyed'dan coroutine olarak başlar,
@@ -31,6 +31,7 @@ public sealed class GelLauncherFireAction : BoardAction
     private readonly ObstacleId launcherId;
     // Kartuşun iki hücresi: gövde görseli sönene dek taş girmez (yoksa şişme düşen taşların altında kalır).
     private CellHold bodyHold;
+    private CellHold pathHold;
     private bool bodyVisualDone;
 
     public GelLauncherFireAction(BoardController board, Vector2Int origin, ObstacleId launcherId)
@@ -60,7 +61,9 @@ public sealed class GelLauncherFireAction : BoardAction
             Vector2Int front = FrontCell(footprint, dir);
             var path = BuildPath(front, dir);
 
-            var blasts = new GelLauncherBlastAction[path.Count];
+            pathHold = board.HoldForFlow(path);
+            // Lift'ten farkı: kapağın önündeki engeller tek vuruş değil, TAMAMEN yok edilir (kullanıcı kuralı).
+            var impacts = new BoosterCellImpactPass(board, clearObstaclesFully: true);
             var deferred = new List<Vector2Int>();
             bool gelStarted = false, gelDone = false;
 
@@ -120,21 +123,21 @@ public sealed class GelLauncherFireAction : BoardAction
 
                 if (!board.IsMaskHoleCell(path[i].x, path[i].y))
                 {
-                    blasts[i] = new GelLauncherBlastAction(board, level, path[i]);
-                    board.EnqueueBoardAction(blasts[i]);
+                    impacts.HitCell(path[i]);
+                    PaintIfOpen(path[i]);
                 }
 
                 // Kapak ağızdan GelLagCells hücre çıkınca jel tabandan yola çıkar.
                 if (!gelStarted && i + 1 >= GelLagCells)
                 {
                     gelStarted = true;
-                    gelRoutine = board.StartCoroutine(RunGel(level, GelCells(footprint, front, path), deferred, () => gelDone = true));
+                    gelRoutine = board.StartCoroutine(RunGel(level, GelCells(footprint, front), deferred, () => gelDone = true));
                 }
             }
             if (!gelStarted)
             {
                 gelStarted = true;
-                gelRoutine = board.StartCoroutine(RunGel(level, GelCells(footprint, front, path), deferred, () => gelDone = true));
+                gelRoutine = board.StartCoroutine(RunGel(level, GelCells(footprint, front), deferred, () => gelDone = true));
             }
 
             // Kapak tahtadan çıkıp söner.
@@ -144,7 +147,7 @@ public sealed class GelLauncherFireAction : BoardAction
             // Jel ve kapak patlamalarının bitmesini bekle; o an engel altında kalan hücreleri sonra boya.
             float waited = 0f;
             while (waited < CompletionTimeout && IsCurrent(level)
-                && (!gelDone || !AllCompleted(blasts) || (releaseRoutine != null && !bodyVisualDone)))
+                && (!gelDone || (releaseRoutine != null && !bodyVisualDone)))
             {
                 waited += Time.deltaTime;
                 yield return null;
@@ -162,6 +165,7 @@ public sealed class GelLauncherFireAction : BoardAction
             if (cap != null) ReturnImage(cap, CapPoolKey);
             if (body != null) Object.Destroy(body.gameObject);
             ReleaseBodyCells();
+            pathHold?.Dispose(); pathHold = null;
             job.Dispose();
             if (IsCurrent(level))
                 board.RequestResolveAfterActionSequence();
@@ -169,13 +173,12 @@ public sealed class GelLauncherFireAction : BoardAction
     }
 
     // Jel sırası: kartuşun tabanı → ağız hücresi → yol.
-    private static List<Vector2Int> GelCells(List<Vector2Int> footprint, Vector2Int front, List<Vector2Int> path)
+    private static List<Vector2Int> GelCells(List<Vector2Int> footprint, Vector2Int front)
     {
         var cells = new List<Vector2Int>();
         foreach (var c in footprint)
             if (c != front) cells.Add(c);
         cells.Add(front);
-        cells.AddRange(path);
         return cells;
     }
 
@@ -207,13 +210,6 @@ public sealed class GelLauncherFireAction : BoardAction
 
     private static float CellSeconds(int index)
         => Mathf.Max(MinCellSeconds, StartCellSeconds * Mathf.Pow(CellAccel, index));
-
-    private static bool AllCompleted(GelLauncherBlastAction[] blasts)
-    {
-        foreach (var b in blasts)
-            if (b != null && !b.Completed) return false;
-        return true;
-    }
 
     private void PaintIfOpen(Vector2Int c)
     {
@@ -398,51 +394,6 @@ public sealed class GelLauncherFireAction : BoardAction
             cap.position = Vector3.LerpUnclamped(from, to, k);
             if (img != null) { var c = img.color; c.a = 1f - k; img.color = c; }
             yield return null;
-        }
-    }
-}
-
-/// <summary>
-/// Jel fırlatıcı kapağının tek hücreye çarpması: önce hücredeki engel(ler) kalmayana kadar special
-/// vuruşu (kırılamayan engelde durur), sonra <see cref="CellsImpactAction"/> ile taş kırılır / special
-/// tetiklenir. Sıraya (sequencer) girer → hasar o anki içeriğe uygulanır.
-/// </summary>
-public sealed class GelLauncherBlastAction : BoardAction
-{
-    private const int MaxObstacleHits = 6;
-
-    private readonly BoardController board;
-    private readonly LevelData level;
-    private readonly Vector2Int cell;
-    public bool Completed { get; private set; }
-
-    public GelLauncherBlastAction(BoardController board, LevelData level, Vector2Int cell)
-    {
-        this.board = board;
-        this.level = level;
-        this.cell = cell;
-    }
-
-    public override IEnumerator ExecuteVisuals(ActionSequencer sequencer)
-    {
-        try
-        {
-            if (board == null || !board.isActiveAndEnabled || board.LevelData != level)
-                yield break;
-
-            var obstacles = board.ObstacleStateService;
-            for (int i = 0; i < MaxObstacleHits && obstacles != null && obstacles.HasObstacleAt(cell.x, cell.y); i++)
-            {
-                var hit = board.ApplyObstacleDamageAt(cell.x, cell.y, ObstacleHitContext.SpecialActivation);
-                if (!hit.didHit) break;   // kırılamaz (kargo, jel vb.)
-                board.TriggerObstacleVisualChange(hit.visualChange);
-            }
-
-            yield return new CellsImpactAction(board, level, new List<Vector2Int> { cell }).ExecuteVisuals(sequencer);
-        }
-        finally
-        {
-            Completed = true;
         }
     }
 }

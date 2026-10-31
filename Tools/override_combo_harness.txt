@@ -31,7 +31,7 @@ public class Combo {
     Check(c.turnViewA.TopReverse==aFirst&&c.turnViewA.BottomReverse!=aFirst,"A cap and lower half obey position role");
     Check(c.turnViewB.TopReverse!=aFirst&&c.turnViewB.BottomReverse==aFirst,"B mirrors both half directions");
     Check(c.turnViewA.Phase>phase&&Near(c.turnViewA.Phase,c.turnViewB.Phase),"no phase reset/pause during separation, return or impact fade");phase=c.turnViewA.Phase;
-    Check(Near(c.iconImageA.color.a,0)&&Near(c.iconImageB.color.a,0),"static full icons do not cover spinning halves");
+    Check(Near(c.iconImageA.visibleAlpha,0)&&Near(c.iconImageB.visibleAlpha,0),"static full icons do not cover spinning halves");
     if(vertical&&impacts==0)Check(Near(c.IconRectA.anchoredPosition.x,0)&&Near(c.IconRectB.anchoredPosition.x,0),"vertical pair separates and returns on its own axis");
     if(impacts==0){Check(c.comboLink!=null,"tether remains connected through opening and smash");
      var mid=(c.IconRectA.anchoredPosition+c.IconRectB.anchoredPosition)*.5f;

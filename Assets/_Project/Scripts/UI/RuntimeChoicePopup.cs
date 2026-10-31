@@ -95,6 +95,23 @@ public sealed class RuntimeChoicePopup : MonoBehaviour
         DontDestroyOnLoad(root);
     }
 
+    /// <summary>Açık popup'ın başlık yayını değiştirir (varsayılan: CommonPopupSkin.titleArcDegrees).</summary>
+    public static void SetTitleArc(float degrees)
+    {
+        var title = _instance != null && _instance.view != null ? _instance.view.Title : null;
+        if (title != null && title.TryGetComponent(out TextArcEffect arc)) arc.SetArcAngle(degrees);
+    }
+
+    /// <summary>Açık popup'ın başlığını dikeyde kaydırır (+ yukarı) — bant içinde ortalamak için.</summary>
+    public static void NudgeTitle(float dy)
+    {
+        var title = _instance != null && _instance.view != null ? _instance.view.Title : null;
+        if (title == null) return;
+        var rt = title.rectTransform;
+        rt.offsetMin += new Vector2(0f, dy);
+        rt.offsetMax += new Vector2(0f, dy);
+    }
+
     public static void Show(string title, string message, params Choice[] choices)
     {
         Dismiss();

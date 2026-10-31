@@ -17,8 +17,8 @@ public sealed class HarvestConfig : ScriptableObject
         s_shared != null ? s_shared : (s_shared = Resources.Load<HarvestConfig>(ResourcePath));
 
     [Header("Takvim & kapı")]
-    [Tooltip("Oynanacak level bu sayıya ulaşınca açılır (25. seviye bitince = 26).")]
-    [Min(1)] public int minLevelGate = 26;
+    [Tooltip("Oynanacak level bu sayıya ulaşınca açılır (49. seviye bitince = 50).")]
+    [Min(1)] public int minLevelGate = 50;
     [Tooltip("Döngü uzunluğu (gün). İlk activeDays gün event açık, kalanı ara.")]
     [Min(1)] public int cycleDays = 7;
     [Min(1)] public int activeDays = 5;

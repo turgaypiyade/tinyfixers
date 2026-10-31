@@ -1,0 +1,1279 @@
+{
+  "phase": "Draft",
+  "levels": [
+    {
+      "level": 131,
+      "width": 9,
+      "height": 11,
+      "active": 87,
+      "maskComponents": [
+        87
+      ],
+      "moves": 26,
+      "goals": 3,
+      "families": {
+        "58": 10,
+        "56": 2,
+        "30": 9
+      }
+    },
+    {
+      "level": 132,
+      "width": 9,
+      "height": 11,
+      "active": 75,
+      "maskComponents": [
+        75
+      ],
+      "moves": 27,
+      "goals": 5,
+      "families": {
+        "58": 10,
+        "7": 12,
+        "40": 12,
+        "56": 2,
+        "45": 1
+      }
+    },
+    {
+      "level": 133,
+      "width": 9,
+      "height": 11,
+      "active": 99,
+      "maskComponents": [
+        99
+      ],
+      "moves": 28,
+      "goals": 4,
+      "families": {
+        "56": 2,
+        "12": 15,
+        "11": 15,
+        "58": 12
+      }
+    },
+    {
+      "level": 134,
+      "width": 9,
+      "height": 11,
+      "active": 99,
+      "maskComponents": [
+        99
+      ],
+      "moves": 24,
+      "goals": 5,
+      "families": {
+        "28": 16,
+        "56": 6,
+        "25": 25,
+        "40": 13,
+        "30": 12
+      }
+    },
+    {
+      "level": 135,
+      "width": 9,
+      "height": 11,
+      "active": 68,
+      "maskComponents": [
+        68
+      ],
+      "moves": 27,
+      "goals": 4,
+      "families": {
+        "46": 18,
+        "56": 2,
+        "45": 2,
+        "28": 14
+      }
+    },
+    {
+      "level": 136,
+      "width": 9,
+      "height": 11,
+      "active": 99,
+      "maskComponents": [
+        99
+      ],
+      "moves": 28,
+      "goals": 5,
+      "families": {
+        "28": 8,
+        "40": 16,
+        "55": 2,
+        "56": 3,
+        "57": 1
+      }
+    },
+    {
+      "level": 137,
+      "width": 9,
+      "height": 11,
+      "active": 99,
+      "maskComponents": [
+        99
+      ],
+      "moves": 26,
+      "goals": 2,
+      "families": {
+        "55": 6,
+        "26": 4
+      }
+    },
+    {
+      "level": 138,
+      "width": 9,
+      "height": 11,
+      "active": 99,
+      "maskComponents": [
+        99
+      ],
+      "moves": 28,
+      "goals": 3,
+      "families": {
+        "56": 4,
+        "52": 4
+      }
+    },
+    {
+      "level": 139,
+      "width": 9,
+      "height": 11,
+      "active": 99,
+      "maskComponents": [
+        99
+      ],
+      "moves": 32,
+      "goals": 3,
+      "families": {
+        "56": 11,
+        "46": 11,
+        "58": 39
+      }
+    },
+    {
+      "level": 140,
+      "width": 9,
+      "height": 10,
+      "active": 82,
+      "maskComponents": [
+        82
+      ],
+      "moves": 30,
+      "goals": 5,
+      "families": {
+        "40": 30,
+        "35": 4,
+        "47": 1,
+        "56": 3
+      }
+    },
+    {
+      "level": 141,
+      "width": 9,
+      "height": 11,
+      "active": 99,
+      "maskComponents": [
+        99
+      ],
+      "moves": 28,
+      "goals": 5,
+      "families": {
+        "28": 25,
+        "27": 4,
+        "59": 2,
+        "21": 2
+      }
+    },
+    {
+      "level": 142,
+      "width": 9,
+      "height": 11,
+      "active": 73,
+      "maskComponents": [
+        73
+      ],
+      "moves": 32,
+      "goals": 4,
+      "families": {
+        "25": 24,
+        "5": 22,
+        "30": 7,
+        "33": 2
+      }
+    },
+    {
+      "level": 143,
+      "width": 9,
+      "height": 9,
+      "active": 76,
+      "maskComponents": [
+        76
+      ],
+      "moves": 27,
+      "goals": 3,
+      "families": {
+        "40": 36,
+        "4": 8,
+        "55": 8
+      }
+    },
+    {
+      "level": 144,
+      "width": 9,
+      "height": 11,
+      "active": 88,
+      "maskComponents": [
+        88
+      ],
+      "moves": 30,
+      "goals": 5,
+      "families": {
+        "28": 27,
+        "40": 27,
+        "45": 4,
+        "59": 3
+      }
+    },
+    {
+      "level": 145,
+      "width": 9,
+      "height": 11,
+      "active": 69,
+      "maskComponents": [
+        45,
+        6,
+        6,
+        6,
+        6
+      ],
+      "moves": 32,
+      "goals": 4,
+      "families": {
+        "39": 24,
+        "46": 14,
+        "45": 2,
+        "7": 12
+      }
+    },
+    {
+      "level": 146,
+      "width": 8,
+      "height": 8,
+      "active": 64,
+      "maskComponents": [
+        64
+      ],
+      "moves": 24,
+      "goals": 1,
+      "families": {
+        "63": 6
+      }
+    },
+    {
+      "level": 147,
+      "width": 9,
+      "height": 9,
+      "active": 61,
+      "maskComponents": [
+        57,
+        4
+      ],
+      "moves": 27,
+      "goals": 3,
+      "families": {
+        "7": 15,
+        "4": 21,
+        "63": 5
+      }
+    },
+    {
+      "level": 148,
+      "width": 8,
+      "height": 11,
+      "active": 88,
+      "maskComponents": [
+        88
+      ],
+      "moves": 28,
+      "goals": 4,
+      "families": {
+        "63": 10,
+        "31": 12,
+        "59": 2
+      }
+    },
+    {
+      "level": 149,
+      "width": 9,
+      "height": 9,
+      "active": 64,
+      "maskComponents": [
+        36,
+        12,
+        12,
+        4
+      ],
+      "moves": 31,
+      "goals": 4,
+      "families": {
+        "39": 24,
+        "4": 10,
+        "6": 15,
+        "63": 1
+      }
+    },
+    {
+      "level": 150,
+      "width": 9,
+      "height": 10,
+      "active": 75,
+      "maskComponents": [
+        75
+      ],
+      "moves": 30,
+      "goals": 5,
+      "families": {
+        "12": 20,
+        "25": 12,
+        "47": 1,
+        "28": 12
+      }
+    },
+    {
+      "level": 151,
+      "width": 9,
+      "height": 9,
+      "active": 73,
+      "maskComponents": [
+        73
+      ],
+      "moves": 25,
+      "goals": 2,
+      "families": {
+        "77": 25,
+        "64": 1
+      }
+    },
+    {
+      "level": 152,
+      "width": 9,
+      "height": 11,
+      "active": 95,
+      "maskComponents": [
+        95
+      ],
+      "moves": 28,
+      "goals": 4,
+      "families": {
+        "25": 22,
+        "77": 18,
+        "28": 22,
+        "64": 2
+      }
+    },
+    {
+      "level": 153,
+      "width": 9,
+      "height": 11,
+      "active": 87,
+      "maskComponents": [
+        87
+      ],
+      "moves": 26,
+      "goals": 4,
+      "families": {
+        "55": 3,
+        "21": 4,
+        "58": 16,
+        "64": 1
+      }
+    },
+    {
+      "level": 154,
+      "width": 9,
+      "height": 11,
+      "active": 88,
+      "maskComponents": [
+        88
+      ],
+      "moves": 34,
+      "goals": 5,
+      "families": {
+        "6": 21,
+        "44": 10,
+        "63": 4,
+        "59": 1
+      }
+    },
+    {
+      "level": 155,
+      "width": 9,
+      "height": 11,
+      "active": 69,
+      "maskComponents": [
+        69
+      ],
+      "moves": 30,
+      "goals": 4,
+      "families": {
+        "46": 39,
+        "45": 36,
+        "28": 36,
+        "64": 4
+      }
+    },
+    {
+      "level": 156,
+      "width": 9,
+      "height": 11,
+      "active": 87,
+      "maskComponents": [
+        87
+      ],
+      "moves": 26,
+      "goals": 4,
+      "families": {
+        "42": 10,
+        "25": 16,
+        "65": 2,
+        "40": 12
+      }
+    },
+    {
+      "level": 157,
+      "width": 9,
+      "height": 10,
+      "active": 74,
+      "maskComponents": [
+        42,
+        20,
+        12
+      ],
+      "moves": 35,
+      "goals": 5,
+      "families": {
+        "39": 16,
+        "5": 15,
+        "6": 15,
+        "65": 1,
+        "42": 12
+      }
+    },
+    {
+      "level": 158,
+      "width": 9,
+      "height": 11,
+      "active": 75,
+      "maskComponents": [
+        75
+      ],
+      "moves": 30,
+      "goals": 5,
+      "families": {
+        "21": 2,
+        "52": 2,
+        "65": 2,
+        "44": 3
+      }
+    },
+    {
+      "level": 159,
+      "width": 8,
+      "height": 11,
+      "active": 70,
+      "maskComponents": [
+        58,
+        4,
+        4,
+        4
+      ],
+      "moves": 26,
+      "goals": 4,
+      "families": {
+        "25": 32,
+        "65": 3,
+        "30": 32,
+        "64": 1
+      }
+    },
+    {
+      "level": 160,
+      "width": 9,
+      "height": 10,
+      "active": 76,
+      "maskComponents": [
+        76
+      ],
+      "moves": 30,
+      "goals": 5,
+      "families": {
+        "5": 18,
+        "25": 21,
+        "47": 1,
+        "64": 1
+      }
+    },
+    {
+      "level": 161,
+      "width": 9,
+      "height": 10,
+      "active": 86,
+      "maskComponents": [
+        86
+      ],
+      "moves": 24,
+      "goals": 1,
+      "families": {
+        "68": 2
+      }
+    },
+    {
+      "level": 162,
+      "width": 9,
+      "height": 11,
+      "active": 77,
+      "maskComponents": [
+        77
+      ],
+      "moves": 30,
+      "goals": 4,
+      "families": {
+        "58": 24,
+        "27": 2,
+        "68": 1,
+        "63": 2
+      }
+    },
+    {
+      "level": 163,
+      "width": 9,
+      "height": 11,
+      "active": 96,
+      "maskComponents": [
+        96
+      ],
+      "moves": 25,
+      "goals": 3,
+      "families": {
+        "55": 2,
+        "56": 1,
+        "68": 4
+      }
+    },
+    {
+      "level": 164,
+      "width": 9,
+      "height": 11,
+      "active": 75,
+      "maskComponents": [
+        59,
+        4,
+        4,
+        4,
+        4
+      ],
+      "moves": 30,
+      "goals": 4,
+      "families": {
+        "68": 2,
+        "39": 16,
+        "65": 2,
+        "64": 2
+      }
+    },
+    {
+      "level": 165,
+      "width": 8,
+      "height": 10,
+      "active": 64,
+      "maskComponents": [
+        64
+      ],
+      "moves": 28,
+      "goals": 4,
+      "families": {
+        "21": 2,
+        "68": 2,
+        "46": 1,
+        "26": 6
+      }
+    },
+    {
+      "level": 166,
+      "width": 9,
+      "height": 11,
+      "active": 73,
+      "maskComponents": [
+        73
+      ],
+      "moves": 32,
+      "goals": 4,
+      "families": {
+        "30": 12,
+        "25": 14,
+        "69": 15,
+        "38": 2
+      }
+    },
+    {
+      "level": 167,
+      "width": 8,
+      "height": 9,
+      "active": 70,
+      "maskComponents": [
+        70
+      ],
+      "moves": 36,
+      "goals": 4,
+      "families": {
+        "63": 3,
+        "30": 18,
+        "68": 3,
+        "31": 6
+      }
+    },
+    {
+      "level": 168,
+      "width": 9,
+      "height": 10,
+      "active": 87,
+      "maskComponents": [
+        87
+      ],
+      "moves": 28,
+      "goals": 3,
+      "families": {
+        "25": 24,
+        "63": 4,
+        "30": 24
+      }
+    },
+    {
+      "level": 169,
+      "width": 9,
+      "height": 11,
+      "active": 63,
+      "maskComponents": [
+        63
+      ],
+      "moves": 26,
+      "goals": 5,
+      "families": {
+        "25": 22,
+        "69": 8,
+        "14": 6,
+        "28": 22,
+        "6": 6
+      }
+    },
+    {
+      "level": 170,
+      "width": 9,
+      "height": 10,
+      "active": 72,
+      "maskComponents": [
+        72
+      ],
+      "moves": 30,
+      "goals": 5,
+      "families": {
+        "25": 27,
+        "28": 13,
+        "65": 2,
+        "47": 1
+      }
+    },
+    {
+      "level": 171,
+      "width": 9,
+      "height": 11,
+      "active": 91,
+      "maskComponents": [
+        91
+      ],
+      "moves": 30,
+      "goals": 1,
+      "families": {
+        "70": 8
+      }
+    },
+    {
+      "level": 172,
+      "width": 9,
+      "height": 11,
+      "active": 95,
+      "maskComponents": [
+        95
+      ],
+      "moves": 26,
+      "goals": 4,
+      "families": {
+        "39": 20,
+        "46": 16,
+        "59": 2,
+        "7": 16
+      }
+    },
+    {
+      "level": 173,
+      "width": 9,
+      "height": 11,
+      "active": 99,
+      "maskComponents": [
+        99
+      ],
+      "moves": 24,
+      "goals": 5,
+      "families": {
+        "5": 14,
+        "70": 4,
+        "25": 20,
+        "43": 1,
+        "8": 24
+      }
+    },
+    {
+      "level": 174,
+      "width": 9,
+      "height": 11,
+      "active": 94,
+      "maskComponents": [
+        94
+      ],
+      "moves": 24,
+      "goals": 5,
+      "families": {
+        "25": 24,
+        "70": 2,
+        "6": 12,
+        "38": 2,
+        "39": 24
+      }
+    },
+    {
+      "level": 175,
+      "width": 9,
+      "height": 9,
+      "active": 55,
+      "maskComponents": [
+        55
+      ],
+      "moves": 36,
+      "goals": 3,
+      "families": {
+        "34": 12,
+        "4": 9,
+        "5": 20
+      }
+    },
+    {
+      "level": 176,
+      "width": 7,
+      "height": 7,
+      "active": 49,
+      "maskComponents": [
+        49
+      ],
+      "moves": 26,
+      "goals": 2,
+      "families": {
+        "72": 5,
+        "74": 5
+      }
+    },
+    {
+      "level": 177,
+      "width": 9,
+      "height": 11,
+      "active": 92,
+      "maskComponents": [
+        92
+      ],
+      "moves": 30,
+      "goals": 5,
+      "families": {
+        "27": 2,
+        "40": 8,
+        "25": 26,
+        "5": 30,
+        "38": 2
+      }
+    },
+    {
+      "level": 178,
+      "width": 9,
+      "height": 8,
+      "active": 66,
+      "maskComponents": [
+        66
+      ],
+      "moves": 28,
+      "goals": 4,
+      "families": {
+        "72": 6,
+        "74": 6,
+        "71": 6,
+        "73": 6
+      }
+    },
+    {
+      "level": 179,
+      "width": 9,
+      "height": 11,
+      "active": 95,
+      "maskComponents": [
+        95
+      ],
+      "moves": 40,
+      "goals": 5,
+      "families": {
+        "26": 4,
+        "65": 4,
+        "56": 2,
+        "70": 4,
+        "46": 1
+      }
+    },
+    {
+      "level": 180,
+      "width": 9,
+      "height": 10,
+      "active": 74,
+      "maskComponents": [
+        74
+      ],
+      "moves": 30,
+      "goals": 5,
+      "families": {
+        "63": 2,
+        "25": 18,
+        "47": 1,
+        "68": 1
+      }
+    },
+    {
+      "level": 181,
+      "width": 9,
+      "height": 11,
+      "active": 81,
+      "maskComponents": [
+        81
+      ],
+      "moves": 28,
+      "goals": 2,
+      "families": {
+        "75": 11,
+        "30": 21
+      }
+    },
+    {
+      "level": 182,
+      "width": 9,
+      "height": 11,
+      "active": 87,
+      "maskComponents": [
+        87
+      ],
+      "moves": 28,
+      "goals": 3,
+      "families": {
+        "39": 31,
+        "46": 3,
+        "59": 2
+      }
+    },
+    {
+      "level": 183,
+      "width": 9,
+      "height": 11,
+      "active": 87,
+      "maskComponents": [
+        87
+      ],
+      "moves": 29,
+      "goals": 5,
+      "families": {
+        "28": 12,
+        "52": 2,
+        "7": 18,
+        "63": 4
+      }
+    },
+    {
+      "level": 184,
+      "width": 9,
+      "height": 9,
+      "active": 76,
+      "maskComponents": [
+        76
+      ],
+      "moves": 27,
+      "goals": 3,
+      "families": {
+        "34": 4,
+        "40": 24,
+        "25": 12
+      }
+    },
+    {
+      "level": 185,
+      "width": 9,
+      "height": 11,
+      "active": 81,
+      "maskComponents": [
+        81
+      ],
+      "moves": 28,
+      "goals": 5,
+      "families": {
+        "25": 30,
+        "68": 1,
+        "72": 6,
+        "74": 6,
+        "71": 18
+      }
+    },
+    {
+      "level": 186,
+      "width": 9,
+      "height": 11,
+      "active": 91,
+      "maskComponents": [
+        91
+      ],
+      "moves": 26,
+      "goals": 3,
+      "families": {
+        "75": 11,
+        "28": 12,
+        "76": 1
+      }
+    },
+    {
+      "level": 187,
+      "width": 9,
+      "height": 11,
+      "active": 59,
+      "maskComponents": [
+        59
+      ],
+      "moves": 29,
+      "goals": 3,
+      "families": {
+        "69": 4,
+        "30": 16,
+        "14": 8
+      }
+    },
+    {
+      "level": 188,
+      "width": 9,
+      "height": 8,
+      "active": 70,
+      "maskComponents": [
+        70
+      ],
+      "moves": 26,
+      "goals": 3,
+      "families": {
+        "44": 2,
+        "30": 4,
+        "26": 4
+      }
+    },
+    {
+      "level": 189,
+      "width": 9,
+      "height": 11,
+      "active": 83,
+      "maskComponents": [
+        83
+      ],
+      "moves": 30,
+      "goals": 3,
+      "families": {
+        "27": 4,
+        "40": 10,
+        "31": 6
+      }
+    },
+    {
+      "level": 190,
+      "width": 7,
+      "height": 10,
+      "active": 70,
+      "maskComponents": [
+        70
+      ],
+      "moves": 30,
+      "goals": 5,
+      "families": {
+        "72": 6,
+        "74": 6,
+        "25": 8,
+        "47": 1
+      }
+    },
+    {
+      "level": 191,
+      "width": 9,
+      "height": 11,
+      "active": 73,
+      "maskComponents": [
+        73
+      ],
+      "moves": 28,
+      "goals": 3,
+      "families": {
+        "39": 8,
+        "63": 4,
+        "76": 2
+      }
+    },
+    {
+      "level": 192,
+      "width": 9,
+      "height": 10,
+      "active": 90,
+      "maskComponents": [
+        90
+      ],
+      "moves": 32,
+      "goals": 5,
+      "families": {
+        "45": 18,
+        "75": 20,
+        "44": 9,
+        "76": 2,
+        "69": 40
+      }
+    },
+    {
+      "level": 193,
+      "width": 9,
+      "height": 11,
+      "active": 95,
+      "maskComponents": [
+        95
+      ],
+      "moves": 28,
+      "goals": 4,
+      "families": {
+        "40": 21,
+        "34": 6,
+        "39": 9,
+        "64": 3
+      }
+    },
+    {
+      "level": 194,
+      "width": 9,
+      "height": 11,
+      "active": 74,
+      "maskComponents": [
+        42,
+        18,
+        6,
+        4,
+        4
+      ],
+      "moves": 31,
+      "goals": 5,
+      "families": {
+        "70": 2,
+        "25": 24,
+        "39": 16,
+        "56": 3,
+        "72": 24
+      }
+    },
+    {
+      "level": 195,
+      "width": 9,
+      "height": 11,
+      "active": 86,
+      "maskComponents": [
+        86
+      ],
+      "moves": 24,
+      "goals": 5,
+      "families": {
+        "7": 22,
+        "63": 3,
+        "76": 4,
+        "58": 34
+      }
+    },
+    {
+      "level": 196,
+      "width": 9,
+      "height": 9,
+      "active": 78,
+      "maskComponents": [
+        78
+      ],
+      "moves": 26,
+      "goals": 4,
+      "families": {
+        "25": 40,
+        "28": 16,
+        "21": 6,
+        "27": 4
+      }
+    },
+    {
+      "level": 197,
+      "width": 9,
+      "height": 11,
+      "active": 79,
+      "maskComponents": [
+        66,
+        13
+      ],
+      "moves": 32,
+      "goals": 4,
+      "families": {
+        "40": 24,
+        "75": 18,
+        "28": 9,
+        "44": 13
+      }
+    },
+    {
+      "level": 198,
+      "width": 9,
+      "height": 11,
+      "active": 76,
+      "maskComponents": [
+        76
+      ],
+      "moves": 17,
+      "goals": 4,
+      "families": {
+        "45": 8,
+        "74": 16,
+        "27": 4,
+        "29": 2
+      }
+    },
+    {
+      "level": 199,
+      "width": 9,
+      "height": 11,
+      "active": 87,
+      "maskComponents": [
+        87
+      ],
+      "moves": 26,
+      "goals": 5,
+      "families": {
+        "28": 17,
+        "39": 17,
+        "46": 4,
+        "45": 4,
+        "64": 1
+      }
+    },
+    {
+      "level": 200,
+      "width": 9,
+      "height": 10,
+      "active": 78,
+      "maskComponents": [
+        78
+      ],
+      "moves": 30,
+      "goals": 5,
+      "families": {
+        "11": 18,
+        "45": 2,
+        "35": 4,
+        "47": 1
+      }
+    },
+    {
+      "level": 201,
+      "width": 9,
+      "height": 10,
+      "active": 88,
+      "maskComponents": [
+        88
+      ],
+      "moves": 26,
+      "goals": 1,
+      "families": {
+        "78": 12
+      }
+    },
+    {
+      "level": 202,
+      "width": 9,
+      "height": 9,
+      "active": 59,
+      "maskComponents": [
+        59
+      ],
+      "moves": 25,
+      "goals": 3,
+      "families": {
+        "25": 10,
+        "63": 2,
+        "78": 3
+      }
+    },
+    {
+      "level": 203,
+      "width": 9,
+      "height": 10,
+      "active": 62,
+      "maskComponents": [
+        62
+      ],
+      "moves": 25,
+      "goals": 4,
+      "families": {
+        "34": 4,
+        "55": 1,
+        "25": 8,
+        "78": 3
+      }
+    },
+    {
+      "level": 204,
+      "width": 9,
+      "height": 11,
+      "active": 74,
+      "maskComponents": [
+        74
+      ],
+      "moves": 26,
+      "goals": 3,
+      "families": {
+        "78": 4,
+        "75": 9,
+        "76": 1
+      }
+    },
+    {
+      "level": 205,
+      "width": 9,
+      "height": 11,
+      "active": 77,
+      "maskComponents": [
+        77
+      ],
+      "moves": 27,
+      "goals": 4,
+      "families": {
+        "39": 8,
+        "38": 1,
+        "78": 6,
+        "64": 2
+      }
+    }
+  ],
+  "protectedFiles": 2337,
+  "separateAuthorizedRuntimeChange": [],
+  "limits": "Static authoring/graph checks; no Unity build, play, bot or measured win-rate."
+}
