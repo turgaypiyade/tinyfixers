@@ -4472,6 +4472,39 @@ MonoBehaviour:
       hitParticleSprites: []
       hitSound: {fileID: 0}
       hitSoundVolume: 1
+    - sprite: {fileID: 21300000, guid: 002bcbc455fe4656add24ee2889b8d05, type: 3}
+      damageRule: 0
+      blocksCells: 1
+      behavior: 1
+      allowDiagonal: 1
+      locksInteraction: 0
+      holdsTile: 0
+      suppressHitParticles: 0
+      hitParticleSprites: []
+      hitSound: {fileID: 0}
+      hitSoundVolume: 1
+    - sprite: {fileID: 21300000, guid: 002bcbc455fe4656add24ee2889b8d05, type: 3}
+      damageRule: 0
+      blocksCells: 1
+      behavior: 1
+      allowDiagonal: 1
+      locksInteraction: 0
+      holdsTile: 0
+      suppressHitParticles: 0
+      hitParticleSprites: []
+      hitSound: {fileID: 0}
+      hitSoundVolume: 1
+    - sprite: {fileID: 21300000, guid: 002bcbc455fe4656add24ee2889b8d05, type: 3}
+      damageRule: 0
+      blocksCells: 1
+      behavior: 1
+      allowDiagonal: 1
+      locksInteraction: 0
+      holdsTile: 0
+      suppressHitParticles: 0
+      hitParticleSprites: []
+      hitSound: {fileID: 0}
+      hitSoundVolume: 1
     auxiliarySprites:
     - {fileID: 21300000, guid: 636de56adb43429898e1fda4478a1413, type: 3}
     - {fileID: 21300000, guid: 2951ea89e3124551962bf1eee0c8b46c, type: 3}

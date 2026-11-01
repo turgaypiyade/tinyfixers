@@ -377,3 +377,8 @@ Ek (aynı gün): “bazen dikdörtgen şekilde daha iyi 2x3, 2x4 yatayda ya da s
   değirmen + üst bant + alt blok). Ders: her seviyeye ayrı siluet + ayrı oyun fikri; aynı iskeleti engel değiştirerek tekrarlama.
 - 2026-11-01 · "fenerlerin hepsinin bir yerde olduğu senaryo güzel olmuyor fenerler sütunda dizildiğinde güzel oluyor".
 - 2026-11-01 · "kuş evi için lütfen kenarları kullan L ve ters L planlayabilirsin böylelikle iyi bir hedef olur".
+- 2026-11-02 · 207 oyunu: "bir linev patlatıyorum tam alt koridordan yukarı yine boşluklar oluşuyor" (+ ekran). İlk tepki
+  (değirmeni tasarımda dibe indirmek) REDDEDİLDİ: "hayır bu kurallar tüm seviyelerde bizim taş akışımızı ilgilendiren kurallar,
+  taş akışımız her zaman mükemmel olmalı". Ders: akış boşluğu = motor hatası; tasarımla etrafından dolanma. Kök: değirmen
+  4 vuruş/1 aşama → EnsureStageSlots boş varsayılan aşama (allowDiagonal=false) ekliyordu; ilk kanat kırılınca köşe çapraz
+  kaymaya kapanıyordu. Kütüphanede 4 aşama + motor eksik aşamayı son aşamayla doldurur. 207/210 v2.1'e döndü.

@@ -1101,7 +1101,9 @@ public class ObstacleStateService : ISimObstacleQuery
     public bool TakesPerCellHits(int x, int y)
     {
         var id = GetObstacleIdAt(x, y);
-        return id == ObstacleId.Magnet || IsWallFamily(id) || id == ObstacleId.Hamster;
+        // Yel değirmeni duvar ailesinde (kanat başına aşama) ama TEK engeldir: Pulse/LineV-H/PatchBot/joker kaç hücresine
+        // değerse değsin bir etki = bir kanat (kullanıcı 2026-11-02). Line+Pulse'un her ışını ayrı etki → ayrı kanat.
+        return id == ObstacleId.Magnet || (IsWallFamily(id) && id != ObstacleId.Windmill) || id == ObstacleId.Hamster;
     }
 
     public bool IsMagnetEndpoint(int x, int y)

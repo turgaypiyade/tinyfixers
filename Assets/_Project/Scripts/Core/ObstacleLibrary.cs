@@ -25,6 +25,14 @@ public enum ObstacleDamageSourceRule
 [Serializable]
 public class StageRule
 {
+    /// Alan alan kopya (liste alanları da yeni liste). Eksik aşamayı son aşamayla doldurmak için.
+    public StageRule Copy()
+    {
+        var c = (StageRule)MemberwiseClone();
+        if (hitParticleSprites != null) c.hitParticleSprites = new System.Collections.Generic.List<Sprite>(hitParticleSprites);
+        return c;
+    }
+
     public Sprite sprite;
     public ObstacleDamageSourceRule damageRule = ObstacleDamageSourceRule.Any;
     public bool blocksCells = true;
@@ -288,8 +296,14 @@ public class ObstacleDef
 
         int required = Mathf.Max(1, hits);
 
+        // Eksik aşama boş varsayılanla DEĞİL, son tanımlı aşamanın kopyasıyla dolar. Varsayılan (allowDiagonal=false,
+        // behavior=OverTileBlocker) değirmende (4 vuruş / 1 aşama) ilk kanat kırılınca köşeyi çapraz kaymaya kapatıp
+        // altındaki sütunu kalıcı boş bırakıyordu (L207, 2026-11-02).
         while (stages.Count < required)
-            stages.Add(new StageRule());
+        {
+            var last = stages.Count > 0 ? stages[stages.Count - 1] : null;
+            stages.Add(last != null ? last.Copy() : new StageRule());
+        }
 
         while (stages.Count > required)
             stages.RemoveAt(stages.Count - 1);

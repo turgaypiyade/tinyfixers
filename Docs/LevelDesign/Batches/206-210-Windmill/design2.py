@@ -45,8 +45,9 @@ def lv(rows, **kw):
 def l207():
     # Dev Pervane (Normal): tahta dev bir yel değirmeni — artı kanatlar, gerçek değirmen göbekte (kanatları yalnız
     # special kırar). Gövdenin dış kenarlarında fener sütunları (kullanıcı: fener sütunda dizilince güzel), dipte kapı dolabı.
-    # v2.1: fenerler 2./5. sütundaydı → değirmen altındaki orta sütunları iki yandan kapatıp tek dar girişe bağlıyordu
-    # (kullanıcı 207'de kalmaması gereken boşluklar gördü). Dış kenara alındı: 2./5. sütun deliklerden düz dolar.
+    # (v2.2'de değirmen dibe indirilmişti; kullanıcı: "bu kurallar tüm seviyelerde... taş akışımız her zaman mükemmel
+    # olmalı" → kök neden motorda düzeltildi: değirmen 4 vuruş/1 aşama → kanat kırılınca boş varsayılan aşama
+    # allowDiagonal=false oluyordu. Tasarım v2.1'e döndü.)
     return lv(["...oo...",
                "...oo...",
                "...oo...",
