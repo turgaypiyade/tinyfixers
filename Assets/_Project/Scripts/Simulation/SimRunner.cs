@@ -393,6 +393,7 @@ public static class SimRunner
                 case ObstacleId.KeyGenerator:
                 case ObstacleId.BirdHouse:
                 case ObstacleId.LampStrip:
+                case ObstacleId.Windmill:
                 case ObstacleId.RocketBasket:
                 case ObstacleId.Barrel:
                 case ObstacleId.Barrell_v2:
@@ -467,6 +468,7 @@ public static class SimRunner
         {
             ObstacleId.Mud          => true,   // Barrel kırılınca saçılır
             ObstacleId.WaterPuddle  => true,   // WaterTank/WaterTankSmall kırılınca saçılır
+            ObstacleId.Flour        => true,   // değirmen → çuval → un saçılır
             ObstacleId.Oil          => true,   // yayılır
             ObstacleId.SpreadingGel => true,   // yayılır
             ObstacleId.KeyGenerator => true,   // Key üretir

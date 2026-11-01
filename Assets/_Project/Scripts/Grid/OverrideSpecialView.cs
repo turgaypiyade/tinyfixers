@@ -206,12 +206,14 @@ public sealed class OverrideSpecialView : MonoBehaviour
         SetChildSize(topImage, topUsesTurnFrame ? Vector2.Scale(size, topTurnSizeRatio) : size);
         SetChildSize(bottomImage, bottomUsesTurnFrame ? Vector2.Scale(size, bottomTurnSizeRatio) : size);
         SetChildSize(fullImage,   size);
-        if (chargeGraphic != null) chargeGraphic.rectTransform.sizeDelta = size;
+        if (chargeGraphic != null && chargeGraphic.rectTransform.sizeDelta != size) chargeGraphic.rectTransform.sizeDelta = size;
     }
 
+    // Aynı boyutu yeniden yazma: her sizeDelta yazımı Graphic'i yeniden kurdurur ve bu çağrı taşın her
+    // boyut sinyalinde (OnRectTransformDimensionsChange) 3 parça için tekrarlanıyordu.
     private static void SetChildSize(Image img, Vector2 size)
     {
-        if (img != null) img.rectTransform.sizeDelta = size;
+        if (img != null && img.rectTransform.sizeDelta != size) img.rectTransform.sizeDelta = size;
     }
 
     // ── Child creation ───────────────────────────────────────────────────────
@@ -241,6 +243,9 @@ public sealed class OverrideSpecialView : MonoBehaviour
         img.raycastTarget  = false;
         img.preserveAspect = true;
         img.color          = new Color(1f, 1f, 1f, 0f);
+        // Görünmezken KAPALI: her taşta (havuzdan her dönüşte) 3 görünmez görselin yeniden kurulması ve batch'e
+        // girmesi önlenir. Görünür yapan her yol (SpinHalf, birleşme/settle) açar.
+        img.enabled        = false;
         return img;
     }
 
@@ -257,13 +262,14 @@ public sealed class OverrideSpecialView : MonoBehaviour
         ResetHalf(topImage);
         ResetHalf(bottomImage);
         RestoreOriginalHalves();
-        if (fullImage != null) { fullImage.color = new Color(1f,1f,1f,0f); fullImage.rectTransform.localScale = Vector3.one; }
+        if (fullImage != null) { fullImage.color = new Color(1f,1f,1f,0f); fullImage.rectTransform.localScale = Vector3.one; fullImage.enabled = false; }
     }
 
     private static void ResetHalf(Image img)
     {
         if (img == null) return;
         img.color = new Color(1f, 1f, 1f, 0f);
+        img.enabled = false;
         img.rectTransform.anchoredPosition = Vector2.zero;
         img.rectTransform.localEulerAngles = Vector3.zero;
     }
@@ -316,12 +322,13 @@ public sealed class OverrideSpecialView : MonoBehaviour
         yield return null;  // 1 frame birleşik dur
 
         // ── Phase 2: Merge — yarılar kaybolur, tam küre büyük çıkar (flash = scale) ──
-        if (topImage    != null) topImage.color    = new Color(1f,1f,1f,0f);
-        if (bottomImage != null) bottomImage.color = new Color(1f,1f,1f,0f);
+        if (topImage    != null) { topImage.color    = new Color(1f,1f,1f,0f); topImage.enabled = false; }
+        if (bottomImage != null) { bottomImage.color = new Color(1f,1f,1f,0f); bottomImage.enabled = false; }
 
         if (fullImage != null)
         {
             fullImage.color                    = Color.white;
+            fullImage.enabled                  = true;
             fullImage.rectTransform.localScale = Vector3.one * settleOvershootScale;
         }
 
@@ -340,7 +347,7 @@ public sealed class OverrideSpecialView : MonoBehaviour
             yield return null;
         }
 
-        if (fullImage != null) { fullImage.color = Color.white; fullImage.rectTransform.localScale = Vector3.one; }
+        if (fullImage != null) { fullImage.color = Color.white; fullImage.enabled = true; fullImage.rectTransform.localScale = Vector3.one; }
 
         routine = null;
 
@@ -481,7 +488,11 @@ public sealed class OverrideSpecialView : MonoBehaviour
         var rotation = Quaternion.Euler(0f, 0f, zAngle);
         img.rectTransform.anchoredPosition = new Vector2(0f, yOffset) + (Vector2)(rotation * (Vector3)offset);
         img.rectTransform.localEulerAngles = new Vector3(0f, 0f, zAngle);
-        img.color = new Color(1f, 1f, 1f, alpha);
+        // Renk yalnız değişince: her kare aynı rengi yazmak Graphic'i her kare yeniden kurdurur.
+        var c = img.color;
+        if (c.r != 1f || c.g != 1f || c.b != 1f || c.a != alpha) img.color = new Color(1f, 1f, 1f, alpha);
+        bool visible = alpha > 0f;
+        if (img.enabled != visible) img.enabled = visible;
     }
 
 }

@@ -114,6 +114,8 @@ public sealed class SimGoalSet
             ObstacleId.KeyGenerator    => SimGoalFidelity.NotSimulated,
             ObstacleId.BirdHouse       => SimGoalFidelity.NotSimulated, // ardışık vuruş + kuş kotası modellenmiyor
             ObstacleId.LampStrip       => SimGoalFidelity.NotSimulated, // lamba rengi + kayma modellenmiyor
+            ObstacleId.Windmill        => SimGoalFidelity.NotSimulated, // dönen renkli kanat + çuval modellenmiyor
+            ObstacleId.Flour           => SimGoalFidelity.NotSimulated, // çuvaldan rastgele saçılım modellenmiyor
             ObstacleId.Hamster         => SimGoalFidelity.NotSimulated, // beslenme/zıplama modellenmiyor
             ObstacleId.BilliardBall    => SimGoalFidelity.NotSimulated, // yuvarlanma/cep modellenmiyor
             ObstacleId.TarpStatue      => SimGoalFidelity.Approximate,  // branda renk toplaması modellenmiyor

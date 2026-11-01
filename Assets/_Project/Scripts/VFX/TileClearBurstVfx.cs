@@ -228,7 +228,9 @@ public static class TileClearBurstVfx
         float s = tileSize * RING_RADIUS_START / RING_BAND_RADIUS_IN_SPRITE;
         rt.sizeDelta = new Vector2(s, s);
 
-        img.color = new Color(RING_COLOR.r, RING_COLOR.g, RING_COLOR.b, 0f);
+        // Boy localScale, alpha CanvasRenderer ile sürülür → kare başına Graphic yeniden kurulumu yok.
+        img.color = new Color(RING_COLOR.r, RING_COLOR.g, RING_COLOR.b, 1f);
+        img.canvasRenderer.SetAlpha(0f);
         img.raycastTarget = false;
         img.sprite = GetSoftCircleSprite();
         img.type = Image.Type.Simple;
@@ -244,17 +246,15 @@ public static class TileClearBurstVfx
         // Yarıçap: küçük doğ, dışa büyü (hafif ease-out — ölçümde ilk yarıda daha hızlı açılıyor).
         float grow = 1f - Mathf.Pow(1f - k, 1.5f);
         float bandRadius = Mathf.Lerp(RING_RADIUS_START, RING_RADIUS_END, grow);
-        float pixelSize = tileSize * bandRadius / RING_BAND_RADIUS_IN_SPRITE;
-        ring.rt.sizeDelta = new Vector2(pixelSize, pixelSize);
+        float scale = bandRadius / RING_RADIUS_START;   // sizeDelta CreateRing'de RING_RADIUS_START boyunda
+        ring.rt.localScale = new Vector3(scale, scale, 1f);
 
         // Alpha: ~%15'te tepe (≈25 ms), büyürken parlak kal, sonda hızlıca sön.
         float alpha = k < 0.15f
             ? (k / 0.15f) * RING_COLOR.a
             : RING_COLOR.a * Mathf.Pow(1f - (k - 0.15f) / 0.85f, 0.7f);   // referansta ~140 ms'ye kadar belirgin
 
-        Color c = ring.image.color;
-        c.a = Mathf.Clamp01(alpha);
-        ring.image.color = c;
+        ring.image.canvasRenderer.SetAlpha(Mathf.Clamp01(alpha));
     }
 
     // ========== STARS ==========
@@ -283,7 +283,8 @@ public static class TileClearBurstVfx
         rt.sizeDelta = new Vector2(starSize, starSize);
         rt.localRotation = Quaternion.Euler(0, 0, Random.Range(0f, 360f));
 
-        img.color = new Color(STAR_COLOR.r, STAR_COLOR.g, STAR_COLOR.b, 0f);
+        img.color = new Color(STAR_COLOR.r, STAR_COLOR.g, STAR_COLOR.b, 1f);
+        img.canvasRenderer.SetAlpha(0f);   // alpha her kare CanvasRenderer'dan (yeniden kurulum yok)
         img.raycastTarget = false;
         img.sprite = GetStarSprite();
         img.type = Image.Type.Simple;
@@ -329,11 +330,7 @@ public static class TileClearBurstVfx
                 alpha = k / 0.15f;
             else
                 alpha = 1f - (k - 0.15f) / 0.85f;
-            alpha = Mathf.Clamp01(alpha);
-
-            Color c = s.image.color;
-            c.a = alpha;
-            s.image.color = c;
+            s.image.canvasRenderer.SetAlpha(Mathf.Clamp01(alpha));
         }
     }
 
@@ -414,11 +411,7 @@ public static class TileClearBurstVfx
                 alpha = k / 0.1f;
             else
                 alpha = 1f - (k - 0.1f) / 0.9f;
-            alpha = Mathf.Clamp01(alpha);
-
-            Color c = s.image.color;
-            c.a = alpha;
-            s.image.color = c;
+            s.image.canvasRenderer.SetAlpha(Mathf.Clamp01(alpha));
         }
     }
 

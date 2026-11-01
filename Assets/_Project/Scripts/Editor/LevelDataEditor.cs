@@ -1930,7 +1930,7 @@ public class LevelDataEditor : Editor
         // Zemin altı engeller daima en altta. Lazer ise örn. 167'de tek jel hücresini
         // örtebilir; generic beneath yolu lazer kırılınca bu hücreyi açar.
         if (selectedObstacle == ObstacleId.Mud || selectedObstacle == ObstacleId.SpreadingGel
-            || selectedObstacle == ObstacleId.WaterPuddle
+            || selectedObstacle == ObstacleId.WaterPuddle || selectedObstacle == ObstacleId.Flour
             || selectedObstacle == ObstacleId.BilliardPocket)
         {
             if (GameDiagnostics.EditorTools)

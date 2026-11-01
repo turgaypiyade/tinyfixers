@@ -53,7 +53,7 @@ public class TopHudController : MonoBehaviour
     private readonly Dictionary<ObstacleId, int> pendingSplatSpreads = new();
 
     // Ground-truth'tan sayılan saçılan obstacle'lar (bkz. RecomputeSplatGoal).
-    private static readonly ObstacleId[] SplatGoalIds = { ObstacleId.Mud, ObstacleId.WaterPuddle };
+    private static readonly ObstacleId[] SplatGoalIds = { ObstacleId.Mud, ObstacleId.WaterPuddle, ObstacleId.Flour };
     public bool IsInitialized => initialized;
 
     public bool AreAllGoalsCompleted { get; private set; }
@@ -309,6 +309,15 @@ public class TopHudController : MonoBehaviour
             return;
 
         int remaining = svc.CountAllLiveOrigins(splatId) + PendingSplatSpreads(splatId);
+        // Un: henüz düşmemiş un da sayılır (ayakta değirmen + tahtadaki çuval × çuval başına dökülecek un). Çuval tam
+        // o kadar döktüğü için sayaç baştan toplamı gösterir ve yalnız temizledikçe azalır (kullanıcı: "düşmemişse bile
+        // kullanıcı düşeceğini bilmeli"). Tahtada yer kalmazsa dökülebildiği kadar → sayaç o kadar iner.
+        if (splatId == ObstacleId.Flour)
+        {
+            int perSack = board.TryGetComponent<WindmillService>(out var mills) ? mills.FlourPerSack : 25;
+            remaining += (svc.CountAllLiveOrigins(ObstacleId.Windmill) + svc.CountAllLiveOrigins(ObstacleId.FlourSack)
+                          + svc.CountAllLiveOrigins(ObstacleId.FlourSackV)) * perSack;
+        }
         if (goal.dynamicTotal < remaining)
             goal.dynamicTotal = remaining;
         if (goal.remaining == remaining)
@@ -633,6 +642,7 @@ public class TopHudController : MonoBehaviour
         if (svc.IsOilAt(x, y)) createdId = ObstacleId.Oil;
         else if (svc.IsMudAt(x, y)) createdId = ObstacleId.Mud;
         else if (svc.IsWaterPuddleAt(x, y)) createdId = ObstacleId.WaterPuddle;
+        else if (svc.IsFlourAt(x, y)) createdId = ObstacleId.Flour;
         else if (!svc.TryGetStampedBeneathObstacleIdAt(x, y, out createdId)) return;
 
         if (createdId != ObstacleId.Oil && !IsSplatGoalId(createdId))
@@ -683,7 +693,7 @@ public class TopHudController : MonoBehaviour
     }
 
     private static bool IsSplatGoalId(ObstacleId id)
-        => id == ObstacleId.Mud || id == ObstacleId.WaterPuddle;
+        => id == ObstacleId.Mud || id == ObstacleId.WaterPuddle || id == ObstacleId.Flour;
 
     // Bir kaynağın yayılımı bittiğinde: ona ait placeholder'ı saçılan obstacle goal'ünden düş.
     // Gerçek hücreler HandleObstacleCreatedDynamic ile zaten eklendiği için net etki doğru

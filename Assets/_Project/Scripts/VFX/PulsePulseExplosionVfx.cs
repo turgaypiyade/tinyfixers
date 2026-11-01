@@ -694,7 +694,7 @@ public class PulsePulseExplosionVfx : MonoBehaviour
         var img = UiVfxPool.RentImage(UiFxPool.ChargeSparkKey, parentBombRt, "_FuseSpark");
         if (img == null) return;
         var sparkRt = img.rectTransform;
-        sparkRt.SetAsLastSibling();
+        if (sparkRt.GetSiblingIndex() != parentBombRt.childCount - 1) sparkRt.SetAsLastSibling();
 
         float sizeBoost = Mathf.Lerp(1f, 1.4f, chargeProgress);
         float size = Random.Range(sparkSizeMin, sparkSizeMax) * sizeBoost;

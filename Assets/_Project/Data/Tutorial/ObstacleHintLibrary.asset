@@ -457,3 +457,15 @@ MonoBehaviour:
     fallbackTitle: Lamp Strip
     locKey: hint_obstacle_lampstrip
     fallbackText:
+  - id: 80
+    iconOverride: {fileID: 21300000, guid: 002bcbc455fe4656add24ee2889b8d05, type: 3}
+    titleLocKey: hint_obstacle_windmill_name
+    fallbackTitle: Windmill
+    locKey: hint_obstacle_windmill
+    fallbackText:
+  - id: 83
+    iconOverride: {fileID: 21300000, guid: 82e571b9292d4818b15a8179863d6e02, type: 3}
+    titleLocKey: hint_obstacle_flour_name
+    fallbackTitle: Flour
+    locKey: hint_obstacle_flour
+    fallbackText:

@@ -2930,29 +2930,16 @@ public class BoardController : MonoBehaviour
     }
 
     /// <summary>
-    /// Tüm tile'ların sibling sırasını Y koordinatına göre yeniden hesaplar.
-    /// Cascade/spawn sonrası tutarsız sıralamayı düzeltir.
-    /// Üst satırlar (Y küçük) önde render edilir → en son SetAsLastSibling çağrılır.
-    /// SetSiblingIndex yerine SetAsLastSibling kullanılır çünkü SetSiblingIndex
-    /// çağrıldığında diğer child'ların index'leri kayar ve tutarsızlık oluşur.
+    /// Taşların satıra göre (alt satır arkada) yeniden dizilmesi küp görünümlü, üst üste binen taşlar içindi; düz taş
+    /// görselleri birbirine taşmadığından artık gerekmiyor (kullanıcı kararı, 2026-11-01). Her kaskatta ~80 taşın
+    /// sibling sırasını değiştirmek tek Canvas'ın batch sıralamasını baştan kurduruyordu. Yalnız takas sırasında
+    /// oyuncunun tuttuğu taşın önde kalması korunur (çağrı yerleri değişmesin diye ad aynı).
     /// </summary>
     internal void RefreshAllSortingOrders()
     {
-        if (tiles == null) return;
-        // En arkada olması gereken tile'dan başla (Y büyük = alt satır = arkada)
-        // En son çağrılan SetAsLastSibling en önde olur
-        for (int y = height - 1; y >= 0; y--)
-        {
-            for (int x = width - 1; x >= 0; x--)
-            {
-                if (tiles[x, y] != null)
-                    tiles[x, y].transform.SetAsLastSibling();
-            }
-        }
-
-        // Takas sürerken oyuncunun tuttuğu taş, konum sırası ne derse desin en önde kalır.
         foreach (var tile in swapFrontTiles)
-            if (tile != null && tile)
+            if (tile != null && tile && tile.transform.parent != null
+                && tile.transform.GetSiblingIndex() != tile.transform.parent.childCount - 1)
                 tile.transform.SetAsLastSibling();
     }
 

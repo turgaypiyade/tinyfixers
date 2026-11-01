@@ -79,6 +79,7 @@ public static class UiVfxPool
         image.sprite = null;
         image.material = null;
         image.color = Color.white;
+        image.canvasRenderer.SetAlpha(1f);   // alpha'yı CanvasRenderer'dan süren kullanıcıdan (fitil kıvılcımı) kalan değer taşınmasın
         image.raycastTarget = false;
         image.type = Image.Type.Simple;
         image.preserveAspect = false;

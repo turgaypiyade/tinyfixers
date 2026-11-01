@@ -598,6 +598,8 @@ public class PatchBotTargetCoordinator
         bool wallLookupDone = false;
         LampStripService lampService = null;
         bool lampLookupDone = false;
+        WindmillService millService = null;
+        bool millLookupDone = false;
         foreach (var kv in obstacleUnitCells)
         {
             var cells = kv.Value;
@@ -620,13 +622,22 @@ public class PatchBotTargetCoordinator
                 board.TryGetComponent(out lampService);
             }
 
+            // Yel değirmeni: temsilci kanadı duran köşe (kırık köşeye vuruş boşa gider).
+            bool isMill = unitId == ObstacleId.Windmill;
+            if (isMill && !millLookupDone)
+            {
+                millLookupDone = true;
+                board.TryGetComponent(out millService);
+            }
+
             var rep = cells[0];
             float best = float.MaxValue;
             int bestStage = int.MinValue;
             foreach (var c in cells)
             {
                 int stage = isWall && wallService != null ? wallService.GetStageAt(c.x + c.y * board.Width)
-                    : isLamp && lampService != null ? (lampService.IsLitAt(c.x + c.y * board.Width) ? 1 : 0) : 0;
+                    : isLamp && lampService != null ? (lampService.IsLitAt(c.x + c.y * board.Width) ? 1 : 0)
+                    : isMill && millService != null ? (millService.IsLitAt(c.x + c.y * board.Width) ? 1 : 0) : 0;
                 float d = (c.x - cx) * (c.x - cx) + (c.y - cy) * (c.y - cy);
                 if (stage > bestStage || (stage == bestStage && d < best)) { bestStage = stage; best = d; rep = c; }
             }

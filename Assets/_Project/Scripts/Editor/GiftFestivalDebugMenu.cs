@@ -46,6 +46,11 @@ public static class GiftFestivalDebugMenu
     [MenuItem(Root + "Add 10 Balls (Play)", true)]
     private static bool BallsValidate() => Application.isPlaying;
 
+    [MenuItem(Root + "Skip Lap Rest (Play)")]
+    private static void SkipRest() => GiftFestivalState.DebugSkipLapRest();
+    [MenuItem(Root + "Skip Lap Rest (Play)", true)]
+    private static bool CanSkipRest() => Application.isPlaying;
+
     [MenuItem(Root + "Reset Event")]
     private static void Reset() => GiftFestivalState.DebugReset();
 

@@ -7,13 +7,21 @@
 - Each cycle runs **48 hours**, followed by **120 hours off**. Restarting the app or closing the screen preserves the original cycle anchor.
 - Each active cycle requires explicit **Join** acceptance. Joining grants no balls. The lifetime-first on-screen tutorial grants **exactly 1 free ball**; subsequent new main-game wins award **exactly 1 ball**. Wins before joining, losses, retries, duplicate win notifications and expired/completed events award none. Existing banked balances are preserved. Banked balls are not lost when a level is lost; only the potential one-ball win reward is listed in the loss popup.
 - The boards are **2×2 → 3×3 → 4×4**. Their size, box rewards, completion rewards, timing widths/speed and schedule are editable in [GiftFestivalConfig.asset](../Assets/_Project/Resources/Events/GiftFestivalConfig.asset).
-- Prize decks mix coins, jokers, boosters and stars. Fresh boards contain **1/4, 2/9 and 4/16 empty boxes** (nearest whole-box count to 25%). Closed boxes do not reveal their contents. A seed and the complete prize layout are saved once per board, so reopening cannot reroll prizes or empty positions. Old already-paid coin boxes retain their original reward display.
+- Prize decks mix coins, jokers, boosters and stars. Fresh boards contain **1/4, 3/9 and 5/16 empty boxes** (nearest whole-box count to 30%, 2026-11-01; was 25%). Closed boxes do not reveal their contents. A seed and the complete prize layout are saved once per board, so reopening cannot reroll prizes or empty positions. Old already-paid coin boxes retain their original reward display.
 - Board bonuses vary too: the first gives a hammer; the second gives 100 coins and a Pulse Core; the last gives System Override, Paint Bucket and 2 stars. Configure `boxRewards`, `completionRewards` and `emptyBoxFraction` in the event config. Legacy `boxCoins`/`completionCoins` fields remain only for old saves/configs.
 - The main-menu logo uses the same **150×150 rect and 1.15 scale** as Gear Cup and Bridge Repair, with its countdown aligned to the ribbon. The scale is set before the shared idle animator captures it.
 - Speed increases after each completed event board: indicator traversal takes **0.90 / 0.75 / 0.625 seconds** (about 17% faster after the 2026-11-01 adjustment), while throw/swing/flight playback runs at **1.35× / 1.62× / 1.944×**. The green width is **20%**; its timing window gets shorter through speed. Shot speed is captured for the board being hit, including its final box. The reward/impact presentation keeps its readable 0.74-second duration. Tune `sweepSeconds`, `shotSpeed` and `speedIncreasePerRound` in the config.
 - Art references, `stadium.png`, the main-menu logo and TinyFixers Pop font/material are in [GiftFestivalArt.asset](../Assets/_Project/Resources/Events/GiftFestivalArt.asset).
 - Closed gift symbols use a 72×76 cell-local box (previously 51×54); opened prize icons use 50×50 (previously 34×34), with larger amount text. Cell spacing, board placement and sprite aspect ratios are preserved on every board size; the cached cell objects are reused.
 - The menu logo's ribbon shows only the remaining event time. The invitation reuses `GearCupJoinPopup` with the Gift Festival title, field backdrop and a looping rabbit throw / bear swing demonstration. Its blue **Not now** action is on the left, green **Join** on the right. The popup/hero objects are cached and reused; the silent animation uses a single update and pauses on focus loss or disable.
+
+- **Laps (2026-11-01, user request).** Finishing the last board no longer ends the event while time remains: after a
+  **3-hour rest** (`lapRestHours`) the 2×2 → 3×3 → 4×4 boards restart with a freshly shuffled deck. Coin/star amounts
+  scale per lap (`lapRewardScales` = **0.5 / 0.75 / 1.0**, last value repeats; the first lap pays noticeably less);
+  joker/booster counts are unchanged. Board completion rewards use the scale of the lap they belong to. During the rest
+  shots are disabled and the hint shows `YENİ TUR: hh:mm:ss`; wins still bank balls. A lap whose rest would end after the
+  48-hour window is skipped and the event stays finished, as before. `lapsEnabled` turns the feature off. A new cycle
+  resets laps. Editor: `TinyFixers > Debug > Gift Festival > Skip Lap Rest (Play)`.
 
 ## Play
 
@@ -54,7 +62,7 @@ Suggested visual checks: stadium opening and skip; selection on all board sizes;
 
 ## Validation
 
-`csi Tools/check_gift_festival.csx`
+`csi Tools/check_gift_festival.csx` (33,480 checks incl. laps: half-scale first lap, rest blocks shots without spending, reload keeps lap/rest, full scale after rest, wins bank during rest, late lap skipped, new cycle resets)
 
 The isolated harness executes production rules/state/prize-layout code and the real `PlayerStats.RecordLevelCleared` / `MarkCurrentLevelFailed` methods with persistence/wallet stubs: 33,470 checks for timing boundaries (including the 20% green region), every cell/edge on all board sizes, schedule boundaries, 100th-level unlock, explicit joining/rejoining, repeated failures/retries, duplicate win protection, misses, deflections, all 29 positions, empty-box quotas, mixed payouts, stable layouts after reload, interrupted coin/star/item delivery, the potential one-ball loss warning and the one-time tutorial grant/completion across reloads, cycle changes and interrupted reward delivery. It also parses all event C# files. No Unity/player/project build is invoked by this harness. Tutorial visual layout/input should additionally be checked in Unity/on device.
 

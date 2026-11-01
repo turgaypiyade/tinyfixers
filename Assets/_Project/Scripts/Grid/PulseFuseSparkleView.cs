@@ -131,6 +131,7 @@ public sealed class PulseFuseSparkleView : MonoBehaviour
             breathTarget.localScale = Vector3.one;
         SetIconVisible(true);   // spin yarıda kesildiyse statik ikon gizli kalmasın
         ClearSparks(transform);
+        ResetSlots();
         // These live outside the tile hierarchy, so disabling the tile does not hide
         // them. Hide synchronously, then return them to the shared VFX pool.
         if (spinImage != null)
@@ -465,16 +466,113 @@ public sealed class PulseFuseSparkleView : MonoBehaviour
 
     private IEnumerator CoEmit()
     {
+        // Zamanlayıcı birikimi: eskiden her tikte new WaitForSeconds (pulse başına saniyede 50 ayırma).
+        float acc = emitInterval;   // ilk kare hemen yansın (eskisi gibi)
         while (true)
         {
-            int count = Mathf.Max(1, Mathf.RoundToInt(emitIntensity));
-            for (int i = 0; i < count; i++)
-                SpawnSpark();
-            yield return new WaitForSeconds(emitInterval / Mathf.Max(0.5f, emitIntensity));
+            acc += Time.deltaTime;
+            float interval = emitInterval / Mathf.Max(0.5f, emitIntensity);
+            int guard = 0;
+            while (acc >= interval && guard++ < 8)
+            {
+                acc -= interval;
+                int count = Mathf.Max(1, Mathf.RoundToInt(emitIntensity));
+                for (int i = 0; i < count; i++)
+                    SpawnSpark();
+            }
+            if (acc > interval) acc = interval;   // takılma sonrası birikmiş patlama olmasın
+            yield return null;
         }
     }
 
-    private void SpawnSpark() => SpawnSparkAt(transform as RectTransform, fuseLocalOffset, 1f, emitIntensity);
+    // ── Yerel kıvılcım yuvaları ─────────────────────────────────────────────
+    // Fitil sürekli yanar (pulse başına ~33 canlı kıvılcım). Havuzdan kiralamak her kıvılcımda SetParent +
+    // OnEnable + sprite/renk/boy yazımı = Graphic yeniden kurulumu demekti (L205'te tüm yeniden kurulumların
+    // en büyük kalemi). Yuvalar bu görünümün altında kalıcıdır: rengi/sprite'ı/boyu bir kez yazılır, sonra
+    // yalnız konum + ölçek + CanvasRenderer alpha sürülür → yeniden kurulum yok. Yuvalar doluysa (combo
+    // yoğunluğu) kıvılcım eski havuz yolundan basılır; görsel yoğunluk değişmez.
+    private const int LocalSlotCount = 40;
+    private RectTransform slotRoot;
+    private Image[] slots;
+    private float[] slotFreeAt;
+    private float[] slotSize;
+    private int slotCursor;
+
+    private void SpawnSpark()
+    {
+        if (!TrySpawnLocalSpark())
+            SpawnSparkAt(transform as RectTransform, fuseLocalOffset, 1f, emitIntensity);
+    }
+
+    private bool TrySpawnLocalSpark()
+    {
+        if (sparkleSprite == null) return false;
+        EnsureSlots();
+        if (!slotRoot.gameObject.activeSelf) slotRoot.gameObject.SetActive(true);   // ClearSparks kapatmış olabilir
+        float now = Time.time;
+        for (int n = 0; n < LocalSlotCount; n++)
+        {
+            int i = (slotCursor + n) % LocalSlotCount;
+            if (now < slotFreeAt[i]) continue;
+            slotCursor = (i + 1) % LocalSlotCount;
+            var img = slots[i];
+            float intensityBoost = Mathf.Lerp(1f, 1.35f, Mathf.Clamp01(emitIntensity - 1f));
+            float size = Random.Range(sparkSizeMin, sparkSizeMax) * intensityBoost;
+            img.rectTransform.anchoredPosition = fuseLocalOffset + Random.insideUnitCircle * spreadRadius * intensityBoost;
+            slotFreeAt[i] = now + sparkLifetime + 0.1f;   // sürücü kaydı kesin bitmiş olsun (30 fps karesi > 0.02)
+            UiFxPool.TrackPulseFuseSparkSlot(img, sparkLifetime, size / slotSize[i]);
+            return true;
+        }
+        return false;
+    }
+
+    private void EnsureSlots()
+    {
+        if (slots != null && slotRoot != null) return;
+        var go = new GameObject("_SparkSlots", typeof(RectTransform));
+        go.layer = gameObject.layer;
+        slotRoot = (RectTransform)go.transform;
+        slotRoot.SetParent(transform, false);
+        slotRoot.anchorMin = slotRoot.anchorMax = slotRoot.pivot = new Vector2(0.5f, 0.5f);
+        slotRoot.anchoredPosition = Vector2.zero;
+        slotRoot.sizeDelta = Vector2.zero;
+        slots = new Image[LocalSlotCount];
+        slotFreeAt = new float[LocalSlotCount];
+        slotSize = new float[LocalSlotCount];
+        // Yoğunlukta kıvılcım en fazla ×1.35 büyür; yuva bu tavanda, gerçek boy ölçekle verilir.
+        float baseSize = sparkSizeMax * 1.35f;
+        for (int i = 0; i < LocalSlotCount; i++)
+        {
+            var sgo = new GameObject("_SparkSlot", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            sgo.layer = gameObject.layer;
+            var img = sgo.GetComponent<Image>();
+            var srt = img.rectTransform;
+            srt.SetParent(slotRoot, false);
+            srt.anchorMin = srt.anchorMax = srt.pivot = new Vector2(0.5f, 0.5f);
+            srt.sizeDelta = new Vector2(baseSize, baseSize);
+            srt.localScale = Vector3.zero;
+            img.sprite = sparkleSprite;
+            img.raycastTarget = false;
+            img.color = Color.Lerp(sparkColorA, sparkColorB, Random.value);   // her yuvanın sabit tonu
+            img.canvasRenderer.cullTransparentMesh = true;                      // boştaki yuva çizilmez
+            img.canvasRenderer.SetAlpha(0f);
+            slots[i] = img;
+            slotSize[i] = baseSize;
+        }
+    }
+
+    // ClearSparks yuva kökünü de kapatır; sürücüdeki kayıtlar düşer → yeniden açılınca hepsi boş başlasın.
+    private void ResetSlots()
+    {
+        if (slots == null) return;
+        for (int i = 0; i < slots.Length; i++)
+        {
+            slotFreeAt[i] = 0f;
+            if (slots[i] == null) continue;
+            slots[i].canvasRenderer.SetAlpha(0f);
+            slots[i].rectTransform.localScale = Vector3.zero;
+        }
+    }
 
     // Fitil kıvılcımını verilen parent'a, ölçekli offset/boyutla basar. Idle örneği (fuseLocalOffset,
     // tileSize) baz alınır; combo pulse görselinde sizeScale = comboIkonBoyu / TileSize ile aynı
@@ -486,8 +584,9 @@ public sealed class PulseFuseSparkleView : MonoBehaviour
 
         var img = UiVfxPool.RentImage(UiFxPool.PulseFuseSparkKey, parent, "_Spark");
         if (img == null) return;
-        var sparkGO = img.gameObject;
-        sparkGO.transform.SetAsLastSibling();
+        // Havuzdan SetParent ile gelir → zaten son çocuk; gereksiz sibling değişimi Canvas sıralamasını bozmasın.
+        var sparkT = img.transform;
+        if (sparkT.GetSiblingIndex() != parent.childCount - 1) sparkT.SetAsLastSibling();
 
         var sparkRt = img.rectTransform;
         // Yoğunlukta kıvılcım biraz büyür + biraz daha yayılır → dolgun alev.

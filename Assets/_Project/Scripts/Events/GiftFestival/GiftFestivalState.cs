@@ -378,6 +378,12 @@ public static class GiftFestivalState
         Data.balls = (int)Math.Min(int.MaxValue, (long)Balls + Mathf.Max(0, count));
         Save(); OnChanged?.Invoke();
     }
+    public static void DebugSkipLapRest()
+    {
+        Sync(GiftFestivalConfig.Shared, DateTime.UtcNow);
+        Data.lapRestUntilTicks = 0;
+        Save(); OnChanged?.Invoke();
+    }
     public static void DebugReset()
     {
         PlayerPrefs.DeleteKey(StorageKey); PlayerPrefs.Save(); data = null; lastJson = null;

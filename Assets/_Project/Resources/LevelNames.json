@@ -1213,6 +1213,12 @@
       "levelKey": "LevelCL_0205",
       "name": "Mühürlü Kuş Parkı",
       "nameEn": "Sealed Bird Park"
+    },
+    {
+      "level": 206,
+      "levelKey": "LevelCL_0206",
+      "name": "Değirmen Tepesi",
+      "nameEn": "Windmill Hill"
     }
   ],
   "catalog": "LevelCatalogProV1"

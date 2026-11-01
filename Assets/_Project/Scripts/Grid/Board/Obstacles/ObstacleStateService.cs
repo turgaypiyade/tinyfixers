@@ -277,7 +277,13 @@ public class ObstacleStateService : ISimObstacleQuery
     /// Serbest şekilli, tek origin'li ama HÜCRE bazında vuruş alan parça engelleri (duvar ailesi): yığın altı
     /// geri yükleme, kalan vuruş (wallRemainingHits) ve hedef kilidi kuralları ortaktır.
     public static bool IsWallFamily(ObstacleId id) =>
-        id == ObstacleId.Wall || id == ObstacleId.MetalWall || id == ObstacleId.LampStrip;
+        id == ObstacleId.Wall || id == ObstacleId.MetalWall || id == ObstacleId.LampStrip || id == ObstacleId.Windmill;
+
+    /// Yel değirmeni: WindmillService set eder (origin, vurulan HÜCRE, context, eşleşme rengi) — LampStrip ile aynı
+    /// sözleşme: Advanced = o köşedeki kanat kırıldı, Collapse = son kanat (engel temizlenir), Ignored = vuruş yok.
+    public Func<int, int, ObstacleHitContext, TileType?, WallHitOutcome> WindmillHitInterceptor;
+    /// Değirmen: bu hücrenin köşesinde hâlâ kanat var mı (hedef seçicinin anlamlı vuruş sorgusu).
+    public Func<int, bool> WindmillCellLitQuery;
 
 
     /// Aç Hamster: HamsterObstacleService set eder (origin, vurulan hücre). Vuruş hamsteri BESLER, asla hasar
@@ -712,14 +718,16 @@ public class ObstacleStateService : ISimObstacleQuery
             return new ObstacleHitResult(true, true, false, change, default, hamsterCells);
         }
 
-        if (id == ObstacleId.LampStrip)
+        if (id == ObstacleId.LampStrip || id == ObstacleId.Windmill)
         {
-            if (LampStripHitInterceptor == null)
+            // Değirmen, lamba şeridiyle aynı hücre-başı renk kuralını paylaşır; yalnız kuralı uygulayan servis farklı.
+            var interceptor = id == ObstacleId.LampStrip ? LampStripHitInterceptor : WindmillHitInterceptor;
+            if (interceptor == null)
                 return new ObstacleHitResult(false, false, true, default, default, Array.Empty<int>());
 
             int[] lampCells = CollectCellsForOrigin(origin, id, includeBuried: true);
             LampStripLastHitColor = ChestColorMask.None;
-            var lampOutcome = LampStripHitInterceptor.Invoke(origin, idx, context, sourceTileType);
+            var lampOutcome = interceptor.Invoke(origin, idx, context, sourceTileType);
             if (lampOutcome == WallHitOutcome.Ignored)
                 return new ObstacleHitResult(false, false, true, default, default, Array.Empty<int>());
 
@@ -2542,6 +2550,8 @@ public class ObstacleStateService : ISimObstacleQuery
 
         if (id == ObstacleId.LampStrip)
             return LampStripCellLitQuery != null && LampStripCellLitQuery(idx) ? 1 : 0;
+        if (id == ObstacleId.Windmill)
+            return WindmillCellLitQuery != null && WindmillCellLitQuery(idx) ? 1 : 0;
 
         if (id == ObstacleId.Safe)
         {
@@ -2871,6 +2881,31 @@ public class ObstacleStateService : ISimObstacleQuery
     }
 
     // Su birikintisi (WaterTank'tan saçılır): mud gibi pasif under-tile, taş üstünde oynanır.
+    public bool IsFlourAt(int x, int y)
+    {
+        if (!IsValidCell(x, y)) return false;
+        return (ObstacleId)level.obstacles[level.Index(x, y)] == ObstacleId.Flour;
+    }
+
+    /// Değirmenden düşen un çuvalı (2×1 / 1×2) için çok hücreli örtüyü taş olan hücrelere yerleştirir: taşlar
+    /// altında tutulur (kilitli), çuval tek vuruşta kalkar. Hücreler aktif, engelsiz ve sınır içinde olmalı.
+    public bool TrySpawnFlourSack(int x, int y, bool vertical)
+    {
+        if (level == null || level.obstacles == null || level.obstacleOrigins == null) return false;
+        int x2 = vertical ? x : x + 1, y2 = vertical ? y + 1 : y;
+        if (!level.InBounds(x, y) || !level.InBounds(x2, y2)) return false;
+        int a = level.Index(x, y), b = level.Index(x2, y2);
+        if (level.cells == null || level.cells[a] != (int)CellType.Normal || level.cells[b] != (int)CellType.Normal) return false;
+        if ((ObstacleId)level.obstacles[a] != ObstacleId.None || (ObstacleId)level.obstacles[b] != ObstacleId.None) return false;
+        var id = vertical ? ObstacleId.FlourSackV : ObstacleId.FlourSack;
+        var def = library != null ? library.Get(id) : null;
+        if (def == null) return false;
+        level.obstacles[a] = level.obstacles[b] = (int)id;
+        level.obstacleOrigins[a] = level.obstacleOrigins[b] = a;
+        if (a < remainingHitsByOrigin.Length) remainingHitsByOrigin[a] = Mathf.Max(1, def.hits);
+        return true;
+    }
+
     public bool IsWaterPuddleAt(int x, int y)
     {
         if (!IsValidCell(x, y)) return false;
@@ -2882,7 +2917,7 @@ public class ObstacleStateService : ISimObstacleQuery
     // Diğer under-tile obstacle'lar swap/select'i bloklar; bunlar istisna (taş üstünde normal
     // oynanır + hareket eder).
     public bool IsInteractiveUnderTileOverlayAt(int x, int y)
-        => IsMudAt(x, y) || IsSpreadingGelAt(x, y) || IsWaterPuddleAt(x, y) || IsWaterChannelAt(x, y);
+        => IsMudAt(x, y) || IsSpreadingGelAt(x, y) || IsWaterPuddleAt(x, y) || IsFlourAt(x, y) || IsWaterChannelAt(x, y);
 
     // Kapalı su kanalı: su birikintisi gibi pasif taş altı katman; üstündeki taş normal oynanır.
     public bool IsWaterChannelAt(int x, int y)

@@ -480,6 +480,7 @@ public sealed class SimObstacleLayer : ISimObstacleQuery
         if (id == ObstacleId.EnergyContainer) return;   // ayrı sistem, tasarımla dışarıda
         if (id == ObstacleId.BirdHouse) return;         // kırılmaz üretici; kuş kotası simüle edilmiyor
         if (id == ObstacleId.LampStrip) return;         // lamba rengi/kayma modellenmiyor → engel olarak kalır
+        if (id == ObstacleId.Windmill) return;          // dönen renkli kanat modellenmiyor → engel olarak kalır
 
         var rule = _rules?.Get(id);
         if (rule == null) return;

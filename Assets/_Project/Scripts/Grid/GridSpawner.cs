@@ -744,6 +744,7 @@ public class GridSpawner : MonoBehaviour
             DrawSpreadingGelOverlays();
             DrawWallObstacles();
             DrawLampStrips();
+            DrawWindmills();
             DrawHamsterObstacles();
             // DrawMudOverlays ClearAll() yapar; stamped-beneath mud'ları bundan SONRA çizilmeli.
             // Aksi halde LevelP_00540'ta plastic/movable altındaki mud ilk açılışta silinir,
@@ -1334,6 +1335,8 @@ public class GridSpawner : MonoBehaviour
                 if (obsId == ObstacleId.Wall || obsId == ObstacleId.MetalWall) continue;
                 // Lamba şeridi kendi parça renderer'ını kullanır (LampStripService).
                 if (obsId == ObstacleId.LampStrip) continue;
+                // Yel değirmeni kendi katmanlı görünümünü kullanır (WindmillService: gövde + dönen kanatlar + göbek).
+                if (obsId == ObstacleId.Windmill) continue;
                 // Oil kendi cell-anchored blob renderer'ını kullanır. Generic full-cell image
                 // üretirsek her hücrede iç bevel kalır ve tek sıvı alan gibi birleşmez.
                 if (obsId == ObstacleId.Oil) continue;
@@ -1437,6 +1440,18 @@ public class GridSpawner : MonoBehaviour
         }
 
         LampStripService.Ensure(board).Build(resolvedLevel, overTilesObstaclesRoot, tileSize);
+    }
+
+    // Yel değirmeni: gövde + 4 dönen kanat + göbek, çuval uçuşu ve un saçılımı WindmillService'te.
+    private void DrawWindmills()
+    {
+        if (board == null || resolvedLevel?.obstacles == null || overTilesObstaclesRoot == null) return;
+        if (System.Array.IndexOf(resolvedLevel.obstacles, (int)ObstacleId.Windmill) < 0)
+        {
+            if (board.TryGetComponent<WindmillService>(out var existing)) existing.Clear();
+            return;
+        }
+        WindmillService.Ensure(board).Build(resolvedLevel, overTilesObstaclesRoot, tileSize);
     }
 
     // Aç Hamster: tek hücre hareketli engel (TileView, kargo gibi); beslenme/kare değişimi/zıplama
@@ -2232,7 +2247,7 @@ public class GridSpawner : MonoBehaviour
             if (p.beneathId == ObstacleId.Oil ||
                 p.beneathId == ObstacleId.Safe || p.beneathId == ObstacleId.AncientSeal || p.beneathId == ObstacleId.Tube ||
                 p.beneathId == ObstacleId.Magnet || p.beneathId == ObstacleId.Grass ||
-                WallKind.For(p.beneathId) != null || p.beneathId == ObstacleId.LampStrip)
+                WallKind.For(p.beneathId) != null || p.beneathId == ObstacleId.LampStrip || p.beneathId == ObstacleId.Windmill)
                 continue;
 
             var def = resolvedLevel.obstacleLibrary.Get(p.beneathId);
@@ -2740,6 +2755,14 @@ public class GridSpawner : MonoBehaviour
                 if (grassFlowerOverlayService != null) AddRoot(grassFlowerOverlayService.transform);
                 break;
             case ObstacleId.SpreadingGel: AddRoot(spreadingGelOverlayRoot); break;
+            case ObstacleId.Windmill:
+                if (board.TryGetComponent<WindmillService>(out var millService))
+                {
+                    var millRoots = new List<Transform>();
+                    millService.CollectViewRoots(millRoots);
+                    foreach (var r in millRoots) AddRoot(r);
+                }
+                break;
             case ObstacleId.LampStrip:
                 if (board.TryGetComponent<LampStripService>(out var strips))
                 {
@@ -4213,7 +4236,7 @@ public class GridSpawner : MonoBehaviour
 
         // Duvar: parça görseli + kalan vuruş WallObstacleService'te (OnObstacleViewRestored'ı o da dinler);
         // generic 1x1 image çizilmez.
-        if (WallKind.For(obsId) != null || obsId == ObstacleId.LampStrip)
+        if (WallKind.For(obsId) != null || obsId == ObstacleId.LampStrip || obsId == ObstacleId.Windmill)
             return;
 
         // Oil ayrı bir overlay renderer'ı kullanır (obstacleViewsByOrigin değil). Bir cover'ın

@@ -342,6 +342,18 @@ public enum ObstacleId : int
     // (boşluklar dahil) yol boyunca 1 hücre kayar, uçtan çıkan diğer uçtan girer. Tüm lambalar kırılınca çerçeve
     // 2-3 büyük parçaya ayrılıp düşer; hedef = çerçeve sayısı. Üstüne yağ/çim gelebilir; altında çamur/jel olabilir.
     LampStrip = 79,
+
+    // Yel değirmeni (WindmillService) 2×2: dört renkli kanat beklerken yavaşça döner; kanatlar YALNIZ special/joker ile
+    // kırılır (normal eşleşme vurmaz, sıra önemsiz — kullanıcı 2026-11-01). Dört kanat bitince değirmen yıkılır ve
+    // rastgele, normal taş olan bir 1×2 alana un çuvalı fırlatır. Hedef DEĞİL (hedef: Flour). Üstüne bir şey konmaz;
+    // ileride altına zemin (çamur vb.) gelebilir.
+    Windmill = 80,
+    // Un çuvalı: değirmenin fırlattığı 2×1 (yatay) / 1×2 (dikey) örtü; altındaki taşları tutar, tek vuruşta patlar ve
+    // 5×5 alana (alt katmanı boş hücrelere) un saçar. Hedef değil.
+    FlourSack = 81,
+    FlourSackV = 82,
+    // Un: taşın altında en alt katman (su birikintisi / çamur gibi); üstündeki eşleşmeyle temizlenir. Hedef = hücre sayısı.
+    Flour = 83,
 }
 
 /// Lamba şeridi hücre rengi (LevelData.lampColorByCell). Renkler taş türleriyle eşleşir (renkli sandık sırası).

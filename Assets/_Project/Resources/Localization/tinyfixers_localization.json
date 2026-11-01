@@ -977,6 +977,22 @@
           "value": "Her lambayı yanında AYNI RENKTE eşleşmeyle ya da özel taşla kır. Mor lambalar yalnız özel taşla kırılır. Bazı şeritlerde lambalar her hamleden sonra kayar. Tüm lambaları kır, şerit dağılsın!"
         },
         {
+          "key": "hint_obstacle_windmill_name",
+          "value": "Yel Değirmeni"
+        },
+        {
+          "key": "hint_obstacle_windmill",
+          "value": "Değirmenin dönen kanatları yalnız ÖZEL TAŞLA kırılır. Dört kanat kırılınca değirmen bir un çuvalı fırlatır; çuvalı da kır, un taşların altına dağılsın!"
+        },
+        {
+          "key": "hint_obstacle_flour_name",
+          "value": "Un"
+        },
+        {
+          "key": "hint_obstacle_flour",
+          "value": "Un çuvalı patlayınca un taşların altına dağılır. Unun üstünde eşleşme yaparak temizle!"
+        },
+        {
           "key": "hint_obstacle_safe",
           "value": "Kasayı renk sırasına göre aç. Kilitler bitince altındaki içerik ortaya çıkar."
         },
@@ -4344,6 +4360,22 @@
         {
           "key": "hint_obstacle_lampstrip",
           "value": "Break each lamp with a match of THE SAME COLOR next to it, or with a special. Purple lamps break only with specials. Some strips shift their lamps after every move. Break all lamps to clear the strip!"
+        },
+        {
+          "key": "hint_obstacle_windmill_name",
+          "value": "Windmill"
+        },
+        {
+          "key": "hint_obstacle_windmill",
+          "value": "The spinning sails break ONLY with specials. When all four sails break, the windmill throws a flour sack; break it too and the flour spreads under the tiles!"
+        },
+        {
+          "key": "hint_obstacle_flour_name",
+          "value": "Flour"
+        },
+        {
+          "key": "hint_obstacle_flour",
+          "value": "When the flour sack bursts, flour spreads under the tiles. Make matches on top of it to clean it up!"
         },
         {
           "key": "hint_obstacle_safe",

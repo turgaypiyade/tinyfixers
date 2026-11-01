@@ -41,7 +41,10 @@ public class MainMenuLivesDisplay : MonoBehaviour
     [SerializeField, Min(8f)] private float extraBadgeSize = 46f;
 
     [Header("Reklam")]
+    // Yalnız editörde ve AdMob kapalıyken okunur (StartAd); TF_ADMOB açıkken derleyici "kullanılmıyor" uyarısı verir.
+#pragma warning disable CS0414
     [SerializeField] private bool simulateAdInEditor = true;
+#pragma warning restore CS0414
     [SerializeField, Min(0f)] private float simulatedAdDuration = 2f;
 
     [Header("Can 0 iken satın alma")]

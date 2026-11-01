@@ -19,6 +19,12 @@
   8/8/8 → 11 → **13/13/13** (kullanıcı 11 ile oynadı: 2 fail, biri tek hamleyle; 3.'de geçti, "biraz rahat" → 13 önerdi),
   hamle 26 → 24. `Batches/199-Harden/`. 13 hali oynanmadı.
 - **Kullanıcı oyun geri bildirimi (2026-11-01):** 197 ve 198 "çok iyi olmuş" (197 rahatlatılmış hali).
+- **206 Değirmen Tepesi — KULLANICI TASARIMI (2026-11-01, onaylı: "çok mantıklı ve güzel bir level oldu"):** 8×10,
+  4 değirmen iki yanda simetrik (satır 4–5 ve 9–10; yatay roket o satırlarda 4 kanat kırar), S su kanalı aşağı biter;
+  hedef Un 100 · Su Kanalı 1; 25 hamle. Kullanıcı rahat geçti. (İlk Claude taslağı: tek değirmen, Un 25.)
+  Eski satır: 8×10, tek değirmen, hedef yalnız Un 25
+  (kullanıcı: "hedefim UN olsun"), 25 hamle; katalog girişi + LevelNames eklendi. Mekanik kodu yeni, Unity'de oynanmadı.
+  207–210 değirmen oynanınca tasarlanacak. `Batches/206-210-Windmill/`, `Docs/Obstacles/Windmill/Plan.md`.
 - **202–204 sıkılaştırma (2026-11-01, kullanıcı: "202-204 çok kolay, en azından 1-2 hamle kala bitirsem; 205 oldu"):**
   kuş hedefi 18→24 / 12→18 / 16→22, hamle 24→21 / 24→21 / 25→22. Tahta aynı. v2 yedekleri `Batches/201-205-Lamps/Revisions/`.
 - **205 v3 fener sütunları UYGULANDI (2026-11-01, kullanıcı isteği):** kenar sütunları fener (ekranda 22, hedef 30),

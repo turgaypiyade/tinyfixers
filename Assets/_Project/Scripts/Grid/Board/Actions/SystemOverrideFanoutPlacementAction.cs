@@ -1068,7 +1068,8 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
             float size = tileSize * UnityEngine.Random.Range(0.06f, 0.14f);
 
             var img = CreateLaserImpactImage(root, "SplashDrop", color, size);
-            var c = color; c.a = 0.95f; img.color = c;
+            var c = color; c.a = 1f; img.color = c;
+            img.canvasRenderer.SetAlpha(0.95f);   // sönüm CanvasRenderer'dan → kare başına Graphic yeniden kurulumu yok
 
             drops.Add(new SplashDroplet { Rect = img.rectTransform, Image = img, Pos = Vector2.zero, Vel = vel });
         }
@@ -1096,9 +1097,7 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
                 dp.Rect.anchoredPosition = dp.Pos;
                 dp.Rect.localScale = Vector3.one * Mathf.Lerp(1f, 0.25f, k);
 
-                var c = dp.Image.color;
-                c.a = 0.95f * (1f - k * k);     // sona doğru hızlanan sönüm
-                dp.Image.color = c;
+                dp.Image.canvasRenderer.SetAlpha(0.95f * (1f - k * k));     // sona doğru hızlanan sönüm
             }
 
             yield return null;
@@ -1125,8 +1124,12 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
         root.SetAsLastSibling();
 
         float tileSize = Mathf.Max(24f, board != null ? board.TileSize : 96f);
-        var flash = CreateLaserImpactImage(root, "ImpactFlash", OverrideLaserCoreColor, tileSize * 0.72f);
+        // Renkler tam alpha ile bir kez yazılır; sönüm her kare CanvasRenderer alpha'sıyla (yeniden kurulum yok).
+        var flashColor = OverrideLaserCoreColor; flashColor.a = 1f;
+        var flash = CreateLaserImpactImage(root, "ImpactFlash", flashColor, tileSize * 0.72f);
         var core = CreateLaserImpactImage(root, "ImpactCore", Color.white, tileSize * 0.28f);
+        flash.canvasRenderer.SetAlpha(0.72f);
+        core.canvasRenderer.SetAlpha(0.95f);
 
         var shards = new List<LaserImpactShard>(7);
         for (int i = 0; i < 7; i++)
@@ -1135,12 +1138,13 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
             float distance = tileSize * UnityEngine.Random.Range(0.28f, 0.48f);
             float length = tileSize * UnityEngine.Random.Range(0.18f, 0.28f);
             Color color = i % 2 == 0 ? edgeColor : OverrideLaserCoreColor;
-            color.a = 0.94f;
+            color.a = 1f;
 
             var img = CreateLaserImpactImage(root, "ImpactShard", color, length);
             var rt = img.rectTransform;
             rt.sizeDelta = new Vector2(length, Mathf.Max(3f, tileSize * 0.035f));
             rt.localRotation = Quaternion.Euler(0f, 0f, angle);
+            img.canvasRenderer.SetAlpha(0.94f);
             shards.Add(new LaserImpactShard
             {
                 Rect = rt,
@@ -1166,17 +1170,13 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
             if (flash != null)
             {
                 flash.rectTransform.localScale = Vector3.one * Mathf.Lerp(0.35f, 1.35f, outEase);
-                var c = OverrideLaserCoreColor;
-                c.a = 0.72f * alpha;
-                flash.color = c;
+                flash.canvasRenderer.SetAlpha(0.72f * alpha);
             }
 
             if (core != null)
             {
                 core.rectTransform.localScale = Vector3.one * Mathf.Lerp(0.85f, 0.35f, k);
-                var c = Color.white;
-                c.a = 0.95f * alpha;
-                core.color = c;
+                core.canvasRenderer.SetAlpha(0.95f * alpha);
             }
 
             for (int i = 0; i < shards.Count; i++)
@@ -1187,9 +1187,7 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
 
                 shard.Rect.anchoredPosition = Vector2.LerpUnclamped(Vector2.zero, shard.End, outEase);
                 shard.Rect.localScale = new Vector3(Mathf.Lerp(1.15f, 0.35f, k), 1f, 1f);
-                var c = shard.Image.color;
-                c.a = 0.95f * alpha;
-                shard.Image.color = c;
+                shard.Image.canvasRenderer.SetAlpha(0.95f * alpha);
             }
 
             yield return null;

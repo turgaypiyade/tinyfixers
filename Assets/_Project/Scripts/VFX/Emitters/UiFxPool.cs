@@ -30,6 +30,8 @@ public sealed class UiFxPool : MonoBehaviour
         public RectTransform rect;
         public Vector2 start, drift;
         public float age, life, size;
+        public bool slot;          // PulseFuseSparkleView'in kalıcı yuvası: havuza dönmez, yalnız söner
+        public float sizeScale;    // yuva: gerçek boy / yuva boyu (yalnız slot=true)
     }
 
     private struct Ghost
@@ -127,6 +129,7 @@ public sealed class UiFxPool : MonoBehaviour
         img = go.GetComponentInChildren<Image>(true);
         if (img == null) img = go.AddComponent<Image>();
         img.gameObject.SetActive(true);
+        img.canvasRenderer.SetAlpha(1f);   // sönüm CanvasRenderer'dan sürülür; havuzdan önceki kullanımın 0'ı taşınmasın
         rt = img.rectTransform;
         return go;
     }
@@ -157,9 +160,7 @@ public sealed class UiFxPool : MonoBehaviour
     {
         float duration = Mathf.Max(0.0001f, life);
         float alpha = image.color.a;
-        var color = image.color;
-        color.a = Mathf.Lerp(alpha, 0f, Time.deltaTime / duration);
-        image.color = color;
+        image.canvasRenderer.SetAlpha(1f - Mathf.Clamp01(Time.deltaTime / duration));
         Instance.ghosts.Add(new Ghost
         {
             // Pure alpha fade: leave rt null so the driver never rewrites its unchanged scale.
@@ -227,9 +228,15 @@ public sealed class UiFxPool : MonoBehaviour
 
     internal static void TrackPulseFuseSpark(Image image, float life, float size)
     {
+        // Görünürlük ve boy her kare CanvasRenderer alpha + localScale ile sürülür: ikisi de Graphic'i yeniden
+        // kurdurmaz. Eskiden her kare image.color + sizeDelta yazılıyordu; PulseCore başına ~33 canlı kıvılcım ×
+        // tahtadaki her pulse = yüzlerce görsel her kare baştan kuruluyordu (L205 kombo karesinde Canvas 17 ms).
         var color = image.color;
-        color.a = 0f; // No full-opacity frame before the shared driver first advances it.
+        color.a = 1f;
         image.color = color;
+        image.rectTransform.sizeDelta = Vector2.one * size;
+        image.rectTransform.localScale = new Vector3(0.4f, 0.4f, 1f);
+        image.canvasRenderer.SetAlpha(0f); // No full-opacity frame before the shared driver first advances it.
         Instance.pulseFuseSparks.Add(new PulseFuseSpark
         {
             image = image,
@@ -238,6 +245,26 @@ public sealed class UiFxPool : MonoBehaviour
             drift = Random.insideUnitCircle.normalized * Random.Range(6f, 14f),
             life = Mathf.Max(0.0001f, life),
             size = size
+        });
+    }
+
+    /// <summary>Kalıcı yuva kıvılcımı: sprite/renk/boy sahibi tarafından bir kez yazılmıştır; burada yalnız
+    /// konum + ölçek + CanvasRenderer alpha sürülür (Graphic yeniden kurulmaz). Bitince havuza dönmez.</summary>
+    internal static void TrackPulseFuseSparkSlot(Image image, float life, float sizeScale)
+    {
+        var rect = image.rectTransform;
+        image.canvasRenderer.SetAlpha(0f);
+        float s0 = 0.4f * sizeScale;
+        rect.localScale = new Vector3(s0, s0, 1f);
+        Instance.pulseFuseSparks.Add(new PulseFuseSpark
+        {
+            image = image,
+            rect = rect,
+            start = rect.anchoredPosition,
+            drift = Random.insideUnitCircle.normalized * Random.Range(6f, 14f),
+            life = Mathf.Max(0.0001f, life),
+            slot = true,
+            sizeScale = sizeScale
         });
     }
 
@@ -254,16 +281,20 @@ public sealed class UiFxPool : MonoBehaviour
             spark.age += dt;
             if (!spark.image.gameObject.activeInHierarchy || spark.age >= spark.life)
             {
-                UiVfxPool.Return(PulseFuseSparkKey, spark.image.gameObject, MaxPulseSparksPerKey);
+                if (spark.slot)
+                {
+                    spark.image.canvasRenderer.SetAlpha(0f);
+                    spark.rect.localScale = Vector3.zero;
+                }
+                else UiVfxPool.Return(PulseFuseSparkKey, spark.image.gameObject, MaxPulseSparksPerKey);
                 RemoveAtSwap(pulseFuseSparks, i);
                 continue;
             }
             float k = spark.age / spark.life;
             spark.rect.anchoredPosition = spark.start + spark.drift * k;
-            var color = spark.image.color;
-            color.a = k < 0.25f ? k / 0.25f : 1f - (k - 0.25f) / 0.75f;
-            spark.image.color = color;
-            spark.rect.sizeDelta = Vector2.one * (spark.size * Mathf.Lerp(0.4f, 1f, Mathf.Sin(k * Mathf.PI)));
+            spark.image.canvasRenderer.SetAlpha(k < 0.25f ? k / 0.25f : 1f - (k - 0.25f) / 0.75f);
+            float scale = Mathf.Lerp(0.4f, 1f, Mathf.Sin(k * Mathf.PI)) * (spark.slot ? spark.sizeScale : 1f);
+            spark.rect.localScale = new Vector3(scale, scale, 1f);
             pulseFuseSparks[i] = spark;
         }
     }
@@ -292,9 +323,8 @@ public sealed class UiFxPool : MonoBehaviour
             g.t += dt;
             float u = Mathf.Clamp01(g.t / g.life);
             float k = Mathf.Pow(1f - u, g.power);
-            var c = g.img.color;
-            c.a = g.alpha0 * k;
-            g.img.color = c;
+            // image.color alpha0'da kalır; sönüm CanvasRenderer alpha'sıyla (çarpılır) → Graphic yeniden kurulmaz.
+            g.img.canvasRenderer.SetAlpha(k);
             if (g.rt != null) g.rt.localScale = Vector3.LerpUnclamped(g.scale0, g.scale1, u);
 
             if (g.t >= g.life)
@@ -331,6 +361,10 @@ public sealed class UiFxPool : MonoBehaviour
             drift = (Vector2.up * 1.6f + Random.insideUnitCircle).normalized * Random.Range(12f, 30f),
             life = Mathf.Max(0.0001f, life), size = size, lastFrame = Time.frameCount
         };
+        var color = image.color;
+        color.a = 1f;
+        image.color = color;
+        image.rectTransform.sizeDelta = Vector2.one * size;
         // StartCoroutine previously applied its first animation step synchronously.
         AdvanceChargeSpark(ref spark, Time.deltaTime);
         Instance.chargeSparks.Add(spark);
@@ -341,10 +375,10 @@ public sealed class UiFxPool : MonoBehaviour
         spark.age += dt;
         float k = spark.age / spark.life;
         spark.rect.anchoredPosition = spark.start + spark.drift * k;
-        var color = spark.image.color;
-        color.a = Mathf.Clamp01(k < 0.2f ? k / 0.2f : 1f - (k - 0.2f) / 0.8f);
-        spark.image.color = color;
-        spark.rect.sizeDelta = Vector2.one * (spark.size * Mathf.Lerp(0.45f, 1.15f, Mathf.Sin(k * Mathf.PI)));
+        // Alpha + boy CanvasRenderer/localScale ile: Graphic yeniden kurulmaz (fitil kıvılcımıyla aynı kural).
+        spark.image.canvasRenderer.SetAlpha(Mathf.Clamp01(k < 0.2f ? k / 0.2f : 1f - (k - 0.2f) / 0.8f));
+        float scale = Mathf.Lerp(0.45f, 1.15f, Mathf.Sin(k * Mathf.PI));
+        spark.rect.localScale = new Vector3(scale, scale, 1f);
     }
 
     private void UpdateChargeSparks(float dt)
@@ -402,7 +436,7 @@ public sealed class UiFxPool : MonoBehaviour
         float scale = t < 0.2f ? Mathf.Lerp(0.85f, 1.25f, t / 0.2f) : Mathf.Lerp(1.25f, 0.10f, (t - 0.2f) / 0.8f);
         spark.rect.localScale = Vector3.one * scale;
         float alpha = t < 0.55f ? 1f : 1f - (t - 0.55f) / 0.45f;
-        spark.image.color = new Color(spark.color.r, spark.color.g, spark.color.b, spark.color.a * alpha);
+        spark.image.canvasRenderer.SetAlpha(alpha);   // image.color = spark.color sabit; çarpım aynı sonucu verir
     }
 
     private void UpdatePatchbotSparks(float dt)

@@ -103,7 +103,8 @@ public static class AdService
             Debug.LogError("[Ads] Missing production rewarded ad unit ID in MonetizationConfig.json.");
             return;
         }
-        MobileAds.RaiseAdEventsOnUnityMainThread = true;
+        // Reklam olayları ana iş parçacığına MobileAdsEventExecutor.ExecuteInUpdate ile aktarılır (eski
+        // MobileAds.RaiseAdEventsOnUnityMainThread obsolete). Her SDK geri çağrısı aşağıda tek tek sarılı.
         GameSettings.OnSoundChanged += ApplySoundSetting;
         Host.StartCoroutine(InitializeConsent());
     }
@@ -181,7 +182,7 @@ public static class AdService
         loading = true;
         int session = generation;
         int request = ++loadVersion;
-        RewardedAd.Load(RewardedUnitId, new AdRequest(), (ad, error) =>
+        RewardedAd.Load(RewardedUnitId, new AdRequest(), (ad, error) => MobileAdsEventExecutor.ExecuteInUpdate(() =>
         {
             if (stopping || session != generation || request != loadVersion) { ad?.Destroy(); return; }
             loading = false;
@@ -195,7 +196,7 @@ public static class AdService
             }
             rewarded = ad;
             loadedAt = Time.realtimeSinceStartup;
-        });
+        }));
     }
 
     private static IEnumerator RetryLoad()
@@ -257,19 +258,20 @@ public static class AdService
             else if (failed) ShowUnavailable();
             callback?.Invoke(earned);
         }
-        ad.OnAdFullScreenContentClosed += () => Finish(false);
-        ad.OnAdFullScreenContentFailed += error =>
+        // SDK olayları arka iş parçacığından gelebilir: sırayı koruyarak ana iş parçacığına aktar (ödül → kapanış).
+        ad.OnAdFullScreenContentClosed += () => MobileAdsEventExecutor.ExecuteInUpdate(() => Finish(false));
+        ad.OnAdFullScreenContentFailed += error => MobileAdsEventExecutor.ExecuteInUpdate(() =>
         {
             Debug.LogWarning($"[Ads] Show failed: {error?.GetMessage()}");
             Finish(true);
-        };
+        });
         try
         {
-            ad.Show(_ =>
+            ad.Show(_ => MobileAdsEventExecutor.ExecuteInUpdate(() =>
             {
                 if (finished || stopping || session != generation || earned) return;
                 earned = true;
-            });
+            }));
         }
         catch (Exception error)
         {
