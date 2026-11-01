@@ -26,6 +26,37 @@ public class PulseCoreVfxPlayer : MonoBehaviour
     [SerializeField] private float expandTime = 0.35f;       // Halkanın yayılma hızı
     [SerializeField] private float coreBurstDuration = 0.2f; // Patlamanın ekranda kalma süresi
 
+    // Seviye açılışında patlama havuzu + prosedürel dokular kare kare hazırlanır. Eskiden oturumun ilk
+    // PulseCore patlamalarında Instantiate + 12 Shadow AddComponent + 128/256 px doku üretimi (her biri ~1 MB
+    // geçici Color[]) kombonun ilk karesine biniyordu (editör 40–345 ms, iPhone 151 ms tepe).
+    private const int PrewarmPoolCount = 4;
+
+    private void Start()
+    {
+        if (vfxRoot != null && pulsePrefab != null)
+            StartCoroutine(CoPrewarm());
+    }
+
+    private IEnumerator CoPrewarm()
+    {
+        yield return null;   // sahne kurulumunun ilk karesine binme
+        PulseCoreExplosionFX first = null;
+        for (int i = 0; i < PrewarmPoolCount && pulsePool.Count < PrewarmPoolCount; i++)
+        {
+            var rt = Instantiate(pulsePrefab, vfxRoot);
+            rt.gameObject.SetActive(false);   // OnEnable'ın başlattığı oynatma ilk karede durur (PlayPulseVfx ile aynı)
+            var fx = rt.GetComponent<PulseCoreExplosionFX>();
+            if (fx == null) { Destroy(rt.gameObject); yield break; }
+            fx.ReturnToPool = returnToPool ??= f => pulsePool.Push(f);
+            pulsePool.Push(fx);
+            if (first == null) first = fx;
+            yield return null;
+        }
+        if (first == null && pulsePool.Count > 0) first = pulsePool.Peek();
+        while (first != null && first.PrewarmNextProceduralSprite())
+            yield return null;   // doku başına bir kare
+    }
+
     [ContextMenu("TEST/Play Pulse At Center")]
     public void PlayTestAtCenter()
     {

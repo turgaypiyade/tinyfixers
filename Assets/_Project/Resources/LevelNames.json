@@ -1219,6 +1219,30 @@
       "levelKey": "LevelCL_0206",
       "name": "Değirmen Tepesi",
       "nameEn": "Windmill Hill"
+    },
+    {
+      "level": 207,
+      "levelKey": "LevelCL_0207",
+      "name": "Dev Pervane",
+      "nameEn": "Giant Sails"
+    },
+    {
+      "level": 208,
+      "levelKey": "LevelCL_0208",
+      "name": "Baykuşlu Ağaç",
+      "nameEn": "Owl Tree"
+    },
+    {
+      "level": 209,
+      "levelKey": "LevelCL_0209",
+      "name": "Dört Kanat",
+      "nameEn": "Four Sails"
+    },
+    {
+      "level": 210,
+      "levelKey": "LevelCL_0210",
+      "name": "Un Çuvalı",
+      "nameEn": "Flour Sack"
     }
   ],
   "catalog": "LevelCatalogProV1"

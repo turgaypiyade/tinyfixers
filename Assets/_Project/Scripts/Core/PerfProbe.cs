@@ -26,6 +26,8 @@ public sealed class PerfProbe : MonoBehaviour
     public static string CurrentPath => instance != null ? instance.path : null;
 
     private static PerfProbe instance;
+    // CSV'de ondalık ayırıcı her cihazda nokta olsun (TR cihazda "0,01" sütunları kaydırıyordu).
+    private static readonly System.Globalization.CultureInfo Inv = System.Globalization.CultureInfo.InvariantCulture;
     private string path;
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
@@ -218,18 +220,18 @@ public sealed class PerfProbe : MonoBehaviour
     {
         float t = UnityEngine.Time.realtimeSinceStartup;
         double avg = frames > 0 ? frameSum / frames : 0;
-        line.Clear().Append(type).Append(',').Append(t.ToString("0.00")).Append(',').Append(CurrentLevel.Global)
-            .Append(',').Append(frames).Append(',').Append((avg > 0 ? 1000.0 / avg : 0).ToString("0.0"))
-            .Append(',').Append(avg.ToString("0.00")).Append(',').Append(frameMax.ToString("0.00"));
+        line.Clear().Append(type).Append(',').Append(t.ToString("0.00", Inv)).Append(',').Append(CurrentLevel.Global)
+            .Append(',').Append(frames).Append(',').Append((avg > 0 ? 1000.0 / avg : 0).ToString("0.0", Inv))
+            .Append(',').Append(avg.ToString("0.00", Inv)).Append(',').Append(frameMax.ToString("0.00", Inv));
         for (int i = 0; i < recs.Length; i++)
         {
             double a = frames > 0 ? recs[i].sum / frames : 0;
-            line.Append(',').Append(recs[i].recorder.Valid ? a.ToString(recs[i].isTime ? "0.000" : "0") : "-1")
-                .Append(',').Append(recs[i].recorder.Valid ? recs[i].max.ToString(recs[i].isTime ? "0.000" : "0") : "-1");
+            line.Append(',').Append(recs[i].recorder.Valid ? a.ToString(recs[i].isTime ? "0.000" : "0", Inv) : "-1")
+                .Append(',').Append(recs[i].recorder.Valid ? recs[i].max.ToString(recs[i].isTime ? "0.000" : "0", Inv) : "-1");
         }
         float f = Mathf.Max(1, frames);
-        line.Append(',').Append((busyFrames * 100f / f).ToString("0")).Append(',').Append((specialFrames * 100f / f).ToString("0"))
-            .Append(',').Append((seqFrames * 100f / f).ToString("0")).Append(',').Append(jobsMax).Append(',').Append(BoardStateText()).Append(",1");
+        line.Append(',').Append((busyFrames * 100f / f).ToString("0", Inv)).Append(',').Append((specialFrames * 100f / f).ToString("0", Inv))
+            .Append(',').Append((seqFrames * 100f / f).ToString("0", Inv)).Append(',').Append(jobsMax).Append(',').Append(BoardStateText()).Append(",1");
         writer.WriteLine(line.ToString());
 
         if (t - lastSummaryLog >= SummaryLogSeconds - 0.01f)
@@ -309,15 +311,15 @@ public sealed class PerfProbe : MonoBehaviour
 
     private void WriteSpike(float t, double frameMs)
     {
-        line.Clear().Append("spike,").Append(t.ToString("0.000")).Append(',').Append(CurrentLevel.Global).Append(",1,")
-            .Append((1000.0 / Math.Max(0.001, frameMs)).ToString("0.0")).Append(',').Append(frameMs.ToString("0.00")).Append(',').Append(frameMs.ToString("0.00"));
+        line.Clear().Append("spike,").Append(t.ToString("0.000", Inv)).Append(',').Append(CurrentLevel.Global).Append(",1,")
+            .Append((1000.0 / Math.Max(0.001, frameMs)).ToString("0.0", Inv)).Append(',').Append(frameMs.ToString("0.00", Inv)).Append(',').Append(frameMs.ToString("0.00", Inv));
         for (int i = 0; i < recs.Length; i++)
         {
             string v = "-1";
             if (recs[i].recorder.Valid)
             {
                 double x = recs[i].recorder.LastValue;
-                v = recs[i].isTime ? (x * 1e-6).ToString("0.000") : x.ToString("0");
+                v = recs[i].isTime ? (x * 1e-6).ToString("0.000", Inv) : x.ToString("0", Inv);
             }
             line.Append(',').Append(v).Append(',').Append(v);
         }

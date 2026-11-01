@@ -12630,6 +12630,7 @@ MonoBehaviour:
   titleGradientTop: {r: 1, g: 0.98, b: 0.86, a: 1}
   titleGradientBottom: {r: 1, g: 0.86, b: 0.38, a: 1}
   useProceduralSelectionFrame: 0
+  selectedFrameSprite: {fileID: -9041127198330568130, guid: f69765dc01f7e4323b62b5993f80e7fe, type: 3}
   selectedFrameSpriteName: Top_border_img_v2
   selectedFramePadding: 10
   selectedFrameOutlineColor: {r: 1, g: 0.80386245, b: 0.0141509175, a: 1}

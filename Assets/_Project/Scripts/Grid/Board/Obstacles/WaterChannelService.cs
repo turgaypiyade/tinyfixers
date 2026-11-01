@@ -115,6 +115,7 @@ public sealed class WaterChannelService
 
         if (channels.Count > 0)
         {
+            board.WaterChannelWetQuery = IsWetAt;
             // Birincil: OnObstacleDestroyed — ObstacleStateService HER yok edilmede tetikler (görsel olayı tetiklemeyen
             // hasar yolları da var). Yedek: görsel olay. Open() aynı hücre için tekrar çağrılırsa bir şey yapmaz.
             board.OnObstacleDestroyed += HandleObstacleDestroyed;
@@ -126,6 +127,7 @@ public sealed class WaterChannelService
     {
         if (board != null)
         {
+            if (board.WaterChannelWetQuery == (System.Func<int, bool>)IsWetAt) board.WaterChannelWetQuery = null;
             board.OnObstacleDestroyed -= HandleObstacleDestroyed;
             board.ObstacleVisualChanged -= HandleObstacleVisualChanged;
         }
@@ -166,6 +168,20 @@ public sealed class WaterChannelService
     private void HandleObstacleDestroyed(int originIndex, ObstacleId obstacleId)
     {
         if (obstacleId == ObstacleId.WaterChannel) Open(originIndex);
+        // Açık kanal hücresindeki un suyu tutuyordu: un temizlenince akış kaldığı yerden sürer.
+        else if (obstacleId == ObstacleId.Flour && byCell.TryGetValue(originIndex, out var hit)
+                 && !hit.channel.filling && !hit.channel.completed && board.isActiveAndEnabled)
+            board.StartCoroutine(Flow(hit.channel));
+    }
+
+    private bool IsWetAt(int cellIndex) => byCell.TryGetValue(cellIndex, out var hit) && hit.channel.cells[hit.index].wet;
+
+    // Açık ama üstünde un olan kanal hücresi suyu geçirmez (değirmen unu; temizlenince akış sürer).
+    private bool IsBlocked(Cell cell)
+    {
+        if (!cell.open) return true;
+        var state = board.ObstacleStateService;
+        return state != null && state.IsFlourAt(cell.x, cell.y);
     }
 
     private void HandleObstacleVisualChanged(ObstacleVisualChange change)
@@ -206,11 +222,11 @@ public sealed class WaterChannelService
             {
                 var cell = channel.cells[i];
                 if (cell.wet) continue;
-                if (!cell.open)
+                if (IsBlocked(cell))
                 {
                     yield return FadeFoam(channel);
-                    // Söndürme sırasında açıldıysa: Open() akış sürüyor diye yeni akış başlatmadı → burada devam et.
-                    if (!cell.open) yield break;
+                    // Söndürme sırasında açıldıysa / un temizlendiyse: yeni akış başlatılmadı → burada devam et.
+                    if (IsBlocked(cell)) yield break;
                 }
                 if (Time.time >= nextFlowSoundTime)
                 {

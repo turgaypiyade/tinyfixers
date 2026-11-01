@@ -372,3 +372,8 @@ Ek (aynı gün): “bazen dikdörtgen şekilde daha iyi 2x3, 2x4 yatayda ya da s
 - 2026-11-01 · "201 hariç seviyeler çok kolay oldu... tüm geçmiş güzel obstacle lara bak bence bir kaç tane daha kullanmaya çalış" + "water channel aşağıya dönük biterse iyi olur (animasyonumuz çalışıyor)". Ders: yeni engel eklerken eski işi silip yerine az emekli şerit koymak seviyeyi kolaylaştırır; iş miktarını koru. Su kanalı yolu aşağı dönerek alt kenarda bitsin.
 - 2026-11-01 · "202-204 çok kolay hocam en azından 1-2 hamle kala bitirsem 205 oldu bence zorluyor". Kalibrasyon: normal seviyede hedef his 1–2 hamle kala bitirmek; 205 (Hard, fener sütunları) doğru. Kaldıraç: kuş kotası + hamle.
 - 2026-11-01 · Zorluk kalibrasyonu: "oyunu çok rahat geçtim geniş boardlarda oyun rahat geçiliyor. insanların bir iki kez yanması bu seviyelerde bana anormal gelmiyor" (206, 4 değirmen + kanal, 25 hamle). Ders: 200+ normal seviyelerde geniş tahta = kolay; 1–2 fail beklenen his. 206'yı kullanıcı kendisi tasarladı ve onayladı.
+
+- 2026-11-01 · 207–210 v1 RET: "bunlar çok sıradan boardlar ... hiç yaratıcılık yok hepsi aynı" (dikdörtgen + kenar
+  değirmen + üst bant + alt blok). Ders: her seviyeye ayrı siluet + ayrı oyun fikri; aynı iskeleti engel değiştirerek tekrarlama.
+- 2026-11-01 · "fenerlerin hepsinin bir yerde olduğu senaryo güzel olmuyor fenerler sütunda dizildiğinde güzel oluyor".
+- 2026-11-01 · "kuş evi için lütfen kenarları kullan L ve ters L planlayabilirsin böylelikle iyi bir hedef olur".

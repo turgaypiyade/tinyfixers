@@ -1030,6 +1030,10 @@ public class BoardController : MonoBehaviour
     internal bool EnableSpecialChainTrace => false;
 #endif
     internal ObstacleStateService ObstacleStateService => obstacleStateService;
+
+    /// Su kanalı: hücre (index) suyla dolmuş mu? WaterChannelService kurulurken bağlar, Dispose'da temizler.
+    /// Değirmen unu ıslak kanala dökülmez (un suyun altına giremez).
+    internal System.Func<int, bool> WaterChannelWetQuery;
     internal SpecialLockCoordinator SpecialLocks => specialLockCoordinator;
 
     // Kafes açma kuralı (Lazer topu, releaseWhenCovered kilitleri): normal eşleşme kafesli special'ın 4 komşusundan

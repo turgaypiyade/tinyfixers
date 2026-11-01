@@ -4535,7 +4535,7 @@ MonoBehaviour:
       behavior: 1
       allowDiagonal: 1
       locksInteraction: 0
-      holdsTile: 0
+      holdsTile: 1
       suppressHitParticles: 0
       hitParticleSprites: []
       hitSound: {fileID: 0}
@@ -4597,7 +4597,7 @@ MonoBehaviour:
       behavior: 1
       allowDiagonal: 1
       locksInteraction: 0
-      holdsTile: 0
+      holdsTile: 1
       suppressHitParticles: 0
       hitParticleSprites: []
       hitSound: {fileID: 0}

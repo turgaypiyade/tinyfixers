@@ -323,21 +323,21 @@ public sealed class WindmillService : MonoBehaviour
         return true;
     }
 
-    /// Çuvalın kapladığı alanın merkezine en yakın, aktif ve engelsiz (alt katmanı boş) hücrelere TAM FlourPerSack
-    /// kadar un: önce 5×5 halkası, yetmezse dışa doğru. Tahtada yer yoksa dökülebildiği kadar.
+    /// Çuval SABİT bir alana döker: merkezine en yakın FlourPerSack konum (25 → 5×5). Alan tahta sınırı/delik/engel/
+    /// zaten unlu/ıslak kanal hücresine denk gelirse o un kaybolur ve hedef sayacı o kadar azalır (kullanıcı kuralı
+    /// 2026-11-01: "unlu bir kareye dağılıyorsa bir tane olsun hedef azalsın.. kenardaysa boşluğa denk geliyorsa yine
+    /// goals'teki azalmalı"). Eskiden yer bulamayan un dışa doğru taşıp uzak hücrelere yayılıyordu.
     private void SpreadFlour(int x0, int y0, int w, int h)
     {
         if (boundState == null) return;
         float cx = x0 + (w - 1) * 0.5f, cy = y0 + (h - 1) * 0.5f;
+        int r = Mathf.CeilToInt(Mathf.Sqrt(FlourPerSack) * 0.5f) + 1;
+        int ix = Mathf.FloorToInt(cx), iy = Mathf.FloorToInt(cy);
         spreadBuffer.Clear();
-        for (int y = 0; y < height; y++)
-            for (int x = 0; x < width; x++)
-            {
-                int i = y * width + x;
-                if (level.cells[i] != (int)CellType.Normal || (ObstacleId)level.obstacles[i] != ObstacleId.None) continue;
-                spreadBuffer.Add(new Vector2Int(x, y));
-            }
-        // Halka mesafesi (Chebyshev) önce, eşitlikte gerçek uzaklık: 5×5 doğal olarak ilk dolar.
+        for (int y = iy - r; y <= iy + r + 1; y++)
+            for (int x = ix - r; x <= ix + r + 1; x++)
+                spreadBuffer.Add(new Vector2Int(x, y));   // tahta dışı dahil: alan konumdur, hücre değil
+        // Halka mesafesi (Chebyshev) önce, eşitlikte gerçek uzaklık: 25 konum = tam 5×5.
         spreadBuffer.Sort((p, q) =>
         {
             float rp = Mathf.Max(Mathf.Abs(p.x - cx), Mathf.Abs(p.y - cy)), rq = Mathf.Max(Mathf.Abs(q.x - cx), Mathf.Abs(q.y - cy));
@@ -345,13 +345,16 @@ public sealed class WindmillService : MonoBehaviour
             float dp = (p.x - cx) * (p.x - cx) + (p.y - cy) * (p.y - cy), dq = (q.x - cx) * (q.x - cx) + (q.y - cy) * (q.y - cy);
             return dp.CompareTo(dq);
         });
-        int placed = 0;
-        for (int k = 0; k < spreadBuffer.Count && placed < FlourPerSack; k++)
+        int count = Mathf.Min(FlourPerSack, spreadBuffer.Count);
+        for (int k = 0; k < count; k++)
         {
             var c = spreadBuffer[k];
+            if (c.x < 0 || c.y < 0 || c.x >= width || c.y >= height) continue;
+            int i = c.y * width + c.x;
+            if (level.cells[i] != (int)CellType.Normal || (ObstacleId)level.obstacles[i] != ObstacleId.None) continue;
+            if (board.WaterChannelWetQuery != null && board.WaterChannelWetQuery(i)) continue;   // un suyun altına girmez
             if (!boundState.TrySpawnSingleCellObstacleAt(c.x, c.y, ObstacleId.Flour)) continue;
             board.RaiseObstacleCreatedDynamic(c.x, c.y);
-            placed++;
         }
         board.RequestResolveAfterActionSequence();
     }

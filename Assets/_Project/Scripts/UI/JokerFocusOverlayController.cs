@@ -45,6 +45,8 @@ public class JokerFocusOverlayController : MonoBehaviour
 
     [Header("Selection Highlight")]
     [SerializeField] private bool   useProceduralSelectionFrame   = false;
+    [Tooltip("Seçim çerçevesi. Doğrudan referans: build'de isimle arama yalnız o an bellekte yüklüyse bulur.")]
+    [SerializeField] private Sprite selectedFrameSprite;
     [SerializeField] private string selectedFrameSpriteName       = "Top_border_img_v2";
     [SerializeField] private float  selectedFramePadding          = 10f;
     [SerializeField] private Color  selectedFrameOutlineColor     = new Color(1f, 0.85f, 0.25f, 1f);
@@ -1051,6 +1053,7 @@ public class JokerFocusOverlayController : MonoBehaviour
     // ── Sprite helpers ────────────────────────────────────────────────────────
     private Sprite ResolveSelectionFrameSprite()
     {
+        if (selectedFrameSprite != null) return selectedFrameSprite;
         if (string.IsNullOrEmpty(selectedFrameSpriteName)) return null;
         var s = ResolveSpriteByName(selectedFrameSpriteName);
         if (s != null) return s;

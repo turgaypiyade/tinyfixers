@@ -19,6 +19,10 @@
   8/8/8 → 11 → **13/13/13** (kullanıcı 11 ile oynadı: 2 fail, biri tek hamleyle; 3.'de geçti, "biraz rahat" → 13 önerdi),
   hamle 26 → 24. `Batches/199-Harden/`. 13 hali oynanmadı.
 - **Kullanıcı oyun geri bildirimi (2026-11-01):** 197 ve 198 "çok iyi olmuş" (197 rahatlatılmış hali).
+- **207–210 Değirmen onluğu v2 siluetler (2026-11-01), oynanmadı:** v1 kullanıcı: "çok sıradan ... hepsi aynı" (yedek
+  `Revisions/v1-siradan/`). v2: 207 Dev Pervane (tahta = yel değirmeni) · 208 Baykuşlu Ağaç · 209 Dört Kanat SH (delikle 4
+  oda) · 210 Un Çuvalı Boss. Kurallar: fener SÜTUN, kuş evi kenarda L/ters L. Un artık sabit 5×5'e döker, denk gelmeyen un
+  hedeften düşer. Ayrıntı `Batches/206-210-Windmill/README-207-210.md`.
 - **206 Değirmen Tepesi — KULLANICI TASARIMI (2026-11-01, onaylı: "çok mantıklı ve güzel bir level oldu"):** 8×10,
   4 değirmen iki yanda simetrik (satır 4–5 ve 9–10; yatay roket o satırlarda 4 kanat kırar), S su kanalı aşağı biter;
   hedef Un 100 · Su Kanalı 1; 25 hamle. Kullanıcı rahat geçti. (İlk Claude taslağı: tek değirmen, Un 25.)

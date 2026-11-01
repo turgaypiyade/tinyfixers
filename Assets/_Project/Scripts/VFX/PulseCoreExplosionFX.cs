@@ -568,6 +568,36 @@ public class PulseCoreExplosionFX : MonoBehaviour
 
     private static readonly Dictionary<VariantKey, List<Sprite>> variantCache = new();
 
+    private VariantKey RingVariantKey() => new VariantKey(false, Mathf.Max(32, noiseTexSize), 0,
+        ringThickness, noiseAmplitude, noiseFrequency, edgeSoftness, 0f);
+    private VariantKey RaysVariantKey() => new VariantKey(true, Mathf.Max(64, rayTexSize), rayCount,
+        rayThinness, raySoftness, rayReach, rayIrregularity, rayIrregFreq);
+
+    /// <summary>Prosedürel halka/ışın dokusunun eksik varyasyonlarından BİRİNİ üretir; üretecek bir şey
+    /// kalmadıysa false. Dokular oturum boyu paylaşılan önbellekte → ilk patlamalarda kare içinde piksel
+    /// döngüsü + ~1 MB Color[] ayırması olmasın diye seviye açılışında kare kare çağrılır.</summary>
+    public bool PrewarmNextProceduralSprite()
+    {
+        if (useNoisyRing && shockwaveRing != null && VariantCount(RingVariantKey()) < VariantsPerKey)
+        {
+            GetOrCreateVariant(RingVariantKey(), this);
+            return true;
+        }
+        if (useProceduralRays && sunburstRays != null && VariantCount(RaysVariantKey()) < VariantsPerKey)
+        {
+            GetOrCreateVariant(RaysVariantKey(), this);
+            return true;
+        }
+        return false;
+    }
+
+    private static int VariantCount(VariantKey key)
+    {
+        if (!variantCache.TryGetValue(key, out var list)) return 0;
+        list.RemoveAll(sp => sp == null);
+        return list.Count;
+    }
+
     private static Sprite GetOrCreateVariant(VariantKey key, PulseCoreExplosionFX source)
     {
         if (!variantCache.TryGetValue(key, out var list))
@@ -623,9 +653,7 @@ public class PulseCoreExplosionFX : MonoBehaviour
     {
         if (sunburstRays == null) return;
 
-        int size = Mathf.Max(64, rayTexSize);
-        var key = new VariantKey(true, size, rayCount, rayThinness, raySoftness, rayReach, rayIrregularity, rayIrregFreq);
-        var sprite = GetOrCreateVariant(key, this);
+        var sprite = GetOrCreateVariant(RaysVariantKey(), this);
 
         sunburstRays.sprite = sprite;
         sunburstRays.type = Image.Type.Simple;
@@ -701,9 +729,7 @@ public class PulseCoreExplosionFX : MonoBehaviour
     {
         if (shockwaveRing == null) return;
 
-        int size = Mathf.Max(32, noiseTexSize);
-        var key = new VariantKey(false, size, 0, ringThickness, noiseAmplitude, noiseFrequency, edgeSoftness, 0f);
-        var sprite = GetOrCreateVariant(key, this);
+        var sprite = GetOrCreateVariant(RingVariantKey(), this);
 
         shockwaveRing.sprite = sprite;
         shockwaveRing.type = Image.Type.Simple;
