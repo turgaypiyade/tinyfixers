@@ -44,19 +44,21 @@ def lv(rows, **kw):
 @level(207)
 def l207():
     # Dev Pervane (Normal): tahta dev bir yel değirmeni — artı kanatlar, gerçek değirmen göbekte (kanatları yalnız
-    # special kırar). Gövdenin iki kenarında fener sütunları (kullanıcı: fener sütunda dizilince güzel), dipte kapı dolabı.
+    # special kırar). Gövdenin dış kenarlarında fener sütunları (kullanıcı: fener sütunda dizilince güzel), dipte kapı dolabı.
+    # v2.1: fenerler 2./5. sütundaydı → değirmen altındaki orta sütunları iki yandan kapatıp tek dar girişe bağlıyordu
+    # (kullanıcı 207'de kalmaması gereken boşluklar gördü). Dış kenara alındı: 2./5. sütun deliklerden düz dolar.
     return lv(["...oo...",
                "...oo...",
                "...oo...",
                "oooMMooo",
                "oooMMooo",
                "...oo...",
-               "..LooL..",
-               "..LooL..",
-               ".oLooLo.",
-               ".oLWWLo.",
-               "oooWWooo"], moves=20,
-              goals=[ob(FLOUR, 25), ob(LANTERN, 8), ob(WARDROBE, 1)], name=('Dev Pervane', 'Giant Sails'))
+               "..oooo..",
+               "..oooo..",
+               ".LooooL.",
+               ".LoWWoL.",
+               "oLoWWoLo"], moves=20,
+              goals=[ob(FLOUR, 25), ob(LANTERN, 6), ob(WARDROBE, 1)], name=('Dev Pervane', 'Giant Sails'))
 
 @level(208)
 def l208():

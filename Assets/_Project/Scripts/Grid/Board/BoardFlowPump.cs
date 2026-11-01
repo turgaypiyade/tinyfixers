@@ -27,7 +27,7 @@ internal sealed class BoardFlowPump
     private readonly List<TileView> group = new();
     private int lastDiagonalTry = -1;
     private int quietVersion, quietClears, quietLandings;
-    private bool hasQuietSnapshot, hasPendingMatches;
+    private bool hasQuietSnapshot, hasPendingMatches, retryDeferredDiagonal;
 
     private bool CanSleep => !board.IsBusy && board.ActiveBackgroundJobs == 0
         && !board.IsActionSequencePlaying && !board.CascadeLogic.IsGravityBusy;
@@ -61,14 +61,19 @@ internal sealed class BoardFlowPump
                 board.RefreshAllSortingOrders();
                 worked = true;
             }
+            // Çapraz kayma geçici sebeple ertelendiyse denemeyi harcama ve uyuma: kaynak taş durunca / destek
+            // kalkınca sonraki karede yeniden planlanır. Ertelenme kısa sürer → tarama da kısa sürer.
+            retryDeferredDiagonal = falls.Count == 0 && board.CascadeLogic.DeferredDiagonalSlide;
+            if (retryDeferredDiagonal) lastDiagonalTry = -1;
         }
+        else retryDeferredDiagonal = false;
 
         if (ClearSettledGroups())
             worked = true;
 
         if (worked)
             board.NoteFlowPumpWork();
-        else if (!hasPendingMatches && CanSleep && version == board.MatchFinder.ChangeVersion
+        else if (!hasPendingMatches && !retryDeferredDiagonal && CanSleep && version == board.MatchFinder.ChangeVersion
             && clears == board.ClearedCellCount && landings == board.FallMotion.LandedCount)
         {
             quietVersion = version;

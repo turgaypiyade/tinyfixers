@@ -250,8 +250,14 @@ public partial class CascadeLogic
         return true;
     }
 
+    /// Son planda bir çapraz kayma GEÇİCİ bir sebeple ertelendi mi (kaynak taş köşede henüz durmadı, geçici desteğe
+    /// dayanıyor, bekleyen special). Pompa bu durumda üstü kapalı cebi yeniden dener; aksi hâlde deneme yalnız taş
+    /// inişi/temizlik sayacına bağlıydı ve hızlı yıkım / special oluşumu sonrası değirmen altı gibi cepler boş kalıyordu.
+    internal bool DeferredDiagonalSlide { get; private set; }
+
     private List<BoardAction> CalculateCascadesNow()
     {
+        DeferredDiagonalSlide = false;
         board.IncrementFallGeneration();
 #if UNITY_EDITOR
         DiagonalFlowTrace.BeginPlan(board);
@@ -898,10 +904,13 @@ public partial class CascadeLogic
         // against the then-current board. Pass-through voids keep their route-based
         // source handling since a stone cannot rest inside a mask hole.
         if (board.UseFlowPump && sourceY == fromY && !IsSlideSourceAtCorner(sourceTile, fromX, fromY))
+        {
+            DeferredDiagonalSlide = true;
             return false;
+        }
 
         // Tutulan / anchor'lı hücredeki taş yerinde kalır (dikey geçişte de hareket etmez).
-        if (board.IsPendingTriggeredSpecialCell(fromX, sourceY)) return false;
+        if (board.IsPendingTriggeredSpecialCell(fromX, sourceY)) { DeferredDiagonalSlide = true; return false; }
 
         // Cargo (exitAtBottom): asla diagonal kaymaz, yalnızca düz aşağı düşer.
         if (sourceTile.IsStraightFallOnly) return false;
@@ -915,7 +924,10 @@ public partial class CascadeLogic
         // taş, line/pulse alanı). Kaynak taş kalıcı zemine değil geçici desteğe dayanıyorsa durur; destek
         // kalkınca dikey düşer. Aksi hâlde "öndekiler durdu, arkadaki çapraza kaçtı" olur.
         if (RestsOnTemporarySupport(virtualBoard, fromX, sourceY))
+        {
+            DeferredDiagonalSlide = true;
             return false;
+        }
 
         // Special'lar diagonal'e savrulmasın: düz inmeyi tercih ederler. skipSpecials=true
         // olan ilk geçişte special kaynak atlanır; yalnızca son çare geçişinde (başka filler yoksa)
