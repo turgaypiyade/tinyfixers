@@ -43,6 +43,9 @@ public static class GiftFestivalState
         public bool tutorialBallGranted, tutorialCompleted;
         public int rewardSeed;
         public int prizeRound = -1;
+        // Laps inside one active window: completed board sets, and when the next set may start.
+        public int lap;
+        public long lapRestUntilTicks;
         public DailySlotReward[] boxPrizes = Array.Empty<DailySlotReward>();
         public int delivered;
         public DailySlotReward[] delivery = Array.Empty<DailySlotReward>();
@@ -58,6 +61,10 @@ public static class GiftFestivalState
     public static bool HasJoined => Data.joined;
     public static bool TutorialCompleted => Data.tutorialCompleted;
     public static bool IsFinished(GiftFestivalConfig cfg) => cfg == null || Round >= cfg.RoundCount;
+    public static int Lap => Data.lap;
+    /// All boards of the previous lap are done and the next lap has not opened yet (shots wait, wins still earn balls).
+    public static bool IsResting(GiftFestivalConfig cfg, DateTime now) => !IsFinished(cfg) && Data.lapRestUntilTicks > now.Ticks;
+    public static DateTime RestEnds => new DateTime(Math.Max(0, Math.Min(DateTime.MaxValue.Ticks, Data.lapRestUntilTicks)), DateTimeKind.Utc);
 
     public static bool IsUnlocked(GiftFestivalConfig cfg)
     {
@@ -122,6 +129,7 @@ public static class GiftFestivalState
             Data.invitationShown = false;
             Data.rewardSeed = 0; Data.prizeRound = -1;
             Data.boxPrizes = Array.Empty<DailySlotReward>();
+            Data.lap = 0; Data.lapRestUntilTicks = 0;
             changed = true;
         }
         return changed;
@@ -133,7 +141,8 @@ public static class GiftFestivalState
         if (!HasJoined || round == null) return false;
         if (Data.prizeRound == Round && Data.boxPrizes != null && Data.boxPrizes.Length == round.Size * round.Size) return false;
         if (Data.rewardSeed == 0) { Data.rewardSeed = Guid.NewGuid().GetHashCode(); if (Data.rewardSeed == 0) Data.rewardSeed = 1; }
-        Data.boxPrizes = GiftFestivalRewards.Create(round, cfg.emptyBoxFraction, Data.rewardSeed, Round, OpenMask);
+        Data.boxPrizes = GiftFestivalRewards.Create(round, cfg.emptyBoxFraction, Data.rewardSeed, Round, OpenMask,
+            cfg.LapRewardScale(Data.lap));
         Data.prizeRound = Round;
         return true;
     }
@@ -240,14 +249,14 @@ public static class GiftFestivalState
 
     public readonly struct Shot
     {
-        public readonly int Round, Selected, Target, Size, Coins;
+        public readonly int Round, Selected, Target, Size, Coins, Lap;
         public readonly GiftFestivalRules.Hit Hit;
         public readonly bool Opened, Completed;
         public readonly DailySlotReward BoxReward;
         public bool Empty => Opened && GiftFestivalRewards.IsEmpty(BoxReward);
-        public Shot(int round, int selected, int target, int size, int coins, GiftFestivalRules.Hit hit, bool opened, bool completed, DailySlotReward boxReward)
+        public Shot(int round, int selected, int target, int size, int coins, GiftFestivalRules.Hit hit, bool opened, bool completed, DailySlotReward boxReward, int lap = 0)
         {
-            Round = round; Selected = selected; Target = target; Size = size; Coins = coins;
+            Round = round; Selected = selected; Target = target; Size = size; Coins = coins; Lap = lap;
             Hit = hit; Opened = opened; Completed = completed;
             BoxReward = boxReward;
         }
@@ -258,8 +267,10 @@ public static class GiftFestivalState
         shot = default;
         if (RuntimeSimulationSession.IsActive || delivering) return false;
         Sync(cfg, now);
-        if (!IsLive(cfg, now) || !HasJoined || IsFinished(cfg) || Balls <= 0) return false;
+        if (!IsLive(cfg, now) || !HasJoined || IsFinished(cfg) || IsResting(cfg, now) || Balls <= 0) return false;
         var round = cfg.GetRound(Round);
+        int lapIndex = Data.lap;
+        float lapScale = cfg.LapRewardScale(lapIndex);
         if (round == null || selected < 0 || selected >= round.Size * round.Size || GiftFestivalRules.IsOpen(OpenMask, selected)) return false;
         var hit = GiftFestivalRules.Evaluate(position, cfg.SafeRedWidth, cfg.SafeGreenWidth);
         int target = GiftFestivalRules.TargetCell(selected, round.Size, hit);
@@ -279,23 +290,41 @@ public static class GiftFestivalState
         {
             if (round.completionCoins > 0)
             {
-                coins += round.completionCoins;
-                rewards.Add(new DailySlotReward { type = DailySlotRewardType.Coins, amount = round.completionCoins });
+                var bonus = GiftFestivalRewards.Scale(new DailySlotReward { type = DailySlotRewardType.Coins, amount = round.completionCoins }, lapScale);
+                coins += bonus.amount;
+                rewards.Add(bonus);
             }
             Data.round++;
             Data.openMask = 0;
+            if (Data.round >= cfg.RoundCount) StartNextLap(cfg, now);
         }
         if (complete && round.completionRewards != null)
             for (int i = 0; i < round.completionRewards.Length; i++)
-                if (round.completionRewards[i] != null) rewards.Add(round.completionRewards[i]);
+                if (round.completionRewards[i] != null) rewards.Add(GiftFestivalRewards.Scale(round.completionRewards[i], lapScale));
         if (complete) EnsurePrizes(cfg);
         Data.delivery = rewards.ToArray();
         Data.delivered = 0;
         // No callbacks between the staged receipt and delivery; presentation starts after this finishes.
         if (Data.delivery.Length > 0) Deliver(); else Save();
-        shot = new Shot(roundIndex, selected, target, round.Size, coins, hit, opened, complete, boxReward);
+        shot = new Shot(roundIndex, selected, target, round.Size, coins, hit, opened, complete, boxReward, lapIndex);
         OnChanged?.Invoke();
         return true;
+    }
+
+    // Last board of a lap done: the boards restart with a fresh deck after a rest — only if that rest ends
+    // while the event is still live. Otherwise the event stays finished for this window, as before.
+    private static void StartNextLap(GiftFestivalConfig cfg, DateTime now)
+    {
+        if (!cfg.lapsEnabled) return;
+        long rest = (long)(Math.Max(0.0, (double)cfg.lapRestHours) * TimeSpan.TicksPerHour);
+        var window = Window(cfg, now);
+        if (!window.Active || now.Ticks + rest >= window.End.Ticks) return;
+        Data.lap++;
+        Data.round = 0;
+        Data.openMask = 0;
+        Data.rewardSeed = 0; Data.prizeRound = -1;
+        Data.boxPrizes = Array.Empty<DailySlotReward>();
+        Data.lapRestUntilTicks = now.Ticks + rest;
     }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]

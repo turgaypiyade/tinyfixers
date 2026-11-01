@@ -3309,6 +3309,14 @@
           "value": "TAHTA TAMAMLANDI!"
         },
         {
+          "key": "giftfestival_next_lap",
+          "value": "YENİ TUR: {0}"
+        },
+        {
+          "key": "giftfestival_lap_done",
+          "value": "Bütün tahtalar tamam! Yeni hediyeler {0} sonra."
+        },
+        {
           "key": "giftfestival_next_board",
           "value": "Sıradaki tahta seni bekliyor!"
         },
@@ -6676,6 +6684,14 @@
         {
           "key": "giftfestival_round_complete",
           "value": "BOARD COMPLETE!"
+        },
+        {
+          "key": "giftfestival_next_lap",
+          "value": "NEXT ROUND: {0}"
+        },
+        {
+          "key": "giftfestival_lap_done",
+          "value": "Every board done! New gifts in {0}."
         },
         {
           "key": "giftfestival_next_board",

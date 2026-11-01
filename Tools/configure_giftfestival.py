@@ -59,7 +59,7 @@ def main():
   debugForceAvailable: 0
   redWidth: 0.15
   greenWidth: 0.2
-  sweepSeconds: 1.05
+  sweepSeconds: 0.9
   shotSpeed: 1.35
   speedIncreasePerRound: 0.2
   emptyBoxFraction: 0.25

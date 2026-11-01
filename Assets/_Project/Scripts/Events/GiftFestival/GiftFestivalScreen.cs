@@ -297,12 +297,17 @@ public sealed class GiftFestivalScreen : MonoBehaviour
 
     private void RefreshControls()
     {
-        bool live = GiftFestivalState.IsLive(cfg, DateTime.UtcNow);
-        bool done = GiftFestivalState.IsFinished(cfg);
+        var now = DateTime.UtcNow;
+        bool live = GiftFestivalState.IsLive(cfg, now);
+        // Resting between laps behaves like a finished board for input; the hint carries the next-lap countdown.
+        bool resting = GiftFestivalState.IsResting(cfg, now);
+        bool done = GiftFestivalState.IsFinished(cfg) || resting;
         canTime = live && !done && GiftFestivalState.Balls > 0;
         hitButton.interactable = phase == Phase.Ready && live && !done && selected >= 0 && GiftFestivalState.Balls > 0 && !closing
             && (!tutorialActive || tutorialGreen);
-        hint.text = !live ? GiftFestivalUI.L("ended") : done ? GiftFestivalUI.L("finished")
+        hint.text = !live ? GiftFestivalUI.L("ended")
+            : resting ? string.Format(GiftFestivalUI.L("next_lap"), TimeFormat.Countdown(GiftFestivalState.RestEnds - now))
+            : done ? GiftFestivalUI.L("finished")
             : GiftFestivalState.Balls <= 0 ? GiftFestivalUI.L("earn_balls") : selected < 0 ? GiftFestivalUI.L("select") : GiftFestivalUI.L("time_hit");
         bool showHint = phase == Phase.Ready && !closing && !tutorialActive && selected < 0;
         if (!hint.enabled || !canTime) hint.alpha = 1f;
@@ -471,15 +476,21 @@ public sealed class GiftFestivalScreen : MonoBehaviour
         if (round != null && round.completionCoins > 0)
         {
             var icon = TileIconLibrary.Shared != null ? TileIconLibrary.Shared.GetRewardIcon(DailySlotRewardType.Coins) : null;
-            items[offset++] = new RuntimeChoicePopup.RewardItem(icon, "+" + round.completionCoins, GameLocalization.GetOr("shop_reward_coins", "Coins"));
+            int bonus = GiftFestivalRewards.Scale(new DailySlotReward { type = DailySlotRewardType.Coins, amount = round.completionCoins },
+                cfg.LapRewardScale(shot.Lap)).amount;
+            items[offset++] = new RuntimeChoicePopup.RewardItem(icon, "+" + bonus, GameLocalization.GetOr("shop_reward_coins", "Coins"));
         }
         for (int i = 0; i < count; i++)
         {
-            var reward = round.completionRewards[i];
+            // Show what was actually paid: completion rewards are scaled by the lap the board belonged to.
+            var reward = GiftFestivalRewards.Scale(round.completionRewards[i], cfg.LapRewardScale(shot.Lap));
             if (reward != null) items[offset + i] = new RuntimeChoicePopup.RewardItem(reward.ResolveIcon(), reward.AmountLabel, reward.DisplayName);
         }
-        RuntimeChoicePopup.ShowRewards(GiftFestivalUI.L("round_complete"), GiftFestivalState.IsFinished(cfg)
-            ? GiftFestivalUI.L("finished") : GiftFestivalUI.L("next_board"), items, GameLocalization.GetOr("common_ok", "OK"));
+        var now = DateTime.UtcNow;
+        RuntimeChoicePopup.ShowRewards(GiftFestivalUI.L("round_complete"),
+            GiftFestivalState.IsResting(cfg, now) ? string.Format(GiftFestivalUI.L("lap_done"), TimeFormat.Countdown(GiftFestivalState.RestEnds - now))
+            : GiftFestivalState.IsFinished(cfg) ? GiftFestivalUI.L("finished") : GiftFestivalUI.L("next_board"),
+            items, GameLocalization.GetOr("common_ok", "OK"));
     }
 
     private void Layout()

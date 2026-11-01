@@ -19,6 +19,24 @@
   8/8/8 → 11 → **13/13/13** (kullanıcı 11 ile oynadı: 2 fail, biri tek hamleyle; 3.'de geçti, "biraz rahat" → 13 önerdi),
   hamle 26 → 24. `Batches/199-Harden/`. 13 hali oynanmadı.
 - **Kullanıcı oyun geri bildirimi (2026-11-01):** 197 ve 198 "çok iyi olmuş" (197 rahatlatılmış hali).
+- **202–204 sıkılaştırma (2026-11-01, kullanıcı: "202-204 çok kolay, en azından 1-2 hamle kala bitirsem; 205 oldu"):**
+  kuş hedefi 18→24 / 12→18 / 16→22, hamle 24→21 / 24→21 / 25→22. Tahta aynı. v2 yedekleri `Batches/201-205-Lamps/Revisions/`.
+- **205 v3 fener sütunları UYGULANDI (2026-11-01, kullanıcı isteği):** kenar sütunları fener (ekranda 22, hedef 30),
+  sütun bazlı döküm yalnız 0/8, fallback 0. Ayrıntı README v3. Oynanmadı.
+- **202–205 v2 UYGULANDI (2026-11-01):** kullanıcı v1'i "201 hariç çok kolay" buldu → çim/çiçekli çim örtüleri, morlar,
+  hamle −1/−2; 204 kanalı aşağı dönerek biter. Ayrıntı `Batches/201-205-Lamps/README.md` (v2). Oynanmadı.
+- **201–205 Lamba UYGULANDI (2026-11-01, kullanıcı: "diğerleri ok uygulayabilirsin"; 205'te tek başına roket sepeti
+  kullanıcı isteğiyle kaldırıldı):** kademeli lamba kullanımı; statik kontrol geçti (dizi boyu, origin, dallanma yok,
+  204 kanal yolu halkayla çakışmıyor). 205 adı "Mühürlü Kuş Parkı" artık mühür içermiyor → yeni ad kullanıcıya soruldu.
+  Oynanmadı; ayrıntı `Batches/201-205-Lamps/README.md`,
+  önizleme `~/Desktop/Wondi Paylaşım/Lamba_201-205/`. Ayrıca kullanıcı 157 önerisini Unity'de kendisi
+  uyguladı (pusula 6 sıra) ve 134 hamlesini 26 yaptı (ikisi de commit dışı, Unity yeniden serileştirdi).
+- **Gece incelemesi (2026-11-01, kullanıcı uyurken; yarın Android kapalı test sürümü):** asset'e yazılan öneri YOK.
+  Sorular `~/Desktop/Wondi Paylaşım/Gece_Inceleme/Sorular.md`: 134 hamle 24→27 · 143 üst plastik sırası taş alanı (36→28)
+  · 157 pusula sütunu 8→6 sıra (16→12). Tek komut: `Batches/Night-2026-11-01/propose.py apply <lv>`. Tanıtımlar
+  (141/151/166/176) kullanıcı "rahat geçtik" dediği için dokunulmadı; 173/174 farkı küçük.
+  Cevaplar: **134** kullanıcı kendisi hamle 24 → 26 yaptı. **143** aynen kalır — koridordaki TNT+roket açılış combosu
+  ilk hamlede geniş alan açıyor (bot bunu iyi kullanmıyor); kapalı testte fails_before ile izlenecek. **157** cevap bekliyor.
 - **Boss fırlatmaları düzeltildi + 130 hedefleri (2026-11-01, kullanıcı kuralı → Memory kural 5):** 140–200'de
   fırlatma ve alet tehdidi listeleri revizyon öncesi çeşitli hallerine döndü; hedefte olan türler çıkarıldı
   (160: Mud atılmaz; 180: gri alet 47 hedefte olduğu için yalnız renkli aletler). HP/dalga/saldırı aynı.

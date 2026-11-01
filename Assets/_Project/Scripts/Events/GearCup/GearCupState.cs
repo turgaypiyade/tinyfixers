@@ -116,7 +116,7 @@ public static class GearCupState
         message = "";
         var cfg = GearCupPreviewConfig.Shared;
         if (cfg == null || !cfg.eventEnabled || !IsUnlocked)
-        { message = GameLocalization.GetFormat("gearcup_unlock", cfg != null ? cfg.minLevelGate : 70); return false; }
+        { message = GameLocalization.GetFormat("gearcup_unlock", cfg != null ? cfg.minLevelGate : 110); return false; }
         if (!PlayerTeamState.HasTeam || string.IsNullOrEmpty(PlayerTeamState.TeamId))
         { message = GameLocalization.GetOr("gearcup_need_team", "Join a team first to enter Gear Cup."); return false; }
         if (HasJoined && Data.teamId != PlayerTeamState.TeamId && DateTime.UtcNow < End)

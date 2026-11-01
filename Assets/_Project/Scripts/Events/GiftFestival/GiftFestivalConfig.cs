@@ -19,15 +19,23 @@ public sealed class GiftFestivalConfig : ScriptableObject
     [Range(0.01f, 0.45f)] public float redWidth = 0.15f;
     [Range(0.02f, 0.8f)] public float greenWidth = 0.20f;
     [Tooltip("Seconds to travel from one end of the meter to the other.")]
-    [Range(0.35f, 3f)] public float sweepSeconds = 1.05f;
+    [Range(0.35f, 3f)] public float sweepSeconds = 0.90f;
     [Tooltip("Throw, swing and ball-flight playback multiplier on the first board.")]
     [Range(0.5f, 3f)] public float shotSpeed = 1.35f;
     [Tooltip("Compounding speed increase per completed event board. 0.2 = 20% faster per board.")]
     [Range(0f, 0.5f)] public float speedIncreasePerRound = 0.2f;
     [Header("Prizes")]
-    [Tooltip("Hidden empty boxes. Rounded to whole boxes: 1/4, 2/9, 4/16 at 25%.")]
-    [Range(0f, 0.75f)] public float emptyBoxFraction = 0.25f;
+    [Tooltip("Hidden empty boxes. Rounded to whole boxes: 1/4, 3/9, 5/16 at 30%.")]
+    [Range(0f, 0.75f)] public float emptyBoxFraction = 0.30f;
     public GiftFestivalRound[] rounds = GiftFestivalRound.Defaults();
+
+    [Header("Laps (Safari-like replay inside one active window)")]
+    [Tooltip("All boards done → rest, then the boards restart with a fresh prize deck. Off = the event ends after the last board.")]
+    public bool lapsEnabled = true;
+    [Tooltip("Hours between finishing the last board and the next lap. A lap that could not start before the event ends is skipped.")]
+    [Range(0f, 24f)] public float lapRestHours = 3f;
+    [Tooltip("Coin/star amount multiplier per lap (1st, 2nd, ...). The last value repeats. Joker/booster counts are unchanged.")]
+    public float[] lapRewardScales = { 0.5f, 0.75f, 1f };
 
     [Header("Main menu invitation")]
     public bool autoShowJoinPopup = true;
@@ -37,6 +45,8 @@ public sealed class GiftFestivalConfig : ScriptableObject
 
     public int RoundCount => rounds != null ? rounds.Length : 0;
     public GiftFestivalRound GetRound(int index) => rounds != null && index >= 0 && index < rounds.Length ? rounds[index] : null;
+    public float LapRewardScale(int lap) => lapRewardScales == null || lapRewardScales.Length == 0 ? 1f
+        : Mathf.Clamp(lapRewardScales[Mathf.Clamp(lap, 0, lapRewardScales.Length - 1)], 0.1f, 5f);
     public float SafeRedWidth => GiftFestivalRules.RedWidth(redWidth);
     public float SafeGreenWidth => GiftFestivalRules.GreenWidth(redWidth, greenWidth);
 

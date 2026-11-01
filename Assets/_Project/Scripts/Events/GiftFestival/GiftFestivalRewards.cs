@@ -13,7 +13,17 @@ public static class GiftFestivalRewards
         return Math.Max(0, Math.Min(count - 1, (int)Math.Round(count * Math.Max(0, Math.Min(1, fraction)), MidpointRounding.AwayFromZero)));
     }
 
-    public static DailySlotReward[] Create(GiftFestivalRound round, float fraction, int seed, int board, int legacyOpenedMask)
+    /// Coins/stars are multiplied by the lap scale (first lap pays less); item counts stay as authored.
+    public static DailySlotReward Scale(DailySlotReward source, float scale)
+    {
+        if (source == null) return null;
+        int amount = Math.Max(1, source.amount);
+        if (source.type == DailySlotRewardType.Coins || source.type == DailySlotRewardType.Stars)
+            amount = Math.Max(1, (int)Math.Round(amount * (double)scale, MidpointRounding.AwayFromZero));
+        return new DailySlotReward { type = source.type, amount = amount, durationMinutes = source.durationMinutes };
+    }
+
+    public static DailySlotReward[] Create(GiftFestivalRound round, float fraction, int seed, int board, int legacyOpenedMask, float scale = 1f)
     {
         int count = round.Size * round.Size;
         var prizes = new DailySlotReward[count];
@@ -44,9 +54,7 @@ public static class GiftFestivalRewards
             }
             var deck = round.boxRewards;
             var source = deck != null && deck.Length > 0 ? deck[(int)(((long)offset + rewardIndex++) % deck.Length)] : null;
-            prizes[cell] = source == null
-                ? new DailySlotReward { type = DailySlotRewardType.Coins, amount = Math.Max(1, round.boxCoins) }
-                : new DailySlotReward { type = source.type, amount = Math.Max(1, source.amount), durationMinutes = source.durationMinutes };
+            prizes[cell] = Scale(source ?? new DailySlotReward { type = DailySlotRewardType.Coins, amount = Math.Max(1, round.boxCoins) }, scale);
         }
         return prizes;
     }

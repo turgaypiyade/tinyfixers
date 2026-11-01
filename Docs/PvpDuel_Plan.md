@@ -14,7 +14,7 @@ karakteriyle çıkar. İki oyuncu altın koyar, kazanan potu alır.
 
 ### Açılma şartı
 - Oyunun toplam kayıtlı kullanıcısı **10.000'i geçince** event aktif olur.
-- Oyuncu ayrıca **70. level'ı geçmiş** olmalı.
+- Oyuncu ayrıca **200–250. level'ı geçmiş** olmalı (2026-11-01 kullanıcı; önce 70).
 
 ### Giriş ve pot
 - Her oyuncu **300 altın** koyar → ortada **600 altın**, kazanan hepsini alır.

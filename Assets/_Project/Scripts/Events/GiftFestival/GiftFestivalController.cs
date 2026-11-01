@@ -73,14 +73,16 @@ public sealed class GiftFestivalController : MonoBehaviour
     {
         if (built || cfg.Art == null) return;
         built = true;
-        icon = GiftFestivalUI.Rect("GiftFestivalEventIcon", panel, new Vector2(150, 170), Vector2.zero);
-        var logo = GiftFestivalUI.Picture("Logo", icon, cfg.Art.menuLogo, Vector2.one * 150, new Vector2(0, 10));
+        icon = GiftFestivalUI.Rect("GiftFestivalEventIcon", panel, Vector2.one * 150, Vector2.zero);
+        // Match the authored Gear Cup / Bridge icon footprint before the idle animator captures its scale.
+        icon.localScale = Vector3.one * 1.15f;
+        var logo = GiftFestivalUI.Picture("Logo", icon, cfg.Art.menuLogo, Vector2.one * 150, Vector2.zero);
         var button = icon.gameObject.AddComponent<Image>();
         button.color = Color.clear;
         GiftFestivalUI.Button(button, Open);
         logo.raycastTarget = false;
         icon.gameObject.AddComponent<EventIconAnimator>();
-        countdown = GiftFestivalUI.Label("Countdown", icon, cfg, "", 21, new Vector2(121, 38), new Vector2(0, -35));
+        countdown = GiftFestivalUI.Label("Countdown", icon, cfg, "", 21, new Vector2(121, 38), new Vector2(0, -45));
         var badgeImage = GiftFestivalUI.Picture("BallBadge", icon, BridgeRepairUI.Pill(), new Vector2(58, 42), new Vector2(58, 64));
         badgeImage.type = Image.Type.Sliced;
         badgeImage.color = new Color(0.82f, 0.1f, 0.12f);

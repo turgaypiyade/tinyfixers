@@ -97,6 +97,8 @@ public class GiftFestivalConfig {
  public GiftFestivalArt Art=new GiftFestivalArt();
  public float redWidth=.15f,greenWidth=.30f;
  public float emptyBoxFraction;
+ public bool lapsEnabled; public float lapRestHours=3f; public float[] lapRewardScales={1f};
+ public float LapRewardScale(int lap)=>lapRewardScales==null||lapRewardScales.Length==0?1f:lapRewardScales[Math.Max(0,Math.Min(lap,lapRewardScales.Length-1))];
  public GiftFestivalRound[] rounds={new GiftFestivalRound(),new GiftFestivalRound{size=3,boxCoins=40,completionCoins=250},new GiftFestivalRound{size=4,boxCoins=60,completionCoins=500}};
  public int RoundCount=>rounds.Length;
  public GiftFestivalRound GetRound(int i)=>i>=0&&i<rounds.Length?rounds[i]:null;
@@ -177,6 +179,35 @@ public static class Checks {
   }
   Check(GiftFestivalState.IsFinished(cfg)&&GiftFestivalState.Balls==71&&PlayerWallet.Coins==2270,""29 gifts and three completion bonuses paid once"");
   Check(!GiftFestivalState.TryHit(cfg,0,.5f,Now,out shot)&&PlayerWallet.Coins==2270,""Final completion cannot duplicate prizes"");
+
+  // Laps (2026-11-01): finished boards rest, then restart with a fresh, lap-scaled deck inside the same window.
+  cfg=Reset();cfg.lapsEnabled=true;cfg.lapRestHours=3f;cfg.lapRewardScales=new[]{.5f,1f};
+  GiftFestivalState.TryJoin(cfg,Now);Balls(200);
+  for(int round=0;round<3;round++){int side=cfg.rounds[round].size;for(int cell=0;cell<side*side;cell++)GiftFestivalState.TryHit(cfg,cell,.5f,Now,out shot);}
+  Check(PlayerWallet.Coins==1137,""Lap 1 pays half coins: 13*4+20*9+30*16 + 50+125+250"");
+  Check(!GiftFestivalState.IsFinished(cfg)&&GiftFestivalState.Lap==1&&GiftFestivalState.Round==0&&GiftFestivalState.OpenMask==0,""Last board starts the next lap instead of finishing"");
+  Check(GiftFestivalState.IsResting(cfg,Now.AddHours(2.9))&&GiftFestivalState.RestEnds==Now.AddHours(3),""Rest lasts the configured hours"");
+  Check(!GiftFestivalState.TryHit(cfg,0,.5f,Now.AddHours(2.9),out shot)&&GiftFestivalState.Balls==171,""Shots wait during the rest without spending"");
+  Forget();GiftFestivalState.Sync(cfg,Now.AddHours(1));
+  Check(GiftFestivalState.Lap==1&&GiftFestivalState.IsResting(cfg,Now.AddHours(1)),""Lap and rest survive a reload"");
+  int before=PlayerWallet.Coins;
+  Check(GiftFestivalState.TryHit(cfg,0,.5f,Now.AddHours(3),out shot)&&shot.Opened&&shot.Lap==1&&PlayerWallet.Coins==before+25,""After the rest the new lap pays full scale"");
+  // Win hook reads the real clock: anchor a fresh cycle at UtcNow and put it into a rest.
+  cfg=Reset();cfg.lapsEnabled=true;
+  typeof(GiftFestivalState).GetMethod(""RegisterHooks"",System.Reflection.BindingFlags.NonPublic|System.Reflection.BindingFlags.Static).Invoke(null,null);
+  CurrentLevel.Global=150;GiftFestivalState.TryJoin(cfg,DateTime.UtcNow);
+  GiftFestivalState.Data.lastWinLevel=140;GiftFestivalState.Data.lapRestUntilTicks=DateTime.UtcNow.AddHours(2).Ticks;Balls(4);int balls=GiftFestivalState.Balls;
+  Check(GiftFestivalState.IsResting(cfg,DateTime.UtcNow),""Rest state set for the win-hook check"");
+  PlayerStats.RecordLevelCleared();
+  Check(GiftFestivalState.Balls==balls+1,""Wins during a rest still bank a ball"");
+  cfg=Reset();cfg.lapsEnabled=true;cfg.lapRestHours=3f;var late=Now.AddHours(46);
+  GiftFestivalState.TryJoin(cfg,Now);Balls(200);
+  for(int round=0;round<3;round++){int side=cfg.rounds[round].size;for(int cell=0;cell<side*side;cell++)GiftFestivalState.TryHit(cfg,cell,.5f,late,out shot);}
+  Check(GiftFestivalState.IsFinished(cfg)&&GiftFestivalState.Lap==0,""A lap that cannot open before the event ends is skipped"");
+  cfg=Reset();cfg.lapsEnabled=true;GiftFestivalState.TryJoin(cfg,Now);Balls(200);
+  for(int round=0;round<3;round++){int side=cfg.rounds[round].size;for(int cell=0;cell<side*side;cell++)GiftFestivalState.TryHit(cfg,cell,.5f,Now,out shot);}
+  GiftFestivalState.Sync(cfg,Now.AddDays(7));
+  Check(GiftFestivalState.Lap==0&&!GiftFestivalState.IsResting(cfg,Now.AddDays(7)),""A new festival cycle resets laps"");
 
   cfg=Reset();GiftFestivalState.TryJoin(cfg,Now);Balls(3);PlayerWallet.CrashAfterSave=true;
   try{GiftFestivalState.TryHit(cfg,0,.5f,Now,out shot);}catch(Exception){}
