@@ -70,6 +70,7 @@ public class GiftFestivalRound {
 public class GiftFestivalConfig {
  public static GiftFestivalConfig Shared;public int unlockAfterLevel=100,activeHours=48,restHours=120;
  public float emptyBoxFraction;public GiftFestivalArt Art=new GiftFestivalArt();
+ public bool lapsEnabled; public float lapRestHours=3f; public float LapRewardScale(int lap)=>1f;
  public GiftFestivalRound[] rounds={new GiftFestivalRound()};public int RoundCount=>rounds.Length;
  public GiftFestivalRound GetRound(int i)=>i>=0&&i<rounds.Length?rounds[i]:null;
  public float SafeRedWidth=>.15f;public float SafeGreenWidth=>.2f;
