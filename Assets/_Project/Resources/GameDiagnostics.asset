@@ -12,11 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c30d0cbdff49483d9f3a9b049856b0c7, type: 3}
   m_Name: GameDiagnostics
   m_EditorClassIdentifier: 
-  criticalErrors: 1
+  criticalErrors: 0
   boardFlow: 0
   boardIntegrity: 0
   specialChains: 0
-  performance: 1
+  performance: 0
   backend: 0
   analyticsEvents: 1
   editorTools: 0
