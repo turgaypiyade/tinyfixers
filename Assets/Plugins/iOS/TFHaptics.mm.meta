@@ -29,7 +29,7 @@ PluginImporter:
       settings:
         AddToEmbeddedBinaries: false
         CPU: AnyCPU
-        CompileFlags: 
+        CompileFlags: -fobjc-exceptions
         FrameworkDependencies: CoreHaptics;
   userData: 
   assetBundleName: 

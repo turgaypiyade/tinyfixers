@@ -352,6 +352,9 @@ public sealed class WindmillService : MonoBehaviour
             if (c.x < 0 || c.y < 0 || c.x >= width || c.y >= height) continue;
             int i = c.y * width + c.x;
             if (level.cells[i] != (int)CellType.Normal || (ObstacleId)level.obstacles[i] != ObstacleId.None) continue;
+            // Oyun anında delik olan hücre (su kanalı çeşmesi/deposu: MarkRuntimePassThroughHole) taş tutmaz → un orada
+            // görünmez ve temizlenemez (hedef bitmezdi). O konuma düşen un kaybolur, hedef azalır (kullanıcı 2026-11-02).
+            if (board.IsMaskHoleCell(c.x, c.y)) continue;
             if (board.WaterChannelWetQuery != null && board.WaterChannelWetQuery(i)) continue;   // un suyun altına girmez
             if (!boundState.TrySpawnSingleCellObstacleAt(c.x, c.y, ObstacleId.Flour)) continue;
             board.RaiseObstacleCreatedDynamic(c.x, c.y);
