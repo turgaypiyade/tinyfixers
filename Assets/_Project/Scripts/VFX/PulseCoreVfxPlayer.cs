@@ -57,6 +57,29 @@ public class PulseCoreVfxPlayer : MonoBehaviour
             yield return null;   // doku başına bir kare
     }
 
+    // Yan yana karşılaştırma (Play modunda Inspector ▸ ⋮ menüsü): aynı renk/rastgelelik, sol gölgeli (eski) | sağ gölgesiz.
+    [ContextMenu("TEST/Karşılaştır: sol gölgeli | sağ gölgesiz")]
+    public void PlayBlurComparison()
+    {
+        if (vfxRoot == null || pulsePrefab == null || !Application.isPlaying) return;
+        float tile = 110f;
+        int seed = Random.Range(int.MinValue, int.MaxValue);
+        for (int side = 0; side < 2; side++)
+        {
+            var rt = Instantiate(pulsePrefab, vfxRoot);
+            rt.gameObject.SetActive(false);
+            var fx = rt.GetComponent<PulseCoreExplosionFX>();
+            if (fx == null) { Destroy(rt.gameObject); return; }
+            fx.BlurShadowsOverride = side == 0;
+            fx.ReturnToPool = f => Destroy(f.gameObject);
+            fx.SetRadiusCells(1, (int)tile);
+            rt.anchoredPosition = new Vector2(side == 0 ? -tile * 1.8f : tile * 1.8f, 0f);
+            rt.localScale = Vector3.one;
+            Random.InitState(seed);   // iki patlama aynı paleti/kalınlığı seçsin
+            rt.gameObject.SetActive(true);
+        }
+    }
+
     [ContextMenu("TEST/Play Pulse At Center")]
     public void PlayTestAtCenter()
     {

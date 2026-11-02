@@ -102,8 +102,14 @@ public sealed class FirebaseTeamService : ITeamService, IDisposable
             {
                 if (disposed) return;
                 realChat.Clear();
+                long cutoff = DateTime.UtcNow.AddDays(-FirebaseTeamCloud.ChatRetentionDays).Ticks;
                 foreach (var doc in snapshot.Documents)
                 {
+                    // 3 günden eski mesaj gösterilmez (sunucu TTL'i expireAt ile siler; silinene kadar burada gizlenir).
+                    // sentAt'i henüz olmayan (sunucu onayı bekleyen) kendi mesajın hemen görünür.
+                    // sentAt sunucu onayına kadar NULL gelir (alan var ama değer yok) → doğrudan GetValue istisna fırlatıyordu.
+                    // SentTicks bekleyen mesajı "şimdi" sayar.
+                    if (SentTicks(doc) < cutoff) continue;
                     string senderId = doc.ContainsField("senderId") ? doc.GetValue<string>("senderId") : "";
                     if (ChatModeration.IsBlocked(senderId)) continue;   // engellenen oyuncunun mesajları görünmez
                     var msg = new TeamChatMessage

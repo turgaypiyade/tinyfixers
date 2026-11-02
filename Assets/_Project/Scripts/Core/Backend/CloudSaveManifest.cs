@@ -24,6 +24,7 @@ public static class CloudSaveManifest
         "player_coins",
         "player_total_stars",
         "player_total_score",
+        "player_weekly_score",    // bu haftanın puanı (haftalık liderlik); hafta anahtarıyla birlikte
         "player_avatar_id",
         "booster_hammer_count",
         "booster_row_count",
@@ -90,6 +91,7 @@ public static class CloudSaveManifest
     {
         ProgressResetRevisionKey,
         "player_name",
+        "player_weekly_score_week", // player_weekly_score'un ait olduğu ISO hafta (ör. 2026-W45)
         "legal_accepted_version", // kabul edilen Şartlar/Gizlilik sürümü (LegalConsent)
         "legal_accepted_at",
         "chat_blocked_uids",      // engellenen oyuncular (ChatModeration)

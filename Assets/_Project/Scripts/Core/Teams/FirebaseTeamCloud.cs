@@ -12,7 +12,7 @@ using UnityEngine;
 ///               botMembers (statik sim üye sayısı), realMembers (Increment),
 ///               createdBy, updatedAt
 ///   teams/{id}/members/{uid}: name, joinedAt
-///   teams/{id}/chat/{msgId}: senderId, senderName, text, sentAt
+///   teams/{id}/chat/{msgId}: senderId, senderName, text, sentAt, expireAt (sentAt + 3 gün; Firestore TTL siler)
 ///
 /// Bot takımlar LAZY MATERIALIZE edilir: dizindeki bot takıma ilk gerçek oyuncu
 /// katıldığında deterministik id'yle ("bot_{seed}") gerçek doküman oluşur — böylece
@@ -25,6 +25,10 @@ using UnityEngine;
 public static class FirebaseTeamCloud
 {
     public const int Capacity = 50;
+
+    /// Takım sohbeti en fazla bu kadar gün tutulur (kullanıcı 2026-11-02). Her mesaj expireAt taşır; Firebase Console'da
+    /// Firestore ▸ TTL politikası: koleksiyon grubu "chat", alan "expireAt" → süresi dolanı sunucu kendisi siler.
+    public const int ChatRetentionDays = 3;
 
     private static FirebaseFirestore Db => FirebaseFirestore.DefaultInstance;
 
@@ -174,6 +178,7 @@ public static class FirebaseTeamCloud
             { "senderName", ChatModeration.Filter(PlayerProfile.PlayerName) },
             { "text", ChatModeration.Filter(text.Trim()) },
             { "sentAt", FieldValue.ServerTimestamp },
+            { "expireAt", Timestamp.FromDateTime(DateTime.UtcNow.AddDays(ChatRetentionDays)) },
         }).ContinueWithOnMainThread(task =>
         {
             if (task.IsFaulted || task.IsCanceled)

@@ -39,6 +39,8 @@ public abstract class ShopOfferCardBase : MonoBehaviour
         {
             priceButton.onClick.RemoveAllListeners();
             priceButton.onClick.AddListener(HandleClick);
+            // Market + level sonu kampanya şeridi: satın al butonunda PreLevel'deki sarı çerçeve (oran korunur).
+            ButtonFrameBacking.Attach(priceButton, CommonPopupSkin.Shared.continueButtonFrame);
         }
     }
 

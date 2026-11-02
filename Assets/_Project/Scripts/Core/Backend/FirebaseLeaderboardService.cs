@@ -100,8 +100,8 @@ public sealed class FirebaseLeaderboardService : ILeaderboardService
 
         // 1) Anında yerel botlar + kendi satırın → boş/geç görünmesin.
         //    Dünya (0) ve Türkiye (1) ayrı bot havuzlarından.
-        cache[(tab, 0)] = Rank(Merge(new List<LeaderboardEntry>(), region: 0));
-        cache[(tab, 1)] = Rank(Merge(new List<LeaderboardEntry>(), region: 1));
+        cache[(tab, 0)] = Rank(Merge(new List<LeaderboardEntry>(), region: 0, tab));
+        cache[(tab, 1)] = Rank(Merge(new List<LeaderboardEntry>(), region: 1, tab));
         OnChanged?.Invoke();
 
         // 2) Dünya ve ülke ayrı gerçek skor kayıtlarını okur.
@@ -150,13 +150,13 @@ public sealed class FirebaseLeaderboardService : ILeaderboardService
                         Debug.LogWarning($"[Leaderboard] read deferred ({tab}/{sub}): {task.Exception?.GetBaseException().Message}");
                     return;
                 }
-                cache[key] = Rank(Merge(ParseOthers(task.Result), region: sub));
+                cache[key] = Rank(Merge(ParseOthers(task.Result), region: sub, tab));
                 OnChanged?.Invoke();
             });
     }
 
     // Gerçek(diğerleri) + botlar + kendi satırın → tek liste (henüz sırasız).
-    private List<LeaderboardEntry> Merge(List<LeaderboardEntry> realOthers, int region)
+    private List<LeaderboardEntry> Merge(List<LeaderboardEntry> realOthers, int region, LeaderboardTab tab)
     {
         var list = new List<LeaderboardEntry>();
         list.AddRange(realOthers);
@@ -165,7 +165,8 @@ public sealed class FirebaseLeaderboardService : ILeaderboardService
         {
             playerName = PlayerProfile.PlayerName,
             subtitle = GameLocalization.Get("leaderboard_you"),
-            score = PlayerWallet.TotalScore,
+            // Haftalık sekme yalnız bu haftanın puanını yarıştırır (botlar da haftalık puanla gelir).
+            score = tab == LeaderboardTab.Weekly ? PlayerWallet.WeeklyScore : PlayerWallet.TotalScore,
             isSelf = true,
             chapter = PlayerPrefs.GetInt("current_level", 1),
         });
@@ -250,9 +251,9 @@ public sealed class FirebaseLeaderboardService : ILeaderboardService
             {
                 playerName = PlayerTeamState.TeamName,
                 subtitle = GameLocalization.Get("leaderboard_your_team"),
-                // Sim: takım puanı = senin toplam puanın (gerçek üye toplamı backend'le gelecek).
-                // Böylece oynadıkça takım skorun büyür ve puanın teams sekmesinde de görünür.
-                score = PlayerWallet.TotalScore,
+                // Sim: takım puanı = senin BU HAFTAKİ puanın (gerçek üye toplamı backend'le gelecek). Rakip takımlar
+                // da haftalık puanla (TeamWeeklyScore) yarıştığı için toplam puan kullanılmaz (2026-11-02).
+                score = PlayerWallet.WeeklyScore,
                 isSelf = true,
                 capacityCurrent = PlayerTeamState.IsCreator ? 1 : 6,
                 capacityMax = TeamCapacity,
@@ -314,8 +315,8 @@ public sealed class FirebaseLeaderboardService : ILeaderboardService
             || !FirebaseCloudSaveService.RestoreResolved || FirebaseCloudSaveService.SuspendForDeletion || publishing) return;
         string uid = FirebaseAuthService.UserId, name = PlayerProfile.PlayerName;
         string week = WeekId(), region = PlayerDirectoryService.DetectRegion();
-        int score = PlayerWallet.TotalScore;
-        string signature = $"{uid}|{week}|{region}|{name}|{score}";
+        int score = PlayerWallet.TotalScore, weekly = PlayerWallet.WeeklyScore;
+        string signature = $"{uid}|{week}|{region}|{name}|{score}|{weekly}";
         if (lastPublishedSignature == signature) return;
         publishing = true;
         var data = new Dictionary<string, object>
@@ -327,7 +328,14 @@ public sealed class FirebaseLeaderboardService : ILeaderboardService
         // Same permitted score schema on all boards; no rules/index deployment required.
         var batch = Db.StartBatch();
         batch.Set(Db.Collection("leaderboards/global/scores").Document(uid), data, SetOptions.MergeAll);
-        batch.Set(Db.Collection($"leaderboards/{week}/scores").Document(uid), data, SetOptions.MergeAll);
+        // Haftalık tabloya bu haftanın puanı (toplam değil).
+        var weeklyData = new Dictionary<string, object>
+        {
+            { "name", name },
+            { "score", weekly },
+            { "updatedAt", FieldValue.ServerTimestamp },
+        };
+        batch.Set(Db.Collection($"leaderboards/{week}/scores").Document(uid), weeklyData, SetOptions.MergeAll);
         batch.Set(Db.Collection($"leaderboards/region_{region}/scores").Document(uid), data, SetOptions.MergeAll);
         batch.CommitAsync().ContinueWithOnMainThread(task =>
         {

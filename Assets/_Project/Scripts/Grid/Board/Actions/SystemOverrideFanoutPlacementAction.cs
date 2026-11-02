@@ -62,9 +62,6 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
     private const float OriginMarkScale = 1.25f;
     private const float OriginBobPixels = 0.05f;        // yukarıdayken hafif salınım (tile oranı)
     private static Sprite laserImpactSprite;
-    // Kaynak ikon sprite'ı → beyaz silüet (RGB=beyaz, alpha=ikon) cache'i. Halo bunu kullanır.
-    private static readonly System.Collections.Generic.Dictionary<Sprite, Sprite> whiteSilhouetteCache
-        = new System.Collections.Generic.Dictionary<Sprite, Sprite>();
     private static readonly Color OverrideLaserCoreColor = new Color(0.20f, 0.82f, 1f, 0.96f);
     // Çubuğun sıcak parlak çekirdeği: beyaza yakın (floresan/kor his); dış parıltı partner rengi.
     private static readonly Color OverrideRodCoreColor = new Color(0.86f, 0.98f, 1f, 1f);
@@ -697,76 +694,33 @@ public class SystemOverrideFanoutPlacementAction : BoardAction
         rt.SetSiblingIndex(Mathf.Max(0, iconRt.GetSiblingIndex()));   // ikonun ARKASINDA
 
         var image = go.GetComponent<Image>();
-        // BEYAZ şekle-uygun halo: ikonun RGB'sini beyaza çeken silüet (alpha korunur). Düz ikon
-        // sprite'ı + color tint, ikonun renklerini çarptığı için halo TAŞIN RENGİNDE görünüyordu;
-        // beyaz silüet kesin beyaz yapar. Texture okunamazsa (Read/Write kapalı) ikona düşer (fallback).
-        image.sprite = GetWhiteSilhouette(tile.IconImage.sprite) ?? tile.IconImage.sprite;
+        // BEYAZ şekle-uygun halo: ikonun KENDİ sprite'ı + silüet shader'ı (yalnız alpha/şekil, renk = Image.color → beyaz).
+        // Eskiden sprite GPU'da RenderTexture'a blit edilip ReadPixels ile okunuyordu: Android'de (ETC/ayrık alpha,
+        // GLES/Vulkan Y ekseni, temizlenmeyen geçici RT) alpha kayboluyor → BEYAZ KARE hale; ReadPixels ayrıca GPU'yu
+        // bekletip Override+Pulse işaretlemesinde takılma yapıyordu (kullanıcı/kuzen Android raporu, 2026-11-02).
+        image.sprite = tile.IconImage.sprite;
+        var silhouette = SilhouetteMaterial;
+        if (silhouette != null) image.material = silhouette;   // shader yoksa renkli ikon şekli (kare değil)
         image.preserveAspect = tile.IconImage.preserveAspect;
         image.color = new Color(1f, 1f, 1f, ImplantHighlightAlpha);   // beyaz
         image.raycastTarget = false;
         return image;
     }
 
-    // Kaynak sprite'ın ŞEKLİNİ (alpha) koruyup RGB'yi beyaza çeken silüet sprite üretir (cache'li).
-    // Halo bununla ŞEKLE-UYGUN + BEYAZ görünür (ikon renkleri sızmaz; armutsa halo da armut).
-    // Texture Read/Write GEREKTİRMEZ: kaynak texture GPU'da RenderTexture'a blit edilip oradan
-    // ReadPixels ile okunur (import ayarına dokunmadan çalışır). Başarısızsa null → çağıran ikona düşer.
-    private static Sprite GetWhiteSilhouette(Sprite src)
+    // Resources'ta → build'e kesin girer (TinyFixers/UI/DuelSilhouette shader'ı). Paylaşılan; renk vertex color'dan.
+    private static Material silhouetteMaterial;
+    private static bool silhouetteMaterialLoaded;
+    internal static Material SilhouetteMaterial
     {
-        if (src == null)
-            return null;
-        if (whiteSilhouetteCache.TryGetValue(src, out var cached))
-            return cached;   // null da cache'lenir (tekrar denemeyelim)
-
-        Sprite result = null;
-        var tex = src.texture;
-        if (tex != null)
+        get
         {
-            Rect r = src.textureRect;
-            int px = Mathf.RoundToInt(r.x), py = Mathf.RoundToInt(r.y);
-            int w = Mathf.RoundToInt(r.width), h = Mathf.RoundToInt(r.height);
-            if (w > 0 && h > 0)
+            if (!silhouetteMaterialLoaded)
             {
-                RenderTexture rt = null;
-                var prevActive = RenderTexture.active;
-                try
-                {
-                    rt = RenderTexture.GetTemporary(tex.width, tex.height, 0, RenderTextureFormat.ARGB32);
-                    Graphics.Blit(tex, rt);           // kaynağı GPU'da RT'ye kopyala (readable olması şart değil)
-                    RenderTexture.active = rt;
-
-                    var outTex = new Texture2D(w, h, TextureFormat.RGBA32, false)
-                    {
-                        wrapMode = TextureWrapMode.Clamp,
-                        filterMode = FilterMode.Bilinear
-                    };
-                    outTex.ReadPixels(new Rect(px, py, w, h), 0, 0);   // RT'den (GPU) oku → readable outTex
-
-                    // ŞEKLİ koru (alpha), RGB'yi beyaza çevir → şekle-uygun BEYAZ silüet.
-                    var pixels = outTex.GetPixels();
-                    for (int i = 0; i < pixels.Length; i++)
-                        pixels[i] = new Color(1f, 1f, 1f, pixels[i].a);
-                    outTex.SetPixels(pixels);
-                    outTex.Apply(false, true);
-
-                    result = Sprite.Create(outTex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f), src.pixelsPerUnit);
-                }
-                catch (System.Exception e)
-                {
-                    if (GameDiagnostics.CriticalErrors)
-                        Debug.LogWarning($"[OverrideImplantHalo] Beyaz silüet üretilemedi ({src.name}): {e.Message}");
-                    result = null;   // fallback (çağıran ikonu kullanır — kare değil, renkli şekil)
-                }
-                finally
-                {
-                    RenderTexture.active = prevActive;
-                    if (rt != null) RenderTexture.ReleaseTemporary(rt);
-                }
+                silhouetteMaterialLoaded = true;
+                silhouetteMaterial = Resources.Load<Material>("Materials/ImplantSilhouette");
             }
+            return silhouetteMaterial;
         }
-
-        whiteSilhouetteCache[src] = result;
-        return result;
     }
 
     private static void ApplyImplantHighlight(ImplantBreathHandle handle, float breath01)

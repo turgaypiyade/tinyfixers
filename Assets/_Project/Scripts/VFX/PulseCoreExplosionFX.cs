@@ -133,6 +133,14 @@ public class PulseCoreExplosionFX : MonoBehaviour
     /// Havuz (PulseCoreVfxPlayer): doluysa bitişte Destroy yerine kapanıp buraya döner.
     public System.Action<PulseCoreExplosionFX> ReturnToPool;
 
+    // Shadow tabanlı sözde-bulanıklık (iç parıltı/çekirdek/halka, katman başına 4 kopya). Kopyalar yalnız 1–2 px
+    // kaydırılmış (300+ px katmanda) → görsel katkısı çok küçük ama her katmanı GPU'da 5 kez boyatıyor; Override+Pulse
+    // zincirinde Android'de kare düşürüyordu (2026-11-02). Varsayılan KAPALI. Karşılaştırma: PulseCoreVfxPlayer
+    // ▸ "TEST/Karşılaştır" (sol gölgeli, sağ gölgesiz) ya da Inspector'dan aç.
+    [SerializeField] private bool useBlurShadows = false;
+    internal bool? BlurShadowsOverride;
+    private bool BlurShadowsEnabled => BlurShadowsOverride ?? useBlurShadows;
+
     // Zincirde üst üste binen patlama sayısı. Fazlası blur kopyası (Shadow) çizmez:
     // her kopya patlama boyunda bir saydam katman daha = mobil GPU'da katlanan overdraw.
     private static int activeCount;
@@ -221,7 +229,7 @@ public class PulseCoreExplosionFX : MonoBehaviour
             RestoreBaseline();
 
         if (!countedActive) { countedActive = true; activeCount++; }
-        if (activeCount > MaxBlurredConcurrent)
+        if (!BlurShadowsEnabled || activeCount > MaxBlurredConcurrent)
         {
             DisableShadows(glowShadows);
             DisableShadows(coreShadows);
@@ -247,7 +255,9 @@ public class PulseCoreExplosionFX : MonoBehaviour
             if (ringAnimStarted)
             {
                 if (shockwaveRing == null) { OnRadiusPx?.Invoke(float.MaxValue); yield break; }
-                float r = shockwaveRing.rectTransform.sizeDelta.x * 0.5f;
+                // Görünen çap = sizeDelta × ölçek (katmanlar ölçekle büyür; sizeDelta faz boyunca sabit referans).
+                var ringRt = shockwaveRing.rectTransform;
+                float r = ringRt.sizeDelta.x * Mathf.Abs(ringRt.localScale.x) * 0.5f;
                 if (r > maxSeen) { maxSeen = r; OnRadiusPx?.Invoke(maxSeen); }
             }
             yield return null;
@@ -369,9 +379,12 @@ public class PulseCoreExplosionFX : MonoBehaviour
         float coreThickness = Random.Range(coreThicknessMin, coreThicknessMax);
         float ringThickness = Random.Range(ringThicknessMin, ringThicknessMax);
 
-        ApplyBlurShadows(innerGlow, ref glowShadows, glowColor, glowThickness);
-        ApplyBlurShadows(coreFlash, ref coreShadows, flashColor, coreThickness);
-        ApplyBlurShadows(shockwaveRing, ref ringShadows, ringColor, ringThickness);
+        if (BlurShadowsEnabled)
+        {
+            ApplyBlurShadows(innerGlow, ref glowShadows, glowColor, glowThickness);
+            ApplyBlurShadows(coreFlash, ref coreShadows, flashColor, coreThickness);
+            ApplyBlurShadows(shockwaveRing, ref ringShadows, ringColor, ringThickness);
+        }
 
         // Prosedürel ışınlarda yumuşaklık texture'a gömülü → shadow blur'a gerek yok.
         // Hazır sprite kullanılırsa keskin kenarları 360° radyal sözde-blur ile yumuşat.
@@ -510,10 +523,10 @@ public class PulseCoreExplosionFX : MonoBehaviour
 
     private void HideAll()
     {
-        if (sunburstRays != null) sunburstRays.color = WithAlpha(raysColor, 0f);
-        if (innerGlow != null) innerGlow.color = WithAlpha(glowColor, 0f);
-        if (shockwaveRing != null) shockwaveRing.color = WithAlpha(ringColor, 0f);
-        if (coreFlash != null) coreFlash.color = WithAlpha(flashColor, 0f);
+        HideLayer(sunburstRays, raysColor);
+        HideLayer(innerGlow, glowColor);
+        HideLayer(shockwaveRing, ringColor);
+        HideLayer(coreFlash, flashColor);
     }
 
     private IEnumerator PlayExplosion()
@@ -819,7 +832,7 @@ public class PulseCoreExplosionFX : MonoBehaviour
         if (rt == null)
             yield break;
 
-        rt.localScale = Vector3.one;
+        BeginLayer(img, rt, baseCol, fromSize, toSize, out float refSize);
 
         float t = 0f;
 
@@ -834,8 +847,7 @@ public class PulseCoreExplosionFX : MonoBehaviour
             float eased = curve.Evaluate(u);
             float size = Mathf.Lerp(fromSize, toSize, eased);
 
-            rt.sizeDelta = new Vector2(size, size);
-            img.color = WithAlpha(baseCol, Mathf.Lerp(fromA, toA, eased));
+            SetLayer(img, rt, size, refSize, Mathf.Lerp(fromA, toA, eased));
 
             yield return null;
         }
@@ -843,8 +855,8 @@ public class PulseCoreExplosionFX : MonoBehaviour
         if (isShuttingDown || img == null || rt == null)
             yield break;
 
-        rt.sizeDelta = new Vector2(toSize, toSize);
-        img.color = WithAlpha(baseCol, toA);
+        SetLayer(img, rt, toSize, refSize, toA);
+        EndLayer(img, baseCol, toA);
     }
 
     private IEnumerator AnimateLayerWithRotation(
@@ -864,7 +876,7 @@ public class PulseCoreExplosionFX : MonoBehaviour
         if (rt == null)
             yield break;
 
-        rt.localScale = Vector3.one;
+        BeginLayer(img, rt, baseCol, fromSize, toSize, out float refSize);
 
         float t = 0f;
 
@@ -879,8 +891,7 @@ public class PulseCoreExplosionFX : MonoBehaviour
             float eased = curve.Evaluate(u);
             float size = Mathf.Lerp(fromSize, toSize, eased);
 
-            rt.sizeDelta = new Vector2(size, size);
-            img.color = WithAlpha(baseCol, Mathf.Lerp(fromA, toA, eased));
+            SetLayer(img, rt, size, refSize, Mathf.Lerp(fromA, toA, eased));
             rt.localRotation *= Quaternion.Euler(0, 0, raysRotateSpeed * Time.deltaTime);
 
             yield return null;
@@ -889,8 +900,41 @@ public class PulseCoreExplosionFX : MonoBehaviour
         if (isShuttingDown || img == null || rt == null)
             yield break;
 
-        rt.sizeDelta = new Vector2(toSize, toSize);
-        img.color = WithAlpha(baseCol, toA);
+        SetLayer(img, rt, toSize, refSize, toA);
+        EndLayer(img, baseCol, toA);
+    }
+
+    // Katman boyu localScale, görünürlüğü CanvasRenderer alpha'sıyla sürülür: ikisi de Graphic'i yeniden kurdurmaz
+    // (eskiden her kare sizeDelta + color → patlama başına 4 katman her kare baştan kuruluyordu; rapor 2026-11-01'de
+    // SunburstRays tek başına %12,5). Renk tam alpha ile faz başında BİR kez yazılır; CR alpha çarpanı gölge (Shadow,
+    // useGraphicAlpha) katmanlarına da aynı oranda uygulanır → son görünüm eskisiyle aynı. sizeDelta = fazın büyük ucu.
+    private static void BeginLayer(Image img, RectTransform rt, Color baseCol, float fromSize, float toSize, out float refSize)
+    {
+        refSize = Mathf.Max(1f, Mathf.Max(fromSize, toSize));
+        var full = WithAlpha(baseCol, 1f);
+        if (img.color != full) img.color = full;
+        if (rt.sizeDelta.x != refSize || rt.sizeDelta.y != refSize) rt.sizeDelta = new Vector2(refSize, refSize);
+    }
+
+    private static void SetLayer(Image img, RectTransform rt, float size, float refSize, float alpha)
+    {
+        float k = size / refSize;
+        rt.localScale = new Vector3(k, k, 1f);
+        img.canvasRenderer.SetAlpha(Mathf.Clamp01(alpha));
+    }
+
+    // Faz sonunda tamamen söndüyse köşe (vertex) alpha'sı da 0: cullTransparentMesh köşe alpha'sına bakar; CR alpha 0
+    // tek başına çizimi kesmeyebilir → sönmüş tam-alan katman + blur kopyaları GPU'da boyanmaya devam ederdi.
+    private static void EndLayer(Image img, Color baseCol, float alpha)
+    {
+        if (alpha <= 0.001f) img.color = WithAlpha(baseCol, 0f);
+    }
+
+    private static void HideLayer(Image img, Color baseCol)
+    {
+        if (img == null) return;
+        img.color = WithAlpha(baseCol, 0f);   // gizli = köşe alpha'sı 0 → cullTransparentMesh çizmez
+        img.canvasRenderer.SetAlpha(0f);
     }
 
     private static Color WithAlpha(Color c, float a)

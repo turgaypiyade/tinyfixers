@@ -158,6 +158,22 @@ public static class PlayerWallet
 
     public static int TotalScore => PlayerPrefs.GetInt(KeyTotalScore, 0);
 
+    // Haftalık puan: yalnız BU hafta kazanılan puan (haftalık liderlik). Hafta (ISO, Pazartesi başlar) değişince
+    // sıfırdan başlar. Eskiden haftalık tabloya toplam puan yazılıyordu → oynayan herkes ilk anda birinci görünüyordu.
+    private const string KeyWeeklyScore = "player_weekly_score";
+    private const string KeyWeeklyScoreWeek = "player_weekly_score_week";
+
+    public static int WeeklyScore =>
+        PlayerPrefs.GetString(KeyWeeklyScoreWeek, "") == FirebaseLeaderboardService.CurrentWeekId
+            ? PlayerPrefs.GetInt(KeyWeeklyScore, 0) : 0;
+
+    private static void AddWeeklyScore(int gained)
+    {
+        string week = FirebaseLeaderboardService.CurrentWeekId;
+        PlayerPrefs.SetInt(KeyWeeklyScore, WeeklyScore + gained);   // WeeklyScore eski haftada 0 döner
+        PlayerPrefs.SetString(KeyWeeklyScoreWeek, week);
+    }
+
     public static int GetLevelScore(int level)
         => PlayerPrefs.GetInt(KeyLevelScore + level, 0);
 
@@ -179,6 +195,7 @@ public static class PlayerWallet
 
         int newTotal = TotalScore + gained;
         PlayerPrefs.SetInt(KeyTotalScore, newTotal);
+        AddWeeklyScore(gained);
         PlayerPrefs.Save();
 
         OnTotalScoreChanged?.Invoke(newTotal);

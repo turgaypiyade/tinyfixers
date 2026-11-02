@@ -17,6 +17,22 @@ static id tfLastPlayer = nil;
 // Three reusable transient players: no pattern/player construction per broken cell.
 static id tfImpactPlayers[3];
 static id tfLastRumble = nil;
+// Motor gerçekten çalışıyor mu? autoShutdownEnabled boşta motoru kapatır; kapalı motora bağlı oynatıcıya stop/start
+// çağrısı Core Haptics'te NSException fırlatır ("checkEngineRunning: self.running") → yakalanmazsa SIGABRT.
+// (2026-11-02: iPhone 17 Pro Max'te TF_HapticCancel → OnDisable yolunda tekrarlayan çöküş.)
+static BOOL tfEngineRunning = NO;
+
+// Core Haptics çağrısı istisna fırlatırsa titreşim olmaz ama uygulama asla kapanmaz.
+static BOOL TFSafe(void (^block)(void))
+{
+    @try { block(); return YES; }
+    @catch (NSException* e)
+    {
+        NSLog(@"[TFHaptics] yakalanan istisna: %@ — %@", e.name, e.reason);
+        tfEngineRunning = NO;
+        return NO;
+    }
+}
 
 static CHHapticEngine* TFEngine(void)
 {
@@ -39,13 +55,19 @@ static CHHapticEngine* TFEngine(void)
         }
         engine.playsHapticsOnly = YES;          // oyunun ses oturumuna dokunma
         engine.autoShutdownEnabled = YES;       // boştayken motoru kapat (pil)
+        engine.stoppedHandler = ^(CHHapticEngineStoppedReason reason) {
+            tfEngineRunning = NO;   // boşta kapanma, ses kesintisi, arka plan…
+        };
         engine.resetHandler = ^{
             dispatch_async(dispatch_get_main_queue(), ^{
                 for (int index = 0; index < 3; index++) tfImpactPlayers[index] = nil;
                 tfLastPlayer = nil;
                 tfLastRumble = nil;
-                NSError* restartError = nil;
-                [tfEngine startAndReturnError:&restartError];
+                tfEngineRunning = NO;
+                TFSafe(^{
+                    NSError* restartError = nil;
+                    tfEngineRunning = [tfEngine startAndReturnError:&restartError];
+                });
             });
         };
         tfEngine = engine;
@@ -66,8 +88,11 @@ static BOOL TFPlayCoreHaptics(int style)
         if (engine == nil) return NO;
 
         int index = style < 0 ? 0 : (style > 2 ? 2 : style);
+        __block BOOL played = NO;
+        TFSafe(^{
         NSError* error = nil;
-        if (![engine startAndReturnError:&error]) return NO;
+        if (![engine startAndReturnError:&error]) { tfEngineRunning = NO; return; }
+        tfEngineRunning = YES;
         id<CHHapticPatternPlayer> player = tfImpactPlayers[index];
         if (player == nil)
         {
@@ -77,18 +102,21 @@ static BOOL TFPlayCoreHaptics(int style)
             CHHapticEventParameter* s = [[CHHapticEventParameter alloc] initWithParameterID:CHHapticEventParameterIDHapticSharpness value:sharpness];
             CHHapticEvent* event = [[CHHapticEvent alloc] initWithEventType:CHHapticEventTypeHapticTransient parameters:@[i, s] relativeTime:0];
             CHHapticPattern* pattern = [[CHHapticPattern alloc] initWithEvents:@[event] parameters:@[] error:&error];
-            if (pattern == nil) return NO;
+            if (pattern == nil) return;
             player = [engine createPlayerWithPattern:pattern error:&error];
-            if (player == nil) return NO;
+            if (player == nil) return;
             tfImpactPlayers[index] = player;
         }
         if (![player startAtTime:CHHapticTimeImmediate error:&error])
         {
             tfImpactPlayers[index] = nil; // engine reset/interruption: rebuild on the next eligible impact
-            return NO;
+            return;
         }
         tfLastPlayer = player;
-        return YES;
+        played = YES;
+        });
+        if (!played) tfImpactPlayers[index] = nil;   // istisna/başarısızlık: sonraki vuruşta yeniden kur
+        return played;
     }
     return NO;
 }
@@ -139,8 +167,8 @@ extern "C" void TF_HapticContinuous(float intensity, float duration)
         if (@available(iOS 13.0, *))
         {
             CHHapticEngine* engine = TFEngine();
-            if (engine != nil)
-            {
+            __block BOOL rumbled = NO;
+            if (engine != nil) TFSafe(^{
                 CHHapticEventParameter* i = [[CHHapticEventParameter alloc] initWithParameterID:CHHapticEventParameterIDHapticIntensity value:intensity];
                 CHHapticEventParameter* s = [[CHHapticEventParameter alloc] initWithParameterID:CHHapticEventParameterIDHapticSharpness value:0.3f];
                 CHHapticEvent* event = [[CHHapticEvent alloc] initWithEventType:CHHapticEventTypeHapticContinuous
@@ -151,13 +179,16 @@ extern "C" void TF_HapticContinuous(float intensity, float duration)
                 CHHapticPattern* pattern = [[CHHapticPattern alloc] initWithEvents:@[event] parameters:@[] error:&error];
                 id<CHHapticPatternPlayer> player = pattern != nil && [engine startAndReturnError:&error]
                     ? [engine createPlayerWithPattern:pattern error:&error] : nil;
+                tfEngineRunning = player != nil;
                 if (player != nil && [player startAtTime:CHHapticTimeImmediate error:&error])
                 {
                     tfLastRumble = player;
+                    rumbled = YES;
                     return;
                 }
                 NSLog(@"[TFHaptics] sürekli titreşim hatası: %@", error);
-            }
+            });
+            if (rumbled) return;
         }
         TFPlayFeedbackGenerator(2);
     };
@@ -171,14 +202,18 @@ extern "C" void TF_HapticCancel(void)
     void (^cancel)(void) = ^{
         if (@available(iOS 13.0, *))
         {
-            for (int index = 0; index < 3; index++)
-            {
-                id<CHHapticPatternPlayer> player = tfImpactPlayers[index];
-                [player stopAtTime:CHHapticTimeImmediate error:nil];
-            }
             id<CHHapticPatternPlayer> rumble = tfLastRumble;
-            [rumble stopAtTime:CHHapticTimeImmediate error:nil];
             tfLastRumble = nil;
+            // Motor kapalıysa durdurulacak titreşim de yoktur; kapalı motora stop çağrısı istisna fırlatır.
+            if (!tfEngineRunning) return;
+            TFSafe(^{
+                for (int index = 0; index < 3; index++)
+                {
+                    id<CHHapticPatternPlayer> player = tfImpactPlayers[index];
+                    [player stopAtTime:CHHapticTimeImmediate error:nil];
+                }
+                [rumble stopAtTime:CHHapticTimeImmediate error:nil];
+            });
         }
     };
     if ([NSThread isMainThread]) cancel();

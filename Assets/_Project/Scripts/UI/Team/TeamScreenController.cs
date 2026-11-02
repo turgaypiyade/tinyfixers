@@ -93,6 +93,7 @@ public sealed class TeamScreenController : MonoBehaviour
 
     private void OnDisable()
     {
+        CloseQuickMenu(instant: true);
         LivesManager.OnLivesChanged -= RefreshLifeControls;
         if (service != null) service.OnChanged -= OnServiceChanged;
     }
@@ -254,23 +255,202 @@ public sealed class TeamScreenController : MonoBehaviour
         return button;
     }
 
+    // ── Hızlı mesaj menüsü ────────────────────────────────────────────────
+    // Popup yerine butonun HEMEN ÜSTÜNDE açılan menü (kullanıcı 2026-11-02). Açılış: mesajlar butonun içinden KISA (buton
+    // boyunda hap) çıkıp yukarı kayar — önce en üstteki (en uzağa giden), alttakiler sırayla; yerine varınca sola doğru
+    // uzayıp tam boya ulaşır, yazı o an belirir. Zemin düz yumuşak yeşil hap (görsel değil). Bir kez kurulur.
+    private static readonly Color QuickItemColor = new Color(0.31f, 0.67f, 0.28f, 1f);   // yumuşak yeşil (koyulaştırıldı)
+    private const float QuickItemWidth = 600f, QuickItemHeight = 100f, QuickItemSpacing = 12f, QuickMenuGap = 16f;
+    // Yumuşak menü: her öğe yükseldikçe uzar (boy = kendi yolunun ilerlemesi). Uzun yol = uzun süre → hepsi birlikte oturur.
+    private const float QuickSlideBase = 0.26f, QuickSlidePerRow = 0.10f, QuickStagger = 0.10f, QuickCloseSeconds = 0.12f;
+    private RectTransform quickMenu;
+    private CanvasGroup quickMenuGroup;
+    private GameObject quickBlocker;
+    private RectTransform[] quickItems;
+    private TMP_Text[] quickLabels;
+    private Coroutine quickAnim;
+    private static Sprite quickPillSprite;
+
     private void ShowQuickMessages()
     {
         if (service == null) return;
-        // Save Progress düzeni: seçenekler gövdede tam genişlik kartlar, altta tek "Kapat".
-        var options = new RuntimeChoicePopup.OfferButton[QuickMessageKeys.Length];
-        for (int i = 0; i < options.Length; i++)
+        if (quickMenu != null && quickMenu.gameObject.activeSelf) { CloseQuickMenu(instant: false); return; }
+        EnsureQuickMenu();
+        for (int i = 0; i < quickLabels.Length; i++)
+            quickLabels[i].text = QuickText(i);   // dil değişmiş olabilir
+
+        var host = (RectTransform)quickMenu.parent;
+        quickBlocker.transform.SetAsLastSibling();
+        quickMenu.SetAsLastSibling();
+        // Menü kökü = hızlı mesaj butonunun sağ-üst köşesinin biraz üstü; öğeler buradan yukarı dizilir.
+        var corners = new Vector3[4];
+        ((RectTransform)quickButton.transform).GetWorldCorners(corners);
+        Vector2 local = host.InverseTransformPoint(corners[2]);
+        quickMenu.anchorMin = quickMenu.anchorMax = host.pivot;
+        quickMenu.anchoredPosition = local + new Vector2(0f, QuickMenuGap);
+
+        quickBlocker.SetActive(true);
+        quickMenu.gameObject.SetActive(true);
+        quickMenuGroup.alpha = 1f;
+        if (quickAnim != null) StopCoroutine(quickAnim);
+        quickAnim = StartCoroutine(AnimateQuickOpen());
+    }
+
+
+    private string QuickText(int i) =>
+        GameLocalization.Get(QuickMessageKeys[i]) + " <sprite name=\"" + QuickMessageEmoji[i] + "\">";
+
+    private float QuickSlotY(int i) => (quickItems.Length - 1 - i) * (QuickItemHeight + QuickItemSpacing);   // i=0 en üst
+
+    private void EnsureQuickMenu()
+    {
+        if (quickMenu != null) return;
+        var host = inTeamRoot != null ? inTeamRoot.transform : transform;
+        int layer = host.gameObject.layer;
+
+        // Dışarı dokununca kapat: tam ekran görünmez yakalayıcı.
+        quickBlocker = new GameObject("QuickMenuBlocker", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button));
+        quickBlocker.layer = layer;
+        var brt = (RectTransform)quickBlocker.transform;
+        brt.SetParent(host, false);
+        brt.anchorMin = Vector2.zero; brt.anchorMax = Vector2.one;
+        brt.offsetMin = brt.offsetMax = Vector2.zero;
+        quickBlocker.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0f);
+        var bbtn = quickBlocker.GetComponent<Button>();
+        bbtn.transition = Selectable.Transition.None;
+        bbtn.onClick.AddListener(() => CloseQuickMenu(instant: false));
+        quickBlocker.SetActive(false);
+
+        var menuGo = new GameObject("QuickMenu", typeof(RectTransform), typeof(CanvasGroup));
+        menuGo.layer = layer;
+        quickMenu = (RectTransform)menuGo.transform;
+        quickMenu.SetParent(host, false);
+        quickMenu.pivot = new Vector2(1f, 0f);
+        quickMenu.sizeDelta = Vector2.zero;   // öğeler elle konumlanır (animasyon düzen grubuyla çatışmasın)
+        quickMenuGroup = menuGo.GetComponent<CanvasGroup>();
+
+        var pill = QuickPillSprite();
+        quickItems = new RectTransform[QuickMessageKeys.Length];
+        quickLabels = new TMP_Text[QuickMessageKeys.Length];
+        for (int i = 0; i < QuickMessageKeys.Length; i++)
         {
-            string text = GameLocalization.Get(QuickMessageKeys[i]) + " <sprite name=\"" + QuickMessageEmoji[i] + "\">";
-            options[i] = new RuntimeChoicePopup.OfferButton(text, "", () =>
+            int index = i;
+            var item = new GameObject("QuickItem" + i, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button));
+            item.layer = layer;
+            var rt = (RectTransform)item.transform;
+            rt.SetParent(quickMenu, false);
+            rt.anchorMin = rt.anchorMax = new Vector2(1f, 0f);
+            rt.pivot = new Vector2(1f, 0f);   // sağ kenar sabit: uzama sola doğru
+            rt.sizeDelta = new Vector2(QuickItemWidth, QuickItemHeight);
+            var img = item.GetComponent<Image>();
+            img.sprite = pill;
+            img.type = Image.Type.Sliced;
+            img.pixelsPerUnitMultiplier = pill != null ? pill.border.x / (QuickItemHeight * 0.5f) : 1f;   // tam yuvarlak uçlar
+            img.color = QuickItemColor;
+            var btn = item.GetComponent<Button>();
+            btn.targetGraphic = img;
+
+            var labelGo = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
+            labelGo.layer = layer;
+            labelGo.transform.SetParent(rt, false);
+            var label = labelGo.GetComponent<TextMeshProUGUI>();
+            label.richText = true;
+            label.alignment = TextAlignmentOptions.Center;
+            label.raycastTarget = false;
+            label.enableAutoSizing = true;
+            label.fontSizeMax = 40f; label.fontSizeMin = 24f;
+            label.textWrappingMode = TextWrappingModes.NoWrap;
+            var lrt = label.rectTransform;
+            lrt.anchorMin = Vector2.zero; lrt.anchorMax = Vector2.one;
+            lrt.offsetMin = new Vector2(36f, 8f); lrt.offsetMax = new Vector2(-36f, -8f);
+            TextSurfaceStyle.Apply(label, QuickItemColor);   // beyaz yüz + yeşilin koyusu kontur (yazı kuralı)
+            quickItems[i] = rt;
+            quickLabels[i] = label;
+
+            btn.onClick.AddListener(() =>
             {
                 if (this == null || service == null) return;
-                service.SendMessage(text);
+                service.SendMessage(QuickText(index));
                 BuildFeed(snapToBottom: true);
+                CloseQuickMenu(instant: true);
             });
         }
-        RuntimeChoicePopup.ShowOffer(GameLocalization.Get("team_quick_title"), GameLocalization.Get("team_quick_body"),
-            options, GameLocalization.Get("common_close"), null, defaultFrame: true);
+        menuGo.SetActive(false);
+    }
+
+    // Düz hap zemini: yarıçap = yükseklik/2, 9-slice. Bir kez üretilir (piksel hesabı; GPU'dan geri okuma yok).
+    private static Sprite QuickPillSprite()
+    {
+        if (quickPillSprite != null) return quickPillSprite;
+        const int size = 64; const float r = size * 0.5f;
+        var tex = new Texture2D(size, size, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear };
+        var px = new Color32[size * size];
+        for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                float dx = x + 0.5f - r, dy = y + 0.5f - r;
+                float a = Mathf.Clamp01(r - Mathf.Sqrt(dx * dx + dy * dy) + 0.5f);   // kenarda 1 px yumuşatma
+                px[y * size + x] = new Color32(255, 255, 255, (byte)(a * 255f));
+            }
+        tex.SetPixels32(px);
+        tex.Apply(false, true);
+        quickPillSprite = Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 100f, 0,
+            SpriteMeshType.FullRect, new Vector4(r - 1f, r - 1f, r - 1f, r - 1f));
+        return quickPillSprite;
+    }
+
+    private void CloseQuickMenu(bool instant)
+    {
+        if (quickMenu == null || !quickMenu.gameObject.activeSelf) return;
+        if (quickBlocker != null) quickBlocker.SetActive(false);
+        if (quickAnim != null) { StopCoroutine(quickAnim); quickAnim = null; }
+        if (instant || !isActiveAndEnabled) { quickMenu.gameObject.SetActive(false); return; }
+        quickAnim = StartCoroutine(AnimateQuickClose());
+    }
+
+    private System.Collections.IEnumerator AnimateQuickOpen()
+    {
+        int n = quickItems.Length;
+        float total = 0f;
+        for (int i = 0; i < n; i++) total = Mathf.Max(total, i * QuickStagger + QuickSlideTime(i));
+        float t = 0f;
+        while (true)
+        {
+            t += Time.unscaledDeltaTime;
+            for (int i = 0; i < n; i++)
+            {
+                float local = t - i * QuickStagger;   // i=0 (en üst, en uzun yol) önce yola çıkar
+                float p = Mathf.Clamp01(local / QuickSlideTime(i));
+                float e = 1f - (1f - p) * (1f - p) * (1f - p);   // ease-out cubic: yumuşak oturma
+                var rt = quickItems[i];
+                // Hepsi en alttaki mesajın yerinde (butonun hemen üstü, sağa yaslı) KÜÇÜK hap olarak doğar; yükseldikçe
+                // sola doğru uzar ve yerine oturur. En alttaki yerinde küçükten tam boya gelir (kullanıcı 2026-11-02).
+                rt.anchoredPosition = new Vector2(0f, Mathf.Lerp(QuickSlotY(n - 1), QuickSlotY(i), e));
+                rt.sizeDelta = new Vector2(Mathf.Lerp(QuickItemHeight, QuickItemWidth, e), QuickItemHeight);
+                rt.gameObject.SetActive(local > 0f);
+                quickLabels[i].alpha = Mathf.Clamp01((e - 0.55f) / 0.45f);   // yazı hap yeterince uzayınca belirir
+            }
+            if (t >= total) break;
+            yield return null;
+        }
+        quickAnim = null;
+    }
+
+    // Yol uzunluğuna göre süre: en üst (3 satır yükselir) en uzun, en alt (yerinde büyür) en kısa → hepsi birlikte oturur.
+    private float QuickSlideTime(int i) => QuickSlideBase + QuickSlidePerRow * (quickItems.Length - 1 - i);
+
+    private System.Collections.IEnumerator AnimateQuickClose()
+    {
+        float t = 0f;
+        while (t < QuickCloseSeconds)
+        {
+            t += Time.unscaledDeltaTime;
+            quickMenuGroup.alpha = 1f - Mathf.Clamp01(t / QuickCloseSeconds);
+            yield return null;
+        }
+        quickMenu.gameObject.SetActive(false);
+        quickMenuGroup.alpha = 1f;
+        quickAnim = null;
     }
 
     // Başlığın sağında yuvarlak (i) ikonu → takım bilgisi penceresi.

@@ -250,7 +250,6 @@ public class TileView : MonoBehaviour,
     private static Sprite specialRevealHaloSprite;
     private Coroutine overrideMarkHaloRoutine;
     private GameObject overrideMarkHaloRoot;
-    private static readonly System.Collections.Generic.Dictionary<Sprite, Sprite> overrideMarkHaloSilhouetteCache = new();
 
     private bool specialRevealVisualCaptured;
     private Vector3 specialRevealIconBaseScale = Vector3.one;
@@ -2161,7 +2160,11 @@ public class TileView : MonoBehaviour,
         haloRt.SetSiblingIndex(Mathf.Max(0, iconRt.GetSiblingIndex()));
 
         var haloImage = overrideMarkHaloRoot.GetComponent<Image>();
-        haloImage.sprite = GetOrCreateOverrideMarkSilhouette(iconImage.sprite) ?? iconImage.sprite;
+        // Beyaz şekle-uygun hale: ikon sprite'ı + silüet shader'ı (GPU'dan geri okuma yok; Android'de beyaz kare/takılma
+        // yapıyordu — SystemOverrideFanoutPlacementAction.CreateImplantHighlight ile aynı kaynak).
+        haloImage.sprite = iconImage.sprite;
+        var silhouette = SystemOverrideFanoutPlacementAction.SilhouetteMaterial;
+        if (silhouette != null) haloImage.material = silhouette;
         haloImage.preserveAspect = iconImage.preserveAspect;
         haloImage.raycastTarget = false;
         haloImage.color = new Color(1f, 1f, 1f, 0f);
@@ -2189,64 +2192,6 @@ public class TileView : MonoBehaviour,
         }
 
         CleanupOverrideMarkHalo();
-    }
-
-    private static Sprite GetOrCreateOverrideMarkSilhouette(Sprite src)
-    {
-        if (src == null)
-            return null;
-        if (overrideMarkHaloSilhouetteCache.TryGetValue(src, out var cached))
-            return cached;
-
-        Sprite result = null;
-        var tex = src.texture;
-        if (tex != null)
-        {
-            Rect r = src.textureRect;
-            int px = Mathf.RoundToInt(r.x);
-            int py = Mathf.RoundToInt(r.y);
-            int w = Mathf.RoundToInt(r.width);
-            int h = Mathf.RoundToInt(r.height);
-            if (w > 0 && h > 0)
-            {
-                RenderTexture rt = null;
-                RenderTexture prevActive = RenderTexture.active;
-                try
-                {
-                    rt = RenderTexture.GetTemporary(tex.width, tex.height, 0, RenderTextureFormat.ARGB32);
-                    Graphics.Blit(tex, rt);
-                    RenderTexture.active = rt;
-
-                    var outTex = new Texture2D(w, h, TextureFormat.RGBA32, false)
-                    {
-                        wrapMode = TextureWrapMode.Clamp,
-                        filterMode = FilterMode.Bilinear
-                    };
-                    outTex.ReadPixels(new Rect(px, py, w, h), 0, 0);
-
-                    var pixels = outTex.GetPixels();
-                    for (int i = 0; i < pixels.Length; i++)
-                        pixels[i] = new Color(1f, 1f, 1f, pixels[i].a);
-                    outTex.SetPixels(pixels);
-                    outTex.Apply(false, true);
-
-                    result = Sprite.Create(outTex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f), src.pixelsPerUnit);
-                }
-                catch
-                {
-                    result = null;
-                }
-                finally
-                {
-                    RenderTexture.active = prevActive;
-                    if (rt != null)
-                        RenderTexture.ReleaseTemporary(rt);
-                }
-            }
-        }
-
-        overrideMarkHaloSilhouetteCache[src] = result;
-        return result;
     }
 
     private void CleanupOverrideMarkHalo()

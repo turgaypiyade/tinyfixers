@@ -253,6 +253,8 @@ public sealed class ShopOfferCard : ShopOfferCardBase
                 button.onClick.RemoveAllListeners();
                 button.onClick.AddListener(() => purchaseHandler?.Invoke(coin));
                 button.interactable = true;
+                // Sütuna sığdırma ölçeği çerçeveye de taşınır (kopya kendi çerçevesini kurar).
+                ButtonFrameBacking.Attach(button, CommonPopupSkin.Shared.continueButtonFrame, rt.localScale.x);
             }
             trioButtons.Add(clone);
         }
