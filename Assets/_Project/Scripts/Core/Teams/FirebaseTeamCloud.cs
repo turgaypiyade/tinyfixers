@@ -196,6 +196,44 @@ public static class FirebaseTeamCloud
 
     public static CollectionReference LifeRequests(string teamId) => TeamDoc(teamId).Collection("lifeRequests");
 
+    // ── Sohbet temizliği ────────────────────────────────────────────
+    // Firestore TTL faturalandırma (Blaze) istiyor → temizliği istemci yapar: takım sohbeti bağlanınca o takımın
+    // ChatRetentionDays'ten eski mesajları toplu silinir. Kural (firestore.rules): sentAt 3 günü geçmiş mesajı her
+    // oturum açmış kullanıcı silebilir. Oturum başına takım başına tek deneme; tek seferde en fazla PurgeBatch belge
+    // (kalanı sonraki girişte). Hiç açılmayan takımın eskileri sunucuda kalır ama oyunda zaten gösterilmez.
+    private const int PurgeBatch = 200;
+    private static readonly HashSet<string> chatPurgedTeams = new();
+
+    public static void PurgeExpiredChat(string teamId)
+    {
+        if (string.IsNullOrWhiteSpace(teamId) || !FirebaseAuthService.IsReady || !chatPurgedTeams.Add(teamId)) return;
+        // Kural 3 günü sunucu saatine göre denetler; istemci saati biraz ileri olsa da reddedilmesin diye 1 saat pay.
+        var cutoff = Timestamp.FromDateTime(DateTime.UtcNow.AddDays(-ChatRetentionDays).AddHours(-1));
+        TeamDoc(teamId).Collection("chat").WhereLessThan("sentAt", cutoff).Limit(PurgeBatch).GetSnapshotAsync()
+            .ContinueWithOnMainThread(task =>
+            {
+                if (task.IsFaulted || task.IsCanceled)
+                {
+                    chatPurgedTeams.Remove(teamId);   // çevrimdışı vb.: sonraki girişte yeniden dene
+                    if (GameDiagnostics.Backend)
+                        Debug.LogWarning($"[TeamCloud] sohbet temizliği okunamadı: {task.Exception?.GetBaseException().Message}");
+                    return;
+                }
+                var docs = task.Result.Documents;
+                var batch = Db.StartBatch();
+                int count = 0;
+                foreach (var doc in docs) { batch.Delete(doc.Reference); count++; }
+                if (count == 0) return;
+                batch.CommitAsync().ContinueWithOnMainThread(commit =>
+                {
+                    if (GameDiagnostics.Backend)
+                        Debug.Log(commit.IsFaulted || commit.IsCanceled
+                            ? $"[TeamCloud] sohbet temizliği reddedildi (kural yayınlandı mı?): {commit.Exception?.GetBaseException().Message}"
+                            : $"[TeamCloud] {count} eski sohbet mesajı silindi ({teamId}).");
+                });
+            });
+    }
+
     public static void RequestLife(string teamId, int needed)
     {
         if (string.IsNullOrWhiteSpace(teamId) || !FirebaseAuthService.IsReady) return;

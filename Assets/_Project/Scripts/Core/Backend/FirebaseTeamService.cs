@@ -95,6 +95,9 @@ public sealed class FirebaseTeamService : ITeamService, IDisposable
             .WhereGreaterThan("createdAt", Timestamp.FromDateTime(DateTime.UtcNow.AddHours(-24)))
             .Listen(OnLifeRequests);
 
+        // 3 günden eski mesajları sunucudan sil (oturum başına takım başına bir kez; TTL için faturalandırma gerekmesin).
+        FirebaseTeamCloud.PurgeExpiredChat(teamId);
+
         // Canlı sohbet dinleyicisi (local-cache yazımları da anında düşer).
         chatListener = FirebaseTeamCloud.TeamDoc(teamId).Collection("chat")
             .OrderByDescending("sentAt").Limit(ChatLimit)

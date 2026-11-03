@@ -45,8 +45,11 @@ service cloud.firestore {
 
       match /chat/{msgId} {
         allow read: if true;
-        // Hesap silme: gönderen kendi mesajlarını siler.
-        allow delete: if request.auth != null && resource.data.senderId == request.auth.uid;
+        // Hesap silme: gönderen kendi mesajlarını siler. Sohbet temizliği: 3 günden eski mesajı (sunucu saatine göre)
+        // her oturum açmış oyuncu silebilir — TTL faturalandırma istediği için temizliği istemci yapar (FirebaseTeamCloud).
+        allow delete: if request.auth != null
+          && (resource.data.senderId == request.auth.uid
+              || (resource.data.sentAt is timestamp && resource.data.sentAt < request.time - duration.value(3, 'd')));
         allow create: if request.auth != null
           && request.resource.data.senderId == request.auth.uid
           && request.resource.data.text is string
