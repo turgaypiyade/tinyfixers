@@ -133,17 +133,26 @@ public static class PlayerStatsCloudReporter
 
     private sealed class Hook : MonoBehaviour
     {
+        private const float LevelResultSendSeconds = 60f;
+        private const float PlayTimeSendSeconds = 300f;
         private DateTime backgroundedAtUtc = DateTime.MinValue;
         private float elapsed;
+        private float sinceSend;
 
         private void Update()
         {
             float delta = Mathf.Min(Time.unscaledDeltaTime, 0.5f);
             unflushedSeconds += delta;
             elapsed += delta;
+            sinceSend += delta;
             if (elapsed < 15f) return;
             elapsed = 0f;
-            FlushPlayTime();
+            FlushPlayTime();   // yerel birikim (PlayerPrefs) — ağ yok
+            // Firestore kotası (2026-11-04): her gönderim 1 işlem = 3 okuma + 2-3 yazma. Önceden 15 sn'de bir gidiyordu
+            // (açık uygulama başına saatte ~480 yazma, Spark günlük 20K sınırını birkaç oyuncu dolduruyordu). Şimdi: seviye
+            // sonucu bekliyorsa en geç 60 sn'de, yalnız oyun süresi varsa 5 dk'da bir; arka plana alınınca hemen.
+            if (sinceSend < (LevelTelemetryStore.HasLevelResultPending ? LevelResultSendSeconds : PlayTimeSendSeconds)) return;
+            sinceSend = 0f;
             FlushPending();
         }
 

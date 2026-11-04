@@ -24,7 +24,9 @@ using UnityEngine;
 public static class FirebaseCloudSaveService
 {
     private const int SaveVersion = 1;
-    private const float DirtyCheckInterval = 15f;   // sn — dirty ise push
+    // sn — dirty ise push. 15 → 60 (2026-11-04, Firestore yazma kotası): oyun içinde altın/event değiştikçe saatte 240
+    // yazıma çıkabiliyordu. Arka plana alınınca (mobilde güvenilir çıkış sinyali) ve satın almada yine HEMEN yazılır.
+    private const float DirtyCheckInterval = 60f;
     private const float FetchRetryDelay = 10f;      // sn — restore fetch backoff
 
     /// <summary>

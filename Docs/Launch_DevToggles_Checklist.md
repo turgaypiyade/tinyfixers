@@ -42,3 +42,10 @@ Firestore `config/progressEvent` → `minLevel` en az 20 olmalı (uygulama zaten
 
 ## E. Satın alma / reklam hazırlığı (2026-10-31)
 12 ürün Unity IAP Catalog’da USD fiyatlar ve TR/EN adlarla eşitlendi. Google Play satıcı profili engeli kalktı; 12 ürünün tamamı oluşturuldu ve `standard` satın alma seçenekleri **Active** olarak doğrulandı. Bölgesel fiyatlar tek USD girdisinden Google tarafından hesaplandı. AdMob’da son kontrolde **Payment setup incomplete** görülüyordu; UMP mesajı taslak, App Store Connect giriş bekliyor. Sunucu makbuz doğrulaması ve cihaz testleri tamamlanmadı. Ayrıntılar ve ürün listesi: [Monetization/Release-Setup.md](Monetization/Release-Setup.md).
+
+## F. Firestore kota (2026-11-04)
+Spark: 20K yazma / 50K okuma günlük. Ölçüm: 3-4 test oyuncusuyla günde 9.6K yazma (%48) — kök: oyun süresi istatistiği
+(`PlayerStatsCloudReporter`) 15 sn'de bir işlem (3 okuma + 2 yazma) gönderiyordu, menüde boşta bile. Düzeltme: seviye sonucu
+varken ≤60 sn, yalnız oyun süresi 5 dk, arka planda hemen. Bulut kaydı 15 → 60 sn (pause/satın almada anında). Liderlik
+yalnız ekrana girince okunur (periyodik yenileme yok; aynı ziyarette sekme/alt seçenek geçişi tekrar okumaz). Beklenen: açık uygulama başına saatte ~480 → ~100-150 yazma (ÖLÇÜLMEDİ — yeni build ile Usage'tan
+doğrula). 1.000-2.000 oyuncu için yine Spark yetmez → yayından önce Blaze + bütçe uyarısı.

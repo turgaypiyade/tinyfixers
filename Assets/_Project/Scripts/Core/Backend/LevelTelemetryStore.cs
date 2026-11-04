@@ -11,6 +11,9 @@ public static class LevelTelemetryStore
     private static LevelTelemetryState state;
     private static LevelTelemetryState State => state ??= Load();
     public static string StreamId => State.streamId;
+
+    /// Gönderilmeyi bekleyen bir seviye sonucu var mı (oyun süresi dışında) — gönderim sıklığı buna göre seçilir.
+    public static bool HasLevelResultPending => State.pending.Exists(p => p != null && p.level > 0);
     public static string OwnerId => State.ownerId;
     internal static LevelTelemetryAttempt CurrentAttempt => State.active;
 

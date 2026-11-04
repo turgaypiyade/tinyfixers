@@ -75,7 +75,9 @@ public sealed class LeaderboardScreenController : MonoBehaviour
     private readonly Dictionary<LeaderboardTab, int> subFilterByTab = new();
     private LeaderboardTab current = LeaderboardTab.Weekly;
     private bool wired;
-    private float refreshTimer;
+    // Firestore okuma kotası (kullanıcı kararı 2026-11-04): tablo yalnız ekrana GİRİNCE okunur — açıkken arkada periyodik
+    // yenileme YOK; aynı ziyarette sekmeler arası gidip gelmek tekrar okumaz (servis önbelleği gösterilir).
+    private readonly HashSet<LeaderboardTab> fetchedThisVisit = new();
 
     private void OnEnable()
     {
@@ -85,7 +87,7 @@ public sealed class LeaderboardScreenController : MonoBehaviour
         if (!FirebaseAuthService.IsReady) FirebaseAuthService.OnReady += OnSocialReady;
         FirebaseCloudSaveService.OnRestored += OnSocialReady;
         PlayerProfile.OnChanged += OnSocialReady;
-        refreshTimer = 0f;
+        fetchedThisVisit.Clear();
         WireTabs();
         ScreenTitleStyle.ApplyToScreen(transform, theme != null ? theme.headingFont : null);
         SocialBackdrop.ApplyToScreen(transform);
@@ -102,15 +104,6 @@ public sealed class LeaderboardScreenController : MonoBehaviour
     }
 
     private void OnSocialReady() => service?.Fetch(current);
-
-    // Refresh only while this screen is visible, never a background polling object per friend.
-    private void Update()
-    {
-        refreshTimer += Time.unscaledDeltaTime;
-        if (refreshTimer < 30f) return;
-        refreshTimer = 0f;
-        service?.Fetch(current);
-    }
 
     private void OnApplicationPause(bool paused)
     {
@@ -178,15 +171,14 @@ public sealed class LeaderboardScreenController : MonoBehaviour
     private void SelectSubFilter(int index)
     {
         subFilterByTab[current] = index;
-        service?.Fetch(current);
-        Render();
+        Render();   // sekme yüklenirken iki alt tablo birlikte okunur; geçiş yeniden okumaz (kota)
     }
 
-    // Sekme seç → async yüklemeyi tetikle + mevcut cache'i hemen göster.
+    // Sekme seç → bu ziyarette ilk kez açılıyorsa yükle; her durumda mevcut cache'i hemen göster.
     private void Build(LeaderboardTab tab)
     {
         current = tab;
-        service?.Fetch(tab);
+        if (fetchedThisVisit.Add(tab)) service?.Fetch(tab);
         Render();
     }
 
