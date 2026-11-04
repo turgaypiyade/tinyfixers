@@ -1,0 +1,926 @@
+{
+  "note": "All definitions considered; variants, products, producers and stages are not independent new mechanics. Plastic_Yellow9/Green13 are requested colour variants of known Blue11/Red12; goal use does not create a new mechanic. Windmill represented by Flour83; BirdHouse by collectible Bird3.",
+  "definitions": [
+    {
+      "id": 1,
+      "name": "Stone",
+      "firstAuthoredV1": null,
+      "recentUses": [],
+      "selectedLevels": []
+    },
+    {
+      "id": 2,
+      "name": "Shield1",
+      "firstAuthoredV1": null,
+      "recentUses": [],
+      "selectedLevels": []
+    },
+    {
+      "id": 3,
+      "name": "Shield2",
+      "firstAuthoredV1": null,
+      "recentUses": [],
+      "selectedLevels": []
+    },
+    {
+      "id": 4,
+      "name": "chest1",
+      "firstAuthoredV1": 1,
+      "recentUses": [
+        101,
+        108,
+        143,
+        147,
+        149,
+        175
+      ],
+      "selectedLevels": []
+    },
+    {
+      "id": 5,
+      "name": "chest2",
+      "firstAuthoredV1": 2,
+      "recentUses": [
+        142,
+        157,
+        160,
+        173,
+        175,
+        177
+      ],
+      "selectedLevels": []
+    },
+    {
+      "id": 6,
+      "name": "chest3",
+      "firstAuthoredV1": 4,
+      "recentUses": [
+        129,
+        149,
+        154,
+        157,
+        169,
+        174
+      ],
+      "selectedLevels": []
+    },
+    {
+      "id": 7,
+      "name": "plastic",
+      "firstAuthoredV1": 18,
+      "recentUses": [
+        132,
+        145,
+        147,
+        172,
+        183,
+        195
+      ],
+      "selectedLevels": []
+    },
+    {
+      "id": 8,
+      "name": "plastic_orange",
+      "firstAuthoredV1": 16,
+      "recentUses": [
+        52,
+        74,
+        78,
+        106,
+        109,
+        173
+      ],
+      "selectedLevels": []
+    },
+    {
+      "id": 9,
+      "name": "Plastic_Yellow",
+      "firstAuthoredV1": null,
+      "recentUses": [],
+      "selectedLevels": [
+        215
+      ]
+    },
+    {
+      "id": 11,
+      "name": "Plastic_Blue",
+      "firstAuthoredV1": 17,
+      "recentUses": [
+        40,
+        44,
+        80,
+        109,
+        133,
+        200
+      ],
+      "selectedLevels": [
+        215,
+        218
+      ]
+    },
+    {
+      "id": 12,
+      "name": "Plastic_Red",
+      "firstAuthoredV1": 24,
+      "recentUses": [
+        40,
+        77,
+        80,
+        97,
+        133,
+        150
+      ],
+      "selectedLevels": [
+        215,
+        218
+      ]
+    },
+    {
+      "id": 13,
+      "name": "Plastic_Green",
+      "firstAuthoredV1": null,
+      "recentUses": [],
+      "selectedLevels": [
+        217
+      ]
+    },
+    {
+      "id": 14,
+      "name": "Oil",
+      "firstAuthoredV1": 11,
+      "recentUses": [
+        11,
+        14,
+        28,
+        115,
+        169,
+        187
+      ],
+      "selectedLevels": []
+    },
+    {
+      "id": 21,
+      "name": "ColorChest",
+      "firstAuthoredV1": 26,
+      "recentUses": [
+        118,
+        119,
+        141,
+        153,
+        158,
+        165
+      ],
+      "selectedLevels": [
+        214,
+        215,
+        218,
+        219
+      ]
+    },
+    {
+      "id": 22,
+      "name": "EnergyContainer",
+      "firstAuthoredV1": null,
+      "recentUses": [],
+      "selectedLevels": []
+    },
+    {
+      "id": 23,
+      "name": "BatteryBox",
+      "firstAuthoredV1": null,
+      "recentUses": [],
+      "selectedLevels": []
+    },
+    {
+      "id": 24,
+      "name": "OmegaModul",
+      "firstAuthoredV1": null,
+      "recentUses": [],
+      "selectedLevels": []
+    },
+    {
+      "id": 25,
+      "name": "Mud",
+      "firstAuthoredV1": 6,
+      "recentUses": [
+        190,
+        191,
+        194,
+        202,
+        203,
+        211
+      ],
+      "selectedLevels": []
+    },
+    {
+      "id": 26,
+      "name": "Tube",
+      "firstAuthoredV1": 41,
+      "recentUses": [
+        123,
+        137,
+        165,
+        179,
+        188,
+        212
+      ],
+      "selectedLevels": []
+    },
+    {
+      "id": 27,
+      "name": "Wardrobe",
+      "firstAuthoredV1": 36,
+      "recentUses": [
+        162,
+        177,
+        189,
+        198,
+        207,
+        211
+      ],
+      "selectedLevels": []
+    },
+    {
+      "id": 28,
+      "name": "SculptingStone",
+      "firstAuthoredV1": 51,
+      "recentUses": [
+        170,
+        183,
+        186,
+        197,
+        199,
+        211
+      ],
+      "selectedLevels": []
+    },
+    {
+      "id": 29,
+      "name": "Magnet",
+      "firstAuthoredV1": 91,
+      "recentUses": [
+        94,
+        95,
+        99,
+        100,
+        107,
+        198
+      ],
+      "selectedLevels": []
+    },
+    {
+      "id": 30,
+      "name": "HelmetPorcelain",
+      "firstAuthoredV1": 46,
+      "recentUses": [
+        167,
+        168,
+        181,
+        187,
+        188,
+        208
+      ],
+      "selectedLevels": [
+        213,
+        216,
+        217,
+        220
+      ]
+    },
+    {
+      "id": 31,
+      "name": "HatLauncher",
+      "firstAuthoredV1": 31,
+      "recentUses": [
+        117,
+        119,
+        124,
+        148,
+        167,
+        189
+      ],
+      "selectedLevels": []
+    },
+    {
+      "id": 32,
+      "name": "GoldMoney",
+      "firstAuthoredV1": 76,
+      "recentUses": [
+        76,
+        77,
+        81,
+        126
+      ],
+      "selectedLevels": []
+    },
+    {
+      "id": 33,
+      "name": "Safe",
+      "firstAuthoredV1": 76,
+      "recentUses": [
+        81,
+        85,
+        103,
+        104,
+        142,
+        212
+      ],
+      "selectedLevels": []
+    },
+    {
+      "id": 34,
+      "name": "Cargo",
+      "firstAuthoredV1": 21,
+      "recentUses": [
+        75,
+        175,
+        184,
+        193,
+        203,
+        212
+      ],
+      "selectedLevels": []
+    },
+    {
+      "id": 35,
+      "name": "PlayerShieldPickup",
+      "firstAuthoredV1": 30,
+      "recentUses": [
+        100,
+        110,
+        130,
+        140,
+        200,
+        210
+      ],
+      "selectedLevels": []
+    },
+    {
+      "id": 36,
+      "name": "EnemyShieldPickup",
+      "firstAuthoredV1": 30,
+      "recentUses": [
+        30,
+        60
+      ],
+      "selectedLevels": []
+    },
+    {
+      "id": 37,
+      "name": "Barrel",
+      "firstAuthoredV1": null,
+      "recentUses": [],
+      "selectedLevels": []
+    },
+    {
+      "id": 38,
+      "name": "RocketBasket",
+      "firstAuthoredV1": 81,
+      "recentUses": [
+        112,
+        118,
+        130,
+        166,
+        174,
+        177
+      ],
+      "selectedLevels": []
+    },
+    {
+      "id": 39,
+      "name": "SculptingSpecial",
+      "firstAuthoredV1": 56,
+      "recentUses": [
+        172,
+        174,
+        182,
+        193,
+        194,
+        199
+      ],
+      "selectedLevels": []
+    },
+    {
+      "id": 40,
+      "name": "PlasticTwoStage",
+      "firstAuthoredV1": 61,
+      "recentUses": [
+        156,
+        177,
+        184,
+        189,
+        193,
+        197
+      ],
+      "selectedLevels": [
+        213,
+        215,
+        217,
+        219
+      ]
+    },
+    {
+      "id": 41,
+      "name": "Barrell_v2",
+      "firstAuthoredV1": 86,
+      "recentUses": [
+        86,
+        87,
+        88,
+        89,
+        96
+      ],
+      "selectedLevels": []
+    },
+    {
+      "id": 42,
+      "name": "Grass",
+      "firstAuthoredV1": 66,
+      "recentUses": [
+        156,
+        157,
+        196,
+        202,
+        203,
+        212
+      ],
+      "selectedLevels": [
+        214,
+        216,
+        219
+      ]
+    },
+    {
+      "id": 43,
+      "name": "OverrideBatteryBox",
+      "firstAuthoredV1": 106,
+      "recentUses": [
+        106,
+        111,
+        173
+      ],
+      "selectedLevels": []
+    },
+    {
+      "id": 44,
+      "name": "KeyGenerator",
+      "firstAuthoredV1": 96,
+      "recentUses": [
+        99,
+        154,
+        158,
+        188,
+        192,
+        197
+      ],
+      "selectedLevels": []
+    },
+    {
+      "id": 45,
+      "name": "EggBird",
+      "firstAuthoredV1": 111,
+      "recentUses": [
+        145,
+        155,
+        192,
+        198,
+        199,
+        200
+      ],
+      "selectedLevels": []
+    },
+    {
+      "id": 46,
+      "name": "SpreadingGel",
+      "firstAuthoredV1": 101,
+      "recentUses": [
+        155,
+        165,
+        172,
+        179,
+        182,
+        199
+      ],
+      "selectedLevels": []
+    },
+    {
+      "id": 47,
+      "name": "ToolThreat",
+      "firstAuthoredV1": 140,
+      "recentUses": [
+        150,
+        160,
+        170,
+        180,
+        190,
+        200
+      ],
+      "selectedLevels": []
+    },
+    {
+      "id": 48,
+      "name": "ToolThreatYellow",
+      "firstAuthoredV1": null,
+      "recentUses": [],
+      "selectedLevels": []
+    },
+    {
+      "id": 49,
+      "name": "ToolThreatRed",
+      "firstAuthoredV1": null,
+      "recentUses": [],
+      "selectedLevels": []
+    },
+    {
+      "id": 50,
+      "name": "ToolThreatBlue",
+      "firstAuthoredV1": null,
+      "recentUses": [],
+      "selectedLevels": []
+    },
+    {
+      "id": 51,
+      "name": "ToolThreatGreen",
+      "firstAuthoredV1": null,
+      "recentUses": [],
+      "selectedLevels": []
+    },
+    {
+      "id": 52,
+      "name": "WaterTank",
+      "firstAuthoredV1": 116,
+      "recentUses": [
+        118,
+        120,
+        125,
+        138,
+        158,
+        183
+      ],
+      "selectedLevels": []
+    },
+    {
+      "id": 53,
+      "name": "WaterPuddle",
+      "firstAuthoredV1": null,
+      "recentUses": [],
+      "selectedLevels": []
+    },
+    {
+      "id": 54,
+      "name": "WaterTankSmall",
+      "firstAuthoredV1": null,
+      "recentUses": [],
+      "selectedLevels": []
+    },
+    {
+      "id": 55,
+      "name": "Wall",
+      "firstAuthoredV1": 121,
+      "recentUses": [
+        136,
+        137,
+        143,
+        153,
+        163,
+        211
+      ],
+      "selectedLevels": []
+    },
+    {
+      "id": 56,
+      "name": "MetalWall",
+      "firstAuthoredV1": 131,
+      "recentUses": [
+        139,
+        140,
+        163,
+        179,
+        194,
+        211
+      ],
+      "selectedLevels": []
+    },
+    {
+      "id": 57,
+      "name": "Hamster",
+      "firstAuthoredV1": 136,
+      "recentUses": [
+        136
+      ],
+      "selectedLevels": []
+    },
+    {
+      "id": 58,
+      "name": "GrassFlower",
+      "firstAuthoredV1": 126,
+      "recentUses": [
+        139,
+        153,
+        162,
+        195,
+        204,
+        205
+      ],
+      "selectedLevels": [
+        214,
+        216,
+        219
+      ]
+    },
+    {
+      "id": 59,
+      "name": "GelLauncherUp",
+      "firstAuthoredV1": 141,
+      "recentUses": [
+        141,
+        144,
+        148,
+        154,
+        172,
+        182
+      ],
+      "selectedLevels": []
+    },
+    {
+      "id": 60,
+      "name": "GelLauncherDown",
+      "firstAuthoredV1": null,
+      "recentUses": [],
+      "selectedLevels": []
+    },
+    {
+      "id": 61,
+      "name": "GelLauncherLeft",
+      "firstAuthoredV1": null,
+      "recentUses": [],
+      "selectedLevels": []
+    },
+    {
+      "id": 62,
+      "name": "GelLauncherRight",
+      "firstAuthoredV1": null,
+      "recentUses": [],
+      "selectedLevels": []
+    },
+    {
+      "id": 63,
+      "name": "PaintCanBox",
+      "firstAuthoredV1": 146,
+      "recentUses": [
+        168,
+        180,
+        183,
+        195,
+        202,
+        212
+      ],
+      "selectedLevels": []
+    },
+    {
+      "id": 64,
+      "name": "AncientSeal",
+      "firstAuthoredV1": 151,
+      "recentUses": [
+        155,
+        159,
+        160,
+        164,
+        193,
+        199
+      ],
+      "selectedLevels": []
+    },
+    {
+      "id": 65,
+      "name": "LaserCannon",
+      "firstAuthoredV1": 156,
+      "recentUses": [
+        157,
+        158,
+        159,
+        164,
+        170,
+        179
+      ],
+      "selectedLevels": []
+    },
+    {
+      "id": 66,
+      "name": "BilliardBall",
+      "firstAuthoredV1": null,
+      "recentUses": [],
+      "selectedLevels": []
+    },
+    {
+      "id": 67,
+      "name": "BilliardPocket",
+      "firstAuthoredV1": null,
+      "recentUses": [],
+      "selectedLevels": []
+    },
+    {
+      "id": 68,
+      "name": "TarpStatue",
+      "firstAuthoredV1": 161,
+      "recentUses": [
+        163,
+        164,
+        165,
+        167,
+        180,
+        185
+      ],
+      "selectedLevels": []
+    },
+    {
+      "id": 69,
+      "name": "GrassWaterLily",
+      "firstAuthoredV1": 166,
+      "recentUses": [
+        166,
+        169,
+        187,
+        192
+      ],
+      "selectedLevels": []
+    },
+    {
+      "id": 70,
+      "name": "RhodesStatue",
+      "firstAuthoredV1": 171,
+      "recentUses": [
+        171,
+        173,
+        174,
+        179,
+        194
+      ],
+      "selectedLevels": []
+    },
+    {
+      "id": 71,
+      "name": "ColorCrateYellow",
+      "firstAuthoredV1": 178,
+      "recentUses": [
+        178,
+        185
+      ],
+      "selectedLevels": []
+    },
+    {
+      "id": 72,
+      "name": "ColorCrateRed",
+      "firstAuthoredV1": 176,
+      "recentUses": [
+        176,
+        178,
+        185,
+        190,
+        194
+      ],
+      "selectedLevels": []
+    },
+    {
+      "id": 73,
+      "name": "ColorCrateBlue",
+      "firstAuthoredV1": 178,
+      "recentUses": [
+        178
+      ],
+      "selectedLevels": []
+    },
+    {
+      "id": 74,
+      "name": "ColorCrateGreen",
+      "firstAuthoredV1": 176,
+      "recentUses": [
+        176,
+        178,
+        185,
+        190,
+        198
+      ],
+      "selectedLevels": []
+    },
+    {
+      "id": 75,
+      "name": "Lantern",
+      "firstAuthoredV1": 181,
+      "recentUses": [
+        192,
+        197,
+        205,
+        207,
+        209,
+        210
+      ],
+      "selectedLevels": [
+        213,
+        220
+      ]
+    },
+    {
+      "id": 76,
+      "name": "WaterChannel",
+      "firstAuthoredV1": 186,
+      "recentUses": [
+        186,
+        192,
+        195,
+        204,
+        206
+      ],
+      "selectedLevels": [
+        216,
+        218
+      ]
+    },
+    {
+      "id": 77,
+      "name": "GoldCoin",
+      "firstAuthoredV1": 71,
+      "recentUses": [
+        71,
+        151,
+        152
+      ],
+      "selectedLevels": []
+    },
+    {
+      "id": 78,
+      "name": "BirdHouse",
+      "firstAuthoredV1": 201,
+      "recentUses": [
+        202,
+        203,
+        204,
+        205,
+        208,
+        209
+      ],
+      "selectedLevels": [
+        214,
+        218,
+        220
+      ]
+    },
+    {
+      "id": 79,
+      "name": "LampStrip",
+      "firstAuthoredV1": 191,
+      "recentUses": [
+        196,
+        201,
+        202,
+        203,
+        204,
+        205
+      ],
+      "selectedLevels": []
+    },
+    {
+      "id": 80,
+      "name": "Windmill",
+      "firstAuthoredV1": 206,
+      "recentUses": [
+        206,
+        207,
+        208,
+        209,
+        210
+      ],
+      "selectedLevels": [
+        217,
+        219
+      ]
+    },
+    {
+      "id": 81,
+      "name": "FlourSack",
+      "firstAuthoredV1": null,
+      "recentUses": [],
+      "selectedLevels": []
+    },
+    {
+      "id": 82,
+      "name": "FlourSackV",
+      "firstAuthoredV1": null,
+      "recentUses": [],
+      "selectedLevels": []
+    },
+    {
+      "id": 83,
+      "name": "Flour",
+      "firstAuthoredV1": null,
+      "recentUses": [],
+      "selectedLevels": []
+    }
+  ],
+  "alternativesConsidered": [
+    "A third sail/ship: rejected internally to preserve212 as its own silhouette.",
+    "Four disconnected mill rooms: not chosen;209 already uses that vocabulary.",
+    "Repeated wall/metal/stone/cabinet set: not chosen; newest user asked this broader distribution.",
+    "One board combining all four newer mechanics: rejected internally for readability and goal-slot cost."
+  ]
+}

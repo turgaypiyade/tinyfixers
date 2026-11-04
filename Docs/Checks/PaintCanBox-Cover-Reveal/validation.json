@@ -1,0 +1,19 @@
+{
+  "date": "2026-11-03",
+  "checks": 26,
+  "legacyBugReproduced": true,
+  "initialCans": 9,
+  "firstNormalHitCans": 8,
+  "knownDamagedCountsPreserved": [
+    1,
+    3,
+    5,
+    8,
+    9
+  ],
+  "extraPyramidBuildOnFirstHit": false,
+  "settingsFilesPreserved": 1040,
+  "settingsChanges": [],
+  "viewSourceUnchanged": true,
+  "unityBuildOrDeviceTest": false
+}

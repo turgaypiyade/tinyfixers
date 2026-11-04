@@ -476,7 +476,7 @@ public class PreLevelSpecialPopupController : MonoBehaviour
         if (levelCatalog == null)
             return null;
 
-        int level = Mathf.Max(1, PlayerPrefs.GetInt(prefsLevelKey, 1));
+        int level = MasterLeague.IsPlaying ? MasterLeague.ActiveLevel : Mathf.Max(1, PlayerPrefs.GetInt(prefsLevelKey, 1));
 
         // Oyunun kendisi (LevelRuntimeSelector) level'ı GLOBAL level ile, chapter'dan bağımsız
         // çözüyor. Popup goals'ı da aynısını yapmalı — yoksa theme library'nin hesapladığı
@@ -704,7 +704,9 @@ public class PreLevelSpecialPopupController : MonoBehaviour
         if (titleText != null)
         {
             int level = PlayerPrefs.GetInt(prefsLevelKey, 1);
-            titleText.text = GameLocalization.GetFormat(titleLocalizationKey, level);
+            titleText.text = MasterLeague.IsPlaying
+                ? GameLocalization.GetFormat("master_league_title_lap", MasterLeague.LevelNumber)
+                : GameLocalization.GetFormat(titleLocalizationKey, level);
             SingleLineText.FitWidth(titleText);   // "Seviye 101" iki satıra kaymasın
         }
 

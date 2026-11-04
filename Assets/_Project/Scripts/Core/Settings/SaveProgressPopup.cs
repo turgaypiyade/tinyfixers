@@ -159,7 +159,7 @@ public sealed class SaveProgressPopup : MonoBehaviour
         gameObject.AddComponent<Image>().color = new Color(0, 0, 0, 0.72f);
         var view = CommonPopupView.Create(transform, GameLocalization.Get("save_progress_title"), Close,
             CommonPopupSkin.Shared.saveProgressBackgroundMaterial);
-        statusText = CommonPopupView.Text(view.Body, "Status", "", 34, CommonPopupSkin.Shared.bodyTextColor);
+        statusText = CommonPopupView.Text(view.Body, "Status", "", 34, CommonPopupSkin.Shared.bodyTextColor, readable: true);
         CommonPopupView.Region(statusText.rectTransform, new Rect(0, 0.80f, 1, 0.20f));
 
         providerChoices = CommonPopupView.NewRect(view.Body, "Providers", Vector2.zero).gameObject;

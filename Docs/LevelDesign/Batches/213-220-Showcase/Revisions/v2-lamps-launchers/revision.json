@@ -1,0 +1,17 @@
+{
+  "revision": "v2-lamps-launchers",
+  "lampStripLevels": [
+    217,
+    218
+  ],
+  "gelLauncherLevels": [
+    213,
+    215
+  ],
+  "levelHashes": {
+    "Assets/_Project/Settings/ProLevels/LevelV1_00002130.asset": "1e38df22665e916f0e55a1550241d9b0463c98c7789d0d654da264d9ba8c42bb",
+    "Assets/_Project/Settings/ProLevels/LevelV1_00002150.asset": "7b61533856ec14df8e94841191b32a2266d5d5913d6871539b4a9fdf3374cade",
+    "Assets/_Project/Settings/ProLevels/LevelV1_00002170.asset": "4f0964a02c74397c957ae34d3c0c882a416fa477b03259d66a8e891eed0c76b6",
+    "Assets/_Project/Settings/ProLevels/LevelV1_00002180.asset": "be7fe013adcbf7fb91e8a60d0e06f9bd5d80f6c86b7ab606c157301704768fdb"
+  }
+}

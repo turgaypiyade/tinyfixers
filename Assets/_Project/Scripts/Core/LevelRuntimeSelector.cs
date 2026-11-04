@@ -33,7 +33,7 @@ public class LevelRuntimeSelector : MonoBehaviour
             // Tek kaynak: ana menü / pre-level popup / hedef gösterimi de CurrentLevel.Global okur.
             // Eskiden burada ayrı bir Inspector varsayılanı vardı (sahnede 22 kalmıştı) → yeni kurulumda
             // ana menü "Seviye 1" gösterirken oyun 22. level'ı (LevelP_00240) açıyordu.
-            int selectedLevel = CurrentLevel.Global;
+            int selectedLevel = CurrentLevel.Played;   // Usta Ligi'nde lig seviyesi
 
             if (levelCatalog.TryGetGlobalLevel(selectedLevel, out var byPrefsLevel))
                 return byPrefsLevel;

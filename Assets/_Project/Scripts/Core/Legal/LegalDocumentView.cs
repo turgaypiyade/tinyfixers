@@ -52,7 +52,7 @@ public sealed class LegalDocumentView : MonoBehaviour
         crt.offsetMin = new Vector2(8f, 0f); crt.offsetMax = new Vector2(-8f, 0f);
         content.GetComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
-        var text = CommonPopupView.Text(crt, "Text", LegalConsent.GetDocument(slug), 30, CommonPopupSkin.Shared.bodyTextColor);
+        var text = CommonPopupView.Text(crt, "Text", LegalConsent.GetDocument(slug), 30, CommonPopupSkin.Shared.bodyTextColor, readable: true);
         var trt = text.rectTransform;
         trt.anchorMin = new Vector2(0f, 1f); trt.anchorMax = new Vector2(1f, 1f);
         trt.pivot = new Vector2(0.5f, 1f);

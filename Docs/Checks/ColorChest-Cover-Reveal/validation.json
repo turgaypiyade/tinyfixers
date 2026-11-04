@@ -1,0 +1,10 @@
+{
+  "runtimeChange": "Only preserve ColorChest typed view on non-chest cover destruction",
+  "colorChestChecks": 384,
+  "colorChestOrders": 48,
+  "coveredOriginChecks": 413,
+  "paintCanChecks": 26,
+  "rhodesChecks": 6,
+  "unityBuildOrPlay": false,
+  "deviceTested": false
+}

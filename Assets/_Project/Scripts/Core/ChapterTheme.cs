@@ -85,4 +85,44 @@ public class ChapterTheme : ScriptableObject
     [HideInInspector] public Sprite levelEndExtraMoves5;
     [HideInInspector] public Sprite levelEndExtraMoves10;
     [HideInInspector] public Sprite levelEndExtraMoves15;
+
+    [System.Serializable]
+    public struct SpriteSwap { public Sprite from; public Sprite to; }
+
+    [System.Serializable]
+    public struct MaterialSwap { public Material from; public Material to; }
+
+    [Header("Giriş görseli (Usta Ligi intro'su: atölye kapısı)")]
+    public Sprite introBackground;
+
+    [Header("Özel tema değişimleri (Usta Ligi)")]
+    [Tooltip("Sahnede sabit duran ya da ortak skin'den gelen görseller: 'from' görünen her Image bu temada 'to' olur " +
+             "(alt bar butonları, buton çerçevesi, ortak popup zemini). Bölüm temalarında boş kalır.")]
+    public List<SpriteSwap> spriteSwaps = new();
+    [Tooltip("Zemine göre yazı materyali (ör. bordo kontur → lacivert kontur).")]
+    public List<MaterialSwap> materialSwaps = new();
+
+    /// Son seçilen tema (ChapterThemeLibrary.GetCurrentTheme yazar). Runtime oluşturulan popup'lar değişimleri buradan okur.
+    public static ChapterTheme Active { get; internal set; }
+
+    public static Sprite SwapActive(Sprite sprite) => Active != null ? Active.Swap(sprite) : sprite;
+    public static Material SwapActive(Material material) => Active != null ? Active.Swap(material) : material;
+
+    public bool HasSwaps => spriteSwaps.Count > 0 || materialSwaps.Count > 0;
+
+    public Sprite Swap(Sprite sprite)
+    {
+        if (sprite == null) return sprite;
+        for (int i = 0; i < spriteSwaps.Count; i++)
+            if (spriteSwaps[i].from == sprite && spriteSwaps[i].to != null) return spriteSwaps[i].to;
+        return sprite;
+    }
+
+    public Material Swap(Material material)
+    {
+        if (material == null) return material;
+        for (int i = 0; i < materialSwaps.Count; i++)
+            if (materialSwaps[i].from == material && materialSwaps[i].to != null) return materialSwaps[i].to;
+        return material;
+    }
 }

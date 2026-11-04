@@ -50,6 +50,7 @@ public static class GameAnalytics
 
     private static void SetCurrentLevel(int level)
     {
+        if (MasterLeague.IsPlaying) return;   // kullanıcı özelliği ana yol ilerlemesidir; lig seviyesi yazılmaz
 #if TF_FIREBASE_ANALYTICS
         FirebaseAnalytics.SetUserProperty("current_level", LevelText(level));
 #endif
@@ -78,7 +79,7 @@ public static class GameAnalytics
 #if TF_FIREBASE_ANALYTICS
         parameters ??= System.Array.Empty<(string name, long value)>();
         bool isLevelEvent = eventName == "level_start" || eventName == "level_end";
-        long level = isLevelEvent ? CurrentLevel.Global : 0;
+        long level = isLevelEvent ? CurrentLevel.Played : 0;
         int count = isLevelEvent ? 1 : 0;
         for (int i = 0; i < parameters.Length; i++)
         {
@@ -117,8 +118,10 @@ public static class GameAnalytics
 
     // GA4 boyutları metindir ve metin olarak sıralanır ("100" < "35"). Sıfır dolgulu 6 hane
     // ("000035", "020000") 999999 seviyeye kadar metin sırasını sayı sırasıyla aynı yapar.
-    private static string LevelText(long level) =>
-        level.ToString("D6", System.Globalization.CultureInfo.InvariantCulture);
+    // Ana yol "000057" (sıralanabilir); Usta Ligi "L57" → lig oyunları ana yol hunisine karışmaz.
+    private static string LevelText(long level) => MasterLeague.IsPlaying
+        ? "L" + level.ToString(System.Globalization.CultureInfo.InvariantCulture)
+        : level.ToString("D6", System.Globalization.CultureInfo.InvariantCulture);
 
     // Mobile app custom dimensions require text; measured quantities stay numeric metrics.
     private static bool IsLevelDimension(string name) =>

@@ -35,7 +35,8 @@ public static class LevelAssist
     private static bool HasReturnHelp(int level) => level > 0
         && PlayerPrefs.GetInt(ReturnLevelKey, 0) == level;
 
-    private static bool IsEligible(int level) => !RuntimeSimulationSession.IsActive && level > 0
+    // Usta Ligi yarıştır: gizli yardım ligde KAPALI (haftalık sıralama adil kalsın).
+    private static bool IsEligible(int level) => !RuntimeSimulationSession.IsActive && level > 0 && !MasterLeague.IsPlaying
         && (HasAdOrPurchase ? LevelAttemptStats.LivesSpentOn(level) >= Tier1Lives : HasReturnHelp(level));
 
     public static int TierFor(int level)
@@ -49,7 +50,7 @@ public static class LevelAssist
     // Simulation must also override a cached tier from a previous player attempt.
     private static int CurrentTier => RuntimeSimulationSession.IsActive ? 0
         : LevelAttemptStats.HasActiveAttempt ? (attemptEligible ? LevelAttemptStats.ActiveAssistTier : 0)
-        : TierFor(CurrentLevel.Global);
+        : TierFor(CurrentLevel.Played);
 
     public static float RefillBias
     {
@@ -91,7 +92,7 @@ public static class LevelAssist
     {
         if (RuntimeSimulationSession.IsActive || PlayerPrefs.GetInt(key, 0) != 0) return;
         PlayerPrefs.SetInt(key, 1);
-        if (LevelAttemptStats.HasActiveAttempt) RefreshAttemptEligibility(CurrentLevel.Global);
+        if (LevelAttemptStats.HasActiveAttempt) RefreshAttemptEligibility(CurrentLevel.Played);
         PlayerPrefs.Save();
         FirebaseCloudSaveService.MarkDirty();
     }

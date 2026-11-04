@@ -1,0 +1,88 @@
+using System;using System.Linq;using System.Collections;using System.Collections.Generic;
+using UnityEngine;using UnityEngine.UI;
+namespace UnityEngine {
+ public class Object {public static void Destroy(GameObject go){go.destroyed=true;go.SetActive(false);}}
+ public class Component:Object {public GameObject gameObject;public RectTransform transform=>gameObject.transform;public T GetComponent<T>()where T:Component=>gameObject.GetComponent<T>();}
+ public class MonoBehaviour:Component {public bool isActiveAndEnabled=true;protected Coroutine StartCoroutine(IEnumerator e)=>new Coroutine();protected void StopCoroutine(Coroutine c){}}
+ public class Coroutine{}
+ public class CanvasRenderer:Component{}
+ public class GameObject:Object {
+  readonly Dictionary<Type,Component> components=new Dictionary<Type,Component>();public RectTransform transform;public int layer;public bool activeSelf=true,destroyed;
+  public GameObject(string name="",params Type[] types){transform=new RectTransform{gameObject=this};components[typeof(RectTransform)]=transform;foreach(var t in types)if(t!=typeof(RectTransform))Add(t);}
+  Component Add(Type t){var c=(Component)Activator.CreateInstance(t);c.gameObject=this;components[t]=c;return c;}
+  public T AddComponent<T>()where T:Component,new()=>(T)Add(typeof(T));public T GetComponent<T>()where T:Component=>components.TryGetValue(typeof(T),out var c)?(T)c:null;
+  public void SetActive(bool active){activeSelf=active;}
+ }
+ public class RectTransform:Component {public Vector2 anchorMin,anchorMax,offsetMin,offsetMax,pivot;public void SetParent(RectTransform parent,bool worldPositionStays){}}
+ public struct Vector2 {public float x,y;public Vector2(float x,float y){this.x=x;this.y=y;}public static Vector2 zero=>new Vector2();}
+ public class Sprite {public Rect rect=new Rect();}public class Rect{public float width=100,height=180;}
+ public static class Resources {public static T Load<T>(string name)where T:new()=>new T();}
+ public static class Mathf{public static int Clamp(int v,int lo,int hi)=>Math.Max(lo,Math.Min(hi,v));public static int Min(int a,int b)=>Math.Min(a,b);public static int Max(int a,int b)=>Math.Max(a,b);public static float Max(float a,float b)=>Math.Max(a,b);}
+}
+namespace UnityEngine.UI {public class Image:Component{public Sprite sprite;public bool preserveAspect,raycastTarget;}}
+public enum ObstacleId {None=0,Stone=1,Grass=42,PaintCanBox=63,Other=99}
+public enum PaintCanColor {Auto,Red,Yellow,Green,Blue}
+public class ObstacleDef {public ObstacleId id=ObstacleId.PaintCanBox;public int hits=9;public List<Sprite> auxiliarySprites=new List<Sprite>();}
+public class ObstacleLibrary {public ObstacleDef Get(ObstacleId id)=>new ObstacleDef{id=id,hits=id==ObstacleId.PaintCanBox?9:1};}
+public class LevelData {
+ public int[] obstacles=new int[9],obstacleOrigins=new int[9];public int Index(int x,int y)=>y*3+x;public bool InBounds(int x,int y)=>x>=0&&x<3&&y>=0&&y<3;
+ public PaintCanColor GetPaintCanBoxColor(int i)=>PaintCanColor.Auto;
+}
+public class State {
+ public LevelData level=new LevelData();ObstacleLibrary library=new ObstacleLibrary();public int[] remainingHitsByOrigin=new int[9];
+ public readonly Dictionary<(ObstacleId,int),int> wallRemainingHits=new Dictionary<(ObstacleId,int),int>();
+ public readonly Dictionary<int,(ObstacleId Id,int Remaining)> _underTileBeneathMovable=new Dictionary<int,(ObstacleId,int)>();
+ public readonly Dictionary<int,List<StampedBeneath>> _stampedBeneathByCell=new Dictionary<int,List<StampedBeneath>>();
+ /* STAMP */
+ public int ResolveInitialColorCrateHits(ObstacleId id,int origin,int fallback)=>fallback;
+ /* STATE METHODS */
+ public void Cover(int paintHits=9){level.obstacles[4]=(int)ObstacleId.Grass;level.obstacleOrigins[4]=4;remainingHitsByOrigin[4]=1;RegisterStampedBeneath(4,ObstacleId.PaintCanBox,4,4);var p=_stampedBeneathByCell[4][0];_stampedBeneathByCell[4][0]=new StampedBeneath(p.Id,p.Origin,p.OverOrigin,paintHits);}
+ public void Expose(int hits){_stampedBeneathByCell.Remove(4);level.obstacles[4]=(int)ObstacleId.PaintCanBox;level.obstacleOrigins[4]=4;remainingHitsByOrigin[4]=hits;}
+}
+public class BoardController {public State ObstacleStateService;public RectTransform UnclippedFxRoot=new GameObject().transform;}
+public class PaintCanBoxView:MonoBehaviour {
+ /* VIEW FIELDS */
+ /* CAPACITY */
+ public int BuildCalls,Drops;public int Visible=>slots.Count(s=>s.gameObject.activeSelf&&!s.gameObject.destroyed);public int SlotCount=>slots.Count;
+ /* VIEW METHODS */
+ private void DropSlot(int i,BoardController b,RectTransform fx){Drops++;slots[i].gameObject.SetActive(false);}
+ private IEnumerator CoWobbleAll(){yield break;}private void StartJolt(){}
+}
+public class Spawner {
+ public BoardController board;public LevelData resolvedLevel;int width=3;float tileSize=100;
+ /* SPAWN METHODS */
+ public Image Attach(){var image=new GameObject().AddComponent<Image>();AttachPaintCanBoxView(image,new ObstacleDef(),1,1);return image;}
+ public void Hit(Image image,int remaining)=>UpdatePaintCanBoxView(image,remaining);
+}
+public static class Checks {
+ static int count;static void Check(bool ok,string reason){count++;if(!ok)throw new Exception(reason);}
+ static Spawner Make(State s)=>new Spawner{board=new BoardController{ObstacleStateService=s},resolvedLevel=s.level};
+ public static void Run(bool before){
+  var s=new State();s.Cover();var p=Make(s);
+  // DrawStampedBeneathVisuals temporarily changes the shared level array identity, not the cover HP.
+  s.level.obstacles[4]=(int)ObstacleId.PaintCanBox;
+  var image=p.Attach();var v=image.GetComponent<PaintCanBoxView>();
+  if(before){Check(v.Visible==1,"Legacy attachment must reproduce one visible can from cover HP");s.Expose(9);p.Hit(image,8);Check(v.Visible==8&&v.BuildCalls==2,"Legacy first hit rebuilds/increases one can into eight");Console.WriteLine("REPRODUCED: Grass HP 1 -> one visible can; first paint hit -> eight visible cans and a nine-child rebuild.");return;}
+  Check(v.Visible==9,"A fresh covered paint box must start with all nine cans");Check(v.SlotCount==9&&v.BuildCalls==1,"One nine-slot pyramid is constructed");
+  Check(s.remainingHitsByOrigin[4]==1,"Drawing doesn't mutate the cover's gameplay HP");
+  int remaining;Check(s.TryGetLayerRemainingHitsAt(1,1,ObstacleId.PaintCanBox,4,out remaining)&&remaining==9,"Saved paint HP wins over temporarily stamped primary identity");
+  s.level.obstacles[4]=(int)ObstacleId.Grass;Check(s.TryGetLayerRemainingHitsAt(1,1,ObstacleId.PaintCanBox,4,out remaining)&&remaining==9,"Opaque or see-through cover doesn't change the paint count");
+  s.Expose(9);p.Hit(image,8);Check(v.Visible==8&&v.Drops==1,"First actual normal hit removes exactly one can");Check(v.BuildCalls==1,"Revealing/first hit reuses the existing pyramid");
+  p.Hit(image,6);Check(v.Visible==6&&v.Drops==3&&v.BuildCalls==1,"Special hit removes two cans without reconstruction");
+  p.Hit(image,0);Check(v.Visible==0&&v.Drops==9&&v.BuildCalls==1,"Finale hides exactly the remaining cans");
+  foreach(int saved in new[]{1,3,5,8,9}){
+   s=new State();s.Cover(saved);p=Make(s);s.level.obstacles[4]=(int)ObstacleId.PaintCanBox;image=p.Attach();v=image.GetComponent<PaintCanBoxView>();
+   Check(v.Visible==saved,"Snapshot/previously damaged buried paint keeps its actual count");s.Expose(saved);p.Hit(image,Math.Max(0,saved-1));Check(v.Visible==saved-1&&v.BuildCalls==1,"Damaged reveal doesn't refill or rebuild on the next hit");
+  }
+  s=new State();s.Cover(7);s._stampedBeneathByCell[4].Add(new State.StampedBeneath(ObstacleId.Other,4,4,2));
+  s._stampedBeneathByCell[4].Add(new State.StampedBeneath(ObstacleId.PaintCanBox,0,4,3));
+  Check(s.TryGetLayerRemainingHitsAt(1,1,ObstacleId.PaintCanBox,4,out remaining)&&remaining==7,"Nested layers are selected by both type and origin");
+  Check(!s.TryGetLayerRemainingHitsAt(1,1,ObstacleId.PaintCanBox,8,out remaining),"Wrong paint origin doesn't borrow another layer's count");
+  Check(!s.TryGetLayerRemainingHitsAt(-1,1,ObstacleId.PaintCanBox,4,out remaining),"Invalid cell is safe");
+  Check(!s.TryGetLayerRemainingHitsAt(1,1,ObstacleId.None,4,out remaining)&&!s.TryGetLayerRemainingHitsAt(1,1,ObstacleId.PaintCanBox,-1,out remaining),"Missing layer/invalid origin is safe");
+  s=new State();s.Expose(4);p=Make(s);image=p.Attach();Check(image.GetComponent<PaintCanBoxView>().Visible==4,"Uncovered box uses live remaining HP");
+  s.Expose(0);image=p.Attach();Check(image.GetComponent<PaintCanBoxView>().Visible==0,"An exhausted known layer never resurrects a full pyramid");
+  p=new Spawner();image=p.Attach();Check(image.GetComponent<PaintCanBoxView>().Visible==9,"Missing state defaults to a fresh full box");
+  Console.WriteLine("PASS: "+count+" production-method checks; fresh covered/revealed box 9 -> 8 -> 6 -> 0, no extra pyramid build, partial snapshots preserved.");
+ }
+}

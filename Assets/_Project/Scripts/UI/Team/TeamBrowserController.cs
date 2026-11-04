@@ -266,7 +266,7 @@ public sealed class TeamBrowserController : MonoBehaviour
         CommonPopupView.Place(infoDescText, infoPopupView.Body, new Rect(0, 0.02f, 1, 0.36f));
         CommonPopupView.StyleText(infoCapacityText, 34, color);
         CommonPopupView.StyleText(infoMinChapterText, 28, color);
-        CommonPopupView.StyleText(infoDescText, 32, color);
+        CommonPopupView.StyleText(infoDescText, 32, color, readable: true);
         if (infoDescText != null) infoDescText.richText = false;
         CommonPopupView.Place(infoJoinButton, infoPopupView.Actions, CommonPopupView.ActionRegion(0, 1));
         CommonPopupView.StyleButton(infoJoinButton);

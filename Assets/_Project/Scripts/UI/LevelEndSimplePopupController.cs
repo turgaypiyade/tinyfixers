@@ -1550,7 +1550,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
             board.SetInputLocked(true);
 
         // Mercy tracks effort independently from first-try/streak and give-up analytics.
-        LevelAttemptStats.RecordStruggle(CurrentLevel.Global);
+        LevelAttemptStats.RecordStruggle(CurrentLevel.Played);
 
         int livesBeforeFailure = LivesManager.Current;
         LivesManager.SpendLife();
@@ -1752,9 +1752,44 @@ public class LevelEndSimplePopupController : MonoBehaviour
         ShowFailWalletBalance(false);
         SetMainScreenDimmed(true);
         SetBlockerVisible(true);
+        if (MasterLeague.IsPlaying)
+        {
+            ShowMasterLeagueSuccess(coins);
+            return;
+        }
         ApplyRewardVisuals(stars, coins, score);
         SaveRewards(stars, coins, score);
         AdvanceToNextLevel();
+    }
+
+    // Usta Ligi kazancı (kullanıcı kararları 2026-11-03): ana yol İLERLEMEZ, yıldız/seviye puanı YOK; altın normal verilir;
+    // lig puanı = (taban + kalan hamle × değer) × tur çarpanı, o turdaki en iyi puan sayılır. Etkinlikler kazancı
+    // normal görür (PlayerStats.OnLevelCleared: Hediye Şenliği topu, Hasat, Köprü…).
+    private void ShowMasterLeagueSuccess(int coins)
+    {
+        int levelNumber = MasterLeague.LevelNumber;   // kazanılan seviyenin numarası (RecordWin sonrası +1 olur)
+        MasterLeague.RecordWin(levelCatalog, MasterLeague.ActiveLevel, _movesAtWin, out int points, out _);
+        FirebaseLeaderboardService.PublishOwnScoreIfChanged();   // lig haftalık tablosu hemen güncellensin
+
+        ApplyRewardVisuals(0, coins, points);
+        if (successTitleText != null)
+        {
+            successTitleText.text = GameLocalization.GetFormat("master_league_title_lap", levelNumber);
+            SingleLineText.FitWidth(successTitleText);
+        }
+        if (scoreLabelText != null)
+            scoreLabelText.text = GameLocalization.GetFormat("master_league_points", points);
+        if (starImages != null)
+            foreach (var star in starImages)
+                if (star != null) star.gameObject.SetActive(false);   // ligde yıldız yok
+
+        StarFlyToWalletAnimator.ClearPendingReward();
+        int coinBefore = PlayerWallet.Coins;
+        PlayerWallet.AddCoins(coins);
+        MasterLeague.RecordCoins(coins);
+        if (coins > 0) CoinFlyToWalletAnimator.QueuePendingReward(coins, coinBefore, PlayerWallet.Coins);
+
+        PlayerStats.RecordLevelCleared();   // istatistik + etkinlik kazanımları; current_level DEĞİŞMEZ
     }
 
     private int CalculateStars()

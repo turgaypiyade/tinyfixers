@@ -320,7 +320,7 @@ public class GridSpawner : MonoBehaviour
         // kaybetmeyi kabul edince discard (LevelEndSimplePopupController yönetir).
         ProgressEventService.Instance?.BeginLevelStaging();
         LivesManager.ClaimPendingPurchaseThanks();
-        LevelAttemptStats.BeginAttempt(CurrentLevel.Global, resolvedLevel.moves);
+        LevelAttemptStats.BeginAttempt(CurrentLevel.Played, resolvedLevel.moves);
 
         board.Init(width, height, iconLibrary);
         board.SetLevelData(resolvedLevel);
@@ -717,6 +717,10 @@ public class GridSpawner : MonoBehaviour
         obstacleDefsByOrigin.Clear();
         beneathViewsByCell.Clear();
         _chestViews.Clear();
+        _batteryBoxViews.Clear();
+        _overrideBatteryBoxViews.Clear();
+        _pendingObbDetonationViews.Clear();
+        _wardrobeViews.Clear();
         safeViewsByOrigin.Clear();
         ancientSealViewsByOrigin.Clear();
         ancientSealClickProxyByCell.Clear();
@@ -1219,7 +1223,11 @@ public class GridSpawner : MonoBehaviour
         // Merkezden (Firestore config/levels) ayarlanan hamle sayısı — kopyaya yazılır, asset kirlenmez;
         // hamleyi okuyan her yer (HUD, yıldız, skor) aynı değeri görür.
         if (runtimeClone != null && !RuntimeSimulationSession.IsActive)
-            runtimeClone.moves = LevelRemoteTuning.MovesFor(CurrentLevel.Global, runtimeClone.moves);
+        {
+            runtimeClone.moves = LevelRemoteTuning.MovesFor(CurrentLevel.Played, runtimeClone.moves);
+            // Usta Ligi: tur kesintisi (−%10/tur, tavan %30, en az 5) uzak ayardan SONRA uygulanır.
+            if (MasterLeague.IsPlaying) runtimeClone.moves = MasterLeague.MovesFor(runtimeClone.moves, MasterLeague.Lap);
+        }
 
         return runtimeClone;
     }
@@ -2923,9 +2931,16 @@ public class GridSpawner : MonoBehaviour
             obstacleViewsByOrigin.Remove(originIndex);
             obstacleDefsByOrigin.Remove(originIndex);
         }
-        _chestViews.Remove(originIndex);
-        _batteryBoxViews.Remove(originIndex);
-        _overrideBatteryBoxViews.Remove(originIndex);
+        // A cover can share the origin with a pre-rendered ColorChest beneath it.
+        // Keep that chest registered for its later OpenCabinet / bulb-removal events.
+        if (obstacleId == ObstacleId.ColorChest)
+            _chestViews.Remove(originIndex);
+        if (obstacleId == ObstacleId.BatteryBox)
+            _batteryBoxViews.Remove(originIndex);
+        if (obstacleId == ObstacleId.OverrideBatteryBox)
+            _overrideBatteryBoxViews.Remove(originIndex);
+        if (obstacleId == ObstacleId.Wardrobe)
+            _wardrobeViews.Remove(originIndex);
         ApplyUnderTileCellBgTint();
     }
 
@@ -3932,10 +3947,8 @@ public class GridSpawner : MonoBehaviour
         else
         {
             // Authored damaged ColorCrates must show the same initial stage as their HP.
-            int remaining = 0;
-            if (StackedObstacleEntry.SupportsInitialHits(def.id))
-                remaining = initialRemainingHits > 0 ? initialRemainingHits
-                    : board?.ObstacleStateService != null ? board.ObstacleStateService.GetRemainingHitsAt(x, y) : 0;
+            int remaining = StackedObstacleEntry.SupportsInitialHits(def.id)
+                ? ResolveObstacleViewRemainingHits(def, x, y, initialRemainingHits) : 0;
             sprite = remaining > 0 ? def.GetSpriteForRemainingHits(remaining) : def.GetPreviewSprite();
         }
         if (sprite == null) return null;
@@ -4072,46 +4085,59 @@ public class GridSpawner : MonoBehaviour
             clickProxy.Init(board, x, y, w, h, tileSize);
         }
 
-        // Boya kutusu piramidi: Image boş kasayı gösterir, kutular PaintCanBoxView child'larıdır.
+        ConfigureObstacleContentView(img, def, x, y);
+
+        return img;
+    }
+
+    // DrawStampedBeneathVisuals temporarily changes array identity, while the live HP
+    // still belongs to the cover. Both construction and promotion must query the saved
+    // layer by type AND origin, including partially damaged layers (never refill them).
+    private int ResolveObstacleViewRemainingHits(ObstacleDef def, int x, int y, int initialRemainingHits = 0)
+    {
+        var state = board != null ? board.ObstacleStateService : null;
+        int origin = resolvedLevel != null ? resolvedLevel.Index(x, y) : y * width + x;
+        if (state != null && state.TryGetLayerRemainingHitsAt(x, y, def.id, origin, out int remaining))
+            return remaining;
+        return initialRemainingHits > 0 ? initialRemainingHits : Mathf.Max(1, def.hits);
+    }
+
+    private void ConfigureObstacleContentView(Image img, ObstacleDef def, int x, int y)
+    {
         if (def.id == ObstacleId.PaintCanBox)
+        {
             AttachPaintCanBoxView(img, def, x, y);
+            return;
+        }
+        if (board == null) return;
 
         // Lazer topu: Image tabanı gösterir; kule + cıvatalar LaserCannonView child'ları, davranış servisde.
         if (def.id == ObstacleId.LaserCannon && board != null)
         {
-            var state = board.ObstacleStateService;
-            // Örtü altında çizilirken hücrenin kalan vuruşu örtüye aittir → topu tam (gri cıvatalı) göster.
-            int remaining = state != null && state.GetObstacleIdAt(x, y) == ObstacleId.LaserCannon
-                ? state.GetRemainingHitsAt(x, y) : 0;
-            var view = LaserCannonView.Ensure(img, def, remaining > 0 ? remaining : def.hits);
+            int remaining = ResolveObstacleViewRemainingHits(def, x, y);
+            var view = LaserCannonView.Ensure(img, def, remaining);
             LaserCannonService.Ensure(board).Register(y * width + x, view);
         }
 
         // Rodos heykeli: Image aşamanın tabanını gösterir; kılıç + kalkan RhodesStatueView child'ları.
         if (def.id == ObstacleId.RhodesStatue && board != null)
         {
-            var state = board.ObstacleStateService;
-            int remaining = state != null && state.GetObstacleIdAt(x, y) == ObstacleId.RhodesStatue
-                ? state.GetRemainingHitsAt(x, y) : 0;
-            RhodesStatueView.Ensure(img, remaining > 0 ? remaining : def.hits);
+            RhodesStatueView.Ensure(img, ResolveObstacleViewRemainingHits(def, x, y));
         }
 
         if (BoardController.IsGelLauncher(def.id) && board != null)
         {
             // The assembled press occupies exactly its two cells; generic edge overhang is omitted.
+            var rt = img.rectTransform;
             rt.anchoredPosition = new Vector2(x * tileSize, -y * tileSize);
-            rt.sizeDelta = new Vector2(w * tileSize, h * tileSize);
-            var state = board.ObstacleStateService;
-            int remaining = state != null && state.GetObstacleIdAt(x, y) == def.id
-                ? state.GetRemainingHitsAt(x, y) : def.hits;
-            GelLauncherPressView.Ensure(img, def.id, remaining > 0 ? remaining : def.hits);
+            rt.sizeDelta = new Vector2(def.size.x * tileSize, def.size.y * tileSize);
+            GelLauncherPressView.Ensure(img, def.id, ResolveObstacleViewRemainingHits(def, x, y));
         }
 
         // Brandalı heykel: Image iç zemini gösterir; taş/branda/çerçeve/etiket TarpStatueView child'ları.
         if (def.id == ObstacleId.TarpStatue && board != null)
             TarpStatueService.Ensure(board).Register(y * width + x, img);
 
-        return img;
     }
 
     private void AttachPaintCanBoxView(Image img, ObstacleDef def, int x, int y)
@@ -4119,9 +4145,7 @@ public class GridSpawner : MonoBehaviour
         if (def.auxiliarySprites != null && def.auxiliarySprites.Count > 0 && def.auxiliarySprites[0] != null)
             img.sprite = def.auxiliarySprites[0];
 
-        var state = board != null ? board.ObstacleStateService : null;
-        int remaining = state != null ? state.GetRemainingHitsAt(x, y) : 0;
-        if (remaining <= 0) remaining = def.hits;
+        int remaining = ResolveObstacleViewRemainingHits(def, x, y);
         var color = resolvedLevel != null ? resolvedLevel.GetPaintCanBoxColor(resolvedLevel.Index(x, y)) : PaintCanColor.Auto;
         if (color == PaintCanColor.Auto) color = PaintCanBoxView.AutoColorForRow(y);
         PaintCanBoxView.Ensure(img, remaining, tileSize, color);
@@ -4190,7 +4214,13 @@ public class GridSpawner : MonoBehaviour
                 pre.rectTransform.SetAsLastSibling();
                 obstacleViewsByOrigin[idx] = pre;
                 var preDef = resolvedLevel.obstacleLibrary.Get(obsId);
-                if (preDef != null) obstacleDefsByOrigin[idx] = preDef;
+                if (preDef != null)
+                {
+                    obstacleDefsByOrigin[idx] = preDef;
+                    // Ensure reuses existing children and reapplies this layer's saved
+                    // state; a cover's stage must never leave an empty/pressed preview.
+                    ConfigureObstacleContentView(pre, preDef, x, y);
+                }
                 return;
             }
         }

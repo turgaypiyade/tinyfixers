@@ -1,0 +1,12 @@
+{
+  "level": 211,
+  "date": "2026-11-03",
+  "userFeedback": "bu seviye için oldukça kolaydı 10 hamle kaldı geride",
+  "oldMoves": 28,
+  "newMoves": 20,
+  "reason": "18 moves used in reported play; 20 targets about two remaining for the same play, not a measured win rate.",
+  "assetBeforeSha256": "5639277a851dac01dfea43cbc6a5691e14843354444508550ac09a0fc5d9f505",
+  "assetAfterSha256": "39b01b33fcd6c1d8a7b2e07650f86605b436f56f038a3f4a95b7a21ac1a02531",
+  "onlyAssetFieldChanged": "moves",
+  "newBudgetPlayed": false
+}

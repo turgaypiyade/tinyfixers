@@ -91,7 +91,7 @@ public static class LivesManager
             _nextLifeTime = DateTime.UtcNow.AddMinutes(RegenIntervalMinutes);
 
         _lives--;
-        LevelAttemptStats.RecordLifeSpent(CurrentLevel.Global);
+        LevelAttemptStats.RecordLifeSpent(CurrentLevel.Played);
         Save();
         OnLivesChanged?.Invoke();
         return true;
@@ -101,7 +101,7 @@ public static class LivesManager
     public static void RefundFailureLife()
     {
         EnsureInit();
-        LevelAttemptStats.RefundLifeSpent(CurrentLevel.Global);
+        LevelAttemptStats.RefundLifeSpent(CurrentLevel.Played);
         _lives = Mathf.Min(MaxLives, _lives + 1);
         Save();
         OnLivesChanged?.Invoke();

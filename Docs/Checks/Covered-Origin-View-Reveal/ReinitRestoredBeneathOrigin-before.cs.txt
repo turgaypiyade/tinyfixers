@@ -1,0 +1,10 @@
+    private void ReinitRestoredBeneathOrigin(int beneathOrigin, ObstacleId beneathId, int remainingOverride = -1)
+    {
+        // Revealing a non-origin cell must not reset the still-covered origin's HP.
+        if (level != null && beneathOrigin >= 0 && beneathOrigin < level.obstacles.Length
+            && (ObstacleId)level.obstacles[beneathOrigin] == beneathId
+            && level.obstacleOrigins[beneathOrigin] == beneathOrigin)
+            InitObstacleStateAt(beneathOrigin, remainingOverride);
+        if (level != null && level.width > 0)
+            RequestObstacleViewCreate?.Invoke(beneathOrigin % level.width, beneathOrigin / level.width);
+    }

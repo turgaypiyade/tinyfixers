@@ -1243,6 +1243,66 @@
       "levelKey": "LevelCL_0210",
       "name": "Un Çuvalı",
       "nameEn": "Flour Sack"
+    },
+    {
+      "level": 211,
+      "levelKey": "LevelCL_0211",
+      "name": "Çelik Arma",
+      "nameEn": "Steel Crest"
+    },
+    {
+      "level": 212,
+      "levelKey": "LevelCL_0212",
+      "name": "Renkli Yelken",
+      "nameEn": "Painted Sail"
+    },
+    {
+      "level": 213,
+      "levelKey": "LevelCL_0213",
+      "name": "Işıklı Balon",
+      "nameEn": "Lantern Balloon"
+    },
+    {
+      "level": 214,
+      "levelKey": "LevelCL_0214",
+      "name": "Guguk Çanı",
+      "nameEn": "Cuckoo Bell"
+    },
+    {
+      "level": 215,
+      "levelKey": "LevelCL_0215",
+      "name": "Vitray Atölyesi",
+      "nameEn": "Stained Glass Workshop"
+    },
+    {
+      "level": 216,
+      "levelKey": "LevelCL_0216",
+      "name": "Sulu Lale",
+      "nameEn": "Water Tulip"
+    },
+    {
+      "level": 217,
+      "levelKey": "LevelCL_0217",
+      "name": "Kanatlı Kum Saati",
+      "nameEn": "Winged Hourglass"
+    },
+    {
+      "level": 218,
+      "levelKey": "LevelCL_0218",
+      "name": "Kıvrılan Nehir",
+      "nameEn": "Winding River"
+    },
+    {
+      "level": 219,
+      "levelKey": "LevelCL_0219",
+      "name": "Çiçekli Taç",
+      "nameEn": "Blossom Crown"
+    },
+    {
+      "level": 220,
+      "levelKey": "LevelCL_0220",
+      "name": "Büyük Festival",
+      "nameEn": "Grand Festival"
     }
   ],
   "catalog": "LevelCatalogProV1"

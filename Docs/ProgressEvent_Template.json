@@ -1,0 +1,181 @@
+{
+  "enabled": true,
+  "minLevel": 20,
+  "anchorUtc": "2026-11-03T00:00:00Z",
+  "seasonHours": 72,
+  "ladder": {
+    "enabled": true,
+    "growthPercent": 15,
+    "maxRounds": 3
+  },
+  "seasons": [
+    {
+      "id": "s1_gorevler",
+      "nameTr": "Haftalık Görevler",
+      "nameEn": "Weekly Tasks",
+      "goals": [
+        {
+          "type": "TileCleared_Gear",
+          "target": 150,
+          "reward": "Lives",
+          "amount": 1,
+          "minutes": 15
+        },
+        {
+          "type": "LineAny",
+          "target": 20,
+          "reward": "Joker_LineH",
+          "amount": 1,
+          "minutes": 15
+        },
+        {
+          "type": "TileCleared_Bolt",
+          "target": 250,
+          "reward": "Coins",
+          "amount": 150,
+          "minutes": 0
+        },
+        {
+          "type": "ObstacleCleared",
+          "target": 120,
+          "reward": "Booster_Hammer",
+          "amount": 1,
+          "minutes": 0
+        },
+        {
+          "type": "LevelWon",
+          "target": 10,
+          "reward": "Coins",
+          "amount": 300,
+          "minutes": 0
+        }
+      ]
+    },
+    {
+      "id": "s2_engel_avi",
+      "nameTr": "Engel Avı",
+      "nameEn": "Obstacle Hunt",
+      "goals": [
+        {
+          "type": "ObstacleCleared",
+          "target": 100,
+          "reward": "Coins",
+          "amount": 100,
+          "minutes": 0
+        },
+        {
+          "type": "SpecialCreated",
+          "target": 30,
+          "reward": "Joker_PulseCore",
+          "amount": 1,
+          "minutes": 15
+        },
+        {
+          "type": "TileCleared_Core",
+          "target": 250,
+          "reward": "Booster_Row",
+          "amount": 1,
+          "minutes": 0
+        },
+        {
+          "type": "FirstTryWin",
+          "target": 5,
+          "reward": "Lives",
+          "amount": 1,
+          "minutes": 30
+        },
+        {
+          "type": "ObstacleCleared",
+          "target": 250,
+          "reward": "Coins",
+          "amount": 400,
+          "minutes": 0
+        }
+      ]
+    },
+    {
+      "id": "s3_special_senligi",
+      "nameTr": "Special Şenliği",
+      "nameEn": "Special Festival",
+      "goals": [
+        {
+          "type": "SpecialCreated",
+          "target": 25,
+          "reward": "Lives",
+          "amount": 1,
+          "minutes": 15
+        },
+        {
+          "type": "LineAny",
+          "target": 30,
+          "reward": "Booster_Column",
+          "amount": 1,
+          "minutes": 0
+        },
+        {
+          "type": "TileCleared_Plate",
+          "target": 250,
+          "reward": "Coins",
+          "amount": 200,
+          "minutes": 0
+        },
+        {
+          "type": "SpecialCreated",
+          "target": 60,
+          "reward": "Joker_SystemOverride",
+          "amount": 1,
+          "minutes": 15
+        },
+        {
+          "type": "LevelWon",
+          "target": 12,
+          "reward": "Booster_PaintBucket",
+          "amount": 1,
+          "minutes": 0
+        }
+      ]
+    },
+    {
+      "id": "s4_usta_turu",
+      "nameTr": "Usta Turu",
+      "nameEn": "Master Tour",
+      "goals": [
+        {
+          "type": "LevelWon",
+          "target": 5,
+          "reward": "Coins",
+          "amount": 100,
+          "minutes": 0
+        },
+        {
+          "type": "TileCleared_Any",
+          "target": 600,
+          "reward": "Joker_Line",
+          "amount": 1,
+          "minutes": 15
+        },
+        {
+          "type": "FirstTryWin",
+          "target": 6,
+          "reward": "Booster_Shuffle",
+          "amount": 1,
+          "minutes": 0
+        },
+        {
+          "type": "ObstacleCleared",
+          "target": 200,
+          "reward": "Lives",
+          "amount": 1,
+          "minutes": 30
+        },
+        {
+          "type": "LevelWon",
+          "target": 15,
+          "reward": "Coins",
+          "amount": 500,
+          "minutes": 0
+        }
+      ]
+    }
+  ]
+}

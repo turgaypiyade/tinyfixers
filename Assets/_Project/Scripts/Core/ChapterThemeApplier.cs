@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -76,6 +78,48 @@ public class ChapterThemeApplier : MonoBehaviour
 
         ApplyBoardBorder(theme);
         ApplySuccessAnimation(theme);
+        ApplySceneSwaps(theme);
+    }
+
+    // Özel tema (Usta Ligi): sahnede sabit atanmış görsel/yazı materyallerini tek seferde değiştirir
+    // (alt bar butonları, buton çerçeveleri, sahnedeki popup zeminleri, başlık konturu). Bölüm temalarında liste boş → iş yok.
+    // Sahne başına bir kez; tema sahne içinde değişmez (yeni seviye paketi ana menüye dönüşte sahneyle birlikte okunur).
+    private bool sceneSwapsApplied;
+    private static readonly List<Image> imageBuffer = new();
+    private static readonly List<TMP_Text> textBuffer = new();
+    private static readonly List<GameObject> rootBuffer = new();
+
+    private void ApplySceneSwaps(ChapterTheme theme)
+    {
+        if (sceneSwapsApplied || !theme.HasSwaps) return;
+        sceneSwapsApplied = true;
+
+        rootBuffer.Clear();
+        gameObject.scene.GetRootGameObjects(rootBuffer);
+        foreach (var root in rootBuffer)
+        {
+            if (theme.spriteSwaps.Count > 0)
+            {
+                root.GetComponentsInChildren(true, imageBuffer);
+                foreach (var img in imageBuffer)
+                {
+                    var swapped = theme.Swap(img.sprite);
+                    if (swapped != img.sprite) img.sprite = swapped;
+                }
+            }
+            if (theme.materialSwaps.Count > 0)
+            {
+                root.GetComponentsInChildren(true, textBuffer);
+                foreach (var text in textBuffer)
+                {
+                    var swapped = theme.Swap(text.fontSharedMaterial);
+                    if (swapped != text.fontSharedMaterial) text.fontSharedMaterial = swapped;
+                }
+            }
+        }
+        imageBuffer.Clear();
+        textBuffer.Clear();
+        rootBuffer.Clear();
     }
 
     // ─────────────────────────────────────────────────────────────────

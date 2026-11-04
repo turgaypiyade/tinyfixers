@@ -1,0 +1,5 @@
+{
+  "revision": "v2-lamps-launchers",
+  "author": "Revisions/v2-lamps-launchers/revise.py",
+  "verifier": "Revisions/v2-lamps-launchers/verify_revision.py"
+}

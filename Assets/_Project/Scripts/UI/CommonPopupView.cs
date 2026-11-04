@@ -23,7 +23,7 @@ public sealed class CommonPopupView : MonoBehaviour
         view.panel = rect;
         view.host = parent as RectTransform;
         var image = rect.gameObject.AddComponent<Image>();
-        image.sprite = skin.background;
+        image.sprite = ChapterTheme.SwapActive(skin.background);   // Usta Ligi: lacivert + altın zemin
         image.material = backgroundMaterial;
         image.color = skin.background != null ? Color.white : new Color(0.48f, 0.06f, 0.17f);
         view.Title = Text(rect, "Title", title, skin.titleFontSize, Color.white);
@@ -125,19 +125,23 @@ public sealed class CommonPopupView : MonoBehaviour
         Region(rt, region);
     }
 
-    public static TMP_Text Text(Transform parent, string name, string value, float size, Color color)
+    public static TMP_Text Text(Transform parent, string name, string value, float size, Color color, bool readable = false)
     {
         var rt = NewRect(parent, name, Vector2.zero);
         var text = rt.gameObject.AddComponent<TextMeshProUGUI>();
-        StyleText(text, size, color);
+        StyleText(text, size, color, readable);
         text.text = value ?? string.Empty;
         return text;
     }
 
-    public static void StyleText(TMP_Text text, float size, Color color)
+    /// readable: CÜMLE/PARAGRAF metni okunaklı fontla (skin.readableBodyFont, Inter SemiBold — kullanıcı 2026-11-04: yalnız
+    /// "yazı yazdığımız" popup'lar; sayı/etiket ağırlıklı ekranlar — Progress Event, Gear Cup, mağaza — BakBak One'da kalır).
+    public static void StyleText(TMP_Text text, float size, Color color, bool readable = false)
     {
         if (text == null) return;
-        if (CommonPopupSkin.Shared.font != null) text.font = CommonPopupSkin.Shared.font;
+        var skin = CommonPopupSkin.Shared;
+        var font = readable && skin.readableBodyFont != null ? skin.readableBodyFont : skin.font;
+        if (font != null) text.font = font;
         text.color = color;
         text.fontSize = size;
         text.enableAutoSizing = true;
@@ -153,8 +157,9 @@ public sealed class CommonPopupView : MonoBehaviour
         if (text == null) return;
         var skin = CommonPopupSkin.Shared;
         StyleText(text, skin.titleFontSize, Color.white);
-        ApplyDisplayFont(text, skin.titleFont, skin.titleMaterial);
-        if (text.fontSharedMaterial == skin.titleMaterial && skin.titleMaterial != null)
+        var titleMaterial = ChapterTheme.SwapActive(skin.titleMaterial);   // zemin lacivertse kontur da lacivert
+        ApplyDisplayFont(text, skin.titleFont, titleMaterial);
+        if (text.fontSharedMaterial == titleMaterial && titleMaterial != null)
         {
             // Joker başlığı stili: krem → altın yüz (materyal yüzü beyaz; renk buradan), arkada altın halka.
             text.color = Color.white;

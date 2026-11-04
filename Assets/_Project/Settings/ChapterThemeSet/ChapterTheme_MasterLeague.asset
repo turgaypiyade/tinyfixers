@@ -1,0 +1,110 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ccf9c1f5b8bab4124a7ecfe61a413be7, type: 3}
+  m_Name: ChapterTheme_MasterLeague
+  m_EditorClassIdentifier: Assembly-CSharp::ChapterTheme
+  chapterIndex: 99
+  gameBackground: {fileID: 21300000, guid: 0eedf9e45cb446a19a9e54c3177ad284, type: 3}
+  gameTopHud: {fileID: 21300000, guid: b83c5163928d464d9399ee87665140bc, type: 3}
+  gameBottomArea: {fileID: 21300000, guid: dce6ab2af3214ba5a1f6e90c3bc48147, type: 3}
+  menuBackground: {fileID: 21300000, guid: 994fa905be9ae44c482ec00470c997c8, type: 3}
+  menuTopHud: {fileID: 21300000, guid: f46b4295759644c3a0bcc641c0d098e0, type: 3}
+  menuBottomArea: {fileID: 21300000, guid: 8017717aac1b4d29888bf509a5559374, type: 3}
+  menuLevelSelectorBtn: {fileID: 21300000, guid: a8db0d293a4d499db03d4df628bcefe3, type: 3}
+  menuRepairBtn: {fileID: 21300000, guid: 27cf2898f2884295bbfe9086b4a7d898, type: 3}
+  borderColorId: 6
+  borderSpriteLibrary: {fileID: 11400000, guid: b2b1fa88677e243bbbda0302c5efb9e1, type: 2}
+  lightBoardCells: 1
+  successAnimationBackground: {fileID: 0}
+  preLevelPopupBackground: {fileID: 21300000, guid: 3a52687c285f41ee8ed27b643212083e, type: 3}
+  preLevelContinueButton: {fileID: 21300000, guid: 31a3eec15ec7e4edebed2e4bd6c22218, type: 3}
+  preLevelCancelButton: {fileID: 0}
+  preLevelCheckMark: {fileID: 21300000, guid: 4d7e3c1a8d2a049e7862849181984ab4, type: 3}
+  preLevelDimColor: {r: 0, g: 0, b: 0, a: 0.89411765}
+  preLevelSlotNormalTint: {r: 1, g: 1, b: 1, a: 1}
+  preLevelSlotSelectedTint: {r: 0.42745098, g: 1, b: 0.23921569, a: 0.6666667}
+  preLevelCountTextColor: {r: 1, g: 1, b: 1, a: 1}
+  preLevelButtonTextColor: {r: 1, g: 1, b: 1, a: 1}
+  workshopStages: {fileID: 11400000, guid: ee94cc6fba5bc40eb9422268cd24e711, type: 2}
+  loadingScreenImages:
+  - {fileID: 21300000, guid: 195efa70a7541414a9d5f30ca5630078, type: 3}
+  - {fileID: 21300000, guid: e33a13330145a40e9b9c1307d4abe674, type: 3}
+  - {fileID: 21300000, guid: 1b84d161e03ef41329ba93986ee4f316, type: 3}
+  - {fileID: 21300000, guid: 2ffe2b14db1084a7182210ce7ae161d6, type: 3}
+  - {fileID: 21300000, guid: c0da2777d4a5e4677bd10bd2d6980102, type: 3}
+  loadingHints:
+  - image: {fileID: 21300000, guid: 227f7f906fe094eb68e53870408ec840, type: 3}
+    titleLocalizationKey: loading_hint_3match_title
+    descriptionLocalizationKey: loading_hint_3match_desc
+    loadingLocalizationKey: loading_hint_loading
+  - image: {fileID: 21300000, guid: 36fdba37bc1404ef4b078a00204c67e6, type: 3}
+    titleLocalizationKey: loading_hint_lineh_title
+    descriptionLocalizationKey: loading_hint_lineh_desc
+    loadingLocalizationKey: loading_hint_loading
+  - image: {fileID: 21300000, guid: 25f2c7b5d9b5e4226867623aad291882, type: 3}
+    titleLocalizationKey: loading_hint_linev_title
+    descriptionLocalizationKey: loading_hint_linev_desc
+    loadingLocalizationKey: loading_hint_loading
+  - image: {fileID: 21300000, guid: 42099cda2b9534be39dab5d576c965b5, type: 3}
+    titleLocalizationKey: loading_hint_pulse_title
+    descriptionLocalizationKey: loading_hint_pulse_desc
+    loadingLocalizationKey: loading_hint_loading
+  - image: {fileID: 21300000, guid: 07b622adb22c449ca836ab6a419f1102, type: 3}
+    titleLocalizationKey: loading_hint_override_title
+    descriptionLocalizationKey: loading_hint_override_desc
+    loadingLocalizationKey: loading_hint_loading
+  - image: {fileID: 21300000, guid: 0da3da42f460a490881f15202b8f7c18, type: 3}
+    titleLocalizationKey: loading_hint_patchbot_title
+    descriptionLocalizationKey: loading_hint_patchbot_desc
+    loadingLocalizationKey: loading_hint_loading
+  levelEndPopupBackground: {fileID: 21300000, guid: 8b19fd7696154c53b6040c863463a8c4, type: 3}
+  levelEndContinueButton: {fileID: 0}
+  levelEndCloseButton: {fileID: 0}
+  levelEndStarFilled: {fileID: 0}
+  levelEndStarEmpty: {fileID: 0}
+  levelEndGoalCheckMark: {fileID: 0}
+  levelEndExtraMoves5: {fileID: 0}
+  levelEndExtraMoves10: {fileID: 0}
+  levelEndExtraMoves15: {fileID: 0}
+  introBackground: {fileID: 21300000, guid: 331bb4be599240d6afad7774aff06e4f, type: 3}
+  spriteSwaps:
+  - from: {fileID: 21300000, guid: 330e244545c714ebf9107b3577a79432, type: 3}
+    to: {fileID: 21300000, guid: 8017717aac1b4d29888bf509a5559374, type: 3}
+  - from: {fileID: 21300000, guid: f6528791a0c2440bf80a5d226f288c92, type: 3}
+    to: {fileID: 21300000, guid: 2e2eafc79a3a4be4a3c5858d819a709a, type: 3}
+  - from: {fileID: 21300000, guid: 43e44e3d560a74958bf1278d0c4e96a1, type: 3}
+    to: {fileID: 21300000, guid: dce6ab2af3214ba5a1f6e90c3bc48147, type: 3}
+  - from: {fileID: 21300000, guid: ecd5971b231564baeb9a49ca052b5a88, type: 3}
+    to: {fileID: 21300000, guid: f46b4295759644c3a0bcc641c0d098e0, type: 3}
+  - from: {fileID: 21300000, guid: a613c7faccef449fc85b7943d52d4deb, type: 3}
+    to: {fileID: 21300000, guid: b83c5163928d464d9399ee87665140bc, type: 3}
+  - from: {fileID: 21300000, guid: c2cee371b18654473a7cf9bc0848606c, type: 3}
+    to: {fileID: 21300000, guid: 3a52687c285f41ee8ed27b643212083e, type: 3}
+  - from: {fileID: 21300000, guid: 1a990070d5b464ddaba99d098f0f0673, type: 3}
+    to: {fileID: 21300000, guid: 8b19fd7696154c53b6040c863463a8c4, type: 3}
+  - from: {fileID: 21300000, guid: 432793548bdd6412cafaebf420341c94, type: 3}
+    to: {fileID: 21300000, guid: 5a33522d248d4b7e874c955ba4f198c5, type: 3}
+  - from: {fileID: 21300000, guid: 9d63730815202493db3960712ce23ee2, type: 3}
+    to: {fileID: 21300000, guid: 52f1f730676c4db2b63a019e92474f34, type: 3}
+  - from: {fileID: 21300000, guid: 1e38fd97126554e7da84e2eff466552d, type: 3}
+    to: {fileID: 21300000, guid: 8ded294c672e4b2cb3db47d9486f4618, type: 3}
+  - from: {fileID: 21300000, guid: 618b39e0230a1406ebfba99542c755c5, type: 3}
+    to: {fileID: 21300000, guid: 27cf2898f2884295bbfe9086b4a7d898, type: 3}
+  - from: {fileID: 21300000, guid: c322b9cadec8b45aabd2f464edfc07e4, type: 3}
+    to: {fileID: 21300000, guid: a8db0d293a4d499db03d4df628bcefe3, type: 3}
+  materialSwaps:
+  - from: {fileID: 2100000, guid: 548eb848717e3412f9166a57d21273d1, type: 2}
+    to: {fileID: 2100000, guid: b522d1a3824334833bf7bb5abaa1aee9, type: 2}
+  - from: {fileID: 2100000, guid: 476abda770f4d49878afc3adab8a3390, type: 2}
+    to: {fileID: 2100000, guid: b522d1a3824334833bf7bb5abaa1aee9, type: 2}
+  - from: {fileID: 2100000, guid: d198c6b79b3494fc0bdf18c29c12f8ef, type: 2}
+    to: {fileID: 2100000, guid: fdf675023a554bf9accf8f9cb38230f5, type: 2}

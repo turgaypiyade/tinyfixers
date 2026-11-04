@@ -1,0 +1,77 @@
+{
+  "level": 212,
+  "revision": "v2-grass-over-bottom",
+  "result": "PASS",
+  "moves": 24,
+  "active": 59,
+  "goalCounts": {
+    "34": 4,
+    "42": 14,
+    "63": 2,
+    "33": 1,
+    "26": 2
+  },
+  "sailMaskUnchanged": true,
+  "safeUnchanged": true,
+  "paintCells": [
+    74,
+    75,
+    76,
+    77,
+    83,
+    84,
+    85,
+    86
+  ],
+  "topGrassCells": [
+    74,
+    75,
+    76,
+    77,
+    83,
+    84,
+    85,
+    86
+  ],
+  "checkpoints": [
+    {
+      "phase": "opening",
+      "tileSlots": 41,
+      "naturallyFed": 35,
+      "authoredPinsNeeded": 6
+    },
+    {
+      "phase": "grass cleared",
+      "tileSlots": 41,
+      "naturallyFed": 35,
+      "authoredPinsNeeded": 6
+    },
+    {
+      "phase": "safe opened",
+      "tileSlots": 41,
+      "naturallyFed": 35,
+      "authoredPinsNeeded": 6
+    },
+    {
+      "phase": "grass and paint cleared",
+      "tileSlots": 49,
+      "naturallyFed": 45,
+      "authoredPinsNeeded": 4
+    },
+    {
+      "phase": "hull and tubes open",
+      "tileSlots": 55,
+      "naturallyFed": 55,
+      "authoredPinsNeeded": 0
+    },
+    {
+      "phase": "all goals cleared",
+      "tileSlots": 59,
+      "naturallyFed": 59,
+      "authoredPinsNeeded": 0
+    }
+  ],
+  "protectedFiles": 5980,
+  "changedProtectedFiles": [],
+  "limits": "Static mask/layer/goal/straight cargo exit and full-family removal checkpoints. No runtime gravity/cascade simulation, Unity build, device test, FPS or win-rate measurement. User approved the silhouette; revised play balance is untested."
+}

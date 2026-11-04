@@ -33,6 +33,7 @@ public sealed class ButtonFrameBacking : MonoBehaviour
     public static void Attach(Button button, Sprite frameSprite, float outerScale = 1f)
     {
         if (button == null || frameSprite == null) return;
+        frameSprite = ChapterTheme.SwapActive(frameSprite);   // Usta Ligi: metal çerçeve
         if (!button.TryGetComponent(out ButtonFrameBacking backing))
             backing = button.gameObject.AddComponent<ButtonFrameBacking>();
         backing.outerScale = Mathf.Max(0.01f, outerScale);

@@ -1,5 +1,65 @@
 # Tasarım geri bildirimi
 
+## Eksik boss hedef ikonları · 2026-11-04
+
+- **Kullanıcı:** “boss levellarda goals te boss ikonu görünmüyor ... preleveleditorde de ... son eklediklerin için ikon eklememiş olabilirsin”.
+- **Bulgu/uygulama:**210/220BossDamage iconOverride boş bırakılmıştı. Mevcut önceki boss sprite’ı atandı; bütün22aktif boss kontrol edildi. Yeni boss yazıcıları bu alanı boş üretmeyecek şekilde düzeltildi. Sayısal hedef/oynanış/görsel kompozisyon değişmedi. Bu, seviye dengesi veya şekil onayı değildir.
+
+<!-- feedback: layered-contents-moves-2026-11-04 -->
+
+## Katmanlı içerikler + 213–220 oynanış geri bildirimi · 2026-11-04
+
+- **Kullanıcı:** “çim gellauncher üzerindeyken gellauncher boş görünüyor ... bir çim kalktığında yine dolu çizmeliyiz ... paintbox colorchest ... içini bizim çizdiğimiz tüm objelerde ... wardrobe ... kontrol et”; ayrıca “yeni eklediğin levelları tek hakta geçtim ...219 ve220de bir kez hak kaybettim ... daha uygun hamle”.
+- **Kapsam:** ortak görünüm/katman kurulumunu inceleyip düzelt;213–220hamlelerini oynanışa göre ayarla. Maskeyi/yerleşimi yeniden kurma talebi yok.
+- **Bulgular:** Gel/Laser/Rhodes/Tarp geçici stamp kimliğini gerçek katman sanıp örtünün HP’sini okuyordu. Ortak id+origin sorgusu ilk çizim ve gerçek promotion’da kullanıldı. BatteryBox da cover cleanup ile typed kaydını kaybediyordu. ColorChest/Wardrobe kayıtları ve kapakla açılan içerik yolu denetlendi; gerçek hasar/öğe sayısı korunur.
+- **Oynanış kaydı:**213–218ilk can,219/220birer kayıp sonrası geçiş. Kalan hamle ve tekrar örneklemi yok; bu veri bütün oyuncularda kazanma yüzdesi değildir. Yeni21/21/22/20/21/22/24/28hamle ilk yerel kalibrasyon, henüz oynanmadı.
+
+## 219 ColorChest hatası + iki LampStrip / iki GelLauncher · 2026-11-03
+
+- **Kullanıcı:** “219 ... grass altında color chest ... boş açıldı ama hit alıyor ... ampulleri göstermiyor”, “217 ve senin seçeceğin bir tanesinde ... lampstrip”, “gellauncherı2oyunda lampstripiiki oyunda”, “plastic_xxx ... kaldırabilirsin ... gerekirse boardu da değiştirebilirsin”.
+- **Kapsam:**219 görünüm hatasını düzelt;217 dahil ikiLampStrip ve ikiGelLauncher seviyesi seç. Renkli plastikleri kaldırmak/tahtayı uyarlamak yetkili. Açık şekil beğenisi veya tüm seviyeleri yeniden kurma talebi değildir.
+- **Ajan uygulaması (onay değil):**Lamp217/218, Launcher213/215; maskeler korunup215sütun düzeni kuruldu.219asseti korunarak typed-view cleanup düzeltildi. Statik/PNG ve izole production-method kontrolleri var; kullanıcı yeni yerleşimleri henüz oynamadı/onaylamadı.
+
+## 213–220 · yaratıcı şekiller / dağıtılmış engeller · 2026-11-03
+
+- **Kullanıcı:** “8 tane daha seviye yap”, “fener, bir home, water channel, yel değirmeni ... helmet porcealen, plastic two obstacle, color chest, grass with flower, plastic_xxx ... hepsini bir anda değil uygun şekilde dağıt”, “boardun ortasına ... tek başına duran objeler koyma”, “yelken gibi yaratıcı”, “çok engel koyduysa ... daha düz bir board”.
+- **Yetki/tercih:** Aktif V1 devamı213–220 açıkça yetkilendirildi. Yeni aile tanıtımı gerekmiyor; mevcut türler set içinde dağıtılır. Okunaklı, güzel siluet; anlamlı blok/bant/sütun/kenar konturu, yoğun işte daha sade maske. Ortada rastgele tekil obje yok.
+- **Ajan uygulaması (onay değildir):** Balon/çan/vitray/lale/kum saati/kıvrılan nehir/taç/festival.215Hard,219SuperHard,220Boss10satır. Kuş evleri kenarda, fenerler sütunda, kanallar alt çıkışlı;219Grass sandıkların üstünde.2976 önceki dosya hash ile aynı.
+- **Durum/sınır:** Sekiz taslak statik/görsel olarak incelendi; kullanıcı tarafından henüz oynanıp onaylanmadı.221 veya önceki levelları yeniden tasarlama yetkisi yok.
+
+## 212 yelken beğenisi / boya altta, çim üstte · 2026-11-03
+
+- **Kullanıcı:** “ben genelde çimi en üstte kullanıyorum ... yelken şekli çok güzel ... paintboxları en alta koyalım ... kasa kalabilir ... otlar ... paintboxların üstünde dursun”.
+- **Kabul edilen:** yelkenin görsel silueti beğenildi; maske aynen korunur. Çim için genel yön üst örtüdür; Paint→Grass katmanı bu level için açık taleptir. Önceki Grass→Paint tasarımı bu kapsamda geçersiz. Kasa korunabilir ve aynı yerde bırakıldı.
+- **Uygulama:** iki2×2 Paint, onaylı maskede birlikte sığabildikleri en alt banda (origin74/76) taşındı; üstte8 ayrı Grass. İki Tube üst banda alındı; 24hamle/hedefler/Safe/Cargo/isim/katalog/GUID aynı. Açılış dolumu35 doğal+6 gerçek renk pini; maskede hiçbir hücre değişmedi.
+- **Ders/sınır:** katman çeşitliliğini çimi otomatik olarak alta koymakla kurma; kullanıcı özel ters sıralama istemedikçe önce üstte kullanımını değerlendir. Bu kayıt eski levelları topluca değiştirme yetkisi değildir. Siluet için kullanıcı beğenisi vardır; v2 yerleşimi/oynanış dengesi henüz kullanıcı tarafından denenip onaylanmadı. 213 istenmedi.
+
+## 212 deneme yetkisi ve 211 kullanıcı hamlesi · 2026-11-03
+
+- **Kullanıcı:** “212 yi deneyelim”. Engel örneğine saplanma eleştirisinin ardından yalnız bir sonraki leveli tasarlama yetkisi; hazır tasarıma onay değildir.
+- **Ajan uygulaması:** geniş havuz ve üç oyun fikri değerlendirildi; yelkenli şekli içinde Safe→Cargo, PaintCanBox→Grass ve küçülen Tube→kargo çıkışı ilişkileri seçildi. 24 hamle ilk ayar. 212 not/PNG/asset/katalog/TR+EN ad ve statik kontrol hazır; kullanıcı henüz oynamadı.
+- **211 düzeltmesi:** başlangıç koruma kaydı alınırken 211 dosyasında 24 hamle görüldü; kullanıcı “ben değiştirdim” diyerek değişikliğin kendisine ait olduğunu doğruladı. 211'e yazılmadı; 24 korunur. Önceki ajan 20 hamle kaydı tekrar uygulanmaz.
+- **Sınır:** 211–220 yeni tanıtım molası devam eder. 213 henüz istenmedi; bu çalışma bütün onluğu doldurma yetkisi değildir.
+
+## Örnek verilen engelleri otomatik ana tema yapma · 2026-11-03
+
+- **Kullanıcı:** “düşünme şeklin garip ... wall metal wall vb dedim sen sadece ana obje olarak bunları kullandın bizim 50'ye yakın engelimiz var”. 211'in ardından tasarım yöntemine açık eleştiri.
+- **Kabul edilen düzeltme:** kullanıcı duvarları örnek verdi; geniş mevcut havuzdan bağımsız seçenek geliştirmemizi bekliyordu. Önce farklı mekanik ilişkiler ve görsel fikirler, sonra uygun engel seçimi. “Eski engellerle devam” yalnız birkaç alışılmış aileyi döndürmek değildir. Çok türü tek tahtaya doldurmak veya rastgele serpiştirmek de amaç değildir.
+- **Kanıt/sınır:** güncel ObstacleLibrary ve LevelData tekrar okundu. Kütüphanede 76 ID tanımı var; renk/aşama/yön varyantları, üretim ürünleri ve eski tanımlar bulunduğundan bu sayı 76 bağımsız tasarım ailesi demek değildir. Seçimde tanıtılmışlık ve güncel runtime davranışı korunur.
+- **Kapsam:** yöntem geri bildirimi kaydedildi; kullanıcı 211'i yeniden tasarlamayı veya 212'ye geçmeyi açıkça istemedi. 211 mevcut 20 hamle halinde korunur; bu eleştiri görsel onay veya bütün tasarımın açık ret kararı olarak genişletilmez.
+
+## 211 hamle bütçesi fazla rahat · 2026-11-03
+
+- **Kullanıcı:** “bunun hamlesini düşürebilirsin ... oldukça kolaydı 10 hamle kaldı geride”. Oynanmış 28 hamle sürümüne ait zorluk geri bildirimidir; görsel onay diye yorumlanmaz.
+- **Uygulama:** yalnız 211'in hamlesi 28→20; diğer bütün asset alanları aynı. Bildirilen 18 hamlelik bitirişe yaklaşık iki hamle pay hedeflendi. 20 hamle henüz denenmedi; bu bir başarı oranı ölçümü veya diğer levellar için otomatik kural değildir.
+
+## 211 isteği / 211–220 yeni mekanik molası · 2026-11-03
+
+- **Kullanıcı:** “211-220 arası için eski engelleri, kullanarak devam edeceğiz, katmanlı yapı metall wall wall altı farklı engeller vb ... bunlar örnek ama en önemli board güzel olacak görüntü güzel olacak”.
+- **Kabul edilen yön:** bu onluk için yeni tanıtım kotası uygulanmaz. Eski engel havuzu, alt/üst katman ve görsel kompozisyon birlikte değerlendirilir; duvar örnekleri bütün onluğu aynı tarife dönüştürmez. Yetki yalnız 211'i tasarlamak.
+- **Ajan uygulaması:** 211 Çelik Arma; aşağı daralan 75 hücrelik maske, asimetrik kiremit/metal kuşak, bağlı taş omurga ve 2×2 dolap altında çamur. İlk eş-kanat taslağı ajan görsel incelemesiyle değiştirildi; kullanıcı ret/onayı değildir.
+- **Durum:** asset/katalog/TR+EN ad/not ve gerçek sprite PNG hazır. Statik kontrol ve görsel inceleme var; kullanıcı henüz oynamadı veya onaylamadı. 212'ye başlanmaz.
+
 ## 131–205 genel inceleme / hedef politikası · 2026-10-31
 
 - **Kullanıcı:** “130dan sonra tüm levelları incele ... 5 ve9daki zorluklar fena değil ...

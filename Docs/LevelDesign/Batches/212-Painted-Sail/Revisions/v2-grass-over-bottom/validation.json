@@ -1,0 +1,116 @@
+{
+  "level": 212,
+  "result": "PASS",
+  "moves": 24,
+  "active": 59,
+  "yaml": "Ruby/Psych safe_load",
+  "goalCounts": {
+    "34": 4,
+    "42": 14,
+    "63": 2,
+    "33": 1,
+    "26": 2
+  },
+  "initialTileSlots": 41,
+  "naturallyFed": 32,
+  "authoredHullTiles": 9,
+  "unlockedMatchArea": 35,
+  "unlockedComponents": [
+    4,
+    6,
+    9,
+    16
+  ],
+  "checkpoints": [
+    {
+      "phase": "opening",
+      "tileSlots": 41,
+      "feedReachable": 32,
+      "authoredPinsNeeded": 9
+    },
+    {
+      "phase": "paint removed",
+      "tileSlots": 49,
+      "feedReachable": 47,
+      "authoredPinsNeeded": 2
+    },
+    {
+      "phase": "safe opened",
+      "tileSlots": 41,
+      "feedReachable": 32,
+      "authoredPinsNeeded": 9
+    },
+    {
+      "phase": "cargo delivered and paint removed",
+      "tileSlots": 53,
+      "feedReachable": 51,
+      "authoredPinsNeeded": 2
+    },
+    {
+      "phase": "all goals cleared",
+      "tileSlots": 59,
+      "feedReachable": 59,
+      "authoredPinsNeeded": 0
+    }
+  ],
+  "cargoPaths": [
+    {
+      "cargoCell": 30,
+      "column": 3,
+      "straightPath": [
+        39,
+        48,
+        57,
+        66,
+        75,
+        84,
+        93
+      ]
+    },
+    {
+      "cargoCell": 21,
+      "column": 3,
+      "straightPath": [
+        30,
+        39,
+        48,
+        57,
+        66,
+        75,
+        84,
+        93
+      ]
+    },
+    {
+      "cargoCell": 22,
+      "column": 4,
+      "straightPath": [
+        31,
+        40,
+        49,
+        58,
+        67,
+        76,
+        85,
+        94
+      ]
+    },
+    {
+      "cargoCell": 31,
+      "column": 4,
+      "straightPath": [
+        40,
+        49,
+        58,
+        67,
+        76,
+        85,
+        94
+      ]
+    }
+  ],
+  "protectedFiles": 5977,
+  "changedProtectedFiles": [],
+  "preserved211Moves": 24,
+  "limits": "Static authored data and full-family removal checkpoints. No move/gravity/cascade simulation, Unity build, device test, measured win-rate or FPS. User review pending."
+}

@@ -34,6 +34,36 @@ public static class BotProgression
 
     public static int TeamMembers(int seed) => Rng(seed, salt: 83492791).Next(12, 45);
 
+    /// <summary>
+    /// Usta Ligi botunun haftalık lig puanı (gerçek puan kuralıyla aynı ölçek: seviye başı (100 + kalan hamle × 20) × tur
+    /// çarpanı). Bot başına sabit beceri: günde oynadığı lig seviyesi, kazanma oranı, ortalama kalan hamle, turu; bir kısmı
+    /// haftaya geç katılır → Pazartesi sabahı kimse dolu puanla görünmez, hafta boyunca gerçek zamanla büyür.
+    /// </summary>
+    public static int MasterWeeklyScore(int seed) => MasterScore(seed, WeekSeed(), ElapsedDaysThisWeek());
+
+    /// Geçmiş bir haftanın (ör. "2026-W44") hafta sonu puanı — haftalık ödülün kesin sırası için. Biçim bozuksa -1.
+    public static int MasterFinalScore(int seed, string weekId)
+    {
+        int dash = weekId != null ? weekId.IndexOf("-W", StringComparison.Ordinal) : -1;
+        if (dash <= 0 || !int.TryParse(weekId.Substring(0, dash), out int year)
+            || !int.TryParse(weekId.Substring(dash + 2), out int week)) return -1;
+        return MasterScore(seed, year * 100 + week, 7f);
+    }
+
+    private static int MasterScore(int seed, int weekSeed, float elapsedDays)
+    {
+        var rnd = new System.Random(unchecked(seed * 52813951) ^ weekSeed);
+        int levelsPerDay = rnd.Next(2, 15);
+        float winRate    = 0.55f + (float)rnd.NextDouble() * 0.30f;        // 0.55–0.85
+        int avgMovesLeft = rnd.Next(2, 9);
+        int lap          = 1 + (rnd.NextDouble() < 0.35 ? rnd.Next(1, 3) : 0);
+        float joinDelay  = rnd.NextDouble() < 0.4 ? (float)rnd.NextDouble() * 2.5f : 0f;   // gün
+
+        float activeDays = Mathf.Max(0f, elapsedDays - joinDelay);
+        int levelsWon = Mathf.FloorToInt(activeDays * levelsPerDay * winRate);
+        return levelsWon * MasterLeague.PointsFor(avgMovesLeft, lap);
+    }
+
     // ---- yardımcılar --------------------------------------------------
 
     private static System.Random Rng(int seed, int salt)

@@ -10,7 +10,7 @@ var methods=string.Join("\n",root.DescendantNodes().OfType<MethodDeclarationSynt
 if(before)methods=File.ReadAllText("Tools/Fixtures/RhodesFinalEventOrder/HandleObstacleDestroyed-before.cs.txt");
 var harness=@"
 using System;using System.Collections;using System.Collections.Generic;
-public enum ObstacleId {Safe,AncientSeal,EnergyContainer,OverrideBatteryBox,TarpStatue,Grass,RhodesStatue,Other}
+public enum ObstacleId {Safe,AncientSeal,EnergyContainer,OverrideBatteryBox,TarpStatue,Grass,RhodesStatue,ColorChest,BatteryBox,Wardrobe,Other}
 public class RectTransform {}
 public class GameObject {public bool active=true,destroyed;public void SetActive(bool a){active=a;}}
 public class Image {public GameObject gameObject=new GameObject();public RectTransform rectTransform=new RectTransform();}
@@ -24,7 +24,7 @@ public static class RhodesStatueView {
 }
 public class Probe {
  public Dictionary<int,Image> obstacleViewsByOrigin=new Dictionary<int,Image>();public Dictionary<int,ObstacleId> obstacleDefsByOrigin=new Dictionary<int,ObstacleId>();
- Dictionary<int,object> _overrideBatteryBoxViews=new Dictionary<int,object>(),_pendingObbDetonationViews=new Dictionary<int,object>(),_chestViews=new Dictionary<int,object>(),_batteryBoxViews=new Dictionary<int,object>();
+ Dictionary<int,object> _overrideBatteryBoxViews=new Dictionary<int,object>(),_pendingObbDetonationViews=new Dictionary<int,object>(),_chestViews=new Dictionary<int,object>(),_batteryBoxViews=new Dictionary<int,object>(),_wardrobeViews=new Dictionary<int,object>();
  WaterLily waterLilyService;BoardController board=new BoardController();public int resets;
  bool IsTrackedObstacleViewFor(int i,ObstacleId id)=>obstacleDefsByOrigin.TryGetValue(i,out var actual)&&actual==id;
  void RemoveSafeCellClickProxiesForOrigin(int i){}void RemoveAncientSealCellClickProxiesForOrigin(int i){}

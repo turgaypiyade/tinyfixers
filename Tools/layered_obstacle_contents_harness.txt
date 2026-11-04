@@ -1,0 +1,86 @@
+using System;using System.Linq;using System.Collections.Generic;
+public class Sprite {}
+public class Rect {public float width=100,height=200;}
+public struct Vector2 {public float x,y;public Vector2(float x,float y){this.x=x;this.y=y;}public static Vector2 zero=>new Vector2();}
+public struct Vector2Int {public int x,y;public Vector2Int(int x,int y){this.x=x;this.y=y;}}
+public struct Quaternion {public static Quaternion Euler(float x,float y,float z)=>new Quaternion();}
+public class RectTransform {public Vector2 anchorMin,anchorMax,pivot,anchoredPosition,sizeDelta;public Quaternion localRotation;public Rect rect=new Rect();}
+public class GameObject {readonly Dictionary<Type,object> components=new Dictionary<Type,object>();public bool active=true;public void SetActive(bool v){active=v;}public T Get<T>()where T:class=>components.TryGetValue(typeof(T),out var o)?o as T:null;public T Add<T>()where T:class,new(){var t=new T();components[typeof(T)]=t;return t;}}
+public class Image {public GameObject gameObject=new GameObject();public RectTransform rectTransform=new RectTransform();public bool enabled=true;public Sprite sprite;public T GetComponent<T>()where T:class=>gameObject.Get<T>();}
+public class CanvasGroup {public float alpha;}
+public static class Mathf {public static int Max(int a,int b)=>Math.Max(a,b);public static float Max(float a,float b)=>Math.Max(a,b);public static float Min(float a,float b)=>Math.Min(a,b);public static float Clamp01(float a)=>Math.Max(0,Math.Min(1,a));public static float Lerp(float a,float b,float t)=>a+(b-a)*Clamp01(t);public static float LerpUnclamped(float a,float b,float t)=>a+(b-a)*t;public static float Repeat(float a,float n)=>a-(float)Math.Floor(a/n)*n;public static bool Approximately(float a,float b)=>Math.Abs(a-b)<1e-6;}
+public enum ObstacleId {None,Grass,PaintCanBox,ColorChest,BatteryBox,Wardrobe,LaserCannon,RhodesStatue,TarpStatue,GelLauncherUp,GelLauncherDown,GelLauncherLeft,GelLauncherRight}
+public enum PaintCanColor {Auto,Red}
+public class Stage {public Sprite sprite=new Sprite();}
+public class ObstacleDef {public ObstacleId id;public int hits;public Vector2Int size=new Vector2Int(2,2);public List<Sprite> auxiliarySprites=new List<Sprite>(),wardrobeItemSprites=Enumerable.Range(0,8).Select(_=>new Sprite()).ToList();public List<Stage> stages=new List<Stage>{new Stage(),new Stage()};}
+public class Library {public ObstacleDef Get(ObstacleId id)=>new ObstacleDef{id=id,hits=id==ObstacleId.PaintCanBox?9:id==ObstacleId.LaserCannon||id==ObstacleId.RhodesStatue?4:id==ObstacleId.TarpStatue?3:id==ObstacleId.Grass?1:2};}
+public class LevelData {public int[] obstacles=new int[9],obstacleOrigins=new int[9];public int Index(int x,int y)=>y*3+x;public bool InBounds(int x,int y)=>x>=0&&x<3&&y>=0&&y<3;public PaintCanColor GetPaintCanBoxColor(int i)=>PaintCanColor.Auto;}
+public class State {
+ public LevelData level=new LevelData();Library library=new Library();public int[] remainingHitsByOrigin=new int[9];
+ public Dictionary<(ObstacleId,int),int> wallRemainingHits=new Dictionary<(ObstacleId,int),int>();public Dictionary<int,(ObstacleId Id,int Remaining)> _underTileBeneathMovable=new Dictionary<int,(ObstacleId,int)>();public Dictionary<int,List<StampedBeneath>> _stampedBeneathByCell=new Dictionary<int,List<StampedBeneath>>();
+ /* STAMP */
+ public int ResolveInitialColorCrateHits(ObstacleId id,int origin,int fallback)=>fallback;
+ /* STATE */
+ public ObstacleId GetObstacleIdAt(int x,int y)=>(ObstacleId)level.obstacles[level.Index(x,y)];
+ public void Cover(ObstacleId id,int saved){level.obstacles[4]=(int)ObstacleId.Grass;level.obstacleOrigins[4]=4;remainingHitsByOrigin[4]=1;RegisterStampedBeneath(4,id,4,4);_stampedBeneathByCell[4][0]=new StampedBeneath(id,4,4,saved);}
+ public void Expose(ObstacleId id,int saved){_stampedBeneathByCell.Clear();level.obstacles[4]=(int)id;level.obstacleOrigins[4]=4;remainingHitsByOrigin[4]=saved;}
+}
+public class BoardController {public State ObstacleStateService;public int Width=3;public static bool IsGelLauncher(ObstacleId id)=>id>=ObstacleId.GelLauncherUp&&id<=ObstacleId.GelLauncherRight;}
+public static class GelLauncherFx {public static bool IsVertical(ObstacleId id)=>id==ObstacleId.GelLauncherUp||id==ObstacleId.GelLauncherDown;}
+/* MOTION */
+public class Stripes {public void SetPhase(float p){}}
+public class GelLauncherPressView {
+ public GelLauncherPressMotion motion=new GelLauncherPressMotion();public RectTransform visual=new RectTransform(),chamber=new RectTransform(),gel=new RectTransform(),head=new RectTransform(),rod=new RectTransform();public Stripes stripes=new Stripes();public CanvasGroup opacity=new CanvasGroup();public GameObject cracks=new GameObject();static Sprite frameSprite=new Sprite();int generation;bool firing;
+ void CancelMotion(){motion.Cancel();}public float LiquidRatio=>gel.sizeDelta.y/chamber.rect.height;
+ public static GelLauncherPressView Ensure(Image image,ObstacleId id,int hits){var view=image.GetComponent<GelLauncherPressView>()??image.gameObject.Add<GelLauncherPressView>();view.Configure(image,id,hits);return view;}
+ /* PRESS */
+}
+public class PaintCanBoxView {public int remaining;public static PaintCanColor AutoColorForRow(int y)=>PaintCanColor.Red;public static void Ensure(Image image,int remaining,float size,PaintCanColor color){var v=image.GetComponent<PaintCanBoxView>()??image.gameObject.Add<PaintCanBoxView>();v.remaining=remaining;}}
+public class LaserCannonView {public int remaining;public static LaserCannonView Ensure(Image image,ObstacleDef def,int remaining){var v=image.GetComponent<LaserCannonView>()??image.gameObject.Add<LaserCannonView>();v.remaining=remaining;return v;}}
+public class LaserCannonService {public static LaserCannonService Ensure(BoardController board)=>new LaserCannonService();public void Register(int origin,LaserCannonView view){}}
+public class RhodesStatueView {public int remaining;public static void Ensure(Image image,int remaining){var v=image.GetComponent<RhodesStatueView>()??image.gameObject.Add<RhodesStatueView>();v.remaining=remaining;}}
+public class TarpStatueView {public int hits;public static TarpStatueView Ensure(Image image,int color,int count,int hits,BoardController board){var v=image.GetComponent<TarpStatueView>()??image.gameObject.Add<TarpStatueView>();v.hits=hits;return v;}}
+public class TarpStatueService {public BoardController board;class Statue {public int color,remaining=30;public TarpStatueView view;}readonly Dictionary<int,Statue> statues=new Dictionary<int,Statue>();Statue GetOrCreate(int origin){if(!statues.TryGetValue(origin,out var s))statues[origin]=s=new Statue();return s;}public static TarpStatueService Ensure(BoardController board)=>new TarpStatueService{board=board};/* TARP */}
+public class WardrobeObstacleView {
+ public Image _rootImage=new Image();BoardController _board;bool doorFallEnabled=true;public int items,doors;RectTransform GetComponent<T>()=>_rootImage.rectTransform;
+ void PlaceItems(List<Sprite> sprites,float w,float h,int shelves){items=sprites.Count;}
+ void SpawnFallingDoors(Sprite sprite){doors++;}public void Shake(){}
+ /* WARDROBE */
+}
+public class Spawner {
+ public BoardController board;public LevelData resolvedLevel;int width=3;float tileSize=100;
+ Dictionary<int,WardrobeObstacleView> _wardrobeViews=new Dictionary<int,WardrobeObstacleView>();Dictionary<int,ObstacleDef> obstacleDefsByOrigin=new Dictionary<int,ObstacleDef>();
+ /* SPAWNER */
+ public int Remaining(ObstacleDef def,int fallback=0)=>ResolveObstacleViewRemainingHits(def,1,1,fallback);
+ public void Configure(Image image,ObstacleDef def)=>ConfigureObstacleContentView(image,def,1,1);
+ public void OpenWardrobe(WardrobeObstacleView view,ObstacleDef def){_wardrobeViews[4]=view;obstacleDefsByOrigin[4]=def;HandleWardrobeOpened(4);}
+}
+public static class Checks {
+ static int checks;static void Check(bool ok,string reason){checks++;if(!ok)throw new Exception(reason);}
+ public static void Run(bool before){
+  var lib=new Library();
+  foreach(var id in new[]{ObstacleId.GelLauncherUp,ObstacleId.GelLauncherDown,ObstacleId.GelLauncherLeft,ObstacleId.GelLauncherRight,ObstacleId.LaserCannon,ObstacleId.RhodesStatue,ObstacleId.TarpStatue,ObstacleId.PaintCanBox}){
+   var def=lib.Get(id);def.size=GelLauncherFx.IsVertical(id)?new Vector2Int(1,2):new Vector2Int(2,1);
+   foreach(int saved in before?new[]{def.hits}:Enumerable.Range(1,def.hits)){
+    var s=new State();s.Cover(id,saved);var p=new Spawner{board=new BoardController{ObstacleStateService=s},resolvedLevel=s.level};var image=new Image();
+    s.level.obstacles[4]=(int)id; // Actual beneath drawing stamps identity, NOT the cover HP.
+    p.Configure(image,def);
+    if(BoardController.IsGelLauncher(id)){
+     var view=image.GetComponent<GelLauncherPressView>();
+     if(before){Check(Math.Abs(view.LiquidRatio-.385f)<.00001,"legacy cover HP must reproduce a half-empty press");Console.WriteLine("REPRODUCED: covered fresh launcher reads Grass HP1; actual Configure/ApplyPose draws38.5% liquid instead of63%.");return;}
+     float expected=saved==1?.385f:.63f;Check(Math.Abs(view.LiquidRatio-expected)<.00001,"press liquid must match its own saved layer");Check(!image.enabled,"assembled press stays on child visuals, not the generic root");
+     s.Expose(id,saved);p.Configure(image,def);Check(image.GetComponent<GelLauncherPressView>()==view&&Math.Abs(view.LiquidRatio-expected)<.00001,"promotion reuses children and cannot refill actual damage");
+    }else{
+     int hits=id==ObstacleId.LaserCannon?image.GetComponent<LaserCannonView>().remaining:id==ObstacleId.RhodesStatue?image.GetComponent<RhodesStatueView>().remaining:id==ObstacleId.TarpStatue?image.GetComponent<TarpStatueView>().hits:image.GetComponent<PaintCanBoxView>().remaining;
+     Check(hits==saved,"secondary visual must use its saved HP rather than the cover HP");
+    }
+    Check(p.Remaining(def)==saved,"shared resolver preserves the layer count");
+    Check(s.remainingHitsByOrigin[4]==(BoardController.IsGelLauncher(id)?saved:1),"presentation cannot mutate gameplay HP");
+   }
+  }
+  var fallback=new Spawner();Check(fallback.Remaining(lib.Get(ObstacleId.LaserCannon))==4&&fallback.Remaining(lib.Get(ObstacleId.LaserCannon),2)==2,"no-state fallback respects authored damaged count");
+  var zero=new State();zero.Expose(ObstacleId.PaintCanBox,0);Check(new Spawner{board=new BoardController{ObstacleStateService=zero},resolvedLevel=zero.level}.Remaining(lib.Get(ObstacleId.PaintCanBox))==0,"known exhausted layer does not refill");
+  var ward=new WardrobeObstacleView();ward.SetClosedSprite(new Sprite());var wp=new Spawner{board=new BoardController()};wp.OpenWardrobe(ward,lib.Get(ObstacleId.Wardrobe));Check(ward.items==8&&ward.doors==1,"actual wardrobe open route installs all eight sprite items");
+  Console.WriteLine("PASS: "+checks+" production layered-content/press-pose/wardrobe assertions; four launcher directions and real partial states preserved.");
+ }
+}

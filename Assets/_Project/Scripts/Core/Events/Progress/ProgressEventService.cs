@@ -370,7 +370,7 @@ public class ProgressEventService : MonoBehaviour, IProgressEventService
         if (State == ProgressEventState.Active)
         {
             ApplySignal(new Signal { kind = SignalKind.LevelWon, count = 1 }, fireGainEvent: true);
-            if (LevelAttemptStats.AttemptsOn(CurrentLevel.Global) <= 1)
+            if (LevelAttemptStats.AttemptsOn(CurrentLevel.Played) <= 1)
                 ApplySignal(new Signal { kind = SignalKind.FirstTryWin, count = 1 }, fireGainEvent: true);
         }
 

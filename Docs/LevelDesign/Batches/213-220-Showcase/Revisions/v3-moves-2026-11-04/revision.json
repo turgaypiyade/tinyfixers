@@ -1,0 +1,80 @@
+{
+  "revision": "v3-moves-2026-11-04",
+  "feedback": "User passed213–218 first try; lost one life on each219 and220. Exact remaining moves and repeat sample are unknown.",
+  "levels": [
+    {
+      "level": 213,
+      "title": "Işıklı Balon",
+      "before": 24,
+      "after": 21,
+      "delta": -3,
+      "reason": "One-life pass reported; moderate normal reduction"
+    },
+    {
+      "level": 214,
+      "title": "Guguk Çanı",
+      "before": 24,
+      "after": 21,
+      "delta": -3,
+      "reason": "One-life pass reported; moderate normal reduction"
+    },
+    {
+      "level": 215,
+      "title": "Vitray Atölyesi",
+      "before": 26,
+      "after": 22,
+      "delta": -4,
+      "reason": "Hard passed first try; larger reduction"
+    },
+    {
+      "level": 216,
+      "title": "Sulu Lale",
+      "before": 22,
+      "after": 20,
+      "delta": -2,
+      "reason": "One-life pass reported; moderate normal reduction"
+    },
+    {
+      "level": 217,
+      "title": "Kanatlı Kum Saati",
+      "before": 24,
+      "after": 21,
+      "delta": -3,
+      "reason": "One-life pass reported; moderate normal reduction"
+    },
+    {
+      "level": 218,
+      "title": "Kıvrılan Nehir",
+      "before": 25,
+      "after": 22,
+      "delta": -3,
+      "reason": "One-life pass reported; moderate normal reduction"
+    },
+    {
+      "level": 219,
+      "title": "Çiçekli Taç",
+      "before": 25,
+      "after": 24,
+      "delta": -1,
+      "reason": "One life lost before winning; one-move adjustment only"
+    },
+    {
+      "level": 220,
+      "title": "Büyük Festival",
+      "before": 29,
+      "after": 28,
+      "delta": -1,
+      "reason": "One life lost before winning; one-move adjustment only"
+    }
+  ],
+  "levelHashes": {
+    "Assets/_Project/Settings/ProLevels/LevelV1_00002130.asset": "061bd9aeb3122edce5336377e34d385885be86c545ce87b49c332df645cc9700",
+    "Assets/_Project/Settings/ProLevels/LevelV1_00002140.asset": "259cc6a31b53a69602d4f88eb196f0387740d679fdb3e57358e99b7285cdb477",
+    "Assets/_Project/Settings/ProLevels/LevelV1_00002150.asset": "cb6ed4b8d544f26da41716eddd3152ed615be3d58b21b597845693fc9556b80e",
+    "Assets/_Project/Settings/ProLevels/LevelV1_00002160.asset": "106427a1f74eaac468dfa016ad68e603c7d1e6e4edab3c83112f2d0d29071821",
+    "Assets/_Project/Settings/ProLevels/LevelV1_00002170.asset": "a208340500c3308361a0cb272977fa58094ebbc81687aa7ddbbe0cb06d40e6fd",
+    "Assets/_Project/Settings/ProLevels/LevelV1_00002180.asset": "4cd4ffed0fae7e0c37a5e2e68181ab0caa40f31a8b96a86f00b208eddf187f32",
+    "Assets/_Project/Settings/ProLevels/LevelV1_00002190.asset": "30860c4a5f61dc3d3a9cde047b875f3f018822985ae392ba618d06b08268c87a",
+    "Assets/_Project/Settings/ProLevels/LevelV1_00002200.asset": "6e6ce58bb02cde9cbb319dfc12efa8cb542f8bc70b9428cc42f72f6e8922755f"
+  }
+}

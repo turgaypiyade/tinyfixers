@@ -25,6 +25,24 @@ public static class CloudSaveManifest
         "player_total_stars",
         "player_total_score",
         "player_weekly_score",    // bu haftanın puanı (haftalık liderlik); hafta anahtarıyla birlikte
+        MasterLeague.KeyLap,          // Usta Ligi turu
+        MasterLeague.KeyLapSignature, // turun havuz imzası (yeni paket gelince liste yeniden karışır)
+        MasterLeague.KeyWeekly,       // Usta Ligi haftalık puanı
+        MasterLeagueIntro.KeySeen,    // Usta Ligi girişi izlendi (bir kez)
+        MasterLeague.KeyReached,      // lige ulaştı (sıralama sekmesi)
+        MasterLeague.KeyCleared,      // ligde kazanılan seviye sayısı ("LİG N" numarası)
+        MasterLeague.KeySeason,       // lig sezonu (katalog son seviyesi; değişince lig baştan başlar)
+        MasterLeague.KeyStintWins,    // lig dönemi özeti (yeni paket gelince gösterilir, sonra sıfırlanır)
+        MasterLeague.KeyStintPoints,
+        MasterLeague.KeyStintCoins,
+        MasterLeague.KeyStintBestWeekly,
+        MasterLeague.KeyStintBestRank,
+        MasterLeagueRewards.KeyPendingWeek,   // haftalık lig ödülü: bekleyen hafta + puan, alınan son hafta, rozet sayıları
+        MasterLeagueRewards.KeyPendingPoints,
+        MasterLeagueRewards.KeyClaimedWeek,
+        MasterLeagueRewards.KeyBadgeGold,
+        MasterLeagueRewards.KeyBadgeSilver,
+        MasterLeagueRewards.KeyBadgeBronze,
         "player_avatar_id",
         "booster_hammer_count",
         "booster_row_count",
@@ -92,6 +110,8 @@ public static class CloudSaveManifest
         ProgressResetRevisionKey,
         "player_name",
         "player_weekly_score_week", // player_weekly_score'un ait olduğu ISO hafta (ör. 2026-W45)
+        MasterLeague.KeyBest,         // bu turda geçilen lig seviyeleri + en iyi puanları
+        MasterLeague.KeyWeeklyWeek,   // Usta Ligi haftalık puanının haftası
         "legal_accepted_version", // kabul edilen Şartlar/Gizlilik sürümü (LegalConsent)
         "legal_accepted_at",
         "chat_blocked_uids",      // engellenen oyuncular (ChatModeration)
@@ -316,7 +336,7 @@ public static class CloudSaveManifest
             PlayerPrefs.GetInt(LevelAssist.RewardedAdKey, 0)));
         PlayerPrefs.SetInt(LevelAssist.PurchaseKey, Mathf.Max(localPurchaseEvidence,
             PlayerPrefs.GetInt(LevelAssist.PurchaseKey, 0)));
-        if (LevelAttemptStats.HasActiveAttempt) LevelAssist.RefreshAttemptEligibility(CurrentLevel.Global);
+        if (LevelAttemptStats.HasActiveAttempt) LevelAssist.RefreshAttemptEligibility(CurrentLevel.Played);
 
 #if UNITY_EDITOR
         const int minEditorCoins = 500;

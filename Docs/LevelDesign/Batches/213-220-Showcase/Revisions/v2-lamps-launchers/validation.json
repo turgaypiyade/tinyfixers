@@ -1,0 +1,552 @@
+{
+  "result": "PASS",
+  "levels": [
+    {
+      "level": 213,
+      "title": "Işıklı Balon",
+      "active": 61,
+      "moves": 22,
+      "kind": "Normal",
+      "goalCount": 3,
+      "initialInstances": {
+        "30": 8,
+        "75": 8,
+        "40": 10
+      },
+      "refill": [
+        {
+          "obstacleId": 75,
+          "initial": 8,
+          "goal": 18,
+          "extra": 10
+        }
+      ],
+      "realPins": 16,
+      "channelLengths": [],
+      "specialOnlyBirdHouseCells": [],
+      "checkpoints": [
+        {
+          "phase": "opening",
+          "tileSlots": 35,
+          "naturallyFed": 19,
+          "authoredPinsPresent": 16,
+          "newlyExposedSlotsBelowMovables": []
+        },
+        {
+          "phase": "movables removed",
+          "tileSlots": 61,
+          "naturallyFed": 61,
+          "authoredPinsPresent": 0,
+          "newlyExposedSlotsBelowMovables": []
+        },
+        {
+          "phase": "flowers shed",
+          "tileSlots": 35,
+          "naturallyFed": 19,
+          "authoredPinsPresent": 16,
+          "newlyExposedSlotsBelowMovables": []
+        },
+        {
+          "phase": "grass cleared",
+          "tileSlots": 35,
+          "naturallyFed": 19,
+          "authoredPinsPresent": 16,
+          "newlyExposedSlotsBelowMovables": []
+        },
+        {
+          "phase": "removable solids cleared",
+          "tileSlots": 35,
+          "naturallyFed": 19,
+          "authoredPinsPresent": 16,
+          "newlyExposedSlotsBelowMovables": []
+        },
+        {
+          "phase": "all removable layers cleared",
+          "tileSlots": 61,
+          "naturallyFed": 61,
+          "authoredPinsPresent": 0,
+          "newlyExposedSlotsBelowMovables": []
+        }
+      ]
+    },
+    {
+      "level": 214,
+      "title": "Guguk Çanı",
+      "active": 71,
+      "moves": 24,
+      "kind": "Normal",
+      "goalCount": 4,
+      "initialInstances": {
+        "78": 10,
+        "21": 2,
+        "58": 12,
+        "42": 12
+      },
+      "refill": [],
+      "realPins": 0,
+      "channelLengths": [],
+      "specialOnlyBirdHouseCells": [
+        72,
+        80
+      ],
+      "checkpoints": [
+        {
+          "phase": "opening",
+          "tileSlots": 53,
+          "naturallyFed": 53,
+          "authoredPinsPresent": 0,
+          "newlyExposedSlotsBelowMovables": []
+        },
+        {
+          "phase": "movables removed",
+          "tileSlots": 53,
+          "naturallyFed": 53,
+          "authoredPinsPresent": 0,
+          "newlyExposedSlotsBelowMovables": []
+        },
+        {
+          "phase": "flowers shed",
+          "tileSlots": 53,
+          "naturallyFed": 53,
+          "authoredPinsPresent": 0,
+          "newlyExposedSlotsBelowMovables": []
+        },
+        {
+          "phase": "grass cleared",
+          "tileSlots": 53,
+          "naturallyFed": 53,
+          "authoredPinsPresent": 0,
+          "newlyExposedSlotsBelowMovables": []
+        },
+        {
+          "phase": "removable solids cleared",
+          "tileSlots": 61,
+          "naturallyFed": 61,
+          "authoredPinsPresent": 0,
+          "newlyExposedSlotsBelowMovables": []
+        },
+        {
+          "phase": "all removable layers cleared",
+          "tileSlots": 61,
+          "naturallyFed": 61,
+          "authoredPinsPresent": 0,
+          "newlyExposedSlotsBelowMovables": []
+        }
+      ]
+    },
+    {
+      "level": 215,
+      "title": "Vitray Atölyesi",
+      "active": 99,
+      "moves": 26,
+      "kind": "Hard",
+      "goalCount": 5,
+      "initialInstances": {
+        "9": 12,
+        "11": 12,
+        "12": 12,
+        "40": 16,
+        "21": 4
+      },
+      "refill": [],
+      "realPins": 13,
+      "channelLengths": [],
+      "specialOnlyBirdHouseCells": [],
+      "checkpoints": [
+        {
+          "phase": "opening",
+          "tileSlots": 31,
+          "naturallyFed": 18,
+          "authoredPinsPresent": 13,
+          "newlyExposedSlotsBelowMovables": []
+        },
+        {
+          "phase": "movables removed",
+          "tileSlots": 83,
+          "naturallyFed": 83,
+          "authoredPinsPresent": 0,
+          "newlyExposedSlotsBelowMovables": []
+        },
+        {
+          "phase": "flowers shed",
+          "tileSlots": 31,
+          "naturallyFed": 18,
+          "authoredPinsPresent": 13,
+          "newlyExposedSlotsBelowMovables": []
+        },
+        {
+          "phase": "grass cleared",
+          "tileSlots": 31,
+          "naturallyFed": 18,
+          "authoredPinsPresent": 13,
+          "newlyExposedSlotsBelowMovables": []
+        },
+        {
+          "phase": "removable solids cleared",
+          "tileSlots": 47,
+          "naturallyFed": 18,
+          "authoredPinsPresent": 13,
+          "newlyExposedSlotsBelowMovables": [
+            81,
+            82,
+            83,
+            84,
+            86,
+            87,
+            88,
+            89,
+            90,
+            91,
+            92,
+            93,
+            95,
+            96,
+            97,
+            98
+          ]
+        },
+        {
+          "phase": "all removable layers cleared",
+          "tileSlots": 99,
+          "naturallyFed": 99,
+          "authoredPinsPresent": 0,
+          "newlyExposedSlotsBelowMovables": []
+        }
+      ]
+    },
+    {
+      "level": 216,
+      "title": "Sulu Lale",
+      "active": 63,
+      "moves": 22,
+      "kind": "Normal",
+      "goalCount": 4,
+      "initialInstances": {
+        "58": 12,
+        "30": 12,
+        "76": 1,
+        "42": 12
+      },
+      "refill": [],
+      "realPins": 0,
+      "channelLengths": [
+        15
+      ],
+      "specialOnlyBirdHouseCells": [],
+      "checkpoints": [
+        {
+          "phase": "opening",
+          "tileSlots": 50,
+          "naturallyFed": 50,
+          "authoredPinsPresent": 0,
+          "newlyExposedSlotsBelowMovables": []
+        },
+        {
+          "phase": "movables removed",
+          "tileSlots": 62,
+          "naturallyFed": 62,
+          "authoredPinsPresent": 0,
+          "newlyExposedSlotsBelowMovables": []
+        },
+        {
+          "phase": "flowers shed",
+          "tileSlots": 50,
+          "naturallyFed": 50,
+          "authoredPinsPresent": 0,
+          "newlyExposedSlotsBelowMovables": []
+        },
+        {
+          "phase": "grass cleared",
+          "tileSlots": 50,
+          "naturallyFed": 50,
+          "authoredPinsPresent": 0,
+          "newlyExposedSlotsBelowMovables": []
+        },
+        {
+          "phase": "removable solids cleared",
+          "tileSlots": 50,
+          "naturallyFed": 50,
+          "authoredPinsPresent": 0,
+          "newlyExposedSlotsBelowMovables": []
+        },
+        {
+          "phase": "all removable layers cleared",
+          "tileSlots": 62,
+          "naturallyFed": 62,
+          "authoredPinsPresent": 0,
+          "newlyExposedSlotsBelowMovables": []
+        }
+      ]
+    },
+    {
+      "level": 217,
+      "title": "Kanatlı Kum Saati",
+      "active": 75,
+      "moves": 24,
+      "kind": "Normal",
+      "goalCount": 4,
+      "initialInstances": {
+        "30": 5,
+        "13": 8,
+        "80": 2,
+        "40": 13
+      },
+      "refill": [],
+      "realPins": 35,
+      "channelLengths": [],
+      "specialOnlyBirdHouseCells": [],
+      "checkpoints": [
+        {
+          "phase": "opening",
+          "tileSlots": 41,
+          "naturallyFed": 6,
+          "authoredPinsPresent": 35,
+          "newlyExposedSlotsBelowMovables": []
+        },
+        {
+          "phase": "movables removed",
+          "tileSlots": 67,
+          "naturallyFed": 65,
+          "authoredPinsPresent": 2,
+          "newlyExposedSlotsBelowMovables": []
+        },
+        {
+          "phase": "flowers shed",
+          "tileSlots": 41,
+          "naturallyFed": 6,
+          "authoredPinsPresent": 35,
+          "newlyExposedSlotsBelowMovables": []
+        },
+        {
+          "phase": "grass cleared",
+          "tileSlots": 41,
+          "naturallyFed": 6,
+          "authoredPinsPresent": 35,
+          "newlyExposedSlotsBelowMovables": []
+        },
+        {
+          "phase": "removable solids cleared",
+          "tileSlots": 49,
+          "naturallyFed": 18,
+          "authoredPinsPresent": 29,
+          "newlyExposedSlotsBelowMovables": [
+            73,
+            79
+          ]
+        },
+        {
+          "phase": "all removable layers cleared",
+          "tileSlots": 75,
+          "naturallyFed": 75,
+          "authoredPinsPresent": 0,
+          "newlyExposedSlotsBelowMovables": []
+        }
+      ]
+    },
+    {
+      "level": 218,
+      "title": "Kıvrılan Nehir",
+      "active": 80,
+      "moves": 25,
+      "kind": "Normal",
+      "goalCount": 5,
+      "initialInstances": {
+        "78": 5,
+        "11": 6,
+        "12": 6,
+        "21": 2,
+        "76": 1
+      },
+      "refill": [],
+      "realPins": 3,
+      "channelLengths": [
+        19
+      ],
+      "specialOnlyBirdHouseCells": [
+        35
+      ],
+      "checkpoints": [
+        {
+          "phase": "opening",
+          "tileSlots": 54,
+          "naturallyFed": 51,
+          "authoredPinsPresent": 3,
+          "newlyExposedSlotsBelowMovables": []
+        },
+        {
+          "phase": "movables removed",
+          "tileSlots": 66,
+          "naturallyFed": 64,
+          "authoredPinsPresent": 2,
+          "newlyExposedSlotsBelowMovables": []
+        },
+        {
+          "phase": "flowers shed",
+          "tileSlots": 54,
+          "naturallyFed": 51,
+          "authoredPinsPresent": 3,
+          "newlyExposedSlotsBelowMovables": []
+        },
+        {
+          "phase": "grass cleared",
+          "tileSlots": 54,
+          "naturallyFed": 51,
+          "authoredPinsPresent": 3,
+          "newlyExposedSlotsBelowMovables": []
+        },
+        {
+          "phase": "removable solids cleared",
+          "tileSlots": 62,
+          "naturallyFed": 60,
+          "authoredPinsPresent": 2,
+          "newlyExposedSlotsBelowMovables": []
+        },
+        {
+          "phase": "all removable layers cleared",
+          "tileSlots": 74,
+          "naturallyFed": 73,
+          "authoredPinsPresent": 1,
+          "newlyExposedSlotsBelowMovables": []
+        }
+      ]
+    },
+    {
+      "level": 219,
+      "title": "Çiçekli Taç",
+      "active": 87,
+      "moves": 25,
+      "kind": "Super Hard",
+      "goalCount": 5,
+      "initialInstances": {
+        "58": 18,
+        "40": 18,
+        "80": 2,
+        "21": 2,
+        "42": 26
+      },
+      "refill": [],
+      "realPins": 0,
+      "channelLengths": [],
+      "specialOnlyBirdHouseCells": [],
+      "checkpoints": [
+        {
+          "phase": "opening",
+          "tileSlots": 53,
+          "naturallyFed": 53,
+          "authoredPinsPresent": 0,
+          "newlyExposedSlotsBelowMovables": []
+        },
+        {
+          "phase": "movables removed",
+          "tileSlots": 71,
+          "naturallyFed": 71,
+          "authoredPinsPresent": 0,
+          "newlyExposedSlotsBelowMovables": []
+        },
+        {
+          "phase": "flowers shed",
+          "tileSlots": 53,
+          "naturallyFed": 53,
+          "authoredPinsPresent": 0,
+          "newlyExposedSlotsBelowMovables": []
+        },
+        {
+          "phase": "grass cleared",
+          "tileSlots": 53,
+          "naturallyFed": 53,
+          "authoredPinsPresent": 0,
+          "newlyExposedSlotsBelowMovables": []
+        },
+        {
+          "phase": "removable solids cleared",
+          "tileSlots": 69,
+          "naturallyFed": 68,
+          "authoredPinsPresent": 0,
+          "newlyExposedSlotsBelowMovables": [
+            83
+          ]
+        },
+        {
+          "phase": "all removable layers cleared",
+          "tileSlots": 87,
+          "naturallyFed": 87,
+          "authoredPinsPresent": 0,
+          "newlyExposedSlotsBelowMovables": []
+        }
+      ]
+    },
+    {
+      "level": 220,
+      "title": "Büyük Festival",
+      "active": 84,
+      "moves": 29,
+      "kind": "Boss",
+      "goalCount": 4,
+      "initialInstances": {
+        "75": 14,
+        "78": 8,
+        "30": 10
+      },
+      "refill": [
+        {
+          "obstacleId": 75,
+          "initial": 14,
+          "goal": 18,
+          "extra": 4
+        }
+      ],
+      "realPins": 0,
+      "channelLengths": [],
+      "specialOnlyBirdHouseCells": [],
+      "checkpoints": [
+        {
+          "phase": "opening",
+          "tileSlots": 52,
+          "naturallyFed": 52,
+          "authoredPinsPresent": 0,
+          "newlyExposedSlotsBelowMovables": []
+        },
+        {
+          "phase": "movables removed",
+          "tileSlots": 76,
+          "naturallyFed": 76,
+          "authoredPinsPresent": 0,
+          "newlyExposedSlotsBelowMovables": []
+        },
+        {
+          "phase": "flowers shed",
+          "tileSlots": 52,
+          "naturallyFed": 52,
+          "authoredPinsPresent": 0,
+          "newlyExposedSlotsBelowMovables": []
+        },
+        {
+          "phase": "grass cleared",
+          "tileSlots": 52,
+          "naturallyFed": 52,
+          "authoredPinsPresent": 0,
+          "newlyExposedSlotsBelowMovables": []
+        },
+        {
+          "phase": "removable solids cleared",
+          "tileSlots": 52,
+          "naturallyFed": 52,
+          "authoredPinsPresent": 0,
+          "newlyExposedSlotsBelowMovables": []
+        },
+        {
+          "phase": "all removable layers cleared",
+          "tileSlots": 76,
+          "naturallyFed": 76,
+          "authoredPinsPresent": 0,
+          "newlyExposedSlotsBelowMovables": []
+        }
+      ]
+    }
+  ],
+  "protectedFiles": 2976,
+  "changedProtectedFiles": [],
+  "previousCatalogEntriesPreserved": 212,
+  "previousNamesPreserved": 209,
+  "limits": "Independent Unity YAML and authored geometry/layer/goal checks, not gravity/cascade/bot simulation. No Unity build/Play, device test, measured balance or FPS, upload, or app-release baseline."
+}

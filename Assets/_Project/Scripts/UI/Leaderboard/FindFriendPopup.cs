@@ -79,7 +79,7 @@ public sealed class FindFriendPopup : MonoBehaviour
         CommonPopupView.StyleText(resultSubText, 26, color);
         CommonPopupView.StyleButton(resultAddButton);
         CommonPopupView.Place(notFoundText, popupView.Body, new Rect(0, 0.45f, 1, 0.20f));
-        CommonPopupView.StyleText(notFoundText, 30, color);
+        CommonPopupView.StyleText(notFoundText, 30, color, readable: true);
         if (myIdText != null)
         {
             var row = myIdText.transform.parent;
@@ -90,7 +90,8 @@ public sealed class FindFriendPopup : MonoBehaviour
         }
         CommonPopupView.StyleButton(copyButton);
         CommonPopupView.Place(inviteButton, popupView.Actions, CommonPopupView.ActionRegion(0, 1));
-        CommonPopupView.StyleButton(inviteButton);
+        // Alt ana buton: popup ailesinin klasik lacivert butonu (yeşil kalıbın eşi) + çerçeve — üretilmiş Btn_* görseli değil.
+        CommonPopupView.StyleButton(inviteButton, CommonPopupSkin.Shared.secondaryButton);
         if (inviteButton != null) inviteButton.name = "BtnContinue";
         if (oldCard != null) oldCard.gameObject.SetActive(false);
     }
@@ -105,7 +106,6 @@ public sealed class FindFriendPopup : MonoBehaviour
         UiIcons.SetIconOnly(searchButton, UiIcons.Search, 0.7f);
         UiButtons.Apply(resultAddButton, UiButtons.Kind.SquareGreen, styleLabel: false);
         UiIcons.SetIconOnly(resultAddButton, UiIcons.AddFriend);
-        UiButtons.Apply(inviteButton, UiButtons.Kind.Orange);
         // Yazılı küçük buton: kapsül oranına aç (genişlik ≥ yükseklik × 2.6) + okunur yazı.
         UiButtons.Apply(copyButton, UiButtons.Kind.Blue);
         UiButtons.EnsureCapsuleAspect(copyButton, 2.6f, 30f);

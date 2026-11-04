@@ -445,6 +445,86 @@
           "value": "Devam Etmek İçin Dokun"
         },
         {
+          "key": "master_league_title",
+          "value": "USTA LİGİ"
+        },
+        {
+          "key": "master_league_title_lap",
+          "value": "LİG {0}"
+        },
+        {
+          "key": "master_league_intro_gate",
+          "value": "Tüm seviyeleri tamamladın!\nUstalar seni bekliyor."
+        },
+        {
+          "key": "master_league_intro_floor",
+          "value": "KAT {0}"
+        },
+        {
+          "key": "master_league_intro_roof",
+          "value": "Her turda hamleler azalır, puanlar artar.\nHaftalık sıralamada zirveye çık!"
+        },
+        {
+          "key": "master_league_intro_start",
+          "value": "BAŞLA"
+        },
+        {
+          "key": "master_league_summary_title",
+          "value": "USTA LİGİ ÖZETİ"
+        },
+        {
+          "key": "master_league_summary_intro",
+          "value": "Yeni seviyeler geldi! Ligdeki maceran:"
+        },
+        {
+          "key": "master_league_summary_wins",
+          "value": "Kazanılan lig seviyesi"
+        },
+        {
+          "key": "master_league_summary_points",
+          "value": "Toplam lig puanı"
+        },
+        {
+          "key": "master_league_summary_best_weekly",
+          "value": "En iyi haftalık puan"
+        },
+        {
+          "key": "master_league_summary_best_rank",
+          "value": "En iyi haftalık sıra"
+        },
+        {
+          "key": "master_league_summary_coins",
+          "value": "Ligde kazanılan altın"
+        },
+        {
+          "key": "master_league_summary_lap",
+          "value": "Ulaşılan tur"
+        },
+        {
+          "key": "master_league_summary_start",
+          "value": "Yeni Seviyeler"
+        },
+        {
+          "key": "master_league_reward_title",
+          "value": "HAFTALIK USTA LİGİ"
+        },
+        {
+          "key": "master_league_reward_rank",
+          "value": "Geçen hafta {0}. oldun!"
+        },
+        {
+          "key": "master_league_reward_coins",
+          "value": "+{0}<space=0.3em><sprite name=\"goldmoney\">"
+        },
+        {
+          "key": "master_league_reward_collect",
+          "value": "Topla"
+        },
+        {
+          "key": "master_league_points",
+          "value": "+{0} lig puanı"
+        },
+        {
           "key": "prelevel_popup_title_level",
           "value": "SEVİYE {0}"
         },
@@ -1765,6 +1845,14 @@
           "value": "Arkadaş Ekle"
         },
         {
+          "key": "leaderboard_sub_weekly",
+          "value": "Haftalık"
+        },
+        {
+          "key": "leaderboard_sub_master",
+          "value": "Usta Ligi"
+        },
+        {
           "key": "leaderboard_world",
           "value": "Dünya"
         },
@@ -2090,11 +2178,11 @@
         },
         {
           "key": "wheel_free_spin",
-          "value": "Free Spin"
+          "value": "Ücretsiz Çevir"
         },
         {
           "key": "wheel_paid_spin",
-          "value": "Spin"
+          "value": "Çevir"
         },
         {
           "key": "progress_reward_minutes",
@@ -2326,7 +2414,7 @@
         },
         {
           "key": "wheel_title",
-          "value": "Daily Spin"
+          "value": "Günlük Çark"
         },
         {
           "key": "journey_title",
@@ -2382,11 +2470,11 @@
         },
         {
           "key": "profile_music",
-          "value": "Music"
+          "value": "Müzik"
         },
         {
           "key": "profile_title",
-          "value": "Profile"
+          "value": "Profil"
         },
         {
           "key": "profile_stats_title",
@@ -2406,7 +2494,7 @@
         },
         {
           "key": "profile_name_placeholder",
-          "value": "User Name"
+          "value": "Kullanıcı Adı"
         },
         {
           "key": "workshop_completed_message",
@@ -2426,15 +2514,15 @@
         },
         {
           "key": "settings_follow",
-          "value": "Follow"
+          "value": "Takip Et"
         },
         {
           "key": "settings_help",
-          "value": "Help&Support"
+          "value": "Yardım & Destek"
         },
         {
           "key": "settings_save_progress",
-          "value": "Save Progress"
+          "value": "İlerlemeyi Kaydet"
         },
         {
           "key": "settings_saved",
@@ -2442,7 +2530,7 @@
         },
         {
           "key": "settings_terms",
-          "value": "Terms&Privacy"
+          "value": "Koşullar & Gizlilik"
         },
         {
           "key": "settings_terms_title",
@@ -2566,15 +2654,15 @@
         },
         {
           "key": "settings_music",
-          "value": "Music"
+          "value": "Müzik"
         },
         {
           "key": "settings_sound",
-          "value": "Sound"
+          "value": "Ses"
         },
         {
           "key": "settings_vibration",
-          "value": "Vibration"
+          "value": "Titreşim"
         },
         {
           "key": "settings_hint",
@@ -2582,7 +2670,7 @@
         },
         {
           "key": "settings_notifications",
-          "value": "Notifications"
+          "value": "Bildirimler"
         },
         {
           "key": "settings_toggle_off",
@@ -2646,7 +2734,7 @@
         },
         {
           "key": "wheel_claim",
-          "value": "Claim"
+          "value": "Topla"
         },
         {
           "key": "wonder_mis1_task_1",
@@ -3836,6 +3924,86 @@
         {
           "key": "rising_intro_tap",
           "value": "Tap To Continue"
+        },
+        {
+          "key": "master_league_title",
+          "value": "MASTER LEAGUE"
+        },
+        {
+          "key": "master_league_title_lap",
+          "value": "LEAGUE {0}"
+        },
+        {
+          "key": "master_league_intro_gate",
+          "value": "You completed every level!\nThe masters are waiting."
+        },
+        {
+          "key": "master_league_intro_floor",
+          "value": "FLOOR {0}"
+        },
+        {
+          "key": "master_league_intro_roof",
+          "value": "Each lap: fewer moves, bigger points.\nClimb to the top of the weekly ranking!"
+        },
+        {
+          "key": "master_league_intro_start",
+          "value": "START"
+        },
+        {
+          "key": "master_league_summary_title",
+          "value": "MASTER LEAGUE RECAP"
+        },
+        {
+          "key": "master_league_summary_intro",
+          "value": "New levels are here! Your league run:"
+        },
+        {
+          "key": "master_league_summary_wins",
+          "value": "League levels won"
+        },
+        {
+          "key": "master_league_summary_points",
+          "value": "Total league points"
+        },
+        {
+          "key": "master_league_summary_best_weekly",
+          "value": "Best weekly points"
+        },
+        {
+          "key": "master_league_summary_best_rank",
+          "value": "Best weekly rank"
+        },
+        {
+          "key": "master_league_summary_coins",
+          "value": "Coins earned in league"
+        },
+        {
+          "key": "master_league_summary_lap",
+          "value": "Lap reached"
+        },
+        {
+          "key": "master_league_summary_start",
+          "value": "New Levels"
+        },
+        {
+          "key": "master_league_reward_title",
+          "value": "WEEKLY MASTER LEAGUE"
+        },
+        {
+          "key": "master_league_reward_rank",
+          "value": "You finished #{0} last week!"
+        },
+        {
+          "key": "master_league_reward_coins",
+          "value": "+{0}<space=0.3em><sprite name=\"goldmoney\">"
+        },
+        {
+          "key": "master_league_reward_collect",
+          "value": "Collect"
+        },
+        {
+          "key": "master_league_points",
+          "value": "+{0} league points"
         },
         {
           "key": "prelevel_popup_title_level",
@@ -5156,6 +5324,14 @@
         {
           "key": "leaderboard_add_friend",
           "value": "Add Friend"
+        },
+        {
+          "key": "leaderboard_sub_weekly",
+          "value": "Weekly"
+        },
+        {
+          "key": "leaderboard_sub_master",
+          "value": "Master League"
         },
         {
           "key": "leaderboard_world",

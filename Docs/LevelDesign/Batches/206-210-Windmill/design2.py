@@ -8,6 +8,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[3]; A = ROOT/'Assets/_Project'; P = A/'Settings/ProLevels'
 WINDMILL, FLOUR, WARDROBE, HELMET, LANTERN, BIRDHOUSE, SHIELD = 80, 83, 27, 30, 75, 78, 35
+BOSS_ICON = '{fileID: 21300000, guid: bd8a2a2aabdf46fcabea5eb683bc76d9, type: 3}'
 SIZE2 = {WINDMILL, WARDROBE}
 def tohex(v): return ''.join(struct.pack('<i', x).hex() for x in v)
 def ob(id_, n=None): return ('ob', 1, id_, n)
@@ -201,7 +202,7 @@ def write(n):
         assert LANTERN not in [struct.unpack('<i', bytes.fromhex(h))[0]
                                for h in re.findall(r'.{8}', re.search(r'^  bossThrownObstacles: (\w*)', s, re.M)[1])]
     gl = ''.join(f"  - targetType: {t}\n    tileType: 0\n    obstacleId: {o}\n    collectibleId: "
-                 f"{3 if k == 'bird' else 2 if k == 'boss' else 0}\n    iconOverride: {{fileID: 0}}\n    amount: {a}\n"
+                 f"{3 if k == 'bird' else 2 if k == 'boss' else 0}\n    iconOverride: {BOSS_ICON if k == 'boss' else '{fileID: 0}'}\n    amount: {a}\n"
                  for k, t, o, a in [(g[0], g[1], (0 if g[0] == 'bird' else g[2]), g[3]) for g in d['goals']])
     s, c = re.subn(r'^  goals:\n(?:  - .*\n(?:    .*\n)*)*', '  goals:\n' + gl, s, count=1, flags=re.M); assert c == 1
     asset = P/f'{name}.asset'; meta = P/f'{name}.asset.meta'

@@ -421,6 +421,7 @@ public sealed class LeaderboardScreenController : MonoBehaviour
         string[] labels = service?.GetSubFilters(current) ?? Array.Empty<string>();
         bool hasToggle = labels != null && labels.Length >= 2;
         int active = CurrentSubFilter;
+        LayoutPillsBesideTimeChip(hasToggle);
 
         for (int i = 0; i < toggleButtons.Length; i++)
         {
@@ -463,6 +464,39 @@ public sealed class LeaderboardScreenController : MonoBehaviour
                     : (theme != null ? theme.screenBackground : Color.gray);
             }
         }
+    }
+
+    // Süre çipi (Haftalık) sol üstte hapların hizasında durur: Haftalık sekmesinde de hap varken (Usta Ligi'ne ulaşan oyuncu)
+    // hapları çipin SAĞINDAKİ alana sığdır — sağ kenar ve aradaki boşluk aynı kalır, iki hap eşit daralır. Çip yoksa
+    // (Oyuncular/Takım) skin'deki simetrik düzen. Yalnız sekme/alt seçenek değişince koşar.
+    private void LayoutPillsBesideTimeChip(bool hasToggle)
+    {
+        if (skin == null || toggleButtons.Length < 2 || toggleButtons[0] == null || toggleButtons[1] == null) return;
+        var left = (RectTransform)toggleButtons[0].transform;
+        var right = (RectTransform)toggleButtons[1].transform;
+        float w = skin.togglePillSize.x, spread = skin.togglePillSpread;
+        bool chipShown = hasToggle && timeChip != null && timeChip.gameObject.activeSelf;
+        if (!chipShown || left.parent is not RectTransform parent)
+        {
+            left.sizeDelta = right.sizeDelta = skin.togglePillSize;
+            left.anchoredPosition = new Vector2(-spread, left.anchoredPosition.y);
+            right.anchoredPosition = new Vector2(spread, right.anchoredPosition.y);
+            return;
+        }
+
+        // Çipin sağ kenarı hapların ebeveyn uzayında; hap konumları ebeveynin çapa noktasına göre (anchoredPosition).
+        var corners = new Vector3[4];
+        timeChip.rectTransform.GetWorldCorners(corners);
+        float chipRight = parent.InverseTransformPoint(corners[2]).x;
+        float anchorX = parent.rect.xMin + parent.rect.width * left.anchorMin.x;
+        const float ChipGap = 12f;
+        float gap = 2f * spread - w;                        // haplar arası boşluk (skin)
+        float startX = chipRight + ChipGap - anchorX;       // sol hapın sol kenarı (çapaya göre)
+        float endX = spread + w * 0.5f;                     // sağ hapın sağ kenarı (değişmez)
+        float width = Mathf.Max(w * 0.5f, (endX - startX - gap) * 0.5f);
+        left.sizeDelta = right.sizeDelta = new Vector2(width, skin.togglePillSize.y);
+        left.anchoredPosition = new Vector2(startX + width * 0.5f, left.anchoredPosition.y);
+        right.anchoredPosition = new Vector2(endX - width * 0.5f, right.anchoredPosition.y);
     }
 
     // "Önerilen Arkadaşlar" listesini yeniden basar. Ekle/X, FriendState'i değiştirir;

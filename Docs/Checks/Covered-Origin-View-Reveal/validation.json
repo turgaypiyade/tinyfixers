@@ -1,0 +1,10 @@
+{
+  "settings_files_unchanged": 1040,
+  "before_reproduced": true,
+  "reveal_checks": 413,
+  "cover_clear_orders": 24,
+  "paintcan_regression_checks": 26,
+  "rhodes_regression_checks": 6,
+  "unity_build_or_play_mode_run": false,
+  "device_tested": false
+}

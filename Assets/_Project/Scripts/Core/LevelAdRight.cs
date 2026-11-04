@@ -11,13 +11,13 @@ public static class LevelAdRight
     // Eski adıyla korunuyor (mevcut kayıtlar geçerli kalsın).
     public const string UsedLevelKey = "ad_continue_used_level";
 
-    public static bool IsUsed => PlayerPrefs.GetInt(UsedLevelKey, 0) == CurrentLevel.Global;
+    public static bool IsUsed => PlayerPrefs.GetInt(UsedLevelKey, 0) == CurrentLevel.Played;
 
     /// <summary>Hakkı harcar. Zaten harcanmışsa false (reklam gösterilmemeli).</summary>
     public static bool TryConsume()
     {
         if (IsUsed) return false;
-        PlayerPrefs.SetInt(UsedLevelKey, CurrentLevel.Global);
+        PlayerPrefs.SetInt(UsedLevelKey, CurrentLevel.Played);
         PlayerPrefs.Save();
         return true;
     }

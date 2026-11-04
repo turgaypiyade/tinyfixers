@@ -70,7 +70,7 @@ public sealed class NotificationPermissionPrompt : MonoBehaviour
         var titleRt = view.Title.rectTransform;
         titleRt.offsetMax = new Vector2(titleRt.offsetMax.x, 20f);
         if (view.Title.TryGetComponent(out TextArcEffect arc)) arc.SetArcAngle(17f);
-        var body = CommonPopupView.Text(view.Body, "Message", GameLocalization.Get("notif_prompt_body"), 46, skin.bodyTextColor);
+        var body = CommonPopupView.Text(view.Body, "Message", GameLocalization.Get("notif_prompt_body"), 46, skin.bodyTextColor, readable: true);
         CommonPopupView.Region(body.rectTransform, new Rect(0, 0, 1, 1));
 
         var no = CommonPopupView.Button(view.Actions, "BtnNo", GameLocalization.Get("notif_prompt_no"),

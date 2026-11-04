@@ -1,0 +1,36 @@
+{
+  "result": "PASS",
+  "bossLevels": [
+    10,
+    20,
+    30,
+    40,
+    50,
+    60,
+    70,
+    80,
+    90,
+    100,
+    110,
+    120,
+    130,
+    140,
+    150,
+    160,
+    170,
+    180,
+    190,
+    200,
+    210,
+    220
+  ],
+  "fixedLevels": [
+    210,
+    220
+  ],
+  "onlyBossIconChanged": true,
+  "sprite": "Assets/_Project/Art/UI/WonderCharacters/Badger/BadgerIdle.png",
+  "protectedFiles": 443,
+  "hudAndPrelevelUseAssignedOverride": true,
+  "unityBuildOrPlayRun": false
+}

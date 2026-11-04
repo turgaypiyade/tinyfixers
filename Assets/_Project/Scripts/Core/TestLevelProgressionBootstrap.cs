@@ -18,7 +18,31 @@ public static class TestLevelProgressionBootstrap
         if (UnityEditor.EditorPrefs.GetBool(FreshUserNextLaunchKey, false))
         {
             UnityEditor.EditorPrefs.DeleteKey(FreshUserNextLaunchKey);
-            PlayerPrefs.DeleteAll();
+            // Usta Ligi ilerlemesi/rozetleri Play'ler arasında korunur (debug menüsüyle kurulan lig testleri silinmesin).
+        // Tür, int okumasıyla ayırt edilir: int kaydı GetInt'e değerini, string kaydı nöbetçi varsayılanı döndürür.
+        // (GetString bazı platformlarda int kaydını da metin olarak döndürür → "1" string olarak geri yazılır ve GetInt 0
+        // okur; "lige ulaştı" / "özet bekliyor" bayrakları böyle kayboluyordu.)
+        const int NotInt = int.MinValue;
+        var leagueKeys = MasterLeague.AllKeys;
+        var leagueStrings = new string[leagueKeys.Length];
+        var leagueInts = new int[leagueKeys.Length];
+        var leagueHas = new bool[leagueKeys.Length];
+        for (int k = 0; k < leagueKeys.Length; k++)
+        {
+            leagueHas[k] = PlayerPrefs.HasKey(leagueKeys[k]);
+            if (!leagueHas[k]) continue;
+            leagueInts[k] = PlayerPrefs.GetInt(leagueKeys[k], NotInt);
+            leagueStrings[k] = leagueInts[k] == NotInt ? PlayerPrefs.GetString(leagueKeys[k], "") : null;
+        }
+
+        PlayerPrefs.DeleteAll();
+
+        for (int k = 0; k < leagueKeys.Length; k++)
+        {
+            if (!leagueHas[k]) continue;
+            if (leagueStrings[k] != null) PlayerPrefs.SetString(leagueKeys[k], leagueStrings[k]);
+            else PlayerPrefs.SetInt(leagueKeys[k], leagueInts[k]);
+        }
             PlayerPrefs.Save();
             return;
         }

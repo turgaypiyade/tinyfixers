@@ -1,10 +1,42 @@
 # TinyFixers level tasarım hafızası
 
+## Son düzeltme — Boss hedef ikonu · 2026-11-04
+
+- **Boss ikonları — 2026-11-04:** Kullanıcı goals ve PreLevel/editörde boss ikonunun görünmediğini bildirdi. Aktif V1’de22BossDamage hedefi tarandı; yalnız210/220ikonları fileID0 idi. Önceki20bossun BadgerIdle sprite’ı (bd8a2a2aabdf46fcabea5eb683bc76d9) bu iki hedefe atandı. HUD/PreLevel override önceliği ve editör Sprite alanı kontrol edildi; runtime UI değişmedi. İki authoring yazıcısı ve statik PNG renderer explicit boss ikonunu korur. V4 `Batches/213-220-Showcase/Revisions/v4-boss-goal-icons/` aktif; iki assette yalnız ikon değiştiği ve diğer443seviye/meta/katalog/isim dosyasının aynı kaldığı doğrulandı. Hamle/HP/hedef miktarı/tahta aynı. Unity build/Play/cihaz/yayın yok.
+
+## Güncel durum — örtülü içerikler ve hamle v3 · 2026-11-04
+
+- **2026-11-04 · ortak örtü/içerik düzeltmesi ve hamle v3:** Kullanıcı çim altındaki GelLauncher’ı boş gördü; aynı yolu tüm kodla kurulan içeriklerde kontrol etmemizi istedi. GridSpawner ilk çizim+promotion ortak katman HP sorgusunu kullanıyor (Gel4yön, Paint, Laser, Rhodes); Tarp.Register de saved katmanı okur. İçerik çocukları yeniden üretilmez; gerçek partial state dolmaz. BatteryBox cover-cleanup kaybı da düzeltildi; ColorChest/Battery/Wardrobe typed kayıtları sadece kendi yok edilmesinde temizlenir, board yeniden kurulumunda tüm typed haritalar bırakılır.103içerik/press/wardrobe,30registry,26paint,437promotion,384chest,6Rhodes kontrolleri geçti; eski Gel/Battery hatası fixture ile üretildi. **V2 oynandı:**213–218ilk can,219ve220birer kayıp. **Yeni hamleler213–220:21/21/22/20/21/22/24/28.** Yalnızmoves satırları; maske/hedef/engel/layer/pin/isim/katalog/GUID aynı. V3 `Batches/213-220-Showcase/Revisions/v3-moves-2026-11-04/` aktif. Ayrı MasterLeague/menü/backend/test ayarı eşzamanlı düzenlemeler kayda alındı, görev onları yazmadı. Yenihamleler cihazda oynanmadı; Unitybuild/Play/bot/kaskat/gravity/yayın yok.221istenmedi.
+
+Önceki v2 için “oynanmadı” kayıtları tarihsel kaldı; kullanıcıv2oynadı. V3yenihamleler oynanmadı.
+
+## Güncel revizyon — LampStrip / GelLauncher · 2026-11-03
+
+- **213–220 v2 / ColorChest görünümü — 2026-11-03:** Kullanıcı219’da çim altındaki sandığın ampullerinin görünmediğini bildirdi.Grass destruction artık yalnız gerçekColorChest yıkımında `_chestViews` kaydını kaldırır; mevcut prefab korunur. Eski hata üretildi,384/48sıra test ve413/26/6 regresyon kontrolleri geçti. Kullanıcı isteğiyle **LampStrip217+218, GelLauncher213+215**:217iki kayanL,218ikiC(sol sabit/sağ kayan), kanal aradan;213sepet yanında ikiUp kartuş+Gel61,215dipte dört yatay kartuş/çim üstü dört sandık+Gel99. Seçilen4levelden renkli plastikler kalktı. Hamle213=24(22→24),215=26,217=24,218=25; isim/GUID/katalog aynı.214/216/219/220assetleri ve1–212, diğer kodlar2989hash ile korundu. Batch `Revisions/v2-lamps-launchers/` aktif author/audit/önceki snapshot; dörtPNG/toplu önizleme güncel. Statik ve görsel kontrol var; Unity build/Play/bot/kaskat/gravity/cihaz dengesi/yayın yok. **Oynanıp onaylanmadı;221 istenmedi.**
+
+Önceki213–220v1 durumu tarihsel kaldı. Kullanıcı yardımcı jel kartuşlarını iki levelde, sıralı lambaları217 ve bir başka levelde istedi; yerel revizyon yetkisidir.
+
+## Güncel devam noktası — 213–220 · 2026-11-03
+
+- **213–220 tamamlandı — 2026-11-03, kullanıcı denemesi bekliyor:** Açık sekiz seviye isteğiyle213Işıklı Balon22 ·214Guguk Çanı24 ·215Vitray Atölyesi26Hard ·216Sulu Lale22 ·217Kanatlı Kum Saati24 ·218Kıvrılan Nehir25 ·219Çiçekli Taç25SuperHard ·220Büyük Festival29Boss(9×10,620HP/3dalga) eklendi. Fener/kuş evi/kanal/değirmen set boyunca dağıtıldı; porselen/plastik/ColorChest/çiçekli çim grupları tamamlıyor. Sarı/yeşil plastik mevcut renkli plastik ailesinin varyantlarıdır.1–212(kullanıcının211=24hamlesi ve212 onaylı maskesi dahil), mevcut runtime ve2976 korunan dosya aynı. Batch `Batches/213-220-Showcase/` snapshot/yazıcı/statik audit/katman PNG/toplu önizleme/karşılaştırmalar; sekiz asset/meta, katalog ve TR/EN adlar hazır. Statik YAML/dizi/origin/hedef/başlangıç dolumu/kanal/boss/gruplama kontrolleri ve gerçek PNG incelemesi var; hareketli engellerin düşüşü simüle edilmedi. Oynanmış denge/onay, Unity build/Play, bot/kaskat, yayın veya app-release baseline yok. **221 istenmeden eklenmez.**
+
+Bu kayıt aşağıdaki “213 istenmedi / yalnız211 yetkisi” gibi tarihsel durumların önündedir. Yeni çalışma221’e geçmek değil, kullanıcının213–220 deneme geri bildirimini almaktır.
+
 Bu dosya kullanıcının kalıcı tasarım kurallarını ve oturumlar arası devam noktasını taşır.
 Yeni oturumda önce bunu, sonra `Design-State.md` ve ilgili batch'in kayıtlarını oku.
 Kullanıcının en yeni açık talimatı eski notlardan önceliklidir. Agent taslağı kullanıcı onayı değildir.
 
 ## Güncel ve öncelikli kullanıcı kuralları
+
+- **212 siluet onayı + çim üstte · 2026-11-03:** kullanıcı “yelken şekli çok güzel”, “ben genelde çimi en üstte kullanıyorum”, “paintboxları en alta koyalım ... otlar ... paintboxların üstünde dursun” dedi; kasa kalabilir. Yelken maskesi onaylı ve korunur. Çim için genel tercih **üst örtü**; özel açık talep olmadıkça otomatik alt katman yapma, önceki levellara toplu değişiklik uygulama. 212 v2'de iki 2×2 boya kasası alt gövdede origin74/76, üstlerinde toplam8 Grass; Tube'lar üst banda54/62 taşındı. Kasa, 24 hamle, beş hedef/14 çim aynı; yeni dolumda6 gerçek pin yeterli. Siluet onayı v2 oynanış dengesi onayı değildir. 211 kullanıcının 24 hamlesinde korunur; 213 istenmedi.
+
+- **Son yetki / 212 · 2026-11-03:** kullanıcı “212'yi deneyelim” dedi. 212 Renkli Yelken / Painted Sail taslağı eklendi: 59 aktif hücreli yelkenli, 24 hamle; Safe altında 4 Cargo, 2 PaintCanBox altında 8 Grass, 2 yatay Tube ve 6 açık Grass. Beş hedef toplamı 1/4/2/2/14. Dokuz gerçek başlangıç taşı kapalı alt gövdeyi doldurur. Statik/PNG incelemesi var; henüz kullanıcı onayı/oynanmış denge yok. **211'in hamlesini kullanıcı kendisi 24 yaptı (“ben değiştirdim”); 24 korunur.** Önceki 20 hamle kaydı tarihsel. Sonraki level 213 için talep yok.
+
+- **Engel örneğine saplanma · 2026-11-03:** kullanıcı 211 sonrasında Wall/MetalWall örneklerini ana obje olarak seçmemizi eleştirdi: geniş mevcut engel havuzu değerlendirilmeliydi. “Eski engeller” küçük bir duvar/taş/dolap alt kümesi demek değildir. Önce açık mekanik ailelerinin farklı oynanış ilişkilerinden birkaç aday fikir kur; görsel kompozisyon ve oynanış fikrine uygun aileleri seç. Kullanıcının saydığı örnekleri otomatik ana tema yapma. Bütün aileleri tek tahtaya doldurmak veya çeşitlilik için rastgele eklemek de çözüm değildir. Bu geri bildirim tek başına 211'i yeniden yazma/212'yi tasarlama yetkisi sayılmaz.
+
+- **211 oyun geri bildirimi · 2026-11-03:** kullanıcı 28 hamleyle oldukça kolay geçti, 10 hamle arttı; açık talebiyle yalnız hamle **28→20**. Tahta/hedef/katman/refill korunur. 20 hamle denenmedi; başka levellara otomatik kesinti uygulanmaz.
+
+- **2026-11-03 · 211–220 istisnası:** bu onlukta yeni engel tanıtılmayacak; mevcut engeller ve katmanlı yapıyla devam edilecek. MetalWall/Wall ve alt-üst engel örnekleri seçenek, zorunlu şablon değil. Kullanıcının ana önceliği güzel board/güzel görüntü. Bu açık istisna, yalnız bu onluk için genel 2–3 yeni tanıtım kuralının önündedir. Şu an yalnız **211** tasarım yetkisi var; 212–220 kendiliğinden yapılmaz. 211 Çelik Arma inceleme taslağı; durum ve dosyalar Design-State.md'de.
 
 1. **131 ve sonrasını yeniden incele.** Güncel katalog 205'e kadar; kapsam 131–205, toplam 75 seviye.
    Özellikle 150 sonrası normal seviyeler fazla kolay ve heyecansız bulunuyor.

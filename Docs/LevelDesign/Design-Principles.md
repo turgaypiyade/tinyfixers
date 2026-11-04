@@ -1,5 +1,15 @@
 # Üretim level tasarım ilkeleri
 
+**213–220 kullanıcı yönü · 2026-11-03:**
+
+Sekiz seviye için fener/kuş evi/su kanalı/değirmen; porselen, iki aşamalı plastik, ColorChest, çiçekli çim ve renkli plastiklerle set boyunca dağıtılır. Kullanıcının örneklerini tek tahtaya yığma. Az/orta türde yelken gibi okunaklı yaratıcı siluet; çok engelli kompozisyonda daha düz maske seçilebilir. Ortaya açıklamasız tekil obje serpiştirme. Bu tur213–220 yetkilidir; önceki onaylı levellar korunur.
+
+**Çim örtüsü tercihi — kullanıcı, 2026-11-03:** çim genellikle en üst katmanda kullanılır. Örneğin 212'de boya kasasının üstüne çim serilir; önce çim, sonra boya işi açılır. Çimi otomatik olarak katı kapağın altına saklama. Bu bir genel tercih; kullanıcı aksini açıkça isteyebilir. Onaylı eski levelları topluca yeniden katmanlama yetkisi değildir. 212'nin yelken silueti açıkça beğenildi ve korunur.
+
+**2026-11-03 kullanıcı istisnası:** 211–220 arasında yeni engel tanıtılmaz; eski engeller ve katmanlı yapılar kullanılır. Görsel olarak güzel bir board ana öncelik; MetalWall/Wall örnekleri zorunlu tek şablon değildir. Bu onluk, genel 2–3 yeni engel tanıtımı kotasından muaftır. 211 ve ardından 212 ayrı taleplerle yetkilendirildi; 213–220 kendiliğinden tasarlanmaz.
+
+**211 sonrası yöntem düzeltmesi:** kullanıcı Wall/MetalWall örneklerine fazla bağlanmamızı eleştirdi. Tasarıma bu isimleri ana obje kabul ederek başlama; açık mevcut ailelerin tamamını aday havuzu olarak değerlendir, birkaç farklı oyun fikri kur ve güzel kompozisyonu destekleyen aileleri seç. Aynı dar duvar/taş/dolap havuzuna dönmek çeşitlilik değildir. Hedef çok tür kullanmak değil; seçilen türlerin anlamlı etkileşimi, katman ilişkisi ve farklı bir açılış sağlamasıdır. Renk/aşama/yön varyantları ayrı yaratıcı mekanik fikirler sayılmaz.
+
 ## Güncel öncelik — 131–205 incelemesi · 2026-10-31
 
 - Özellikle 150 sonrası normal levellar kullanıcı tarafından fazla kolay/heyecansız bulundu.

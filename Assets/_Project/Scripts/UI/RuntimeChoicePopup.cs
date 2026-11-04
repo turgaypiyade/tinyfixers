@@ -188,7 +188,7 @@ public sealed class RuntimeChoicePopup : MonoBehaviour
 
         view = CommonPopupView.Create(parent, title, Close);
         var body = CommonPopupView.Text(view.Body, "Message", message, 38,
-            CommonPopupSkin.Shared.bodyTextColor);
+            CommonPopupSkin.Shared.bodyTextColor, readable: true);
         CommonPopupView.Region(body.rectTransform, new Rect(0, 0, 1, 1));
 
         int count = choices != null ? choices.Count : 0;
@@ -243,7 +243,7 @@ public sealed class RuntimeChoicePopup : MonoBehaviour
     public static Button[] BuildOfferBody(CommonPopupView view, string status, IReadOnlyList<OfferButton> options,
         Func<OfferButton, Action> handler)
     {
-        var statusText = CommonPopupView.Text(view.Body, "Status", status, 34, CommonPopupSkin.Shared.bodyTextColor);
+        var statusText = CommonPopupView.Text(view.Body, "Status", status, 34, CommonPopupSkin.Shared.bodyTextColor, readable: true);
         CommonPopupView.Region(statusText.rectTransform, new Rect(0, 0.80f, 1, 0.20f));
 
         int count = options != null ? options.Count : 0;

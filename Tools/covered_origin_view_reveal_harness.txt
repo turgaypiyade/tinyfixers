@@ -1,0 +1,93 @@
+using System;using System.Linq;using System.Collections;using System.Collections.Generic;
+public enum ObstacleId {None,Grass,PaintCanBox,ColorChest,BatteryBox,Wardrobe,Safe,AncientSeal,EnergyContainer,OverrideBatteryBox,TarpStatue,RhodesStatue,Mud,SpreadingGel,RocketBasket,Magnet,Tube,WaterChannel,LampStrip,Windmill,Oil}
+public class RectTransform {public void SetAsLastSibling(){}}
+public class GameObject {public bool destroyed;}
+public class Image {public GameObject gameObject=new GameObject();public RectTransform rectTransform=new RectTransform();public bool raycastTarget;}
+public class ObstacleDef {public ObstacleId id;public bool IsMovableObstacle;}
+public class Library {public ObstacleDef Get(ObstacleId id)=>new ObstacleDef{id=id};}
+public class Footprint {public int x=2,y=2;}
+public class Level {
+ public int width=9;public int[] obstacles=new int[99],obstacleOrigins=Enumerable.Repeat(-1,99).ToArray();public Library obstacleLibrary=new Library();
+ public int Index(int x,int y)=>y*width+x;public Footprint GetObstacleFootprint(ObstacleId id,int idx,ObstacleDef def)=>new Footprint();
+}
+public class State {
+ public Level level;public int initializations,lastRemaining,events;public event Action<int,int> RequestObstacleViewCreate;
+ void InitObstacleStateAt(int origin,int remaining){initializations++;lastRemaining=remaining;}
+ public bool IsGroundLayer(ObstacleId id)=>false;
+ /* GATE */
+ public void Reveal(int origin,ObstacleId id,int remaining=-1)=>ReinitRestoredBeneathOrigin(origin,id,remaining);
+ public void Connect(Spawner spawner){RequestObstacleViewCreate+=(x,y)=>{events++;spawner.Create(x,y);};}
+}
+public class BoardController {
+ public State ObstacleStateService;public static bool IsGelLauncher(ObstacleId id)=>false;
+ public object GetTileViewAt(int x,int y)=>null;public void RefreshOilOverlays(){}
+}
+public class WaterLily {public bool TryPlayGrassBreak(int i,Image image)=>false;}
+public static class WallKind {public static object For(ObstacleId id)=>null;}
+public static class GelLauncherFx {public static void HandOverBody(int i,Image image){}}
+public static class TarpStatueService {public static bool TryPlayFinale(BoardController b,int i,Image image)=>false;}
+public class Spawner {
+ public Level resolvedLevel;public int width=9,height=11;public BoardController board;
+ public Dictionary<int,Image> obstacleViewsByOrigin=new Dictionary<int,Image>(),beneathViewsByCell=new Dictionary<int,Image>();
+ public Dictionary<int,ObstacleDef> obstacleDefsByOrigin=new Dictionary<int,ObstacleDef>();
+ Dictionary<int,object> _overrideBatteryBoxViews=new Dictionary<int,object>(),_pendingObbDetonationViews=new Dictionary<int,object>(),_chestViews=new Dictionary<int,object>(),_batteryBoxViews=new Dictionary<int,object>(),_wardrobeViews=new Dictionary<int,object>();
+ public int configurations;void ConfigureObstacleContentView(Image image,ObstacleDef def,int x,int y){configurations++;}
+ WaterLily waterLilyService;public int newViews,groundCalls;
+ void EnsureGroundBeneath(int x,int y,ObstacleId id){groundCalls++;}
+ void SpawnMudOverlayCell(int x,int y){}void RevealGelCell(int x,int y){}
+ void RevealCoveredAncientSealView(int i){}void RevealCoveredSafeView(int i){}void SpawnMovableObstacleTile(int x,int y){}
+ Image SpawnRocketBasketView(ObstacleDef def,int x,int y){newViews++;return new Image();}
+ Image DrawObstacleImage(ObstacleDef def,int x,int y){newViews++;return new Image();}
+ void RemoveSafeCellClickProxiesForOrigin(int i){}void RemoveAncientSealCellClickProxiesForOrigin(int i){}
+ void ApplyUnderTileCellBgTint(){}void StopObstacleHitShake(int i,RectTransform r){}
+ IEnumerator DestroyGelBodyIfUnclaimed(int i,Image image){yield break;}void StartCoroutine(IEnumerator e){}
+ bool TryPlayRhodesFinalBreak(int i,ObstacleId id)=>false;
+ void Destroy(GameObject go){go.destroyed=true;}
+ /* SPAWNER */
+ public void Create(int x,int y)=>HandleObstacleCreatedDynamic(x,y);
+ public void Retire(int origin,ObstacleId id)=>HandleObstacleDestroyed(origin,id);
+ public Image Add(int origin,ObstacleId id){var image=new Image();obstacleViewsByOrigin[origin]=image;obstacleDefsByOrigin[origin]=new ObstacleDef{id=id};return image;}
+}
+public static class Tests {
+ static int checks,orders;static void Check(bool ok,string reason){checks++;if(!ok)throw new Exception(reason);}
+ static IEnumerable<int[]> Permute(int[] cells){if(cells.Length==0){yield return cells;yield break;}foreach(int cell in cells)foreach(var tail in Permute(cells.Where(c=>c!=cell).ToArray()))yield return new[]{cell}.Concat(tail).ToArray();}
+ public static void Run(bool before){
+  // Same origin/footprint as level 212's left PaintCanBox; exercise all callback orders.
+  foreach(var order in before?new[]{new[]{83,74,75,84}}:Permute(new[]{74,75,83,84})){
+   var level=new Level();var state=new State{level=level};var spawn=new Spawner{resolvedLevel=level,board=new BoardController{ObstacleStateService=state}};state.Connect(spawn);
+   var grass=new Dictionary<int,Image>();foreach(int cell in order){level.obstacles[cell]=(int)ObstacleId.Grass;level.obstacleOrigins[cell]=cell;grass[cell]=spawn.Add(cell,ObstacleId.Grass);}
+   var paint=new Image();spawn.beneathViewsByCell[74]=paint;
+   foreach(int cell in order){
+    // ClearObstacleFromLevel restores data, retires the cover, then requests the revealed origin.
+    level.obstacles[cell]=(int)ObstacleId.PaintCanBox;level.obstacleOrigins[cell]=74;
+    spawn.Retire(cell,ObstacleId.Grass);state.Reveal(74,ObstacleId.PaintCanBox);
+    if(before&&cell==74){
+     Check(!grass[74].gameObject.destroyed,"old gate must reproduce an orphaned grass image");
+     Check(paint.gameObject.destroyed,"old gate must reproduce paint being retired as grass");
+     Console.WriteLine("REPRODUCED: non-origin reveal replaces the tracked grass with paint; origin hit deletes paint and leaves grass orphaned.");return;
+    }
+    if(before)continue;
+    Check(grass[cell].gameObject.destroyed,"retired grass must not survive as a ghost");
+    if(level.obstacles[74]==(int)ObstacleId.Grass){
+     Check(state.events==0&&state.initializations==0,"still-covered origin must not emit/init");
+     Check(spawn.beneathViewsByCell[74]==paint&&!paint.gameObject.destroyed,"covered paint preview must remain underneath");
+     Check(spawn.obstacleViewsByOrigin[74]==grass[74],"live grass ownership must stay intact");
+     Check(spawn.groundCalls==0,"suppressed reveal must not do renderer/ground work");
+    }else{
+     Check(spawn.obstacleViewsByOrigin[74]==paint&&spawn.obstacleDefsByOrigin[74].id==ObstacleId.PaintCanBox,"revealed paint must own the existing image");
+     Check(!paint.gameObject.destroyed&&!spawn.beneathViewsByCell.ContainsKey(74),"promoted preview must remain alive");
+    }
+   }
+   Check(spawn.newViews==0,"reveal must reuse the preview without extra images");
+   Check(spawn.configurations==1,"only the actual preview promotion may refresh its contents");
+   spawn.Retire(74,ObstacleId.PaintCanBox);spawn.Retire(74,ObstacleId.PaintCanBox);
+   Check(paint.gameObject.destroyed&&spawn.obstacleViewsByOrigin.Count==0&&spawn.obstacleDefsByOrigin.Count==0&&spawn.beneathViewsByCell.Count==0,"final retirement must leave no tracked/preview images");orders++;
+  }
+  var s=new State();s.Reveal(0,ObstacleId.PaintCanBox);Check(s.initializations==0,"null level is ignored");
+  s.level=new Level();s.Reveal(-1,ObstacleId.PaintCanBox);s.Reveal(99,ObstacleId.PaintCanBox);Check(s.initializations==0,"invalid origins are ignored");
+  s.level.obstacles[74]=(int)ObstacleId.PaintCanBox;s.level.obstacleOrigins[74]=75;s.Reveal(74,ObstacleId.PaintCanBox);Check(s.initializations==0,"same ID with a different origin is ignored");
+  s.level.obstacleOrigins[74]=74;s.Reveal(74,ObstacleId.PaintCanBox,5);Check(s.initializations==1&&s.lastRemaining==5,"real reveal preserves the remaining-hit override");
+  s.level.obstacles[74]=(int)ObstacleId.Safe;s.Reveal(74,ObstacleId.Safe,3);Check(s.initializations==2&&s.lastRemaining==3,"gate also allows exposed non-paint layers");
+  Console.WriteLine("PASS: "+checks+" production reveal/view ownership checks across "+orders+" cover-clear orders (including both vertical directions).");
+ }
+}

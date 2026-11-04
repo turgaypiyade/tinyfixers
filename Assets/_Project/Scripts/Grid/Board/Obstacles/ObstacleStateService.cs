@@ -989,6 +989,40 @@ public class ObstacleStateService : ISimObstacleQuery
         return Mathf.Max(1, def != null ? def.hits : 1);
     }
 
+    // View construction may temporarily stamp a buried layer into the level arrays.
+    // Resolve the requested identity from the saved stack BEFORE trusting the live
+    // cell's HP, which can still belong to its cover (e.g. Grass=1, PaintCanBox=9).
+    public bool TryGetLayerRemainingHitsAt(int x, int y, ObstacleId id, int origin, out int remaining)
+    {
+        remaining = 0;
+        if (!IsValidCell(x, y) || id == ObstacleId.None || origin < 0 || origin >= level.obstacles.Length)
+            return false;
+
+        int idx = level.Index(x, y);
+        if (_stampedBeneathByCell.TryGetValue(idx, out var layers) && layers != null)
+        {
+            for (int i = layers.Count - 1; i >= 0; i--)
+            {
+                var layer = layers[i];
+                if (layer.Id != id || layer.Origin != origin) continue;
+                remaining = Mathf.Max(0, layer.Remaining);
+                return true;
+            }
+        }
+
+        if (origin == idx && _underTileBeneathMovable.TryGetValue(idx, out var beneath) && beneath.Id == id)
+        {
+            remaining = Mathf.Max(0, beneath.Remaining);
+            return true;
+        }
+
+        if ((ObstacleId)level.obstacles[idx] != id || level.obstacleOrigins[idx] != origin)
+            return false;
+
+        remaining = GetRemainingHitsAt(x, y);
+        return true;
+    }
+
     // Mud can be rendered beneath another obstacle. Reading the primary cell's
     // HP in that case returns the cover's HP, not the visible Mud layer's stage.
     public bool TryGetMudRemainingHitsAt(int x, int y, out int remaining)
@@ -1898,12 +1932,16 @@ public class ObstacleStateService : ISimObstacleQuery
     // Geri yüklenen beneath obstacle'ın hit-state'ini def'ten taze kurar + görselini oluşturur.
     private void ReinitRestoredBeneathOrigin(int beneathOrigin, ObstacleId beneathId, int remainingOverride = -1)
     {
-        // Revealing a non-origin cell must not reset the still-covered origin's HP.
-        if (level != null && beneathOrigin >= 0 && beneathOrigin < level.obstacles.Length
-            && (ObstacleId)level.obstacles[beneathOrigin] == beneathId
-            && level.obstacleOrigins[beneathOrigin] == beneathOrigin)
-            InitObstacleStateAt(beneathOrigin, remainingOverride);
-        if (level != null && level.width > 0)
+        // A non-origin cell can open while the origin is still covered. Do not emit a
+        // view event for that cover: it would promote the beneath image as the cover
+        // and overwrite its tracked view, leaving the original cover image orphaned.
+        if (level == null || beneathOrigin < 0 || beneathOrigin >= level.obstacles.Length
+            || (ObstacleId)level.obstacles[beneathOrigin] != beneathId
+            || level.obstacleOrigins[beneathOrigin] != beneathOrigin)
+            return;
+
+        InitObstacleStateAt(beneathOrigin, remainingOverride);
+        if (level.width > 0)
             RequestObstacleViewCreate?.Invoke(beneathOrigin % level.width, beneathOrigin / level.width);
     }
 

@@ -21,6 +21,7 @@ MonoBehaviour:
   continueButtonFrame: {fileID: 21300000, guid: 432793548bdd6412cafaebf420341c94, type: 3}
   closeButton: {fileID: 21300000, guid: 8fb720f1c5fe84fceaa7533ae6712d06, type: 3}
   font: {fileID: 11400000, guid: 7fc0a3576e2194b19822a1f8eaec994a, type: 2}
+  readableBodyFont: {fileID: 11400000, guid: a83eccbac88584b79b72932e2527695a, type: 2}
   titleFont: {fileID: 11400000, guid: 020a75041a4a04fb28f301a2fa0a06db, type: 2}
   buttonFont: {fileID: 11400000, guid: 020a75041a4a04fb28f301a2fa0a06db, type: 2}
   titleMaterial: {fileID: 2100000, guid: 548eb848717e3412f9166a57d21273d1, type: 2}

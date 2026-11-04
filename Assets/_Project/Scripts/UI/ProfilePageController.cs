@@ -96,6 +96,8 @@ public sealed class ProfilePageController : MonoBehaviour
     {
         MusicState.OnChanged += RefreshMusicName;   // popup'tan yeni parça seçilince güncelle
         Refresh();
+        // Usta Ligi rozeti: avatarın sağ alt köşesinde en değerli rozet (+ ×N). Rozet yoksa görünmez.
+        if (currentAvatarImage != null) MasterBadgeView.Attach(currentAvatarImage.rectTransform)?.Refresh();
     }
 
     private void OnDisable() => MusicState.OnChanged -= RefreshMusicName;

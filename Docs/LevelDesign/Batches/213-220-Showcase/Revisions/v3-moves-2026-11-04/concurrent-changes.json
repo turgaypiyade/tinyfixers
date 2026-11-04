@@ -1,0 +1,50 @@
+{
+  "note": "Independent workspace edits observed during this task. No listed file was written by this task; preserve them. Own runtime files and eight edited level assets are excluded from this baseline and checked separately.",
+  "files": [
+    {
+      "path": "Assets/_Project/Scripts/UI/MasterLeagueIntro.cs",
+      "before": "caa56817edafea9b80ce6dbd090e5ac02bd5919684437353bd7177efe3dd079a",
+      "observed": "394424d2a06314828ed2f9fdd9d469162df3ee445fddc600f0944488db608ae3"
+    },
+    {
+      "path": "Assets/_Project/Scripts/UI/MasterLeagueRewardPopup.cs",
+      "before": "e75ce0b3be1bf67356dcf9bbb841e91387efa2a53dd5cb4193b2ae73e8ded9c6",
+      "observed": "b505c845bad4e328d0292f476c701e28b047c19be032d706adc6e6008f0f1bd0"
+    },
+    {
+      "path": "Assets/_Project/Scripts/UI/MainMenuLevelButtonController.cs",
+      "before": "dfa012e9207b8dca371488a503f01fb6e4c3f8b61d53ecc2f3ff201ec5c46a48",
+      "observed": "8623e409b28771e26bddaba9d71b35171f9f96b4d01cd5ac576d07ba5017af4b"
+    },
+    {
+      "path": "Assets/_Project/Scripts/Core/TestLevelProgressionBootstrap.cs",
+      "before": "455741a7f8f9c4e21dbb0a26479931d876cce649ce0e20376b69c43329089b3d",
+      "observed": "4c1397f95dd882899a54dfcbf34cda0f91f108287222ca066be23922092e8a9f"
+    },
+    {
+      "path": "Assets/_Project/Scripts/Core/MasterLeague.cs",
+      "before": "b9a5ee85f30778aea045c1e57e5d6bd59a8a414add803596d4df8d666ed04476",
+      "observed": "2c3d23a989d2155c068804c6baa57b45eb1569bc6f6bf0bf91bcab291ea964c4"
+    },
+    {
+      "path": "Assets/_Project/Scripts/Editor/MasterLeagueDebugMenu.cs",
+      "before": "9953127c111a27d8341eae17281101b96d04d841f93f5a461b64bd5af183a3a8",
+      "observed": "f9a3e871d7315bddf67bd12bf92c89998a767b4a6e8a5bafc0caba00b3768053"
+    },
+    {
+      "path": "Assets/_Project/Scripts/Core/Backend/CloudSaveManifest.cs",
+      "before": "a2a47acbd7039724147bd1aa4b6f65d10a8101d7d6d0495bd01beec542787756",
+      "observed": "028693318a844c375dced5528b3719d014e5f2dc6fea3e6f3687aa9487319584"
+    },
+    {
+      "path": "Assets/_Project/Scripts/UI/Leaderboard/LeaderboardScreenController.cs",
+      "before": "1d430fa9b706246e9039c2cad4f2796f8d0d923aba096cb93ada01078d817725",
+      "observed": "3f87024735d9e8a4c8b567c34cd9d4b5d479a068011fffcd02b7cb3879728b54"
+    },
+    {
+      "path": "Assets/_Project/Resources/EditorTestSettings.asset",
+      "before": "44df100358c6dfc268f4ea0cc1453e3dad7dd0d05c051d8439c6d1c4f71ba6b0",
+      "observed": "2a575cbcc990cc2df0bb740c6fef8f3b59b8138a4cd9352df8b0524f82dd4209"
+    }
+  ]
+}

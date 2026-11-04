@@ -48,8 +48,21 @@ public class MainMenuLevelButtonController : MonoBehaviour, IPointerDownHandler,
         LivesTimerService.EnsureExists();
         currentLevel = PlayerPrefs.GetInt(prefsLevelKey, 1);
         UpdateVisual();
-        NotificationPermissionPrompt.TryShow(this);
+        // Usta Ligi: ana yol bitip ilk dönüşte giriş (bir kez); yeni paket gelip ilk dönüşte lig dönemi özeti.
+        // Biri açıldıysa bu açılışta bildirim izni sorulmaz (üst üste pencere olmasın).
+        bool leagueMoment = MasterLeagueIntro.TryPlay(this, levelCatalog)
+            // Geçen haftanın lig ödülü (sıra hesaplanınca açılır); hesaplanamazsa sıra özete/bildirim iznine geçer.
+            || MasterLeagueRewardPopup.TryShow(this, ShowNextOpeningPopup)
+            || MasterLeagueSummary.TryShow(this, levelCatalog);
+        if (!leagueMoment) NotificationPermissionPrompt.TryShow(this);
         StoreReviewService.TryRequestOnMainMenu();
+    }
+
+    // Ödül penceresi açılamadıysa (çevrimdışı) açılışın sıradaki penceresi.
+    private void ShowNextOpeningPopup()
+    {
+        if (this == null) return;
+        if (!MasterLeagueSummary.TryShow(this, levelCatalog)) NotificationPermissionPrompt.TryShow(this);
     }
 
     private void OnEnable()
@@ -75,8 +88,20 @@ public class MainMenuLevelButtonController : MonoBehaviour, IPointerDownHandler,
 
     private void UpdateVisual()
     {
-        if (levelText != null)
-            levelText.text = GameLocalization.GetFormat("prelevel_popup_title_level", currentLevel);
+        if (levelText == null) return;
+        // Ana yol bitti → buton Usta Ligi'ni başlatır (Docs/MasterLeague_Plan.md).
+        levelText.text = MasterLeague.IsUnlocked(levelCatalog)
+            ? GameLocalization.GetFormat("master_league_title_lap", MasterLeague.LevelNumber)
+            : GameLocalization.GetFormat("prelevel_popup_title_level", currentLevel);
+    }
+
+    // Ana yol bittiyse sıradaki lig seviyesini oturuma al; bitmediyse (yeni paket geldi) lig oturumunu kapat.
+    private void SyncMasterLeagueSession()
+    {
+        if (MasterLeague.IsUnlocked(levelCatalog))
+            MasterLeague.Begin(MasterLeague.NextLevel(levelCatalog, out _, out _));
+        else
+            MasterLeague.End();
     }
 
     public void OnLevelButtonClicked()
@@ -105,6 +130,8 @@ public class MainMenuLevelButtonController : MonoBehaviour, IPointerDownHandler,
             livesDisplay?.OnAreaClicked();
             return LevelStartResult.NoLives;
         }
+
+        SyncMasterLeagueSession();
 
         if (preLevelSpecialPopup == null)
             preLevelSpecialPopup = FindPreLevelPopupInScene();

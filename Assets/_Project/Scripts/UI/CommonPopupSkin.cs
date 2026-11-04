@@ -16,6 +16,9 @@ public sealed class CommonPopupSkin : ScriptableObject
     public Sprite continueButtonFrame;
     public Sprite closeButton;
     public TMP_FontAsset font;
+    [Tooltip("Popup GÖVDE metni fontu (Inter SemiBold; kullanıcı onayı 2026-11-04 — BakBak One uzun satırda zor okunuyordu). " +
+             "Başlık/buton yazıları kendi fontlarında kalır. Boşsa 'font'.")]
+    public TMP_FontAsset readableBodyFont;
     [Tooltip("Başlık fontu (gösterim: Baloo 2 ExtraBold). Boşsa 'font'.")]
     public TMP_FontAsset titleFont;
     [Tooltip("Buton fontu (Nunito Black). Boşsa 'font'.")]

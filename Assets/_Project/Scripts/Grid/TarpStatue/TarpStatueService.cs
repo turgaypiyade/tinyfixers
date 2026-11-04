@@ -68,12 +68,14 @@ public sealed class TarpStatueService : MonoBehaviour
     {
         if (image == null || board == null) return;
         var s = GetOrCreate(origin);
-        // Örtü (çim) altındayken hücrenin kalan vuruşu örtüye aittir → yalnız en üst katman heykelse oku.
+        // The live origin can belong to a cover, even while preview drawing temporarily
+        // stamps this statue into the level arrays. Read the saved layer's own HP.
         var state = board.ObstacleStateService;
         int ox = origin % board.Width, oy = origin / board.Width;
-        int hits = state != null && state.GetObstacleIdAt(ox, oy) == ObstacleId.TarpStatue
-            ? state.GetRemainingHitsAt(ox, oy) : 3;
-        s.view = TarpStatueView.Ensure(image, s.color, s.remaining, hits > 0 ? hits : 3, board);
+        int hits = 3;
+        if (state != null && state.TryGetLayerRemainingHitsAt(ox, oy, ObstacleId.TarpStatue, origin, out int layerHits))
+            hits = layerHits;
+        s.view = TarpStatueView.Ensure(image, s.color, s.remaining, hits, board);
     }
 
     private Statue GetOrCreate(int origin)

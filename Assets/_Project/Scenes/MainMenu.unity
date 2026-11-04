@@ -1166,8 +1166,8 @@ RectTransform:
   - {fileID: 377572861}
   m_Father: {fileID: 72406}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0.057367828}
-  m_AnchorMax: {x: 0.797546, y: 1.3447694}
+  m_AnchorMin: {x: 0, y: 0.29310346}
+  m_AnchorMax: {x: 0.47368422, y: 6.87069}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -31687,8 +31687,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Help&Support
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 020a75041a4a04fb28f301a2fa0a06db, type: 2}
-  m_sharedMaterial: {fileID: 2100000, guid: 6f215d26e80fc43a58d441a16851b300, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: af5dedf535e914a95b9338f201a87125, type: 2}
+  m_sharedMaterial: {fileID: 3959975710503819313, guid: af5dedf535e914a95b9338f201a87125, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -31712,13 +31712,13 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 44.59
+  m_fontSize: 50
   m_fontSizeBase: 44.59
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 16.05
   m_fontSizeMax: 64.22
-  m_fontStyle: 0
+  m_fontStyle: 1
   m_HorizontalAlignment: 1
   m_VerticalAlignment: 512
   m_textAlignment: 65535
@@ -69743,7 +69743,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 300, y: -95}
+  m_AnchoredPosition: {x: 300, y: -85}
   m_SizeDelta: {x: 400, y: 90}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1524672955
@@ -89253,8 +89253,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Terms&Privacy
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 020a75041a4a04fb28f301a2fa0a06db, type: 2}
-  m_sharedMaterial: {fileID: 2100000, guid: b522d1a3824334833bf7bb5abaa1aee9, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: af5dedf535e914a95b9338f201a87125, type: 2}
+  m_sharedMaterial: {fileID: 3959975710503819313, guid: af5dedf535e914a95b9338f201a87125, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -89278,13 +89278,13 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 44.59
+  m_fontSize: 50
   m_fontSizeBase: 44.59
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 16.05
   m_fontSizeMax: 64.22
-  m_fontStyle: 0
+  m_fontStyle: 1
   m_HorizontalAlignment: 2
   m_VerticalAlignment: 512
   m_textAlignment: 65535
@@ -97700,6 +97700,36 @@ PrefabInstance:
       insertIndex: -1
       addedObject: {fileID: 1255575397}
   m_SourcePrefab: {fileID: 100100000, guid: f91aa304a007f41f9bf748d3d1809f05, type: 3}
+--- !u!114 &714101000000000001
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2123982240}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c369fc9ad96344f5ebbcfec0f8e2f6db, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UiClickSound
+  mode: 2
+  playOnPress: 1
+  clipOverride: {fileID: 8300000, guid: 1b262a3d840248f5ad1f17f1062266f1, type: 3}
+--- !u!114 &714101000000000002
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 89437018}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c369fc9ad96344f5ebbcfec0f8e2f6db, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UiClickSound
+  mode: 2
+  playOnPress: 1
+  clipOverride: {fileID: 8300000, guid: 1b262a3d840248f5ad1f17f1062266f1, type: 3}
 --- !u!114 &720010000000000100
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -99049,33 +99079,3 @@ SceneRoots:
   - {fileID: 1120917708}
   - {fileID: 843498303}
   - {fileID: 979278739}
---- !u!114 &714101000000000001
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2123982240}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c369fc9ad96344f5ebbcfec0f8e2f6db, type: 3}
-  m_Name:
-  m_EditorClassIdentifier: Assembly-CSharp::UiClickSound
-  mode: 2
-  playOnPress: 1
-  clipOverride: {fileID: 8300000, guid: 1b262a3d840248f5ad1f17f1062266f1, type: 3}
---- !u!114 &714101000000000002
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 89437018}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c369fc9ad96344f5ebbcfec0f8e2f6db, type: 3}
-  m_Name:
-  m_EditorClassIdentifier: Assembly-CSharp::UiClickSound
-  mode: 2
-  playOnPress: 1
-  clipOverride: {fileID: 8300000, guid: 1b262a3d840248f5ad1f17f1062266f1, type: 3}

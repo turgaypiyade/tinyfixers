@@ -21,6 +21,12 @@ public class ChapterThemeLibrary : ScriptableObject
     [Header("Themes (one per chapter, any order)")]
     [SerializeField] private List<ChapterTheme> themes = new();
 
+    [Header("Usta Ligi")]
+    [Tooltip("Ana yol bitince (current_level > katalogdaki son seviye) bölüm teması yerine bu tema kullanılır. " +
+             "Yeni seviyeler gelince kendiliğinden bölüm temasına döner.")]
+    [SerializeField] private ChapterTheme masterLeagueTheme;
+    [SerializeField] private LevelCatalog levelCatalog;
+
     // ── Public API ───────────────────────────────────────────────────
 
     /// <summary>Converts a 1-based global level number to a 1-based chapter number.</summary>
@@ -54,9 +60,16 @@ public class ChapterThemeLibrary : ScriptableObject
     public ChapterTheme GetCurrentTheme()
     {
         int level   = PlayerPrefs.GetInt(prefsLevelKey, 1);
-        int chapter = GetChapterForLevel(level);
-        return GetThemeForChapter(chapter);
+        ChapterTheme theme = IsMasterLeagueLevel(level)
+            ? masterLeagueTheme
+            : GetThemeForChapter(GetChapterForLevel(level));
+        ChapterTheme.Active = theme;
+        return theme;
     }
+
+    // MasterLeague.IsUnlocked ile aynı kural; havuz listesi kurmadan (tema her sahne açılışında okunur).
+    private bool IsMasterLeagueLevel(int level)
+        => masterLeagueTheme != null && levelCatalog != null && level > levelCatalog.MaximumGlobalLevel;
 
     /// <summary>Returns the current 1-based chapter number derived from PlayerPrefs.</summary>
     public int GetCurrentChapter()
