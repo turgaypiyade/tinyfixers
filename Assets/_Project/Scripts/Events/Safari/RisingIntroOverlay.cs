@@ -275,7 +275,12 @@ public sealed class RisingIntroOverlay : MonoBehaviour
     private void ApplyStaticText()
     {
         if (titleText != null)
+        {
             titleText.text = LocalizedText("rising_intro_title", "Tırmanış başlıyor!");
+            // Sahnedeki autosize alt sınırı 78 pt: İngilizce "THE CLIMB IS STARTING!" 900 px kutuya sığmayıp iki yandan
+            // taşıyordu. Tek satır, yalnız genişliğe göre küçült (dile göre uzunluk değişir).
+            SingleLineText.FitWidth(titleText, 0.5f);
+        }
         if (tapText != null)
             tapText.text = LocalizedText("rising_intro_ready", "ZİRVEYE HAZIR MISIN?\n<size=38>Devam etmek için dokun</size>");
     }
