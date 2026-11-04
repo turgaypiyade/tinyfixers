@@ -10268,7 +10268,7 @@ MonoBehaviour:
   rowBoosterWithDrillSprite: {fileID: 21300000, guid: 6383ea1b8ef964caa93201ecd940dce2, type: 3}
   rowBoosterWithoutDrillSprite: {fileID: 21300000, guid: 34a21e80fd8d04f8e992b75b9fb13971, type: 3}
   scissorLiftExtraDropTiles: 0.2
-  hammerScreenCrackChance: 1
+  hammerScreenCrackChance: 0.3
   hammerScreenCrackOncePerBoard: 1
   boosterFxParent: {fileID: 415868972}
   hammerBoosterFallbackSprite: {fileID: 21300000, guid: e200b3928e79346e2ab4da678e139c53, type: 3}

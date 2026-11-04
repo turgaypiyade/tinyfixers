@@ -8,8 +8,9 @@ using UnityEngine.Purchasing;
 
 /// <summary>
 /// Unity IAP 5: native store prices, purchase callbacks, durable duplicate receipts and reconnects.
-/// Device purchases never fall back to simulation. Receipt verification on a trusted server remains
-/// a separate integration; a PendingOrder callback alone is not server-side verification.
+/// Device purchases never fall back to simulation. Google Play makbuzları cihazda Google imzasıyla doğrulanır
+/// (GooglePlayReceiptCheck; sahte satın alma araçlarına karşı). Apple'da StoreKit 2 işlemi kendisi imzalar/doğrular.
+/// Sunucu taraflı doğrulama (Cloud Functions, Blaze planı) ayrı bir entegrasyondur.
 /// </summary>
 public static class StoreIap
 {
@@ -287,6 +288,17 @@ public static class StoreIap
             return;
         }
 #endif
+#if UNITY_ANDROID && !UNITY_EDITOR
+        if (!GooglePlayReceiptCheck.Accepts(order.Info.Receipt))
+        {
+            // ONAYLANMAZ ve teslim edilmez: sahte makbuz ödülsüz kalır; yanlışlıkla reddedilen gerçek ödemeyi Google
+            // onaylanmadığı için 3 gün içinde otomatik iade eder (oyuncu parasız ödül kaybetmez).
+            Debug.LogError("[IAP] Google Play receipt signature rejected; order not delivered or confirmed.");
+            purchasingOffer = null;
+            ShowUnavailable();
+            return;
+        }
+#endif
         var items = order.CartOrdered?.Items();
         if (items == null || items.Count == 0) { purchasingOffer = null; return; }
         foreach (var item in items)
@@ -412,3 +424,71 @@ public static class StoreIap
         PlayerPrefs.Save();
     }
 }
+
+#if TF_IAP
+/// <summary>
+/// Google Play makbuz imzası (cihaz üstü, Unity IAP CrossPlatformValidator). Anahtar: Unity ▸ Services ▸ In-App Purchasing ▸
+/// Receipt Validation Obfuscator ile Play Console lisans anahtarından üretilen GooglePlayTangle (kod yansımayla bulunur →
+/// üretilmeden de derlenir). GÜVENLİ VARSAYILAN: Tangle yok / anahtar geçersiz / beklenmeyen hata → doğrulama YAPILMAZ
+/// (gerçek ödeme asla bloke edilmez); yalnız imza, paket adı ya da makbuz verisi açıkça geçersizse reddedilir.
+/// </summary>
+internal static class GooglePlayReceiptCheck
+{
+    private static bool initialized;
+    private static UnityEngine.Purchasing.Security.CrossPlatformValidator validator;
+
+    public static bool Accepts(string unityReceipt)
+    {
+        var v = Validator();
+        if (v == null) return true;   // doğrulayıcı kurulamadı → engelleme yok (yapılandırma eksik)
+        try
+        {
+            v.Validate(unityReceipt);
+            return true;
+        }
+        catch (UnityEngine.Purchasing.Security.InvalidSignatureException) { return false; }   // Google imzası tutmuyor
+        catch (UnityEngine.Purchasing.Security.IAPSecurityException error)
+        {
+            // Paket adı farklı / makbuz verisi boş → sahte. Anahtar, mağaza ya da beklenmeyen biçim (Generic) → engelleme yok.
+            // (Bu türler yalnız cihaz derlemesinde var; editör stub'ında yok → adıyla ayırt edilir.)
+            string type = error.GetType().Name;
+            if (type == "InvalidBundleIdException" || type == "InvalidReceiptDataException") return false;
+            Debug.LogWarning($"[IAP] Receipt check inconclusive ({type}); purchase allowed.");
+            return true;
+        }
+        catch (System.Exception error)
+        {
+            Debug.LogWarning($"[IAP] Receipt check skipped: {error.Message}");
+            return true;
+        }
+    }
+
+    private static UnityEngine.Purchasing.Security.CrossPlatformValidator Validator()
+    {
+        if (initialized) return validator;
+        initialized = true;
+        try
+        {
+            System.Type tangle = null;
+            foreach (var assembly in System.AppDomain.CurrentDomain.GetAssemblies())
+            {
+                tangle = assembly.GetType("UnityEngine.Purchasing.Security.GooglePlayTangle");
+                if (tangle != null) break;
+            }
+            var data = tangle?.GetMethod("Data")?.Invoke(null, null) as byte[];
+            if (data == null || data.Length == 0)
+            {
+                Debug.LogWarning("[IAP] GooglePlayTangle missing; receipt signature check disabled.");
+                return null;
+            }
+            validator = new UnityEngine.Purchasing.Security.CrossPlatformValidator(data, Application.identifier);
+        }
+        catch (System.Exception error)
+        {
+            Debug.LogWarning($"[IAP] Receipt validator unavailable: {error.Message}");
+            validator = null;
+        }
+        return validator;
+    }
+}
+#endif

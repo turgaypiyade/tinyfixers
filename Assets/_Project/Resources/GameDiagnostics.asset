@@ -18,5 +18,5 @@ MonoBehaviour:
   specialChains: 0
   performance: 0
   backend: 0
-  analyticsEvents: 1
+  analyticsEvents: 0
   editorTools: 0

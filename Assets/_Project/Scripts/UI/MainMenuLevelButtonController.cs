@@ -35,6 +35,10 @@ public class MainMenuLevelButtonController : MonoBehaviour, IPointerDownHandler,
     [SerializeField] private bool enableDebugLevelSelector = true;
     [SerializeField, Min(0.25f)] private float debugLongPressSeconds = 3f;
 
+    // Basılı tut → seviye seçici/ilerleme sıfırlama yalnız editör ve Development Build'de (mağaza sürümünde sahne değeri ne
+    // olursa olsun kapalı — kapalı testte oyuncu seviye atlayabiliyordu, 2026-11-04).
+    private bool DebugSelectorEnabled => enableDebugLevelSelector && (Application.isEditor || Debug.isDebugBuild);
+
     private int currentLevel;
     private Coroutine debugLongPressRoutine;
     private bool suppressNextLevelClick;
@@ -154,7 +158,7 @@ public class MainMenuLevelButtonController : MonoBehaviour, IPointerDownHandler,
 
     public void OnPointerDown(PointerEventData eventData)
     {
-        if (!enableDebugLevelSelector)
+        if (!DebugSelectorEnabled)
             return;
 
         StopDebugLongPressDetection();
@@ -421,7 +425,7 @@ public class MainMenuLevelButtonController : MonoBehaviour, IPointerDownHandler,
 
     private void ResetDebugProgress()
     {
-        if (this == null || !enableDebugLevelSelector) return;
+        if (this == null || !DebugSelectorEnabled) return;
         int maxLevel = levelCatalog != null ? levelCatalog.MaximumGlobalLevel : currentLevel;
         if (!FirebaseCloudSaveService.TryResetProgress(maxLevel, out string error))
         {

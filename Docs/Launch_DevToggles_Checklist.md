@@ -6,12 +6,13 @@ Test için açık tutulan, canlıdan (mağaza sürümü) önce kapatılacak/göz
 ## A. Cihazda ETKİLİ — kapatılmazsa oyuncu görür
 | # | Ayar | Nerede | Şu an | Canlıda |
 |---|---|---|---|---|
-| 1 | Seviye seçici 3 sn basılı tut hilesi (debug level paneli) | `MainMenu.unity` → MainMenuLevelButtonController `enableDebugLevelSelector` | **1 (açık)**, `#if` koruması YOK → cihazda da çalışır | 0 yap (ya da kodda `DEVELOPMENT_BUILD` ile koru) |
-| 2 | Çekiçte ekran çatlağı ihtimali | `01_Game.unity` → BoardController `hammerScreenCrackChance` | **1.0 (%100)** | 0.3 (%30, kod varsayılanı) |
+| 1 | Seviye seçici 3 sn basılı tut hilesi (debug level paneli) | `MainMenu.unity` → MainMenuLevelButtonController `enableDebugLevelSelector` | 1 (sahne) — **2026-11-04 kodda korundu**: yalnız editör + Development Build'de çalışır | Tamam (mağaza sürümünde kendiliğinden kapalı) |
+| 2 | Çekiçte ekran çatlağı ihtimali | `01_Game.unity` → BoardController `hammerScreenCrackChance` | **0.3 (%30)** — 2026-11-04 düzeltildi | Tamam |
 | 3 | Bostan Hasadı (kazı) event takvimi | `Resources/Events/HarvestConfig.asset` `activeDays` | 5/7 (2026-10-27 düzeltildi) | Tamam |
 | 4 | AdMob gerçek reklam kimlikleri | `Resources/MonetizationConfig.json` + `GoogleMobileAdsSettings.asset` | İki platformun gerçek ID’leri bağlandı; dev yalnız test reklamı kullanır | AdMob ödeme profili, mağaza bağlantısı ve UMP mesajları tamamlanmalı |
-| 5 | IAP sunucu taraflı makbuz doğrulama | `UI/Shop/StoreIap.cs` (not: "canlıdan önce eklenecek") | yok | Eklenmeli (sahte satın alma koruması) |
-| 6 | Log bayrakları | `Resources/GameDiagnostics.asset` | `analyticsEvents: 1` | 0 (gereksiz log) |
+| 5 | IAP makbuz doğrulama | `UI/Shop/StoreIap.cs` → `GooglePlayReceiptCheck` | 2026-11-04: Android cihaz üstü Google imza kontrolü eklendi (sahte makbuz → teslim/onay yok, Google 3 günde iade eder). Güvenli varsayılan: anahtar yoksa engellemez. **GooglePlayTangle üretilmeli** (Services ▸ In-App Purchasing ▸ Receipt Validation Obfuscator, Play lisans anahtarı). Sunucu doğrulaması Blaze planı ister | Tangle üretildi mi? |
+| 6 | Log bayrakları | `Resources/GameDiagnostics.asset` | `analyticsEvents: 0` — 2026-11-04 kapatıldı | Tamam |
+| 7 | Firestore takım kuralı | `firestore.rules` → `teams/{teamId}` `allow create, update: if request.auth != null` | Giriş yapmış HERKES her takımın kaydını (ad, açıklama, giriş seviyesi) değiştirebilir | Açık yayından ÖNCE: oluşturma yalnız kurucu (kendi uid'i), güncelleme yalnız üye / ad-açıklama yalnız kurucu. Kodun yazdığı alanlara göre yazılmalı (FirebaseTeamCloud). Kapalı testte ertelendi (2026-11-04) |
 
 ## B. Yalnız editör/dev build — cihazda zaten pasif (temizlik için)
 | # | Ayar | Not |
@@ -29,6 +30,11 @@ Test için açık tutulan, canlıdan (mağaza sürümü) önce kapatılacak/göz
 - Firestore `config/levels` BOŞ kalmalı (yalnız acil durum).
 
 Yeni bir test kolaylığı eklendiğinde bu listeye satır ekle.
+
+**Tarama 2026-11-04:** Resources/Settings/Data asset'leri ve sahne/prefab'larda adı debug/force/cheat/mock/fake/test geçen
+açık alanlar arandı. Bulunanlar: `BridgeRepairConfig.debugForceAvailable: 1` (kod `#if UNITY_EDITOR`, cihazda etkisiz),
+`WorkshopController.enableDebugKeys: 1` (`#if UNITY_EDITOR`, cihazda derlenmez), `enableDebugLevelSelector` (artık kodda
+korumalı). Usta Ligi debug menüleri Editor klasöründe; `TestLevelProgressionBootstrap` `#if UNITY_EDITOR`.
 
 ## D. Event açılış seviyeleri (2026-10-27, kullanıcı kararı)
 Haftalık Görevler (Progress Event) 20 · Seri Bonusu 30 · Tırmanış/Safari 45 · Bostan Hasadı 50 (5 gün açık / 2 gün ara) · Köprü Tamiri 60 · Gear Cup 70.
