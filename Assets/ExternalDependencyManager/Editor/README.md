@@ -12,7 +12,7 @@ requires:
 *   Android specific libraries (e.g
     [AARs](https://developer.android.com/studio/projects/android-library.html))
 
-*   iOS [CocoaPods](https://cocoapods.org/)
+*   iOS [CocoaPods](https://cocoapods.org/), [Swift Packages](https://www.swift.org/packages/)
 
 *   Version management of transitive dependencies
 
@@ -332,6 +332,31 @@ For example, to add the AdMob package to replace the Pod example provided below:
                       upToNextMajor="true">
     <swiftPackage name="GoogleMobileAds" replacesPod="Google-Mobiles-Ads-SDK"/>
   </remoteSwiftPackage>
+</dependencies>
+```
+
+##### Target Selection for Swift Packages
+
+By default, packages are linked to the Unity framework target (`UnityFramework`). Use the `target` attribute on `<swiftPackage>` to specify which Xcode target the library or framework product should be linked to:
+
+```xml
+<dependencies>
+  <iosPods>
+    <remoteSwiftPackage url="https://github.com/firebase/firebase-ios-sdk.git">
+      <package version="10.0.0" />
+      <!-- Linked only to UnityFramework (default) -->
+      <swiftPackage name="FirebaseAnalytics" target="Framework" />
+
+      <!-- Linked only to the main app target (Unity-iPhone) -->
+      <swiftPackage name="FirebaseMessaging" target="Main" />
+
+      <!-- Linked to both UnityFramework and Unity-iPhone -->
+      <swiftPackage name="SharedKit" target="All" />
+
+      <!-- Linked to a custom target by exact target name -->
+      <swiftPackage name="NotificationService" target="NotificationServiceExtension" />
+    </remoteSwiftPackage>
+  </iosPods>
 </dependencies>
 ```
 
