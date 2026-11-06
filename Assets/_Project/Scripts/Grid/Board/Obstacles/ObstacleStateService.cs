@@ -522,6 +522,12 @@ public class ObstacleStateService : ISimObstacleQuery
         if (IsInRevealGrace(idx))
             return new ObstacleHitResult(false, false, false, default, default, Array.Empty<int>());
 
+        // Movables are primary in the data even when Grass/Oil is drawn ABOVE them.
+        // Resolve that cover before every interceptor (including Hamster feeding) or
+        // invulnerability rule. A rejected cover hit must never reach the movable.
+        if (TryConsumeCoveringOverlayHit(idx, context, sourceTileType, out var coverResult))
+            return coverResult;
+
         if (id == ObstacleId.Grass && waterLilyCells.Contains(idx))
         {
             bool? handled = WaterLilyHitInterceptor?.Invoke(idx, context);
@@ -532,10 +538,7 @@ public class ObstacleStateService : ISimObstacleQuery
 
         // Cargo (exitAtBottom): KIRILMAZ — hiçbir kaynak (match/special/booster) hasar veremez.
         // Yalnızca en alta inip board'dan çıkınca toplanır (BoardController bottom-exit akışı).
-        // AMA üstündeki örtü (Grass/Oil — kargo hücreye girince beneath store'a iner, görsel olarak
-        // üstte durur) vuruşu alır: aşağıdaki STACK KURALI bu erken dönüşün arkasında kaldığı için
-        // kargo'nun geçtiği grass hiç kırılmıyordu (L61 Override+Override: dalga 1. satıra varmadan
-        // tepedeki kargolar grass hücrelerine indi, 3 grass sağ kaldı).
+        // Üstündeki Grass/Oil örtüsü yukarıda vuruşu alır; kargonun kendisine hasar geçmez.
         // Brandalı heykel: branda kalkana (renk toplaması bitene) dek hiçbir vuruş ilerletmez.
         if (id == ObstacleId.TarpStatue && IsTarpStatueCoveredAt(x, y))
             return new ObstacleHitResult(false, false, false, default, default, Array.Empty<int>());
@@ -544,11 +547,7 @@ public class ObstacleStateService : ISimObstacleQuery
         if (id == ObstacleId.BilliardPocket)
             return new ObstacleHitResult(false, false, false, default, default, Array.Empty<int>());
         if (IsUnbreakableMovableObstacle(id))
-        {
-            if (TryConsumeCoveringOverlayHit(idx, context, out var coverChange))
-                return new ObstacleHitResult(true, true, false, coverChange, default, Array.Empty<int>());
             return new ObstacleHitResult(false, false, false, default, default, Array.Empty<int>());
-        }
 
         // Tube cells are handled entirely by TubeObstacleService.
         // originIndex=-1 so BoardBreakFxService skips the particle FX (TubeView owns its visuals).
@@ -788,15 +787,6 @@ public class ObstacleStateService : ISimObstacleQuery
             change = new ObstacleVisualChange(origin, id, false, GetRemainingHitsAt(x, y), null, hitCellIndex: idx);
             return new ObstacleHitResult(true, true, false, change, default, wallCells);
         }
-
-        // STACK KURALI: bir CellAnchoredOverlay (Grass/Oil) bir movable'ın (Helmet) düştüğü hücrede
-        // GÖRSEL olarak taşın ÜSTÜNDE durur (overlay en üstte çizilir), ama veri modelinde movable
-        // primary olur ve overlay beneath store'a (_underTileBeneathMovable) iner. Bu ters dizilim
-        // yüzünden LineV/special hasarı movable'a gidip onu kırıyor, üstteki overlay sağ kalıyordu.
-        // "Stack'te üstteki önce kırılır" → hit önce overlay'e gitmeli, overlay temizlenene kadar
-        // movable KORUNMALI (bir sonraki hit onu kırar).
-        if (IsMovableObstacleAt(x, y) && TryConsumeCoveringOverlayHit(idx, context, out change))
-            return new ObstacleHitResult(true, true, false, change, default, Array.Empty<int>());
 
         var def = library != null ? library.Get(id) : null;
 
@@ -2401,10 +2391,12 @@ public class ObstacleStateService : ISimObstacleQuery
     // Movable'ın (Helmet vb.) altındaki beneath store'da GÖRSEL olarak ÜSTTE duran bir overlay
     // (Grass/Oil) varsa, gelen hit'i o overlay'e uygular ve movable'ı korur. Overlay tükenince
     // (remaining<=0) beneath store'dan silinir ve normal overlay-clear sinyalleri (goal + view
-    // temizliği) üretilir; movable primary olarak yerinde kalır. true dönerse hit tüketildi.
-    private bool TryConsumeCoveringOverlayHit(int idx, ObstacleHitContext context, out ObstacleVisualChange change)
+    // temizliği) üretilir; movable primary olarak yerinde kalır. true = örtü vuruşu sahiplenir;
+    // kabul etmediği vuruşlarda da alta geçiş engellenir, sonuç didHit=false olur.
+    private bool TryConsumeCoveringOverlayHit(int idx, ObstacleHitContext context, TileType? sourceTileType,
+        out ObstacleHitResult result)
     {
-        change = default;
+        result = default;
 
         if (!_underTileBeneathMovable.TryGetValue(idx, out var beneath))
             return false;
@@ -2420,7 +2412,9 @@ public class ObstacleStateService : ISimObstacleQuery
             bool? handled = WaterLilyHitInterceptor?.Invoke(idx, context);
             if (handled.HasValue)
             {
-                change = new ObstacleVisualChange(-1, ObstacleId.GrassWaterLily, false, 0, null);
+                var lilyChange = new ObstacleVisualChange(-1, ObstacleId.GrassWaterLily, false, 0, null);
+                result = new ObstacleHitResult(handled.Value, handled.Value, !handled.Value,
+                    lilyChange, default, Array.Empty<int>());
                 // A rejected hit must still protect the movable beneath this flower.
                 return true;
             }
@@ -2433,16 +2427,23 @@ public class ObstacleStateService : ISimObstacleQuery
 
         // Overlay'in damage-source kuralına uymayan bir hit ise (grass=Any olduğu için pratikte
         // gelmez) movable'a GEÇİRME — üst katman canlıyken alt korunur; hit sessizce yutulur.
-        if (!CanConsumeHit(overlayDef, remaining, context, null))
-            return false;
+        if (!CanConsumeHit(overlayDef, remaining, context, sourceTileType))
+        {
+            result = new ObstacleHitResult(false, false, true, default, default, Array.Empty<int>());
+            return true;
+        }
 
         remaining--;
 
         bool grassFlowerShed = beneath.Id == ObstacleId.Grass && ShedGrassFlowerIfAny(idx);
+        ObstacleVisualChange change;
 
         if (remaining <= 0)
         {
             _underTileBeneathMovable.Remove(idx);
+            // Same reveal protection as stamped layers: the uncovering effect must
+            // not feed/damage the newly exposed movable on its following frames.
+            _revealGraceUntil[idx] = Time.unscaledTime + RevealGraceSeconds;
             // Normal grass-clear ile aynı olay: goal sayımı + GrassOverlayService/obstacle view temizliği.
             OnObstacleDestroyed?.Invoke(idx, beneath.Id);
             if (beneath.Id == ObstacleId.Grass) CompleteWaterLily(idx);
@@ -2455,6 +2456,7 @@ public class ObstacleStateService : ISimObstacleQuery
                 isGrassFlowerShed: grassFlowerShed);
         }
 
+        result = new ObstacleHitResult(true, true, false, change, default, Array.Empty<int>());
         return true;
     }
 

@@ -1,0 +1,133 @@
+{
+  "result": "PASS",
+  "preservedExistingProjectFiles": 6097,
+  "changedExisting": [
+    "LevelCatalogProV1.asset",
+    "LevelNames.json"
+  ],
+  "changedLevelAssets": [
+    232
+  ],
+  "user231Preserved": true,
+  "activeCells": 73,
+  "components": [
+    69,
+    4
+  ],
+  "goals": [
+    {
+      "targetType": 2,
+      "tileType": 0,
+      "obstacleId": 0,
+      "collectibleId": 4,
+      "iconOverride": {
+        "fileID": 21300000,
+        "guid": "179d3baa3ac1554b83aacde25786b9eb",
+        "type": 3
+      },
+      "amount": 18
+    },
+    {
+      "targetType": 1,
+      "tileType": 0,
+      "obstacleId": 102,
+      "collectibleId": 0,
+      "iconOverride": {
+        "fileID": 21300000,
+        "guid": "23c10e94875a5a08b5e980ac0cbe087d",
+        "type": 3
+      },
+      "amount": 2
+    },
+    {
+      "targetType": 1,
+      "tileType": 0,
+      "obstacleId": 57,
+      "collectibleId": 0,
+      "iconOverride": {
+        "fileID": 21300000,
+        "guid": "cf6adee6a83b4b7b9779fe7288bcafe5",
+        "type": 3
+      },
+      "amount": 4
+    },
+    {
+      "targetType": 1,
+      "tileType": 0,
+      "obstacleId": 58,
+      "collectibleId": 0,
+      "iconOverride": {
+        "fileID": 21300000,
+        "guid": "d58f2dde47ac46dc84f94d49a70415d5",
+        "type": 3
+      },
+      "amount": 6
+    },
+    {
+      "targetType": 1,
+      "tileType": 0,
+      "obstacleId": 42,
+      "collectibleId": 0,
+      "iconOverride": {
+        "fileID": 21300000,
+        "guid": "e2b5868e696b9449183864216e1e8588",
+        "type": 3
+      },
+      "amount": 6
+    }
+  ],
+  "phases": [
+    {
+      "removed": [],
+      "normalSlots": 45,
+      "naturallyFed": 45,
+      "empty": 0
+    },
+    {
+      "removed": [
+        58
+      ],
+      "normalSlots": 45,
+      "naturallyFed": 45,
+      "empty": 0
+    },
+    {
+      "removed": [
+        58,
+        57
+      ],
+      "normalSlots": 49,
+      "naturallyFed": 49,
+      "empty": 0
+    },
+    {
+      "removed": [
+        58,
+        57,
+        85,
+        88,
+        94
+      ],
+      "normalSlots": 61,
+      "naturallyFed": 61,
+      "empty": 0
+    },
+    {
+      "removed": [
+        58,
+        57,
+        85,
+        88,
+        94,
+        100,
+        102
+      ],
+      "normalSlots": 73,
+      "naturallyFed": 73,
+      "empty": 0
+    }
+  ],
+  "pins": 0,
+  "simulationOrBuild": false,
+  "measuredBalance": false
+}

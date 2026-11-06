@@ -1,0 +1,13 @@
+# 232 · çalışma kaydı
+
+Yalnız yeni232 yetkili. Snapshot231 bitirildikten sonra alındı; kullanıcının231 asset/meta dosyaları ve önceden katalogdaki231 referansı korunur. Author yalnız yeni232 asset/meta, katalog sonuna232 ve TR/EN isim sonuna232 yazar. Yeniden çalıştırma owned-hashes ve koruma snapshot’ı ile kullanıcı değişikliğini benimsemeden durur. Eski batch authorları çalıştırılmaz.
+
+Pool-Review.json aktif V1’deki bütün kullanılmış ID’lerin gerçek katalog kullanımını saklar. İlk düşünceler: düz üretici piyanosu, kapalı halka/ada, açık hilal. Hilal; geniş eşleşme alanını, aynı special hattındaki kaynakları ve erişimi sineğe ait adayı birlikte koruduğu için seçildi. Çok seyrek Hamster57 geri döndü; bu yeni mekanik tanıtımı değildir. GrassFlower58 + Grass42 aynı örtünün iki aşamasıdır. 231’de kullanıcı FlyFruit ailesini zaten kullanmıştır.
+
+Review aracı231önceki katalog entry’sini taradı. En yakın konum adayı73, kırpılmış engel silueti adayı174; gerçek sprite karşılaştırmasında231de yer aldı. 73’ün geniş orta çim ve iki ahşap kenarı,174’ün çift heykelli kapalı çerçevesi232’nin açık hilal/tek dış kaynak bandından farklı. 231’in ayrı elma fikri bilinçli korunur;232’nin oyuncu işi çiçek/çim/hamster ve renkli ürün toplama ile değişir. Skor yenilik yüzdesi değildir; renk/aşama varyantları yeni fikir sayılmaz.
+
+Güçlü erken yardım değerlendirmesi tasarım notundadır. Üretim, ürün toplama ve meyve lokmalarının aynı iş olduğu varsayılmadı. Yerleştirme/gölge/katman kontrolleri statik erişimdir; gravity/cascade simülasyonu değildir. Tüm mevcut level assetleri korunur; önceki Assets dosyalarında yalnız katalog ve isim kaydı değişti.
+
+Performans incelemesi: yeni runtime/VFX kodu yazılmadı. Dimerdal ve FlyFruit mevcut ortak tick/havuzlarını kullanır; bu taslakta3kaynak,1sinek kutusu,2meyve ve4hamster vardır. Hamster mevcut lokma coroutine’lerini ve zıplamada geçici hedef listesi/transform dizilerini kullanır; bunlar bu tasarımla optimize edilmiş sayılmaz. Build/Clear eski coroutine’leri durdurur ve destroy hit bağını kaldırır. FlyFruit/Dimerdal iptal ve havuz bırakma davranışı önceki mekanik işindedir; bu level için cihazda iptal/FPS/GC ölçümü yapılmadı. Statik inceleme mevcut davranış üzerinden; motor oynatılmadı.
+
+Validation.json: YAML,diziler,katmanlar,origin/footprint,beş hedef,kotalar,ada ayrılığı,kaynak erişimi,dolum,önceki dosyaların korunması,katalog ve isim eşleşmesi. Gerçek PNG açılıp incelendi. Bu agent görsel değerlendirmesidir; kullanıcı onayı veya oynanmış denge değildir. 28hamle ilk ayar. UI/Unity/Play/build/bot/simülasyon/yayın/baseline/commit yok. 233istenmedi.

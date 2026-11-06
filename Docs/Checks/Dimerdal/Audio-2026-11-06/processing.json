@@ -1,0 +1,46 @@
+{
+  "ShutterOpen": {
+    "source": "/Users/turgayp/Downloads/kepenkac.wav",
+    "sourceSHA256": "ff7450212ac82af757a1f0d8ee1da99b213f3b33ec30669065a039d94ee95bd8",
+    "sourceUnchanged": true,
+    "sourceMono": {
+      "duration": 0.4865,
+      "rmsDB": -25.08827540054717,
+      "peakDB": -3.5035603623438334
+    },
+    "output": "Assets/_Project/Audio/SFX/Dimerdal/ShutterOpen.wav",
+    "outputSHA256": "89b16adcf7364146a90570a1c37b664831848f0c7e1ad4581b94faa7d728c47a",
+    "outputStats": {
+      "duration": 0.25,
+      "rmsDB": -19.09987146816073,
+      "peakDB": -3.0093534665491273
+    },
+    "filters": "highpass=f=65,equalizer=f=220:t=q:w=0.8:g=3,equalizer=f=3800:t=q:w=1.1:g=-1.5,acompressor=threshold=0.1:ratio=3:attack=3:release=60:makeup=1",
+    "targetRmsDB": -19,
+    "peakCeilingDB": -3,
+    "mixVolume": 1.0,
+    "import": "mono 48kHz PCM, preloaded, DecompressOnLoad"
+  },
+  "DiamondFlight": {
+    "source": "/Users/turgayp/Downloads/flyingdiamond.wav",
+    "sourceSHA256": "fc14a2d1514fcbe70b39d1ad50cd224d59f8821bf9aa7ffdf87502b9a2e36a4a",
+    "sourceUnchanged": true,
+    "sourceMono": {
+      "duration": 1.0,
+      "rmsDB": -26.471250283990393,
+      "peakDB": 1.627539196679003
+    },
+    "output": "Assets/_Project/Audio/SFX/Dimerdal/DiamondFlight.wav",
+    "outputSHA256": "95158a08d57c503aeebf09806f3e40cbf1dc0023d47bb8e60a68cd94e4417a56",
+    "outputStats": {
+      "duration": 1.0,
+      "rmsDB": -20.22731501557461,
+      "peakDB": -3.0003622493859567
+    },
+    "filters": "highpass=f=65,equalizer=f=220:t=q:w=0.8:g=2.5,equalizer=f=3800:t=q:w=1.1:g=-1.5,acompressor=threshold=0.1:ratio=3:attack=3:release=60:makeup=1",
+    "targetRmsDB": -19,
+    "peakCeilingDB": -3,
+    "mixVolume": 1.0,
+    "import": "mono 48kHz PCM, preloaded, DecompressOnLoad"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "shutterDefinitionsWired": 12,
+  "audioReferencesVerified": 24,
+  "otherObstacleDefinitionsUnchanged": 83,
+  "levelFilesUnchanged": 468,
+  "originalWavsUnchanged": true,
+  "samplePeaksBelowMinus2_99dBFS": true,
+  "sourcePathsInAssets": false,
+  "csharpSyntax": "passed (3 changed files in this session; parse only)"
+}

@@ -1,0 +1,6 @@
+{
+  "reason": "Observed external edit during233 authoring, before any production mutation. Preserve this exact current asset; baseline remains unchanged.",
+  "files": {
+    "Assets/_Project/Settings/ProLevels/LevelV1_00001080.asset": "6180a68b44351a6c210c2b4fff9a924e3dca0e0d4941be87d0c753fed5522009"
+  }
+}

@@ -1,5 +1,45 @@
 # TinyFixers level tasarım hafızası
 
+**Kalıcı iş sırası — kullanıcı,2026-11-06:** “önce bir fikir belirlemen önemli ... önce tarzımı seçiyoruz”. Önce ana fikir/tarz,şekil veilk oyuncu kararı seçilip paylaşılır;sonra yerleşim yazılır. Sonradan rastgele engel dizisine isim/tema uydurma. Bu yöntem beğenildi;234için önce açıklanan fikir Boya Dalgası’dır. Yeni bir onay zorunluluğu çıkarılmaz;görsel/oynanmış onay ayrıca kaydedilir.
+
+## Güncel yetki — 176 yaklaşımı beğenildi; yalnız 234 · 2026-11-06
+
+Kullanıcı176için “çok iyi oldu ... biraz değiştirdim ama mantığını sevdim” dedi. **Canlı kullanıcı176=23hamle/9kırmızı+9yeşil**, aynı8×8maske; bu yeni hali koru, eski26/5+5modeline geri basma. Kabul edilen yaklaşım: yok olan engeller kenarlarda maskeyle birlikte okunabilir şekil kurar, açılış/refill kararına hizmet eder ve gereksiz engel-altı boş cepleri azaltır. Bu bir görsel/yaklaşım beğenisidir, agent’ın eski hamle dengesi onayı değildir.
+
+Sonraki açık görev **yalnız234**, üstelik “234farklı ona farklı yaklaş”.176V’si veya233altkilidi kopyalanmaz;çim ailesini ve yeni tasarımlarda ColorCrate71–74’ü dinlendirme yönü sürer. Kenar kullanmak bütün levelları aynı çerçeveye dönüştürmek değildir.
+
+**Yeni açık başlangıç taşı istisnası:** Normalde otomatik dolum kullanılır. Yalnız açılışta doğal olarak hiç taş ulaşmayan normal hücrelere gerçek başlangıç taşı döşemek uygundur; boş ekran görüntüsü olmasın. Tüm tahtayı pinleme veya hazır special zorlama değildir. Pinin açılışta desteklenmesi/yerinde kalması ve kapak açıldıktan sonraki refill erişimi ayrı doğrulanır. Kaynak ifadeler `Batches/234-Paint-Wave/user-feedback.json`; kapsam `Design-Principles.md` ve `Design-Feedback.md` başında.235istenmedi.
+
+## Güncel — V1 176 kopuk kutu yerleşimi reddi ve revizyonu · 2026-11-06
+
+Kullanıcı `levelv1_00001760` için “bu bizim kuralımıza uymuyor ortaya saç sapan bir kutu koymak doğru değil” dedi ve mevcut zorluk derecesine uygun yeniden tasarım istedi. Bu açık ret, eski176 için “rahat geçtik/dokunulmadı” kaydından önceliklidir. Yetki yalnız176’dır;233 veya başka level revizyonu çıkarılmaz.
+
+Aktif V1’de176 **Kızıl ve Yeşil / Crimson and Green**, `LevelCL_0176`, GUID `f6068583d99e4456b6e205a8bf6f553b`; tarihsel176Dolaplı Geçit ile karıştırılmaz. Eski7×7içindeki iki kopuk5’li şerit yerine8×8/54aktif daralan çanak ve kenarı tamamlayan tek10hücrelik kırmızı/yeşilV konturu kuruldu. Her renk5hücre ve bağlıdır. **26hamle Normal,5+5hedef,üç-hit sandıklar korunur.** Sonu6 rahat tanıtımdır; Hard’a çevrilmez. ColorCrate72/74 aktifV1ilk kullanım176 olduğu için bu mevcut tanıtımda korunur; yeni geç dönem tasarımlarında aileyi dinlendirme tercihi sürer. Çim ailesi yok.
+
+44/44başlangıç normalyuvası doğal besleme; tek renk temizlenince49/49, tümü kalkınca54/54. Pin/hazırspecial/boşcep yok. Önce/sonra ve2/176/178gerçek sprite karşılaştırması açıldı;2ile alt çanak benzerliği kabul edilir,benzersizlik iddiası yok. Kayıt `Batches/176-Contour-Revision/`, aktifnot/PNG `Level176-Kizil-ve-Yesil.*`, inceleme `Reviews/176-Contour-Revision/`.
+
+Yalnız176assetinin boyut/hücre dizileri değişti; isim,katalog,meta/GUID,müzik,6107diğerAssets dosyası ve232/233/108kullanıcı değişiklikleri korunur. Önceki233koruma snapshot’ının bu sonradan yetkili176değişimini drift sayması normaldir; eskiauthor’la176’yı geri basma. StatikYAML/hedef/katman/akış/koruma ve agentgörsel kontrolü geçti; yeni176henüz kullanıcı onaylı/oynanmış değil. UnityUI/Play/build/bot-kaskat simülasyonu/yayın veya ölçülmüşdenge/FPS yok. Manuel test kullanıcıda.
+
+## Güncel — 233 Kutup Kilidi; çimi dinlendirme yönü · 2026-11-06
+
+Kullanıcı yalnız233’ü istedi: “en güzel levelını yap”; ardından **“çim istemiyorum ama artık”** dedi. Yeni tasarımlarda çimi otomatik varsayılan örtü olarak kullanma;233’te Grass42,GrassFlower58,GrassWaterLily69 tamamen dışarıda. Eski onaylı levellardan çim silme yetkisi değildir. Bu açık son yön eski “çimi üstte kullan” tercihiyle çeliştiği yerde önceliklidir.
+
+233 → `LevelV1_00002330.asset` / `LevelCL_0233` / chapter10; **Kutup Kilidi / Polar Lock**,8×11/82aktif,27hamle Normal. Alt orta iki2×2Safe,soldan kırmızı→sarı→yeşil2/1/1,sağdan yeşil→sarı→kırmızı2/1/1;her biri4Cargo gizler.12hücrelik tekU mıknatısı,sekiz special-only pusula çıkış hücresi ve12porselen kenar sütunu. Beş hedef8Cargo/2Safe/1Magnet/8SculptingSpecial/12Porcelain. Dimerdal/FlyFruit de dinlendirildi;üst çalışma avlusu42/42doğal dolum,pin/hazırspecial/başlangıçboşluğu yok. Refill special koruması auto(-1). Çıkış bandı kasalardan önce temizlenirse8alt hücre geçici gölgede kalır;kasa açılınca beslenir.
+
+**232’nin güncel kullanıcı ayarı32hamle ve5+5+5Dimerdal=15elmas korunur.** Önceki28hamle/6+6+6kayıtları ilk agent taslağıdır;geri uygulanmaz. Çalışma sırasında108dışarıdan değişti;mevcut hali ayrı kaydedilip korundu. Yeni Dimerdal sesleri ve örtü-altı hit düzeltmesi de korundu.
+
+Kayıt `Batches/233-Polar-Lock/`;gerçekPNG/not `Level233-Kutup-Kilidi.*`,232önceki katalog incelemesi `Reviews/233-Polar-Lock/`.142alt kütle/iki kasa bakımından benzer,198mıknatıs için karşılaştırıldı;benzersizlik iddiası yok.6103diğerAssets dosyası hash olarak aynı;2append-onlykatalog/isim ve1dış108ayrı. Statik YAML/katman/hedef/dolum/çıkış ve gerçek sprite görsel kontrolleri geçti. Kullanıcı henüz233oynanışını/görselini onaylamadı;27hamle ilkayar. UnityUI/Play/build/bot-kaskat simülasyonu/yayın/releasebaseline/commit veya ölçülmüşdenge/FPS yok. Manuel test kullanıcıda;234istenmedi.
+
+## Güncel — 232 Kristal Hilal hazır; kullanıcı 231’i korundu · 2026-11-06
+
+Kullanıcı 231’i kendisi tamamladı ve yalnız 232 istedi: board şekli, az kullanılan aileler, özellikle katmanlar; örnek olarak renkli Dimerdal tarafı ve ayrı 2×2 elma. Aktif V1 katalogda 231 → GUID `2c9e5fc93433340bea1dc11fc1796fd8` çözüldü; asset/meta ve önceki bütün level kayıtları korundu.
+
+232 → `LevelV1_00002320.asset` / `LevelCL_0232` / chapter10; TR Kristal Hilal, EN Crystal Crescent. 9×11, 73 aktif (69 ana hilal + 4 hücre ayrı ada), 28 hamle Normal. Solda bitişik üç2×2 mavi/yeşil/kırmızı Dimerdal, her biri6; iç kenarda6 GrassFlower üstünde4 Hamster (kişi başına4 lokma); alt kolda1 FlyEggBox ve1 adet2×2 elma, ayrı adada ikinci2×2 elma. Hedefler18 elmas /2 elma /4 hamster /6 çiçek /6 çim. Çiçek→çim→hamster açılması gerçek yığındır. Bir kutunun4 yumurtası iki meyveye yeter. Sıçrama yardımı üretim+elmas toplama+meyve lokması işinin yerine sayılmaz.
+
+45 normal başlangıç yuvası statik dolumda45/45 besleniyor; pin/hazır special/boş cep yok. Sonraki kesitlerde49/61/73 normal yuva besleniyor. Kayıt `Batches/232-Crystal-Orchard/`; not/PNG `Level232-Kristal-Hilal.*`; tekrar envanteri `Reviews/232-Crystal-Crescent/` ve gerçek sprite231/73/174 karşılaştırması var. 6.097 önceki proje dosyası korundu; eski Assets dosyalarında yalnız katalog + TR/EN isimlere232 eklendi. Runtime/library/akış/GUI kodu değişmedi.
+
+Statik YAML/katman/footprint/hedef/erişim ve gerçek PNG görsel incelemesi geçti. Bu agent değerlendirmesidir; kullanıcı oynanmış denge veya görsel onayı değildir. UI/Unity/Play/build/bot-kaskat simülasyonu/yayın/baseline/commit yok. Manuel test kullanıcıdadır; 233 istenmedi. 231 isim kataloğunda kullanıcı adı henüz yoktu; yeni isim uydurulmadı ve level dosyasına dokunulmadı.
+
 ## Güncel — elma önceden boyut seçimi ve ses/uçuş düzeltmesi · 2026-11-06
 
 Kullanıcı elmanın Safe gibi yerleştirmeden önce Width/Height ile ayarlanmasını istedi. Elma modu eklendi;paletten Elma seçmek bu moda geçer. Sliderlar yalnız sonraki yerleştirmeyi ayarlar. Mevcut elma boyut listesi/tıklayarak resize kaldırıldı;dolu alanın üstüne yerleştirme bütün footprint için atomik reddedilir. Örtü/kasa/mühür/tüp/mıknatıs/kanal/pinli içerik korunur. Elma adedi Goals/PreLevel hedefidir.

@@ -1,4 +1,4 @@
-# Level isimleri — LevelCatalogProV1 (1–230)
+# Level isimleri — LevelCatalogProV1 (1–233)
 
 2026-10-28: Oyun `Settings/ProLevels/LevelCatalogProV1`'e geçti; numaralar YENİ sıradır. Boş seviyeler (4, 8, 106) henüz tasarlanmadığı için isimsizdir. Eski numaralı liste ve eşleşme: Masaüstü Wondi Paylaşım/LevelCatalogProV1_Plan.xlsx.
 
@@ -235,3 +235,5 @@ Yeni level tasarlarken aynı JSON'a TR + EN isim ekle, bu tabloyu ve ilgili not/
 | 228 | Kristal Ünlem |
 | 229 | Rüzgâr Burgusu |
 | 230 | Büyük Işık Düellosu |
+| 232 | Kristal Hilal |
+| 233 | Kutup Kilidi |

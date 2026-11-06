@@ -1,0 +1,87 @@
+{
+  "result": "PASS",
+  "level": 234,
+  "activeCells": 74,
+  "boardComponents": 1,
+  "goals": {
+    "21": 2,
+    "63": 2,
+    "11": 6,
+    "12": 6
+  },
+  "openingAutomaticTiles": 53,
+  "openingShadowTiles": 1,
+  "pinnedCells": {
+    "32": 1
+  },
+  "pinSupport": "six blue movable cells down to bottom",
+  "phases": [
+    {
+      "removed": [],
+      "normalSlots": 54,
+      "naturallyFed": 53,
+      "requiredShadowPins": [
+        32
+      ]
+    },
+    {
+      "removed": [
+        21
+      ],
+      "normalSlots": 54,
+      "naturallyFed": 53,
+      "requiredShadowPins": [
+        32
+      ]
+    },
+    {
+      "removed": [
+        21,
+        63
+      ],
+      "normalSlots": 62,
+      "naturallyFed": 62,
+      "requiredShadowPins": []
+    },
+    {
+      "removed": [
+        21,
+        63,
+        11
+      ],
+      "normalSlots": 68,
+      "naturallyFed": 68,
+      "requiredShadowPins": []
+    },
+    {
+      "removed": [
+        21,
+        63,
+        12
+      ],
+      "normalSlots": 68,
+      "naturallyFed": 68,
+      "requiredShadowPins": []
+    },
+    {
+      "removed": [
+        21,
+        63,
+        11,
+        12
+      ],
+      "normalSlots": 74,
+      "naturallyFed": 74,
+      "requiredShadowPins": []
+    }
+  ],
+  "temporarilyRoofedCellIfLowerBandsClearFirst": 32,
+  "paintCanCapacity": 18,
+  "previousAssetsPreserved": 6106,
+  "catalogAndNamesAppendOnly": true,
+  "user176Preserved": "23moves,9red+9green;exact hash preserved",
+  "grassFamilyAbsent": true,
+  "buildOrGameSimulation": false,
+  "measuredBalance": false,
+  "measuredPerformance": false
+}

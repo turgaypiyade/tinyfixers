@@ -12,6 +12,7 @@ public sealed class DimerdalService : MonoBehaviour
         public int remaining = DimerdalRules.OpeningHits;
         public int limit, committed, pendingReservations, inFlight;
         public DimerdalView view;
+        public ObstacleDef definition;
         public Image host;
         public Sprite diamondSprite;
     }
@@ -115,6 +116,7 @@ public sealed class DimerdalService : MonoBehaviour
             shutters.Add(origin, shutter = new Shutter { id = def.id,
                 limit = board.ActiveLevelData.GetDimerdalProductionCount(origin, def.id) });
         shutter.view = DimerdalView.Ensure(host, def, shutter.remaining);
+        shutter.definition = def;
         shutter.host = host;
         shutter.diamondSprite = def.auxiliarySprites[1];
         if (IsExhausted(shutter)) retirementPending = true;
@@ -151,6 +153,8 @@ public sealed class DimerdalService : MonoBehaviour
             shutter.view.PlayHit();
             Track(shutter.view);
         }
+        // Each accepted hit raises one slat. Production hits use a separate sound.
+        board.Audio?.PlayOneShotClip(shutter.definition.coverRemovedSound, shutter.definition.coverRemovedSoundVolume);
         return true;
     }
 
@@ -262,6 +266,8 @@ public sealed class DimerdalService : MonoBehaviour
             || !production.Launch(board, shutter.host, shutter.diamondSprite, DimerdalRules.DiamondFor(shutter.id), origin)) return false;
         if (!reserved) shutter.committed++;
         shutter.inFlight++;
+        // Start once with the gem's rise; retries/retargeting must not replay it.
+        board.Audio?.PlayOneShotClip(shutter.definition.releaseSound, shutter.definition.releaseSoundVolume);
         shutter.view?.PlayHit();
         Track(shutter.view);
         return true;

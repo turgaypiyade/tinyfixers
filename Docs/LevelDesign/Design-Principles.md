@@ -1,5 +1,11 @@
 # Üretim level tasarım ilkeleri
 
+**Fikir önce gelir — kullanıcı, 2026-11-06:** “önce bir fikir belirlemen önemli ... önce tarzımı seçiyoruz”. İş sırası: seviyenin ana fikrini/tarzını, okunacak şekli ve ilk oyuncu kararını seçip paylaş; sonra bu fikri taşıyan engel ve katmanları yerleştir. Engel dizerek sonradan tema uydurma. Önceki seviyede beğenilen yaklaşım, sonraki seviyeye aynı şekli kopyalamak değildir.
+
+**176 yaklaşımı onaylandı; 234 farklı tasarlanır — kullanıcı, 2026-11-06:** “çok iyi oldu ... biraz değiştirdim ama mantığını sevdim”. Beğenilen, belirli bir V şeklinin her levele kopyalanması değildir: yok olan engeller kenarlarda anlamlı kontur/bant oluşturur, maskeyle birlikte güzel görünür ve açıldıkça gerçek oyun alanı kazandırır. Bu, gereksiz engel tavanlarını ve altlarındaki boş cepleri de azaltır. Sonraki seviyenin silueti, ana mekaniği ve ilk kararı ayrıca seçilir. Kullanıcının elle ayarladığı176 korunur; agent’ın eski hamle/hedef modeline döndürülmez.
+
+**Başlangıç taşı döşeme istisnası — kullanıcının son açıklaması, 2026-11-06:** Normalde taşları otomatik dolum yerleştirir. Yalnız oyunun açılışında doğal olarak hiç taş ulaşmayan normal yuvalara başlangıç taşı koymak uygundur; ekran gereksiz boş görünmesin. Bu istisna bütün tahtayı elle renklendirmek, hazır special zorlamak veya her boş görünen maskeyi taşla doldurmak değildir. Pin gerçekten başlangıçta kalabiliyor mu, altında destek var mı ve kapaklar açılınca bölge nasıl yeniden besleniyor ayrı kontrol edilir. İlk taş doluluğu ile kalıcı refill erişimi aynı iddia değildir.
+
 **213–220 kullanıcı yönü · 2026-11-03:**
 
 Sekiz seviye için fener/kuş evi/su kanalı/değirmen; porselen, iki aşamalı plastik, ColorChest, çiçekli çim ve renkli plastiklerle set boyunca dağıtılır. Kullanıcının örneklerini tek tahtaya yığma. Az/orta türde yelken gibi okunaklı yaratıcı siluet; çok engelli kompozisyonda daha düz maske seçilebilir. Ortaya açıklamasız tekil obje serpiştirme. Bu tur213–220 yetkilidir; önceki onaylı levellar korunur.

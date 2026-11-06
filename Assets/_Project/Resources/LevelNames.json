@@ -1363,6 +1363,24 @@
       "levelKey": "LevelCL_0230",
       "name": "Büyük Işık Düellosu",
       "nameEn": "Grand Light Duel"
+    },
+    {
+      "level": 232,
+      "levelKey": "LevelCL_0232",
+      "name": "Kristal Hilal",
+      "nameEn": "Crystal Crescent"
+    },
+    {
+      "level": 233,
+      "levelKey": "LevelCL_0233",
+      "name": "Kutup Kilidi",
+      "nameEn": "Polar Lock"
+    },
+    {
+      "level": 234,
+      "levelKey": "LevelCL_0234",
+      "name": "Boya Dalgası",
+      "nameEn": "Paint Wave"
     }
   ],
   "catalog": "LevelCatalogProV1"

@@ -1,5 +1,49 @@
 # Tasarım geri bildirimi
 
+## Önce fikir/tarz seçimi — kullanıcı · 2026-11-06
+
+**Kaynak:** “bu tarzını seviyorum önce bir fikir belirlemen önemli bunu kaydet önce tarzımı seçiyoruz”.
+
+**Kabul edilen yöntem:** Ana fikir, şekil dili ve ilk oyuncu kararı yerleşimden önce seçilip kullanıcıyla paylaşılır. Daha sonra engel aileleri ve katmanlar bu fikre göre kurulur; rastgele yerleşim tamamlandıktan sonra tema uydurulmaz.234için önce Boya Dalgası fikrinin açıklanması bu yaklaşımın örneğidir; açıklamanın kendisi yeni assetin oynanmış/görsel onayı değildir. Yeni bir genel onay kapısı veya ek level yetkisi çıkarılmaz.
+
+## 176 yaklaşımı beğenildi; kenar ve başlangıç taşı ilkesi · kullanıcı · 2026-11-06
+
+**Kaynak:** “çok iyi oldu ben biraz değiştirdim ama mantığını sevdim.. bu tarz yaklaşımı kaydet... şimdi234ü yapacaksın.. tabi234farklı ona farklı yaklaş”. Sonraki açıklamalar: yok olan engellerin kenarlarda güzel şekiller oluşturması hem görünümü hem oynanışı iyileştiriyor; engellerin altında fazla boşluk kalmıyor. Açılışta hiç taş ulaşmayan bölgeleri başlangıç taşıyla doldurmayı özellikle uygun buldu.
+
+**Kabul:**176’nın kenarla bütünleşen kompozisyon yaklaşımı kullanıcı tarafından beğenildi. Bu, agent’ın26hamle/5+5hedef dengesinin onayı değildir; kullanıcı seviyeyi kendisi değiştirdi. Canlı176:23hamle/9kırmızı+9yeşil, aynı8×8maske. Aynen korunur. V/çanak şekli sonraki level için zorunlu şablon değildir;234açıkça farklı yaklaşım ister. Yetki yalnız yeni234,235istenmedi.
+
+**Taş yerleştirme açıklaması:** Önceki “taş döşeme” yönü normal otomatik dolum içindir. İstisna yalnız açılışta doğal olarak beslenmeyen normal yuvalardır; ekranın boş görünmemesi için oralara gerçek başlangıç taşı koyulabilir. Bütün çalışma alanını pinleme, başlangıç special’ı uydurma veya akış motorunu değiştirme yetkisi değildir. Açılışta pinde kalma ve sonraki refill yolu ayrı değerlendirilir.
+
+**Kalıcı ders:** Önce kenar/şekil ve yok olunca açılan alan ilişkisini tasarla; sonra gerekliyse gölgede kalan az sayıdaki başlangıç yuvasını taşla doldur. Kenar kullanımı, aynı çerçeveyi her seviyeye tekrar koymak değildir. Kullanıcıya ait son asset, eski batch modeliyle normalleştirilmez.
+
+## V1 176 — kopuk orta kutular reddedildi · kullanıcı · 2026-11-06
+
+**Kaynak:** `levelv1_00001760` için “o seviyenin zorluk derecesine göre tekrar tasarlarmısın. bu bizim kuralımıza uymuyor ortaya saç sapan bir kutu koymak doğru değil”. Kullanıcı mevcut yerleşimi açıkça reddetti.
+
+**Kapsam/ders:** Yalnız aktif V1 176 yeniden tasarlanır. Normal taşların arasında açıklamasız tekil kutu veya bağımsız şerit bırakma; engel grubu maskenin kenarı, kesintisiz bant veya okunabilir şekille ilişkili olmalı. Bu kural, her levele aynı çerçeveyi kopyalamak değildir. Zorluk korunacak derken yalnız hamleyi kısmak veya yeni engellerle tanıtımı zorlaştırmak kastedilmez. Eski “rahat geçtik” notu bu yeni görsel ret kararını geçersiz kılamaz.
+
+**Agent bulgusu:** 176,7×7tam tahtada5kırmızı ve5yeşil ColorCrate’ı iki kopuk yatay şeritte tutuyordu. AktifV1’de bu iki renk ilk kez176’da görülür; sonu6 olanNormal tanıtım rolü esas alındı.
+
+**Agent uygulaması / henüz onay değil:** 8×8/54aktif daralan çanak, tek10hücrelikV altkonturu, renklere göre bitişik5+5.26hamle,hedefler,HP,isim/GUID/katalog aynı.44/44doğal başlangıç dolumu;çim/pin/hazırspecial/yeni aile yok. Gerçek sprite önce/sonra ve tarihsel benzer karşılaştırıldı; yeni yerleşim oynanıp onaylanmadı. Diğer bütünlevellar korunur.
+
+## 233 — çimi dinlendirme ve yeni level yetkisi · kullanıcı · 2026-11-06
+
+**Kaynak:** “şimdi sıra233de dostum artık beni tanıdın oyunu da tanıdırın en güzel levelını yap bakalım”;hemen ardından **“çim istemiyorum ama artık”**.
+
+**Kabul/kapsam:** Yalnız yeni233yetkili. Son açık yön çimi varsayılan katman olarak tekrarlamamaktır;233’teGrass42/GrassFlower58/GrassWaterLily69 kullanılmaz. Önceki onaylı levellardan çim kaldırılmaz. Bu talep233taslağının önceden onaylandığı veya234’ün yetkili olduğu anlamına gelmez.
+
+**Agent uygulaması/onay değil:** Kutup Kilidi;iki ters renk sıralı kasa altında sekizCargo,tekU mıknatıs çıkışı,sekizspecial-only pusula ve12porselen kenarı.42açık normalyuva;27hamle ilkayar.142ve198ile ortak biçim/aile ilişkisi görsel olarak karşılaştırıldı;benzersiz şekil iddiası yok. Gerçek sprite ve statik veri incelemesi tamam;manuel oyun/denge kullanıcıda.
+
+**Kullanıcının mevcut232düzenlemesi:** Yeni233hazırlanırken canlı232asseti32hamle veDimerdal5/5/5,hedef15olarak bulundu ve aynen korundu. Önceki28/6-6-6modeli currentassete geri basılmaz. Bu dosyadan otomatik eski batchauthor’ı çalıştırma.
+
+## 232 — board şekli, az kullanılan aileler ve katmanlar · kullanıcı · 2026-11-06
+
+**Kaynak:** “231’i yaptım … 232.levelı tasarlayacaksın … board önemli, az kullanılan obstacle’lar kullanılacak ama özellikle katmanlı kullanım gerekiyor … bir tarafını renkli elmas üreteçleriyle doldurup … 2×2’lik bir elma … tek başına ayrı bir yerde 231 gibi … güzel şekiller düşün”.
+
+**Kapsam:** Yalnız yeni 232. Kullanıcının yaptığı 231 ve önceki levellar korunur. Renkli Dimerdal bantları ve ayrı 2×2 elma önerilen kompozisyon araçlarıdır; her sonraki levele aynı şablon zorunlu değildir. Az kullanım tek başına seçim gerekçesi değildir; katman açılınca farklı iş başlamalıdır.
+
+**Agent uygulaması / henüz onay değil:** Kristal Hilal / Crystal Crescent; 9×11 maskede 69 hücrelik ana hilal ve 4 hücrelik ayrı elma adası. Üç renkli dış kaynak bandı, çiçek→çim→dört hamster iç bahçesi, alt kolda yumurta kutusu + ikinci 2×2 elma. Hamster ID57 aktif V1’de yalnız136’da kullanılmıştı; son kullanım farkı mekanik yenilik iddiası değildir. 28 hamle ilk ayar; statik ve gerçek sprite incelemesi var, kullanıcı oynanış onayı yok. 233 istenmedi.
+
 ## 229 — jel/pres taslağı reddi; açılış sonrası gerçek iş · kullanıcı · 2026-11-06
 
 **Kaynak:**“taşın altına jel koymuşsun sonra spreading jel var … diye bitecek bir oyun bu … bazen beni hiç anlamadığını ve kurallara uymadığını düşünüyorum”;ardından“devam eder misin”.

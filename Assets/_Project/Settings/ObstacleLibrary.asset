@@ -4834,6 +4834,10 @@ MonoBehaviour:
     particleCount: 0
     wardrobeItemSprites: []
     hamsterSatiety: 7
+    coverRemovedSound: {fileID: 8300000, guid: 5c4fd22f8c775ff99899310942660a57, type: 3}
+    coverRemovedSoundVolume: 1
+    releaseSound: {fileID: 8300000, guid: dfb31fa25e5d528e9c023c1ee1565d54, type: 3}
+    releaseSoundVolume: 1
   - id: 85
     stages:
     - sprite: {fileID: 21300000, guid: 26bcd1b2625f5939ad49e777a1276a59, type: 3}
@@ -4902,6 +4906,10 @@ MonoBehaviour:
     particleCount: 0
     wardrobeItemSprites: []
     hamsterSatiety: 7
+    coverRemovedSound: {fileID: 8300000, guid: 5c4fd22f8c775ff99899310942660a57, type: 3}
+    coverRemovedSoundVolume: 1
+    releaseSound: {fileID: 8300000, guid: dfb31fa25e5d528e9c023c1ee1565d54, type: 3}
+    releaseSoundVolume: 1
   - id: 86
     stages:
     - sprite: {fileID: 21300000, guid: 26bcd1b2625f5939ad49e777a1276a59, type: 3}
@@ -4970,6 +4978,10 @@ MonoBehaviour:
     particleCount: 0
     wardrobeItemSprites: []
     hamsterSatiety: 7
+    coverRemovedSound: {fileID: 8300000, guid: 5c4fd22f8c775ff99899310942660a57, type: 3}
+    coverRemovedSoundVolume: 1
+    releaseSound: {fileID: 8300000, guid: dfb31fa25e5d528e9c023c1ee1565d54, type: 3}
+    releaseSoundVolume: 1
   - id: 96
     stages:
     - sprite: {fileID: 21300000, guid: cd4cc64b02cb5540a781f425f10b8a33, type: 3}
@@ -5070,6 +5082,10 @@ MonoBehaviour:
     particleCount: 0
     wardrobeItemSprites: []
     hamsterSatiety: 7
+    coverRemovedSound: {fileID: 8300000, guid: 5c4fd22f8c775ff99899310942660a57, type: 3}
+    coverRemovedSoundVolume: 1
+    releaseSound: {fileID: 8300000, guid: dfb31fa25e5d528e9c023c1ee1565d54, type: 3}
+    releaseSoundVolume: 1
   - id: 88
     stages:
     - sprite: {fileID: 21300000, guid: a93ba375ad3c55b3b1bc879967d4e781, type: 3}
@@ -5138,6 +5154,10 @@ MonoBehaviour:
     particleCount: 0
     wardrobeItemSprites: []
     hamsterSatiety: 7
+    coverRemovedSound: {fileID: 8300000, guid: 5c4fd22f8c775ff99899310942660a57, type: 3}
+    coverRemovedSoundVolume: 1
+    releaseSound: {fileID: 8300000, guid: dfb31fa25e5d528e9c023c1ee1565d54, type: 3}
+    releaseSoundVolume: 1
   - id: 89
     stages:
     - sprite: {fileID: 21300000, guid: a93ba375ad3c55b3b1bc879967d4e781, type: 3}
@@ -5206,6 +5226,10 @@ MonoBehaviour:
     particleCount: 0
     wardrobeItemSprites: []
     hamsterSatiety: 7
+    coverRemovedSound: {fileID: 8300000, guid: 5c4fd22f8c775ff99899310942660a57, type: 3}
+    coverRemovedSoundVolume: 1
+    releaseSound: {fileID: 8300000, guid: dfb31fa25e5d528e9c023c1ee1565d54, type: 3}
+    releaseSoundVolume: 1
   - id: 97
     stages:
     - sprite: {fileID: 21300000, guid: 933abc4fe9ca5670898c27125c9a3c26, type: 3}
@@ -5306,6 +5330,10 @@ MonoBehaviour:
     particleCount: 0
     wardrobeItemSprites: []
     hamsterSatiety: 7
+    coverRemovedSound: {fileID: 8300000, guid: 5c4fd22f8c775ff99899310942660a57, type: 3}
+    coverRemovedSoundVolume: 1
+    releaseSound: {fileID: 8300000, guid: dfb31fa25e5d528e9c023c1ee1565d54, type: 3}
+    releaseSoundVolume: 1
   - id: 91
     stages:
     - sprite: {fileID: 21300000, guid: 72f3fb8aa142520e9ce83e75230a2faf, type: 3}
@@ -5374,6 +5402,10 @@ MonoBehaviour:
     particleCount: 0
     wardrobeItemSprites: []
     hamsterSatiety: 7
+    coverRemovedSound: {fileID: 8300000, guid: 5c4fd22f8c775ff99899310942660a57, type: 3}
+    coverRemovedSoundVolume: 1
+    releaseSound: {fileID: 8300000, guid: dfb31fa25e5d528e9c023c1ee1565d54, type: 3}
+    releaseSoundVolume: 1
   - id: 92
     stages:
     - sprite: {fileID: 21300000, guid: 72f3fb8aa142520e9ce83e75230a2faf, type: 3}
@@ -5442,6 +5474,10 @@ MonoBehaviour:
     particleCount: 0
     wardrobeItemSprites: []
     hamsterSatiety: 7
+    coverRemovedSound: {fileID: 8300000, guid: 5c4fd22f8c775ff99899310942660a57, type: 3}
+    coverRemovedSoundVolume: 1
+    releaseSound: {fileID: 8300000, guid: dfb31fa25e5d528e9c023c1ee1565d54, type: 3}
+    releaseSoundVolume: 1
   - id: 98
     stages:
     - sprite: {fileID: 21300000, guid: 97f9e491dadc54ee9d64a180373591f6, type: 3}
@@ -5542,6 +5578,10 @@ MonoBehaviour:
     particleCount: 0
     wardrobeItemSprites: []
     hamsterSatiety: 7
+    coverRemovedSound: {fileID: 8300000, guid: 5c4fd22f8c775ff99899310942660a57, type: 3}
+    coverRemovedSoundVolume: 1
+    releaseSound: {fileID: 8300000, guid: dfb31fa25e5d528e9c023c1ee1565d54, type: 3}
+    releaseSoundVolume: 1
   - id: 94
     stages:
     - sprite: {fileID: 21300000, guid: 8bd16d233eb65654b159e60f6ae6bc4c, type: 3}
@@ -5610,6 +5650,10 @@ MonoBehaviour:
     particleCount: 0
     wardrobeItemSprites: []
     hamsterSatiety: 7
+    coverRemovedSound: {fileID: 8300000, guid: 5c4fd22f8c775ff99899310942660a57, type: 3}
+    coverRemovedSoundVolume: 1
+    releaseSound: {fileID: 8300000, guid: dfb31fa25e5d528e9c023c1ee1565d54, type: 3}
+    releaseSoundVolume: 1
   - id: 95
     stages:
     - sprite: {fileID: 21300000, guid: 8bd16d233eb65654b159e60f6ae6bc4c, type: 3}
@@ -5678,6 +5722,10 @@ MonoBehaviour:
     particleCount: 0
     wardrobeItemSprites: []
     hamsterSatiety: 7
+    coverRemovedSound: {fileID: 8300000, guid: 5c4fd22f8c775ff99899310942660a57, type: 3}
+    coverRemovedSoundVolume: 1
+    releaseSound: {fileID: 8300000, guid: dfb31fa25e5d528e9c023c1ee1565d54, type: 3}
+    releaseSoundVolume: 1
   - id: 99
     stages:
     - sprite: {fileID: 21300000, guid: 1194997e00575129be200356e785ace8, type: 3}

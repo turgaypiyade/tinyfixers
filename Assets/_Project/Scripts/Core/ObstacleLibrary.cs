@@ -131,7 +131,7 @@ public class ObstacleDef
     public AudioClip followUpBreakSound;
     [Range(0f, 1f)] public float followUpBreakSoundVolume = 1f;
 
-    [Tooltip("Engelin örtüsü kalkınca (Brandalı heykel: branda soyulurken) çalan ses. Ne zaman çalacağını " +
+    [Tooltip("Engelin örtüsü kalkınca (Brandalı heykel: branda soyulurken; Dimerdal: her kepenk açılma adımı) çalan ses. Ne zaman çalacağını " +
              "engelin kendi servisi belirler.")]
     public AudioClip coverRemovedSound;
     [Range(0f, 1f)] public float coverRemovedSoundVolume = 1f;
@@ -148,7 +148,7 @@ public class ObstacleDef
     [Tooltip("Engel komşu bir special'ı yuttuğunda (GrassWaterLily).")]
     public AudioClip absorbSound;
     [Range(0f, 1f)] public float absorbSoundVolume = 1f;
-    [Tooltip("Engel yuttuğu special'ı geri fırlattığında — fırlatma anında (GrassWaterLily).")]
+    [Tooltip("Fırlatma anında tek sefer çalar (GrassWaterLily: special, Windmill: çuval, Dimerdal: elmas uçuşu).")]
     public AudioClip releaseSound;
     [Range(0f, 1f)] public float releaseSoundVolume = 1f;
 

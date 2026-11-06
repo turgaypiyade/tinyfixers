@@ -1,0 +1,89 @@
+{
+  "result": "PASS",
+  "level": 233,
+  "activeCells": 82,
+  "components": 1,
+  "goals": {
+    "34": 8,
+    "33": 2,
+    "29": 1,
+    "39": 8,
+    "30": 12
+  },
+  "phases": [
+    {
+      "removed": [],
+      "normalSlots": 42,
+      "naturallyFed": 42
+    },
+    {
+      "removed": [
+        33
+      ],
+      "normalSlots": 42,
+      "naturallyFed": 42
+    },
+    {
+      "removed": [
+        33,
+        39
+      ],
+      "normalSlots": 50,
+      "naturallyFed": 50
+    },
+    {
+      "removed": [
+        33,
+        39,
+        29
+      ],
+      "normalSlots": 62,
+      "naturallyFed": 62
+    },
+    {
+      "removed": [
+        33,
+        39,
+        29,
+        30
+      ],
+      "normalSlots": 74,
+      "naturallyFed": 74
+    },
+    {
+      "removed": [
+        33,
+        39,
+        29,
+        30,
+        34
+      ],
+      "normalSlots": 82,
+      "naturallyFed": 82
+    }
+  ],
+  "startingEmpty": 0,
+  "pins": 0,
+  "specialOnlyCells": 8,
+  "magnetPathCells": 12,
+  "magnetEndpointAdvances": 11,
+  "closedSafeTemporaryRoofIfFloorClearedFirst": [
+    66,
+    67,
+    68,
+    69,
+    74,
+    75,
+    76,
+    77
+  ],
+  "priorAssetHashesPreserved": 6103,
+  "externalEditsPreserved": {
+    "Assets/_Project/Settings/ProLevels/LevelV1_00001080.asset": "6180a68b44351a6c210c2b4fff9a924e3dca0e0d4941be87d0c753fed5522009"
+  },
+  "previous232UserChangesPreserved": true,
+  "grassFamilyAbsent": true,
+  "simulationOrBuild": false,
+  "measuredBalance": false,
+  "measuredPerformance": false
+}

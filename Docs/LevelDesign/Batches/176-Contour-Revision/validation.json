@@ -1,0 +1,61 @@
+{
+  "result": "PASS",
+  "changedLevelOnly": 176,
+  "preservedOtherAssetFiles": 6107,
+  "nameAndGuidAndCatalogPreserved": true,
+  "normalIntroduction": true,
+  "moves": 26,
+  "goals": {
+    "72": 5,
+    "74": 5
+  },
+  "activeCells": 54,
+  "connectedObstacleComponents": 1,
+  "perColorComponents": 1,
+  "phases": [
+    {
+      "removed": [],
+      "normalSlots": 44,
+      "naturallyFed": 44
+    },
+    {
+      "removed": [
+        72
+      ],
+      "normalSlots": 49,
+      "naturallyFed": 49
+    },
+    {
+      "removed": [
+        74
+      ],
+      "normalSlots": 49,
+      "naturallyFed": 49
+    },
+    {
+      "removed": [
+        72,
+        74
+      ],
+      "normalSlots": 54,
+      "naturallyFed": 54
+    }
+  ],
+  "previousStaticFeed": {
+    "normalSlots": 39,
+    "naturallyFed": 32,
+    "unfed": [
+      23,
+      24,
+      25,
+      37,
+      38,
+      39,
+      45
+    ]
+  },
+  "pins": 0,
+  "grass": false,
+  "buildOrGameSimulation": false,
+  "measuredBalance": false
+}
