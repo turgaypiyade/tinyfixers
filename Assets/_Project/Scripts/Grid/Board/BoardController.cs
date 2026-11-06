@@ -740,6 +740,70 @@ public class BoardController : MonoBehaviour
     public bool IsExplicitlyLocked => CurrentState == BoardState.Locked;
     public int RemainingMoves { get; private set; }
     public LevelData ActiveLevelData => levelData;
+    internal DimerdalService Dimerdals { get; set; }
+    internal FlyFruitService FlyFruits { get; set; }
+
+    internal bool CanConvertDimerdalDiamond(TileView tile)
+        => CanReplaceIdleColorTile(tile);
+
+    internal bool CanReplaceIdleColorTile(TileView tile)
+    {
+        if (tile == null || !tile.IsCurrentLifetime(tile.LifetimeVersion)
+            || !DimerdalRules.IsColor(tile.GetTileType()) || tile.GetSpecial() != TileSpecial.None
+            || tile.X < 0 || tile.Y < 0 || tile.X >= width || tile.Y >= height
+            || tiles[tile.X, tile.Y] != tile
+            // KeyGenerator kuralı (kullanıcı 2026-11-05: "aynen keygenerator gibi"): elmas yalnız YERİNDE DURAN,
+            // hareketsiz taşın yerine geçer. Havadaki/planlı düşüşteki taşa yazma kaldırıldı; hedef uçuşta düşmeye
+            // başlarsa DimerdalProductionFx yeni hedef seçer. Sonra elmas normal taş gibi düşer.
+            || !tile.IsRuntimeIdle || tile.HasActiveLandingVisual || tile.IsPlannedToMoveThisFallPass
+            || tile.WasDragging || !tile.gameObject.activeInHierarchy
+            || (fallMotion != null && fallMotion.HasPendingMotion(tile))
+            || obstacleStateService == null || obstacleStateService.IsInteractionLockedAt(tile.X, tile.Y)
+            || obstacleStateService.HasObstacleAt(tile.X, tile.Y)
+            || IsPendingTriggeredSpecialCell(tile.X, tile.Y) || IsReservedTileTargetCell(tile.X, tile.Y)
+            || reservedKeyLandingCells.Contains(new Vector2Int(tile.X, tile.Y))) return false;
+        return true;
+    }
+
+    internal bool TryPlaceFlyEgg(TileView tile, int lifetime)
+    {
+        if (tile == null || !tile.IsCurrentLifetime(lifetime) || !CanReplaceIdleColorTile(tile)) return false;
+        var def = levelData?.obstacleLibrary?.Get(ObstacleId.FlyEgg);
+        if (def == null || def.GetPreviewSprite() == null
+            || !obstacleStateService.TrySpawnSingleCellObstacleAt(tile.X, tile.Y, ObstacleId.FlyEgg)) return false;
+        tile.SetUseFullCellIcon(false);
+        tile.SetMovableObstacleTile(true);
+        tile.SetFullCellMovableSprite(def.fullCellSprite);
+        tile.SetVisualLayout(TileView.TileVisualLayout.Centered);
+        tile.SetMovableObstacleSprite(def.GetPreviewSprite());
+        tile.ApplyTileSize(TileSize);
+        SyncTileData(tile.X, tile.Y);
+        RaiseObstacleCreatedDynamic(tile.X, tile.Y);
+        return true;
+    }
+
+    internal bool TryConvertDimerdalDiamond(TileView tile, ObstacleId diamond)
+    {
+        if (!DimerdalRules.IsDiamond(diamond) || !CanConvertDimerdalDiamond(tile)) return false;
+        var def = levelData != null && levelData.obstacleLibrary != null ? levelData.obstacleLibrary.Get(diamond) : null;
+        var sprite = def != null ? def.GetPreviewSprite() : null;
+        if (sprite == null) return false;
+        // A generated diamond is a normal matchable stone, never an obstacle stamp.
+        tile.ApplyDimerdalDiamond(DimerdalRules.DiamondTile(diamond), sprite);
+        SyncTileData(tile.X, tile.Y);
+        return true;
+    }
+
+    internal void CollectDimerdalDiamond(TileView tile)
+    {
+        if (tile == null || !tile.gameObject.activeInHierarchy
+            || !DimerdalRules.IsDiamond(tile.GetTileType()) || tile.DimerdalCollectionStarted) return;
+        tile.DimerdalCollectionStarted = true;
+        if (Dimerdals != null)
+            Dimerdals.CollectDiamond(tile, DimerdalRules.DiamondObstacle(tile.GetTileType()));
+        else
+            TopHud?.NotifyCollectibleCollected(CollectibleId.Diamond, 1);
+    }
 
     // ── Tutorial swap filter ──
     private bool _tutorialSwapFilterActive;
@@ -1374,6 +1438,7 @@ public class BoardController : MonoBehaviour
         var tile = tiles != null ? tiles[x, y] : null;
         if (tile == null || !tile.IsRuntimeIdle || !tile.gameObject.activeInHierarchy
             || tile.GetSpecial() != TileSpecial.None || tile.GetTileType() == TileType.Key
+            || DimerdalRules.IsDiamond(tile.GetTileType())
             || gridData == null || gridData[x, y] == null
             || tile.X != x || tile.Y != y
             || IsPendingTriggeredSpecialCell(x, y) || IsReservedTileTargetCell(x, y))
@@ -2113,7 +2178,8 @@ public class BoardController : MonoBehaviour
             bool pinned = levelData != null
                 && ((levelData.pinnedTileTypes != null && idx < levelData.pinnedTileTypes.Length && levelData.pinnedTileTypes[idx] > 0)
                     || (levelData.pinnedSpecialTypes != null && idx < levelData.pinnedSpecialTypes.Length && levelData.pinnedSpecialTypes[idx] != 0));
-            keep[x, y] = view == null || pinned || view.GetSpecial() != TileSpecial.None;
+            keep[x, y] = view == null || pinned || view.GetSpecial() != TileSpecial.None
+                || DimerdalRules.IsDiamond(view.GetTileType());
         }
 
         var types = SimulateInitialTypes(keep);
@@ -2717,9 +2783,13 @@ public class BoardController : MonoBehaviour
         matchFinder?.InvalidateRunCache();
     }
     public TileView GetTileViewAt(int x, int y) { if (tiles == null || x < 0 || x >= width || y < 0 || y >= height) return null; return tiles[x, y]; }
-    public Sprite GetIcon(TileType type) => iconLibrary != null ? iconLibrary.Get(type) : null;
+    public Sprite GetIcon(TileType type) => DimerdalRules.IsDiamond(type)
+        ? levelData?.obstacleLibrary?.Get(DimerdalRules.DiamondObstacle(type))?.GetPreviewSprite()
+        : iconLibrary != null ? iconLibrary.Get(type) : null;
     public Sprite GetSpecialIcon(TileSpecial special) => iconLibrary != null ? iconLibrary.GetSpecialIcon(special) : null;
-    public Sprite GetOverrideIcon(TileType baseType) => iconLibrary != null ? iconLibrary.GetOverrideIcon(baseType) : null;
+    public Sprite GetOverrideIcon(TileType baseType) => iconLibrary != null
+        ? iconLibrary.GetOverrideIcon(DimerdalRules.IsDiamond(baseType)
+            ? DimerdalRules.MatchColor(DimerdalRules.DiamondObstacle(baseType)) : baseType) : null;
     public Sprite GetPatchBotFlightIcon() => iconLibrary != null ? iconLibrary.GetPatchBotFlightIcon() : null;
     public Sprite GetPatchBotFullIcon()   => iconLibrary != null ? iconLibrary.GetPatchBotFullIcon()   : null;
     public void RegisterTile(TileView tile, int x, int y)
@@ -3136,6 +3206,7 @@ public class BoardController : MonoBehaviour
 
         if (tile != null && tile)
         {
+            CollectDimerdalDiamond(tile);
             // Progress-event "+1" FX'i taşın yanında doğsun diye dünya pozisyonunu yayınla
             // (release'den ÖNCE). Sayım NotifyTilesCleared'da; bu sadece görsel ipucu.
             GameEventBus.EmitTileClearedAt(fxType, tile.transform.position);
@@ -5628,6 +5699,7 @@ public class BoardController : MonoBehaviour
 
     private void HandleObstacleDestroyed(int originIndex, ObstacleId obstacleId)
     {
+        if (obstacleId == ObstacleId.FlyEgg) FlyFruits?.Hatch(originIndex);
         // Register the flight before goal listeners see the final egg disappear, so a
         // completed goal cannot end the level before the three impacts have resolved.
         if (obstacleId == ObstacleId.EggBird && width > 0

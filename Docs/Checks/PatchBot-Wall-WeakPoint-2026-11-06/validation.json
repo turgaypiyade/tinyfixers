@@ -1,0 +1,16 @@
+{
+  "result": "PASS",
+  "oldBehaviorReproduced": true,
+  "weakWallAndFlourSourceProductionChecks": 260,
+  "existingTargetingRegressionChecks": 147,
+  "magnetEndpointRegressionChecks": 85,
+  "protectedProjectFiles": 6052,
+  "changedLevelAssets": [],
+  "changedProductionFiles": [
+    "Assets/_Project/Scripts/Grid/Board/Actions/PatchBotImpactScorer.cs",
+    "Assets/_Project/Scripts/Grid/Board/Actions/PatchBotTargetCoordinator.cs",
+    "Assets/_Project/Scripts/VFX/PatchbotDashUI.cs",
+    "Assets/_Project/Scripts/Grid/Board/Actions/SpecialChainRunner.cs"
+  ],
+  "limits": "Real production methods with presentation doubles. No Unity build/Play/device, board/gravity/cascade simulation, publication, baseline or commit; no measured CPU/GC/FPS."
+}

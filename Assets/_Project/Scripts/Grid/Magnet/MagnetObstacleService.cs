@@ -248,7 +248,8 @@ public class MagnetObstacleService : MonoBehaviour
         tile = board.Tiles[x, y];
         if (tile == null || !tile)
             return false;
-        if (tile.GetSpecial() != TileSpecial.None || tile.GetTileType() == TileType.Key)
+        if (tile.GetSpecial() != TileSpecial.None || tile.GetTileType() == TileType.Key
+            || DimerdalRules.IsDiamond(tile.GetTileType()))
             return false;
 
         if (obstacleStateService != null)

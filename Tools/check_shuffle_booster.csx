@@ -21,7 +21,7 @@ var holes=Methods(files[3],"RefreshHolePanels");
 if(!holes.Contains("hasObstacle || board.ActiveBooster == BoardController.BoosterMode.Shuffle") || !holes.Contains("proxy.enabled = acceptsTap"))throw new Exception("Hole overlay must accept shuffle confirmation and keep other modes blocked");
 var harness=@"
 using System;using System.Collections;using System.Collections.Generic;using System.Linq;
-public enum TileType{Red,Blue,Green,Yellow}public enum TileSpecial{None,Pulse}
+public enum TileType{Red,Blue,Green,Yellow,DiamondBlue,DiamondGreen,DiamondYellow,DiamondRed}public enum ObstacleId{None}public static class DimerdalRules {"+Methods("Grid/Board/Obstacles/DimerdalRules.cs","IsDiamond")+@"}public enum TileSpecial{None,Pulse}
 public struct Vector2Int{public int x,y;public Vector2Int(int x,int y){this.x=x;this.y=y;}}
 public struct Vector2{public float x,y;public Vector2(float x,float y){this.x=x;this.y=y;}public static Vector2 operator+(Vector2 a,Vector2 b)=>new Vector2(a.x+b.x,a.y+b.y);public static Vector2 operator-(Vector2 a,Vector2 b)=>new Vector2(a.x-b.x,a.y-b.y);public static Vector2 operator*(Vector2 a,float f)=>new Vector2(a.x*f,a.y*f);public static Vector2 LerpUnclamped(Vector2 a,Vector2 b,float t)=>a+(b-a)*t;}
 public static class Mathf{public const float PI=(float)Math.PI;public static float Clamp01(float f)=>Math.Max(0,Math.Min(1,f));public static float Max(float a,float b)=>Math.Max(a,b);public static float Sin(float f)=>(float)Math.Sin(f);public static float Cos(float f)=>(float)Math.Cos(f);}
@@ -80,6 +80,8 @@ board=new BoardController(2,1);run=new Routine(board.boosterService.ShuffleBoard
 board=new BoardController(2,1);var snapshot=(TileView[,])board.Tiles.Clone();var versions=new int[2,1]{{1},{1}};Check(!board.boosterService.Stale(snapshot,versions),""live map accepted"");board.Tiles[0,0].LifetimeVersion++;Check(board.boosterService.Stale(snapshot,versions),""pooled reuse invalidates unchanged reference map"");
 // Unchanged playable types must not be accepted as a successful shuffle.
 board=new BoardController(2,1);var same=new TileType[2,1];TileType[,] result;Check(!board.boosterService.Permute(same,new bool[2,1],out result),""identity-only permutation rejected"");
+// A forced recolor fallback must not erase a committed diamond goal stone.
+board=new BoardController(2,1);board.Tiles[0,0].type=TileType.DiamondBlue;var diamond=board.Tiles[0,0];var diamondRun=new Routine(board.boosterService.ShuffleBoardRoutine(board.actionSequencer));diamondRun.Finish();Check(ReferenceEquals(board.Tiles[0,0],diamond)&&diamond.type==TileType.DiamondBlue,""recolor fallback preserves diamond identity and count"");Check(board.busy==0&&board.pause==0,""diamond fallback releases scopes"");
 return checks;}}
 Checks.Run()";
 var count=CSharpScript.EvaluateAsync<int>(harness,ScriptOptions.Default.AddReferences(typeof(System.Collections.Generic.HashSet<int>).Assembly)).GetAwaiter().GetResult();

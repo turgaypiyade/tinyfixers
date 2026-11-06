@@ -1,0 +1,74 @@
+{
+  "BoxFrame.png": {
+    "original": "/var/folders/54/y51scw3j7cj3198kjy1bv4cw0000gn/T/codex-clipboard-YlVrVR.png",
+    "sha256": "8aa78340a6279698388eae6688a844d2bca0e6e35943536ef43cf732882ca772",
+    "size": [
+      1254,
+      1254
+    ]
+  },
+  "BoxFrameDuplicate.png": {
+    "original": "/var/folders/54/y51scw3j7cj3198kjy1bv4cw0000gn/T/codex-clipboard-HyYmCa.png",
+    "sha256": "8aa78340a6279698388eae6688a844d2bca0e6e35943536ef43cf732882ca772",
+    "size": [
+      1254,
+      1254
+    ]
+  },
+  "Egg.png": {
+    "original": "/var/folders/54/y51scw3j7cj3198kjy1bv4cw0000gn/T/codex-clipboard-k60MDz.png",
+    "sha256": "5dbf98df069e7ae25c64d8154c561d4d5d9e71db36ae2c092c7595c630c9ec53",
+    "size": [
+      1254,
+      1254
+    ]
+  },
+  "Apple.png": {
+    "original": "/var/folders/54/y51scw3j7cj3198kjy1bv4cw0000gn/T/codex-clipboard-hdFa9r.png",
+    "sha256": "41367bfb860cf9eebc824bd2356224cc0f59cc4da7e0f897c8f34e252ab1d0e5",
+    "size": [
+      1254,
+      1254
+    ]
+  },
+  "FlySide.png": {
+    "original": "/var/folders/54/y51scw3j7cj3198kjy1bv4cw0000gn/T/codex-clipboard-0GcTPs.png",
+    "sha256": "e763256807e289054832cc8fa5e5ca8d56e1af9d9ee2ef9aa6a35d80bcbc6eff",
+    "size": [
+      2172,
+      724
+    ]
+  },
+  "FlyFront.png": {
+    "original": "/var/folders/54/y51scw3j7cj3198kjy1bv4cw0000gn/T/codex-clipboard-Kf8My5.png",
+    "sha256": "5d8cc32e38c2d37ef930bea0b116184e5990de7b51e896e41dec07385274e350",
+    "size": [
+      2172,
+      724
+    ]
+  },
+  "BoxReference.png": {
+    "original": "/var/folders/54/y51scw3j7cj3198kjy1bv4cw0000gn/T/codex-clipboard-jnN5fD.png",
+    "sha256": "d08b9f53021101f5ed3b4960642f055ff5b87f82abaa4b6770fbef30e93a62c8",
+    "size": [
+      1254,
+      1254
+    ]
+  },
+  "AppleDuplicate.png": {
+    "original": "/var/folders/54/y51scw3j7cj3198kjy1bv4cw0000gn/T/codex-clipboard-lIQhPx.png",
+    "sha256": "41367bfb860cf9eebc824bd2356224cc0f59cc4da7e0f897c8f34e252ab1d0e5",
+    "size": [
+      1254,
+      1254
+    ]
+  },
+  "AppleHalf.png": {
+    "original": "/var/folders/54/y51scw3j7cj3198kjy1bv4cw0000gn/T/codex-clipboard-Vz1l3L.png",
+    "sha256": "aeded25c89e5eb138ca9d71e868bb45c86b495d820e7dcb3c3c78eb3747d13c2",
+    "size": [
+      1254,
+      1254
+    ]
+  }
+}

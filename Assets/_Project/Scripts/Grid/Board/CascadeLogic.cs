@@ -929,6 +929,17 @@ public partial class CascadeLogic
             return false;
         }
 
+        // Gölge sütunu önce dolar (kullanıcı kuralı 2026-11-04: "A sütunu önce dolması gerekirken bazen önce B doluyor").
+        // Geniş engelin gölgesinde iç sütun (B) yandaki gölge sütunundan (A) beslenir. Boşluklar alttan yukarı işlendiği
+        // için B'nin dibi, A'nın henüz dolmamış üst kısmından önce geliyor ve A'nın taşı B'ye çekiliyordu. A'nın bu taşın
+        // ÜSTÜNDE ileride dolacak (beslemesi olan) boşluğu varken A'dan kaydırma yok; A tamamlanınca B'ye akar.
+        // Açık (spawn'a bağlı) sütundan gölgeye dökülme bu kuralın dışında; beslenemeyecek boşluk beklenmez (delik kalmaz).
+        if (ShadowDonorStillFilling(virtualBoard, fromX, sourceY))
+        {
+            DeferredDiagonalSlide = true;
+            return false;
+        }
+
         // Special'lar diagonal'e savrulmasın: düz inmeyi tercih ederler. skipSpecials=true
         // olan ilk geçişte special kaynak atlanır; yalnızca son çare geçişinde (başka filler yoksa)
         // diagonal kayabilirler. Böylece special'lar yana kaymadan normal taş gibi düz iner.
@@ -942,6 +953,17 @@ public partial class CascadeLogic
         bool cornerB = IsDiagonalPassableCell(toX, fromY);
 
         return cornerA || cornerB;
+    }
+
+    private bool ShadowDonorStillFilling(VirtualTile[,] virtualBoard, int x, int y)
+    {
+        if (diagonalFeedReachable == null) return false;
+        int segTop = FindSegmentTopY(x, y);
+        if (IsSegmentConnectedToSpawnEdge(x, segTop)) return false;   // açık sütun: klasik kenardan dökülme
+        for (int yy = segTop; yy < y; yy++)
+            if (IsSlotEmpty(virtualBoard, x, yy) && diagonalFeedReachable[x, yy])
+                return true;
+        return false;
     }
 
     private bool IsSlideSourceAtCorner(VirtualTile tile, int x, int y)

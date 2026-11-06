@@ -1,0 +1,46 @@
+{
+  "result": "PASS",
+  "existingProjectFilesPreserved": 6058,
+  "changedExisting": [
+    "Assets/_Project/Settings/ObstacleLibrary.asset",
+    "Assets/_Project/Scripts/Core/LevelData.cs",
+    "Assets/_Project/Scripts/Editor/LevelDataEditor.cs",
+    "Assets/_Project/Scripts/Grid/GridSpawner.cs",
+    "Assets/_Project/Scripts/Grid/Board/BoardController.cs",
+    "Assets/_Project/Scripts/Grid/Board/Obstacles/ObstacleStateService.cs",
+    "Assets/_Project/Scripts/Grid/Board/Actions/PatchBotTargetCoordinator.cs"
+  ],
+  "newProjectFiles": [
+    "Assets/_Project/Resources/FlyFruit.meta",
+    "Assets/_Project/Scripts/Grid/Board/Obstacles/FlyFruitService.cs.meta",
+    "Assets/_Project/Scripts/Grid/Board/Obstacles/FlyFruitFlyView.cs",
+    "Assets/_Project/Scripts/Grid/Board/Obstacles/FlyEggProductionFx.cs.meta",
+    "Assets/_Project/Scripts/Grid/Board/Obstacles/FlyFruitFlyView.cs.meta",
+    "Assets/_Project/Scripts/Grid/Board/Obstacles/FlyEggProductionFx.cs",
+    "Assets/_Project/Scripts/Grid/Board/Obstacles/FlyFruitProgress.cs.meta",
+    "Assets/_Project/Scripts/Grid/Board/Obstacles/FlyFruitService.cs",
+    "Assets/_Project/Scripts/Grid/Board/Obstacles/FlyFruitProgress.cs",
+    "Assets/_Project/Resources/FlyFruit/BoxFrame.png.meta",
+    "Assets/_Project/Resources/FlyFruit/AppleHalf.png",
+    "Assets/_Project/Resources/FlyFruit/Apple.png",
+    "Assets/_Project/Resources/FlyFruit/FlyAtlas.png",
+    "Assets/_Project/Resources/FlyFruit/BoxReference.png",
+    "Assets/_Project/Resources/FlyFruit/BoxReference.png.meta",
+    "Assets/_Project/Resources/FlyFruit/FlyAtlas.png.meta",
+    "Assets/_Project/Resources/FlyFruit/BoxFrame.png",
+    "Assets/_Project/Resources/FlyFruit/Egg.png",
+    "Assets/_Project/Resources/FlyFruit/AppleHalf.png.meta",
+    "Assets/_Project/Resources/FlyFruit/Apple.png.meta",
+    "Assets/_Project/Resources/FlyFruit/Egg.png.meta"
+  ],
+  "allLevelCatalogNameAssetsPreserved": true,
+  "oldObstacleDefinitionsPreserved": 92,
+  "newIds": [
+    100,
+    101,
+    102
+  ],
+  "sourceImages": 9,
+  "preparedSprites": 11,
+  "unityBuildOrPlay": false
+}

@@ -17,7 +17,9 @@ public enum CollectibleId : int
     BossDamage = 2,
 
     // Guguk kuşu evinden (ObstacleId.BirdHouse) uçan kuşlar. Goal amount = toplam kuş.
-    Bird = 3
+    Bird = 3,
+    // Dimerdal produces colored board diamonds; counted only when collected.
+    Diamond = 4
 }
 
 public static class CollectibleSources
@@ -27,8 +29,25 @@ public static class CollectibleSources
     public static ObstacleId ProducerOf(CollectibleId id) => id switch
     {
         CollectibleId.Bird => ObstacleId.BirdHouse,
+        CollectibleId.Diamond => ObstacleId.DimerdalDiamondBlue,
         _ => ObstacleId.None,
     };
+}
+
+[System.Serializable]
+public struct DimerdalEntry
+{
+    public int originCellIndex;
+    public ObstacleId obstacleId;
+    [Min(1)] public int count;
+}
+
+[System.Serializable]
+public struct FruitObstacleEntry
+{
+    public int originCellIndex;
+    [Min(1)] public int width;
+    [Min(1)] public int height;
 }
 
 public enum LevelKind : int
@@ -354,6 +373,18 @@ public enum ObstacleId : int
     FlourSackV = 82,
     // Un: taşın altında en alt katman (su birikintisi / çamur gibi); üstündeki eşleşmeyle temizlenir. Hedef = hücre sayısı.
     Flour = 83,
+
+    // Dimerdal: four-hit colored shutters with an individual production count.
+    DimerdalBlue1x1 = 84, DimerdalBlue2x2 = 85, DimerdalBlue3x3 = 86,
+    DimerdalGreen1x1 = 87, DimerdalGreen2x2 = 88, DimerdalGreen3x3 = 89,
+    DimerdalYellow1x1 = 90, DimerdalYellow2x2 = 91, DimerdalYellow3x3 = 92,
+    DimerdalRed1x1 = 93, DimerdalRed2x2 = 94, DimerdalRed3x3 = 95,
+    // Legacy diamond authoring/icon IDs; promoted to normal Diamond tiles at spawn/reveal.
+    DimerdalDiamondBlue = 96, DimerdalDiamondGreen = 97,
+    DimerdalDiamondYellow = 98, DimerdalDiamondRed = 99,
+    FlyEggBox = 100, // Four special-only releases; one movable egg per special.
+    FlyEgg = 101,    // Movable1x1; a normal match/special hatches three fruit-eating flies.
+    FlyFruit = 102,  // Per-origin width/height; six fly bites, one fruit goal.
 }
 
 /// Lamba şeridi hücre rengi (LevelData.lampColorByCell). Renkler taş türleriyle eşleşir (renkli sandık sırası).
@@ -600,6 +631,21 @@ public struct StackedObstacleEntry
     [Tooltip("Renkli 1x1 sandıkların başlangıçta kalan vuruşu. 0 = kütüphane varsayılanı; " +
              "2/1 = hasarlı aşamadan başlar. Diğer engellerde kullanılmaz.")]
     [Min(0)] public int initialRemainingHits;
+
+    [Tooltip("Yığın Wall/MetalWall hücrelerinin ortak parça origin'i + 1. 0 = eski tek-hücre davranışı. " +
+             "Aynı bağlı parçanın bütün hücrelerinde aynı değer kullanılır; yerleştirme hücresi originCellIndex olarak kalır.")]
+    [Min(0)] public int wallPieceOriginPlusOne;
+
+    [Tooltip("Overlay numaralı duvar fırçasının parça numarası; yalnız editör kullanır. 0 = eski kayıt.")]
+    [Min(0)] public int wallPieceId;
+
+    public int ResolveRuntimeOrigin(int cellCount)
+    {
+        int sharedOrigin = wallPieceOriginPlusOne - 1;
+        return (obstacleId == ObstacleId.Wall || obstacleId == ObstacleId.MetalWall)
+            && sharedOrigin >= 0 && sharedOrigin <= originCellIndex && sharedOrigin < cellCount
+            ? sharedOrigin : originCellIndex;
+    }
 
     public static bool SupportsInitialHits(ObstacleId id)
         => id == ObstacleId.ColorCrateYellow || id == ObstacleId.ColorCrateRed
@@ -855,6 +901,121 @@ public class LevelData : ScriptableObject
              "Auto'dur: rengi satır bandından gelir (PaintCanBoxView.AutoColorForRow).")]
     public PaintCanBoxColorEntry[] paintCanBoxColors;
 
+    [Tooltip("Her Dimerdal kutusunun üreteceği elmas adedi. Ortak Diamond hedefi bu adetlerin toplamıdır.")]
+    public DimerdalEntry[] dimerdals;
+    public const int DimerdalDefaultCount = 6;
+
+    public int GetDimerdalProductionCount(int origin, ObstacleId id)
+    {
+        if (dimerdals != null)
+            foreach (var e in dimerdals)
+                if (e.originCellIndex == origin && e.obstacleId == id) return Mathf.Max(1, e.count);
+        return DimerdalDefaultCount;
+    }
+
+    public void SetDimerdalProductionCount(int origin, ObstacleId id, int count)
+    {
+        if (!DimerdalRules.IsShutter(id)) return;
+        var list = new System.Collections.Generic.List<DimerdalEntry>(dimerdals ?? System.Array.Empty<DimerdalEntry>());
+        list.RemoveAll(e => e.originCellIndex == origin && e.obstacleId == id);
+        list.Add(new DimerdalEntry { originCellIndex = origin, obstacleId = id, count = Mathf.Max(1, count) });
+        dimerdals = list.ToArray();
+    }
+
+    /// Authoring/initialization only. Include covered sources once, by origin + type.
+    public void GetDimerdalBoxes(System.Collections.Generic.List<DimerdalEntry> boxes)
+    {
+        boxes.Clear();
+        if (obstacles != null && obstacleOrigins != null)
+            for (int i = 0; i < obstacles.Length && i < obstacleOrigins.Length; i++)
+                if (obstacleOrigins[i] == i) AddDimerdalBox(boxes, i, (ObstacleId)obstacles[i]);
+        if (stackedObstacles != null)
+            foreach (var e in stackedObstacles) AddDimerdalBox(boxes, e.originCellIndex, e.obstacleId);
+        boxes.Sort((a, b) => a.originCellIndex != b.originCellIndex
+            ? a.originCellIndex.CompareTo(b.originCellIndex) : a.obstacleId.CompareTo(b.obstacleId));
+    }
+
+    private void AddDimerdalBox(System.Collections.Generic.List<DimerdalEntry> boxes, int origin, ObstacleId id)
+    {
+        if (!DimerdalRules.IsShutter(id) || origin < 0 || origin >= width * height
+            || cells == null || origin >= cells.Length || cells[origin] != (int)CellType.Normal) return;
+        foreach (var e in boxes) if (e.originCellIndex == origin && e.obstacleId == id) return;
+        boxes.Add(new DimerdalEntry { originCellIndex = origin, obstacleId = id, count = GetDimerdalProductionCount(origin, id) });
+    }
+
+    private int CountAuthoredDimerdalDiamonds()
+    {
+        var seen = new System.Collections.Generic.HashSet<(int, ObstacleId)>();
+        if (obstacles != null && obstacleOrigins != null)
+            for (int i = 0; i < obstacles.Length && i < obstacleOrigins.Length; i++)
+                if (obstacleOrigins[i] == i && DimerdalRules.IsDiamond((ObstacleId)obstacles[i]))
+                    seen.Add((i, (ObstacleId)obstacles[i]));
+        if (stackedObstacles != null)
+            foreach (var e in stackedObstacles)
+                if (DimerdalRules.IsDiamond(e.obstacleId)) seen.Add((e.originCellIndex, e.obstacleId));
+        return seen.Count;
+    }
+
+    /// Editor and runtime-clone initialization, BEFORE layer stamping. Never call on
+    /// the live board: its obstacle arrays and source registrations change during play.
+    public bool SynchronizeDimerdalGoals()
+    {
+        var boxes = new System.Collections.Generic.List<DimerdalEntry>();
+        GetDimerdalBoxes(boxes);
+        int authored = CountAuthoredDimerdalDiamonds();
+        int oldAmount = 0;
+        if (goals != null)
+            foreach (var g in goals)
+                if (IsDimerdalGoal(g)) oldAmount += Mathf.Max(0, g.amount);
+        // Old levels had only a shared goal. Materialize an even split once, keeping
+        // their total. New placements always store the designer's explicit count.
+        if ((dimerdals == null || dimerdals.Length == 0) && boxes.Count > 0 && oldAmount > 0)
+        {
+            int budget = Mathf.Max(boxes.Count, oldAmount - authored);
+            for (int i = 0; i < boxes.Count; i++)
+            {
+                var e = boxes[i];
+                e.count = budget / boxes.Count + (i < budget % boxes.Count ? 1 : 0);
+                boxes[i] = e;
+            }
+        }
+        bool changed = dimerdals == null ? boxes.Count > 0 : dimerdals.Length != boxes.Count;
+        if (!changed && dimerdals != null)
+            for (int i = 0; i < boxes.Count; i++)
+                if (dimerdals[i].originCellIndex != boxes[i].originCellIndex
+                    || dimerdals[i].obstacleId != boxes[i].obstacleId || dimerdals[i].count != boxes[i].count) { changed = true; break; }
+        if (changed) dimerdals = boxes.ToArray();
+        int total = authored;
+        foreach (var e in boxes) total += e.count;
+        var next = new System.Collections.Generic.List<LevelGoalDefinition>();
+        LevelGoalDefinition diamondGoal = null;
+        if (goals != null)
+            foreach (var g in goals)
+            {
+                if (!IsDimerdalGoal(g)) { next.Add(g); continue; }
+                if (diamondGoal != null || total <= 0) { changed = true; continue; }
+                diamondGoal = g;
+                next.Add(g);
+            }
+        if (total > 0 && diamondGoal == null)
+        {
+            diamondGoal = new LevelGoalDefinition { targetType = LevelGoalTargetType.Collectible, collectibleId = CollectibleId.Diamond };
+            next.Add(diamondGoal);
+            changed = true;
+        }
+        if (diamondGoal != null)
+        {
+            var icon = obstacleLibrary != null ? obstacleLibrary.Get(ObstacleId.DimerdalDiamondBlue)?.GetGoalIconSprite() : null;
+            if (diamondGoal.amount != total) { diamondGoal.amount = total; changed = true; }
+            if (icon != null && diamondGoal.iconOverride != icon) { diamondGoal.iconOverride = icon; changed = true; }
+        }
+        if (goals == null || next.Count != goals.Length) goals = next.ToArray();
+        return changed;
+    }
+
+    private static bool IsDimerdalGoal(LevelGoalDefinition goal) => goal != null
+        && goal.targetType == LevelGoalTargetType.Collectible && goal.collectibleId == CollectibleId.Diamond;
+
     [Tooltip("Brandalı heykellerin etiket rengi + toplama sayısı, heykel origin'ine göre. Listede olmayan heykel " +
              "varsayılanı kullanır (kırmızı, TarpStatueDefaultCount).")]
     public TarpStatueEntry[] tarpStatues;
@@ -882,12 +1043,80 @@ public class LevelData : ScriptableObject
     /// Çok-hücreli engelin ayak izini okuyan her yer bunu kullanmalı (doğrudan def.size değil).
     public Vector2Int GetObstacleFootprint(ObstacleId id, int originCellIndex, ObstacleDef def)
     {
+        if (id == ObstacleId.FlyFruit) return GetFruitDimensions(originCellIndex);
         if (id == ObstacleId.TarpStatue)
         {
             int n = GetTarpStatue(originCellIndex).Size;
             return new Vector2Int(n, n);
         }
         return def != null ? new Vector2Int(Mathf.Max(1, def.size.x), Mathf.Max(1, def.size.y)) : Vector2Int.one;
+    }
+
+    public FruitObstacleEntry[] fruits;
+
+    public Vector2Int GetFruitDimensions(int origin)
+    {
+        if (fruits != null)
+            foreach (var f in fruits)
+                if (f.originCellIndex == origin) return new Vector2Int(Mathf.Clamp(f.width, 1, Mathf.Max(1, width)), Mathf.Clamp(f.height, 1, Mathf.Max(1, height)));
+        return Vector2Int.one;
+    }
+
+    public void SetFruitDimensions(int origin, int fruitWidth, int fruitHeight)
+    {
+        var list = new System.Collections.Generic.List<FruitObstacleEntry>(fruits ?? System.Array.Empty<FruitObstacleEntry>());
+        list.RemoveAll(f => f.originCellIndex == origin);
+        list.Add(new FruitObstacleEntry { originCellIndex = origin, width = Mathf.Clamp(fruitWidth, 1, Mathf.Max(1, width)), height = Mathf.Clamp(fruitHeight, 1, Mathf.Max(1, height)) });
+        fruits = list.ToArray();
+    }
+
+    public void GetFruitOrigins(System.Collections.Generic.List<int> result)
+    {
+        result.Clear();
+        if (obstacles != null && obstacleOrigins != null)
+            for (int i = 0; i < obstacles.Length && i < obstacleOrigins.Length; i++)
+                if (obstacles[i] == (int)ObstacleId.FlyFruit && obstacleOrigins[i] == i
+                    && cells != null && i < cells.Length && cells[i] == (int)CellType.Normal) result.Add(i);
+        if (stackedObstacles != null)
+            foreach (var e in stackedObstacles)
+                if (e.obstacleId == ObstacleId.FlyFruit && e.originCellIndex >= 0 && e.originCellIndex < width * height
+                    && cells != null && e.originCellIndex < cells.Length && cells[e.originCellIndex] == (int)CellType.Normal
+                    && !result.Contains(e.originCellIndex)) result.Add(e.originCellIndex);
+        result.Sort();
+    }
+
+    // Authoring/runtime-clone only, never recount the live mutable board.
+    public bool SynchronizeFruitGoals()
+    {
+        var origins = new System.Collections.Generic.List<int>(); GetFruitOrigins(origins);
+        bool changed = false;
+        if (fruits != null)
+        {
+            var entries = new System.Collections.Generic.List<FruitObstacleEntry>(fruits);
+            if (entries.RemoveAll(e => !origins.Contains(e.originCellIndex)) > 0) { fruits = entries.ToArray(); changed = true; }
+        }
+        var next = new System.Collections.Generic.List<LevelGoalDefinition>();
+        LevelGoalDefinition fruitGoal = null;
+        if (goals != null) foreach (var g in goals)
+        {
+            if (g == null || g.targetType != LevelGoalTargetType.Obstacle
+                || (g.obstacleId != ObstacleId.FlyFruit && g.obstacleId != ObstacleId.FlyEggBox && g.obstacleId != ObstacleId.FlyEgg)) { next.Add(g); continue; }
+            if (g.obstacleId == ObstacleId.FlyFruit && fruitGoal == null && origins.Count > 0) { fruitGoal = g; next.Add(g); }
+            else changed = true;
+        }
+        if (origins.Count > 0 && fruitGoal == null)
+        {
+            fruitGoal = new LevelGoalDefinition { targetType = LevelGoalTargetType.Obstacle, obstacleId = ObstacleId.FlyFruit };
+            next.Add(fruitGoal); changed = true;
+        }
+        if (fruitGoal != null)
+        {
+            var icon = obstacleLibrary != null ? obstacleLibrary.Get(ObstacleId.FlyFruit)?.GetGoalIconSprite() : null;
+            if (fruitGoal.amount != origins.Count) { fruitGoal.amount = origins.Count; changed = true; }
+            if (icon != null && fruitGoal.iconOverride != icon) { fruitGoal.iconOverride = icon; changed = true; }
+        }
+        if (changed) goals = next.ToArray();
+        return changed;
     }
 
     public void RemoveTarpStatue(int originCellIndex)
@@ -1049,6 +1278,10 @@ public class LevelData : ScriptableObject
 
         if (goals == null)
             goals = System.Array.Empty<LevelGoalDefinition>();
+
+        SynchronizeDimerdalGoals();
+
+        SynchronizeFruitGoals();
 
         for (int i = 0; i < goals.Length; i++)
         {

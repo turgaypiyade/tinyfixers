@@ -1,0 +1,26 @@
+{
+  "date": "2026-11-06",
+  "reviewer": "agent",
+  "userApproved": false,
+  "played": false,
+  "balanceMeasured": false,
+  "opened": [
+    "Previews/Level226.png",
+    "Previews/Level227.png",
+    "Previews/Level228.png",
+    "Previews/Level229.png",
+    "Previews/Level230.png",
+    "Levels226-230.png",
+    "Comparison.png"
+  ],
+  "assessment": {
+    "226": "V1 kullanıcı tarafından reddedildi. V2 gerçek PNG açıldı: tek24hücreyol/24altfener,ayrıdeğirmenadası,36doğalbaşlangıç,pin0. Referans13 ve yakın örnek111/84 ile karşılaştırıldı. Kullanıcı henüzv2oynamadı/onaylamadı.",
+    "227": "173/177/45 ve kırpılmış94 yakın adaylardır.173 ile görsel karşılaştırmada ortogonal raf ritmi ortak; üç dikey/iki yatay çerçeve, L plastik ve bitişik oyma kütlesi yeni iş sırası kuruyor.",
+    "228": "Kırpılmış engel siluetinde61 güçlü yakın adaydır; ayrıca159/193, konumsal181 incelendi.61’de tam genişlikte üst plastik/alt sandık-taş bantları ve ortada yatay çalışma yüzü vardır.228’de dar merkez gövdesi, alt üretici noktası ve geniş dikey yan çalışma yüzleri vardır. Benzer dikdörtgen kütleler saklanmadı; puan özgünlük yüzdesi sayılmadı.",
+    "229": "169 konumsal;12/173/117 kırpılmış yakın adaylardır.169 ile görsel karşılaştırma burgu çevresindeki dört değirmen, merkezi örtülü L ve eşit olmayan iki bağımsız üretim işini ayırır.",
+    "230": "133/102 konumsal;67 kırpılmış kısa listededir.133 karşılaştırmasında arena boyutu ortak olsa da üst fener sahnesi, yan bağımsız kaynaklar ve dip değirmenleri farklı açılma işi kurar."
+  },
+  "finalCorrection": "230 kota ve boss paragrafı çakışması giderildi; son PNG yeniden açıldı.",
+  "limits": "Gerçek sprite; pin dışı renkler temsili. Katman kesiti, gameplay anı değildir.",
+  "active226Revision": "v2-wall-route"
+}

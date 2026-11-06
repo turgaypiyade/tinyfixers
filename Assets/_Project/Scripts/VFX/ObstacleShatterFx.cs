@@ -57,71 +57,79 @@ public static class ObstacleShatterFx
         float span = Mathf.Max(size.x, size.y);
         Vector2 center = bl + size * 0.5f;
 
-        for (int i = 0; i < n; i++)
+        Image flash = null;
+        try
         {
-            var r = layout[i];
-            var img = Acquire(root);
-            img.sprite = pieces[i];
-            img.color = tint;
-            var rt = img.rectTransform;
-            Vector2 pieceSize = new Vector2(r.width * size.x, r.height * size.y) * Overlap;
-            // InverseTransformPoint kökün pivotuna göre konum verir → localPosition (anchoredPosition değil).
-            rt.localPosition = bl + new Vector2(r.center.x * size.x, r.center.y * size.y);
-            rt.localRotation = Quaternion.identity;
-            rt.localScale = Vector3.one;
-            Vector2 off = (Vector2)rt.localPosition - center;
-            Vector2 dir = (off.sqrMagnitude > 1f ? off.normalized : Random.insideUnitCircle.normalized)
-                          + Random.insideUnitCircle * 0.2f;
-            vel[i] = (dir.normalized + Vector2.up * 0.7f) * span * Random.Range(1.0f, 1.5f);
-            Vector2 start = rt.localPosition;
-            Vector2 fittedSize = pieceSize;
-            bounds.Fit(ref start, ref vel[i], ref fittedSize, Life);
-            rt.localPosition = start;
-            rt.sizeDelta = fittedSize;
-            // Büyük parçalar ağır döner: dışa doğru, bölme çizgisinden uzaklaşan yönde.
-            spin[i] = (off.x >= 0f ? -1f : 1f) * Random.Range(90f, 220f);
-            imgs[i] = img;
-        }
-
-        // Kısa parlama (parçaların altında), engel boyunda.
-        var flash = Acquire(root);
-        flash.sprite = FlightTrailFx.GlowSprite();
-        flash.rectTransform.sizeDelta = Vector2.one * span * 1.3f;
-        flash.rectTransform.localPosition = center;
-        flash.rectTransform.localRotation = Quaternion.identity;
-        flash.rectTransform.SetSiblingIndex(Mathf.Max(0, imgs[0].rectTransform.GetSiblingIndex()));
-
-        float gravity = span * 4.5f;
-        for (float t = 0f; t < Life; t += Time.deltaTime)
-        {
-            float dt = Time.deltaTime, k = t / Life;
-            float fade = k < 0.55f ? 1f : 1f - (k - 0.55f) / 0.45f;
-            float f = Mathf.Clamp01(t / FlashTime);
-            if (flash != null)
-            {
-                flash.rectTransform.localScale = Vector3.one * Mathf.Lerp(0.5f, 1.2f, 1f - (1f - f) * (1f - f));
-                flash.color = new Color(1f, 1f, 1f, (1f - f) * 0.8f);
-            }
             for (int i = 0; i < n; i++)
             {
-                var img = imgs[i];
-                if (img == null) continue;
-                vel[i].y -= gravity * dt;
-                vel[i] *= 1f - 0.5f * dt;
+                var r = layout[i];
+                var img = Acquire(root);
+                imgs[i] = img;
+                img.sprite = pieces[i];
+                img.color = tint;
                 var rt = img.rectTransform;
-                rt.localPosition += (Vector3)(vel[i] * dt);
-                rt.localPosition = bounds.ClampCenter(rt.localPosition, rt.sizeDelta);
-                rt.localRotation *= Quaternion.Euler(0f, 0f, spin[i] * dt);
-                rt.localScale = Vector3.one * Mathf.Lerp(1f, 0.75f, k);
-                var c = tint;
-                c.a *= fade;
-                img.color = c;
+                Vector2 pieceSize = new Vector2(r.width * size.x, r.height * size.y) * Overlap;
+                // InverseTransformPoint kökün pivotuna göre konum verir → localPosition (anchoredPosition değil).
+                rt.localPosition = bl + new Vector2(r.center.x * size.x, r.center.y * size.y);
+                rt.localRotation = Quaternion.identity;
+                rt.localScale = Vector3.one;
+                Vector2 off = (Vector2)rt.localPosition - center;
+                Vector2 dir = (off.sqrMagnitude > 1f ? off.normalized : Random.insideUnitCircle.normalized)
+                              + Random.insideUnitCircle * 0.2f;
+                vel[i] = (dir.normalized + Vector2.up * 0.7f) * span * Random.Range(1.0f, 1.5f);
+                Vector2 start = rt.localPosition;
+                Vector2 fittedSize = pieceSize;
+                bounds.Fit(ref start, ref vel[i], ref fittedSize, Life);
+                rt.localPosition = start;
+                rt.sizeDelta = fittedSize;
+                // Büyük parçalar ağır döner: dışa doğru, bölme çizgisinden uzaklaşan yönde.
+                spin[i] = (off.x >= 0f ? -1f : 1f) * Random.Range(90f, 220f);
             }
-            yield return null;
-        }
 
-        for (int i = 0; i < n; i++) Release(imgs[i]);
-        Release(flash);
+            // Kısa parlama (parçaların altında), engel boyunda.
+            flash = Acquire(root);
+            flash.sprite = FlightTrailFx.GlowSprite();
+            flash.rectTransform.sizeDelta = Vector2.one * span * 1.3f;
+            flash.rectTransform.localPosition = center;
+            flash.rectTransform.localRotation = Quaternion.identity;
+            flash.rectTransform.SetSiblingIndex(Mathf.Max(0, imgs[0].rectTransform.GetSiblingIndex()));
+
+            float gravity = span * 4.5f;
+            for (float t = 0f; t < Life; t += Time.deltaTime)
+            {
+                float dt = Time.deltaTime, k = t / Life;
+                float fade = k < 0.55f ? 1f : 1f - (k - 0.55f) / 0.45f;
+                float f = Mathf.Clamp01(t / FlashTime);
+                if (flash != null)
+                {
+                    flash.rectTransform.localScale = Vector3.one * Mathf.Lerp(0.5f, 1.2f, 1f - (1f - f) * (1f - f));
+                    flash.color = new Color(1f, 1f, 1f, (1f - f) * 0.8f);
+                }
+                for (int i = 0; i < n; i++)
+                {
+                    var img = imgs[i];
+                    if (img == null) continue;
+                    vel[i].y -= gravity * dt;
+                    vel[i] *= 1f - 0.5f * dt;
+                    var rt = img.rectTransform;
+                    rt.localPosition += (Vector3)(vel[i] * dt);
+                    rt.localPosition = bounds.ClampCenter(rt.localPosition, rt.sizeDelta);
+                    rt.localRotation *= Quaternion.Euler(0f, 0f, spin[i] * dt);
+                    rt.localScale = Vector3.one * Mathf.Lerp(1f, 0.75f, k);
+                    var c = tint;
+                    c.a *= fade;
+                    img.color = c;
+                }
+                yield return null;
+            }
+
+        }
+        finally
+        {
+            // Return already rented pieces on interruption as well as normal completion.
+            for (int i = 0; i < n; i++) Release(imgs[i]);
+            Release(flash);
+        }
     }
 
     // Sprite'ı yerleşimdeki dikdörtgenlere böler (doku koordinatı; UI ile aynı yön: y yukarı). Parçalar Overlap kadar

@@ -4,18 +4,25 @@ using UnityEngine;
 [CustomEditor(typeof(LevelData))]
 public class LevelDataEditor : Editor
 {
-    private enum PaintMode { Mask, Obstacle, Tube, Magnet, Tiles, Safe, Overlay, Erase, AncientSeal, Channel }
+    private enum PaintMode { Mask, Obstacle, Tube, Magnet, Tiles, Safe, Overlay, Erase, AncientSeal, Channel, Fruit }
 
     private PaintMode mode = PaintMode.Obstacle;
     private ObstacleId selectedObstacle = ObstacleId.Stone;
     private int selectedInitialCrateHits = 3;
     private bool showSharedCrateStageRules;
     private int selectedHamsterSatiety = 7;   // yerleştirilecek hamsterin lokma sayısı
+    private int selectedDimerdalCount = LevelData.DimerdalDefaultCount;
+    private int selectedFruitWidth = 1, selectedFruitHeight = 1;
+    private string fruitPlacementError;
+    private string paletteSearch = "";
+    private readonly System.Collections.Generic.List<ObstacleDef> paletteEntries = new();
+    private readonly System.Collections.Generic.List<DimerdalEntry> dimerdalBoxes = new();
     private TarpStatueColor selectedTarpColor = TarpStatueColor.Red;          // yerleştirilecek heykelin etiket rengi
     private int selectedTarpCount = LevelData.TarpStatueDefaultCount;         // brandanın kalkması için toplanacak taş
     private int selectedTarpSize = TarpStatueEntry.TarpStatueMinSize;         // kare boyut (2/3/4)
     // Duvar (Wall) numaralı fırça: aynı numaralı BİTİŞİK duvar hücreleri tek parça (tek origin).
     private int selectedWallPiece = 1;
+    private bool eraseOverlayWall;
     private int selectedLampColor = LampStripColor.Yellow;   // lamba şeridi fırçasının lamba rengi
     private bool showBossOilSettings;
 
@@ -85,6 +92,13 @@ public class LevelDataEditor : Editor
     private static readonly Color tubeBaseColor = new Color(0.20f, 0.80f, 0.40f, 0.75f);
     private static readonly Color tubeBodyColor = new Color(0.15f, 0.65f, 0.30f, 0.55f);
 
+    private void OnEnable()
+    {
+        var level = target as LevelData;
+        if (level != null && level.SynchronizeDimerdalGoals()) EditorUtility.SetDirty(level);
+        if (level != null && level.SynchronizeFruitGoals()) EditorUtility.SetDirty(level);
+    }
+
     public override void OnInspectorGUI()
     {
         var level = (LevelData)target;
@@ -103,7 +117,7 @@ public class LevelDataEditor : Editor
         DrawTutorialSection(level);
         EditorGUILayout.Space(6);
 
-        mode = (PaintMode)GUILayout.Toolbar((int)mode, new[] { "Mask", "Obstacle", "Tube", "Magnet", "Tiles", "Safe", "Overlay", "Erase", "Ancient Seal", "Kanal" });
+        mode = (PaintMode)GUILayout.Toolbar((int)mode, new[] { "Mask", "Obstacle", "Tube", "Magnet", "Tiles", "Safe", "Overlay", "Erase", "Ancient Seal", "Kanal", "Elma" });
 
         if (mode == PaintMode.Obstacle)
             DrawPalette(level);
@@ -117,6 +131,8 @@ public class LevelDataEditor : Editor
             DrawTilePinPalette(level);
         else if (mode == PaintMode.Safe)
             DrawSafePalette(level);
+        else if (mode == PaintMode.Fruit)
+            DrawFruitPalette(level);
         else if (mode == PaintMode.AncientSeal)
             DrawAncientSealPalette(level);
         else if (mode == PaintMode.Overlay)
@@ -130,7 +146,11 @@ public class LevelDataEditor : Editor
         DrawGrid(level);
 
         if (GUI.changed)
+        {
+            level.SynchronizeDimerdalGoals();
+            level.SynchronizeFruitGoals();
             EditorUtility.SetDirty(level);
+        }
     }
 
     // Öğretici adımları önceden bu özel inspector'da hiç çizilmiyordu: kopyalanan level öğreticiyi
@@ -558,8 +578,17 @@ public class LevelDataEditor : Editor
             if (obstaclePicked && boardCount > 0)
                 goal.amount = boardCount;
 
-            goal.iconOverride = (Sprite)EditorGUILayout.ObjectField("Icon Override", goal.iconOverride, typeof(Sprite), false);
-            goal.amount = Mathf.Max(1, EditorGUILayout.IntField("Amount", goal.amount));
+            bool automaticDiamond = goal.targetType == LevelGoalTargetType.Collectible && goal.collectibleId == CollectibleId.Diamond;
+            bool automaticFruit = goal.targetType == LevelGoalTargetType.Obstacle && goal.obstacleId == ObstacleId.FlyFruit;
+            using (new EditorGUI.DisabledScope(automaticDiamond || automaticFruit))
+            {
+                goal.iconOverride = (Sprite)EditorGUILayout.ObjectField("Icon Override", goal.iconOverride, typeof(Sprite), false);
+                goal.amount = Mathf.Max(1, EditorGUILayout.IntField("Amount", goal.amount));
+            }
+            if (automaticDiamond)
+                EditorGUILayout.HelpBox("Elmas hedefi kutuların üretim adetlerinin toplamıdır. Sayıları Dimerdal paletinden düzenle; başlangıç elmasları da toplamda sayılır.", MessageType.None);
+            if (automaticFruit)
+                EditorGUILayout.HelpBox("Meyve hedefi yerleştirdiğin elmaların adedidir; boyutu kaç hücre olursa olsun bir elma bir hedeftir. Kutu ve yumurta hedefe eklenmez.", MessageType.None);
 
             if (boardCount >= 0)
             {
@@ -600,6 +629,28 @@ public class LevelDataEditor : Editor
     }
 
     private static readonly string[] TarpSizeLabels = { "2x2", "3x3", "4x4" };
+
+    private void DrawDimerdalPalette(LevelData level)
+    {
+        selectedDimerdalCount = Mathf.Max(1, EditorGUILayout.IntField(
+            new GUIContent("Üreteceği elmas", "Yeni koyacağın kutunun kendi üretim adedi."), selectedDimerdalCount));
+        dimerdalBoxes.Clear();
+        if (level.dimerdals != null) dimerdalBoxes.AddRange(level.dimerdals);
+        if (dimerdalBoxes.Count == 0) return;
+        EditorGUILayout.LabelField("Tahtadaki Dimerdal kutuları", EditorStyles.miniBoldLabel);
+        foreach (var box in dimerdalBoxes)
+        {
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField($"{box.obstacleId} ({box.originCellIndex % level.width},{box.originCellIndex / level.width})");
+            int count = Mathf.Max(1, EditorGUILayout.IntField(box.count, GUILayout.Width(60)));
+            EditorGUILayout.EndHorizontal();
+            if (count == box.count) continue;
+            Undo.RecordObject(level, "Dimerdal üretim adedi");
+            level.SetDimerdalProductionCount(box.originCellIndex, box.obstacleId, count);
+            level.SynchronizeDimerdalGoals();
+            EditorUtility.SetDirty(level);
+        }
+    }
 
     // Yeni heykel ayarları + tahtadaki her heykelin rengi/sayısı/boyutu (sonradan da değişir; aynı engel, boyut ayarlı).
     private void DrawTarpStatuePalette(LevelData level)
@@ -690,8 +741,45 @@ public class LevelDataEditor : Editor
     }
 
     // Yerleştirilecek engelin ayak izi: brandalı heykelde seçili kare boyut, diğerlerinde def.size.
+    private void DrawFruitPalette(LevelData level)
+    {
+        EditorGUILayout.LabelField("Elma — Yerleştirme Boyutu", EditorStyles.boldLabel);
+        selectedFruitWidth = EditorGUILayout.IntSlider("Width / Genişlik (hücre)", selectedFruitWidth, 1, Mathf.Max(1, level.width));
+        selectedFruitHeight = EditorGUILayout.IntSlider("Height / Yükseklik (hücre)", selectedFruitHeight, 1, Mathf.Max(1, level.height));
+        EditorGUILayout.HelpBox($"Önce ölçüyü seç, sonra Board'da sol üst hücreye tıkla: {selectedFruitWidth}×{selectedFruitHeight}. " +
+            "Bu ayarlar yalnız yeni elma içindir. Dolu alanın üstüne konmaz; mevcut elmaların boyutu değişmez. " +
+            "Her elma Goals / PreLevel hedefine 1 ekler.", MessageType.Info);
+        if (!string.IsNullOrEmpty(fruitPlacementError)) EditorGUILayout.HelpBox(fruitPlacementError, MessageType.Warning);
+    }
+
+    private static bool TryStampFruit(LevelData level, int origin, int w, int h)
+    {
+        if (level == null || level.width <= 0 || w < 1 || h < 1 || level.cells == null || level.obstacles == null
+            || level.obstacleOrigins == null || origin < 0 || origin >= level.cells.Length) return false;
+        int ox = origin % level.width, oy = origin / level.width;
+        if (!level.InBounds(ox, oy) || !level.InBounds(ox + w - 1, oy + h - 1)) return false;
+        var occupied = SimulateTopLayers(level, -1, -1);
+        for (int y = oy; y < oy + h; y++) for (int x = ox; x < ox + w; x++)
+        {
+            int cell = level.Index(x, y);
+            if (level.cells[cell] != (int)CellType.Normal || occupied.ContainsKey(cell)
+                || (level.pinnedTileTypes != null && cell < level.pinnedTileTypes.Length && level.pinnedTileTypes[cell] > 0)
+                || (level.pinnedSpecialTypes != null && cell < level.pinnedSpecialTypes.Length && level.pinnedSpecialTypes[cell] > 0)) return false;
+        }
+        if (level.waterChannels != null)
+            foreach (var channel in level.waterChannels)
+                if (channel.pathCellIndices != null)
+                    foreach (int cell in channel.pathCellIndices)
+                        if (cell % level.width >= ox && cell % level.width < ox + w && cell / level.width >= oy && cell / level.width < oy + h) return false;
+        // Commit only after validating the whole rectangle; a rejected click changes nothing.
+        for (int y = oy; y < oy + h; y++) for (int x = ox; x < ox + w; x++)
+        { int cell = level.Index(x, y); level.obstacles[cell] = (int)ObstacleId.FlyFruit; level.obstacleOrigins[cell] = origin; }
+        level.SetFruitDimensions(origin, w, h); level.SynchronizeFruitGoals(); return true;
+    }
+
     private Vector2Int PlacementFootprint(ObstacleId id, ObstacleDef def)
     {
+        if (id == ObstacleId.FlyFruit) return new Vector2Int(selectedFruitWidth, selectedFruitHeight);
         if (id == ObstacleId.TarpStatue) return new Vector2Int(selectedTarpSize, selectedTarpSize);
         return def != null ? new Vector2Int(Mathf.Max(1, def.size.x), Mathf.Max(1, def.size.y)) : Vector2Int.one;
     }
@@ -765,6 +853,17 @@ public class LevelDataEditor : Editor
             if (level.cells != null)
                 foreach (var c in level.cells) if (c != 0) playable++;
             return playable;
+        }
+
+        if (id == ObstacleId.Wall || id == ObstacleId.MetalWall)
+        {
+            var origins = new System.Collections.Generic.HashSet<int>();
+            for (int i = 0; i < level.obstacles.Length && i < level.obstacleOrigins.Length; i++)
+                if (level.obstacles[i] == (int)id) origins.Add(level.obstacleOrigins[i]);
+            if (level.stackedObstacles != null)
+                foreach (var e in level.stackedObstacles)
+                    if (e.obstacleId == id) origins.Add(e.ResolveRuntimeOrigin(level.obstacles.Length));
+            return origins.Count;
         }
 
         bool Matches(int raw) => raw == (int)id || (id == ObstacleId.Grass &&
@@ -862,9 +961,59 @@ public class LevelDataEditor : Editor
         }
     }
 
+    private static string ObstacleDisplayName(ObstacleId id)
+    {
+        switch (id)
+        {
+            case ObstacleId.FlyFruit: return "Elma";
+            case ObstacleId.FlyEgg: return "Sinek Yumurtası";
+            case ObstacleId.FlyEggBox: return "Sinek Kutusu";
+            default: return ObjectNames.NicifyVariableName(id.ToString());
+        }
+    }
+
+    private static bool MatchesPaletteSearch(ObstacleDef def, string search)
+    {
+        if (def == null) return false;
+        if (string.IsNullOrWhiteSpace(search)) return true;
+        search = search.Trim();
+        return ObstacleDisplayName(def.id).IndexOf(search, System.StringComparison.OrdinalIgnoreCase) >= 0
+            || def.id.ToString().IndexOf(search, System.StringComparison.OrdinalIgnoreCase) >= 0;
+    }
+
+    private void DrawFruitQuickPalette(ObstacleLibrary library)
+    {
+        EditorGUILayout.LabelField("Meyve ve sinek ailesi", EditorStyles.miniBoldLabel);
+        EditorGUILayout.BeginHorizontal();
+        foreach (var id in new[] { ObstacleId.FlyFruit, ObstacleId.FlyEgg, ObstacleId.FlyEggBox })
+        {
+            var def = library.Get(id);
+            using (new EditorGUI.DisabledScope(def == null))
+            {
+                Rect r = GUILayoutUtility.GetRect(86, 68, GUILayout.ExpandWidth(true));
+                GUI.backgroundColor = selectedObstacle == id ? new Color(.2f, .9f, 1f) : Color.white;
+                if (GUI.Button(r, new GUIContent("", ObstacleDisplayName(id) + " · " + id)))
+                { selectedObstacle = id; if (id == ObstacleId.FlyFruit) mode = PaintMode.Fruit; }
+                GUI.backgroundColor = Color.white;
+                if (def != null) DrawObstaclePreview(library, def, new Rect(r.x, r.y, r.width, 47), 3);
+                GUI.Label(new Rect(r.x, r.y + 47, r.width, 20), ObstacleDisplayName(id),
+                    new GUIStyle(EditorStyles.miniLabel) { alignment = TextAnchor.MiddleCenter });
+            }
+        }
+        EditorGUILayout.EndHorizontal();
+        EditorGUILayout.HelpBox("Elma: seç → Width/Height ayarla → aşağıdaki Board hücresine tıkla. Goals meyve adedini otomatik sayar.", MessageType.None);
+    }
+
     private void DrawPalette(LevelData level)
     {
         EditorGUILayout.LabelField("Obstacle Palette", EditorStyles.boldLabel);
+        if (DimerdalRules.IsShutter(selectedObstacle))
+        {
+            EditorGUILayout.HelpBox("Dimerdal: rengini ve 1x1 / 2x2 / 3x3 boyutunu paletten seç. 4 uygun renk/special hitinde açılır. " +
+                "Açık kutunun yanındaki aynı renk eşleşmesi veya special/joker vuruşu 1 elmas üretir. " +
+                "Her kutu kendi üretim adedini tamamlayınca kırılır. Goals toplamı otomatik hesaplanır; elmaslar toplandığında hedef azalır.", MessageType.Info);
+            DrawDimerdalPalette(level);
+        }
         var library = level.obstacleLibrary;
         if (library == null || library.obstacles == null || library.obstacles.Count == 0)
         {
@@ -872,6 +1021,16 @@ public class LevelDataEditor : Editor
             selectedObstacle = (ObstacleId)EditorGUILayout.EnumPopup("Selected Obstacle (fallback)", selectedObstacle);
             return;
         }
+
+        DrawFruitQuickPalette(library);
+        if (selectedObstacle == ObstacleId.FlyFruit) DrawFruitPalette(level);
+        if (selectedObstacle == ObstacleId.FlyEggBox)
+            EditorGUILayout.HelpBox("Yalnız special vuruşu bir yumurta atar. Dört yumurta iki elmayı bitirir; hedef yalnız meyvedir.", MessageType.Info);
+        paletteSearch = EditorGUILayout.TextField("Engel ara", paletteSearch);
+        paletteEntries.Clear();
+        foreach (var entry in library.obstacles)
+            if (MatchesPaletteSearch(entry, paletteSearch)) paletteEntries.Add(entry);
+        if (paletteEntries.Count == 0) EditorGUILayout.HelpBox("Bu aramada engel bulunamadı.", MessageType.Info);
 
         var seenIds = new System.Collections.Generic.HashSet<ObstacleId>();
         bool hasDuplicateIds = false;
@@ -886,17 +1045,18 @@ public class LevelDataEditor : Editor
 
         int perRow = Mathf.Max(1, Mathf.FloorToInt((EditorGUIUtility.currentViewWidth - 40) / (paletteIcon + 8)));
         int i = 0;
-        while (i < library.obstacles.Count)
+        while (i < paletteEntries.Count)
         {
             EditorGUILayout.BeginHorizontal();
-            for (int k = 0; k < perRow && i < library.obstacles.Count; k++, i++)
+            for (int k = 0; k < perRow && i < paletteEntries.Count; k++, i++)
             {
-                var def = library.obstacles[i];
+                var def = paletteEntries[i];
                 if (def == null) continue;
                 bool isSel = def.id == selectedObstacle;
                 Rect r = GUILayoutUtility.GetRect(paletteIcon, paletteIcon, GUILayout.ExpandWidth(false));
                 GUI.backgroundColor = isSel ? new Color(0.2f, 0.9f, 1f, 1f) : Color.white;
-                if (GUI.Button(r, GUIContent.none)) selectedObstacle = def.id;
+                if (GUI.Button(r, new GUIContent("", ObstacleDisplayName(def.id) + " · " + def.id)))
+                { selectedObstacle = def.id; if (def.id == ObstacleId.FlyFruit) mode = PaintMode.Fruit; }
                 GUI.backgroundColor = Color.white;
                 DrawObstaclePreview(library, def, r, 4);
                 var mini = new GUIStyle(EditorStyles.miniLabel) { alignment = TextAnchor.LowerRight };
@@ -935,7 +1095,7 @@ public class LevelDataEditor : Editor
             }
             var stage0 = selDef.GetStageRuleForRemainingHits(selDef.hits);
             string stageInfo = stage0 == null ? "-" : $"BlocksCells: {stage0.blocksCells}  |  Behavior: {stage0.behavior}  |  AllowDiagonal: {stage0.allowDiagonal}";
-            EditorGUILayout.HelpBox($"Selected: {selectedObstacle}  |  Size: {selDef.size.x}x{selDef.size.y}  |  Library Max Hits: {Mathf.Max(1, selDef.hits)}  |  {stageInfo}", MessageType.None);
+            EditorGUILayout.HelpBox($"Seçili: {ObstacleDisplayName(selectedObstacle)}  |  Size: {selDef.size.x}x{selDef.size.y}  |  Library Max Hits: {Mathf.Max(1, selDef.hits)}  |  {stageInfo}", MessageType.None);
             if (IsWallId(selectedObstacle))
                 DrawWallPieceBrush(level);
             if (selectedObstacle == ObstacleId.LampStrip)
@@ -963,10 +1123,7 @@ public class LevelDataEditor : Editor
         GUI.backgroundColor = Color.white;
         if (GUILayout.Button("Yeni Parça", GUILayout.Width(90)))
         {
-            int max = 0;
-            if (level.wallPieceIds != null)
-                foreach (int p in level.wallPieceIds) max = Mathf.Max(max, p);
-            selectedWallPiece = max + 1;
+            selectedWallPiece = NextWallPieceNumber(level);
         }
         EditorGUILayout.EndHorizontal();
     }
@@ -974,6 +1131,78 @@ public class LevelDataEditor : Editor
     // Numaralı fırçayla parçalanan duvar türleri (aynı numara + aynı tür + bitişik = tek parça).
     private static bool IsWallId(ObstacleId id) =>
         id == ObstacleId.Wall || id == ObstacleId.MetalWall || id == ObstacleId.LampStrip;
+
+    private static bool IsStackedWallId(ObstacleId id) =>
+        id == ObstacleId.Wall || id == ObstacleId.MetalWall;
+
+    private static int StackedWallPieceNumber(LevelData level, StackedObstacleEntry entry)
+    {
+        if (!IsStackedWallId(entry.obstacleId)) return 0;
+        if (entry.wallPieceId > 0) return entry.wallPieceId;
+        // Adopt already-authored grouped walls only during an explicit edit. Reading
+        // the inspector must not rewrite old assets or merge independent legacy caps.
+        if (entry.wallPieceOriginPlusOne <= 0) return 0;
+        int cell = entry.originCellIndex;
+        if (level.wallPieceIds != null && cell >= 0 && cell < level.wallPieceIds.Length
+            && level.wallPieceIds[cell] > 0) return level.wallPieceIds[cell];
+        return entry.wallPieceOriginPlusOne;
+    }
+
+    private static int NextWallPieceNumber(LevelData level)
+    {
+        int max = 0;
+        if (level.wallPieceIds != null)
+            foreach (int p in level.wallPieceIds) max = Mathf.Max(max, p);
+        if (level.stackedObstacles != null)
+            foreach (var e in level.stackedObstacles) max = Mathf.Max(max, StackedWallPieceNumber(level, e));
+        return max + 1;
+    }
+
+    private static void RecomputeStackedWallOrigins(LevelData level)
+    {
+        var entries = level.stackedObstacles;
+        if (entries == null || entries.Length == 0) return;
+        var byCell = new System.Collections.Generic.Dictionary<(int cell, ObstacleId id, int piece), int>();
+        for (int i = 0; i < entries.Length; i++)
+        {
+            var e = entries[i];
+            int piece = StackedWallPieceNumber(level, e);
+            if (piece <= 0 || e.originCellIndex < 0 || e.originCellIndex >= level.width * level.height) continue;
+            e.wallPieceId = piece;
+            entries[i] = e;
+            byCell[(e.originCellIndex, e.obstacleId, piece)] = i;
+        }
+        if (byCell.Count == 0) return;
+        var visited = new System.Collections.Generic.HashSet<int>();
+        var component = new System.Collections.Generic.List<int>();
+        foreach (var pair in byCell)
+        {
+            if (!visited.Add(pair.Value)) continue;
+            component.Clear();
+            component.Add(pair.Value);
+            int origin = entries[pair.Value].originCellIndex;
+            for (int head = 0; head < component.Count; head++)
+            {
+                var e = entries[component[head]];
+                int x = e.originCellIndex % level.width, y = e.originCellIndex / level.width;
+                origin = Mathf.Min(origin, e.originCellIndex);
+                for (int dir = 0; dir < 4; dir++)
+                {
+                    int nx = x + (dir == 0 ? -1 : dir == 1 ? 1 : 0);
+                    int ny = y + (dir == 2 ? -1 : dir == 3 ? 1 : 0);
+                    if (!level.InBounds(nx, ny)) continue;
+                    if (byCell.TryGetValue((level.Index(nx, ny), e.obstacleId, e.wallPieceId), out int next)
+                        && visited.Add(next)) component.Add(next);
+                }
+            }
+            foreach (int index in component)
+            {
+                var e = entries[index];
+                e.wallPieceOriginPlusOne = origin + 1;
+                entries[index] = e;
+            }
+        }
+    }
 
     private static readonly string[] LampColorNames = { "Sarı", "Kırmızı", "Mavi", "Yeşil", "Mor" };
     private static readonly Color[] LampColorSwatches =
@@ -1147,7 +1376,9 @@ public class LevelDataEditor : Editor
             var obs = (ObstacleId)level.obstacles[idx];
             if (isNormal && obs != ObstacleId.None && level.obstacleOrigins[idx] != idx)
                 EditorGUI.DrawRect(r, occupiedOverlay);
-            if (Event.current.type == EventType.MouseDown && r.Contains(Event.current.mousePosition))
+            bool wallDrag = mode == PaintMode.Overlay && IsStackedWallId(selectedObstacle)
+                && Event.current.type == EventType.MouseDrag && Event.current.button == 0;
+            if ((Event.current.type == EventType.MouseDown || wallDrag) && r.Contains(Event.current.mousePosition))
             {
                 Undo.RecordObject(level, $"Paint Level {mode}");
                 ApplyPaint(level, x, y);
@@ -1173,6 +1404,13 @@ public class LevelDataEditor : Editor
             int w = foot.x, h = foot.y;
             Rect big = new Rect(ox + x * cellPx, oy + y * cellPx, w * cellPx - 1, h * cellPx - 1);
             DrawObstaclePreview(library, def, big, 2, level.GetColorCrateInitialHits(idx, obs));
+            if (DimerdalRules.IsShutter(obs))
+            {
+                var badge = new Rect(big.xMax - cellPx * .55f, big.yMax - cellPx * .4f, cellPx * .55f, cellPx * .4f);
+                EditorGUI.DrawRect(badge, new Color(.08f, .06f, .15f, .9f));
+                GUI.Label(badge, level.GetDimerdalProductionCount(idx, obs).ToString(),
+                    new GUIStyle(EditorStyles.boldLabel) { alignment = TextAnchor.MiddleCenter, normal = { textColor = Color.white } });
+            }
             if (obs == ObstacleId.TarpStatue)
             {
                 var tarp = level.GetTarpStatue(idx);
@@ -1441,6 +1679,8 @@ public class LevelDataEditor : Editor
             }
         }
 
+        DrawStackedWallPieces(level, ox, oy);
+
         // Draw stacked-obstacle (overlay) markers. ÖNEMLİ: hücrenin TAMAMINI kaplamayız —
         // altındaki authored obstacle (Mud, Oil...) görünür kalsın diye sadece ÜST-SAĞ köşeye
         // bir rozet + origin köşesine küçük obstacle ikonu çizeriz. Veride alttaki içerik EZİLMEZ.
@@ -1451,6 +1691,7 @@ public class LevelDataEditor : Editor
             {
                 var e = level.stackedObstacles[s];
                 if (e.obstacleId == ObstacleId.None) continue;
+                if (IsStackedWallId(e.obstacleId)) continue; // Draw numbered connected overlay walls below.
                 var def = lib != null ? lib.Get(e.obstacleId) : null;
                 int sox = e.originCellIndex % level.width;
                 int soy = e.originCellIndex / level.width;
@@ -1496,6 +1737,53 @@ public class LevelDataEditor : Editor
             if (!IsNormal(x, y + 1)) Handles.DrawLine(new Vector3(x0, y1), new Vector3(x1, y1));
         }
         Handles.EndGUI();
+    }
+
+    private void DrawStackedWallPieces(LevelData level, float ox, float oy)
+    {
+        if (level.stackedObstacles == null) return;
+        var walls = new System.Collections.Generic.Dictionary<int, StackedObstacleEntry>();
+        foreach (var e in level.stackedObstacles)
+            if (IsStackedWallId(e.obstacleId) && e.originCellIndex >= 0 && e.originCellIndex < level.width * level.height
+                && (!walls.TryGetValue(e.originCellIndex, out var previous) || e.stackOrder >= previous.stackOrder))
+                walls[e.originCellIndex] = e;
+        if (walls.Count == 0) return;
+        var topLayers = SimulateTopLayers(level, -1, -1);
+        var label = new GUIStyle(EditorStyles.boldLabel)
+            { alignment = TextAnchor.MiddleCenter, fontSize = 10, normal = { textColor = Color.black } };
+        foreach (var pair in walls)
+        {
+            int cell = pair.Key;
+            var e = pair.Value;
+            if (topLayers.TryGetValue(cell, out var top) && top.id != e.obstacleId
+                && !ObstacleStateService.IsSeeThroughLayer(top.id)) continue;
+            int x = cell % level.width, y = cell / level.width;
+            int piece = StackedWallPieceNumber(level, e);
+            Rect r = new Rect(ox + x * cellPx, oy + y * cellPx, cellPx - 1, cellPx - 1);
+            var def = level.obstacleLibrary != null ? level.obstacleLibrary.Get(e.obstacleId) : null;
+            if (def != null) DrawObstaclePreview(level.obstacleLibrary, def, r, 1);
+            var color = WallPieceColor(piece);
+            EditorGUI.DrawRect(r, new Color(color.r, color.g, color.b, 0.38f));
+            // Keep a lower-left window into the authored content (e.g. the lantern).
+            var under = level.obstacleLibrary != null ? level.obstacleLibrary.Get((ObstacleId)level.obstacles[cell]) : null;
+            if (under != null) DrawObstaclePreview(level.obstacleLibrary, under,
+                new Rect(r.x, r.yMax - cellPx * 0.45f, cellPx * 0.45f, cellPx * 0.45f), 0);
+            GUI.Label(r, piece > 0 ? piece.ToString() : "–", label);
+            for (int dir = 0; dir < 4; dir++)
+            {
+                int nx = x + (dir == 0 ? -1 : dir == 1 ? 1 : 0);
+                int ny = y + (dir == 2 ? -1 : dir == 3 ? 1 : 0);
+                bool same = level.InBounds(nx, ny) && walls.TryGetValue(level.Index(nx, ny), out var neighbor)
+                    && neighbor.obstacleId == e.obstacleId
+                    && neighbor.ResolveRuntimeOrigin(level.width * level.height) == e.ResolveRuntimeOrigin(level.width * level.height);
+                if (same) continue;
+                var edge = new Color(.1f, .05f, .02f, 1f);
+                if (dir == 0) EditorGUI.DrawRect(new Rect(r.x, r.y, 2, r.height), edge);
+                else if (dir == 1) EditorGUI.DrawRect(new Rect(r.xMax - 2, r.y, 2, r.height), edge);
+                else if (dir == 2) EditorGUI.DrawRect(new Rect(r.x, r.y, r.width, 2), edge);
+                else EditorGUI.DrawRect(new Rect(r.x, r.yMax - 2, r.width, 2), edge);
+            }
+        }
     }
 
     // Duvar hücreleri: kiremit + parça rengi + numara; farklı parçaya/boşluğa bakan kenarlar kalın çizgi.
@@ -1550,6 +1838,8 @@ public class LevelDataEditor : Editor
     // (bileşenin en küçük indeksi). Numara aynı ama ayrık kalan gruplar ayrı parça olur.
     private static void RecomputeWallOrigins(LevelData level)
     {
+        // Preserve the overlay brush numbers before rebuilding the base-only array.
+        RecomputeStackedWallOrigins(level);
         int n = level.width * level.height;
         if (level.wallPieceIds == null || level.wallPieceIds.Length != n)
         {
@@ -1626,6 +1916,9 @@ public class LevelDataEditor : Editor
             case PaintMode.Obstacle:
                 StampObstacle(level, x, y, selectedObstacle);
                 break;
+            case PaintMode.Fruit:
+                StampObstacle(level, x, y, ObstacleId.FlyFruit);
+                break;
             case PaintMode.Tube:
                 PlaceTube(level, x, y);
                 break;
@@ -1649,6 +1942,8 @@ public class LevelDataEditor : Editor
                 break;
         }
         level.PruneTarpStatues();
+        level.SynchronizeDimerdalGoals();
+        level.SynchronizeFruitGoals();
     }
 
     // Model (a): içerik AYRI yerleştirilir (Obstacle/Tiles/Mask modu); Safe sadece bir overlay
@@ -1805,9 +2100,23 @@ public class LevelDataEditor : Editor
         order.Sort((a, b) => a.stackOrder != b.stackOrder ? a.stackOrder.CompareTo(b.stackOrder)
                            : a.kind != b.kind ? a.kind.CompareTo(b.kind) : a.index.CompareTo(b.index));
 
+        // A numbered overlay wall is one shaped obstacle, like a base-layer wall.
+        // Keep placement cells separate from its full footprint for cover validation.
+        var wallCells = new System.Collections.Generic.Dictionary<(ObstacleId id, int origin), System.Collections.Generic.HashSet<int>>();
+        if (level.stackedObstacles != null)
+            foreach (var e in level.stackedObstacles)
+                if (IsStackedWallId(e.obstacleId))
+                {
+                    var key = (e.obstacleId, e.ResolveRuntimeOrigin(n));
+                    if (!wallCells.TryGetValue(key, out var group))
+                        wallCells[key] = group = new System.Collections.Generic.HashSet<int>();
+                    group.Add(e.originCellIndex);
+                }
+
         foreach (var o in order)
         {
             ObstacleId id; System.Collections.Generic.HashSet<int> cells;
+            System.Collections.Generic.HashSet<int> fullCells = null;
             if (o.kind == 0)
             {
                 var e = level.stackedObstacles[o.index];
@@ -1815,6 +2124,8 @@ public class LevelDataEditor : Editor
                 id = e.obstacleId;
                 var efoot = level.GetObstacleFootprint(e.obstacleId, e.originCellIndex, def);
                 cells = RectCells(level, e.originCellIndex, efoot.x, efoot.y);
+                if (IsStackedWallId(id))
+                    fullCells = wallCells[(id, e.ResolveRuntimeOrigin(n))];
             }
             else if (o.kind == 2)
             {
@@ -1828,7 +2139,7 @@ public class LevelDataEditor : Editor
                 id = ObstacleId.Safe;
                 cells = RectCells(level, e.originCellIndex, Mathf.Max(1, e.width), Mathf.Max(1, e.height));
             }
-            foreach (var c in cells) top[c] = (id, cells, false);
+            foreach (var c in cells) top[c] = (id, fullCells ?? cells, false);
         }
         return top;
     }
@@ -1911,6 +2222,14 @@ public class LevelDataEditor : Editor
             MessageType.Info);
         // Üste konacak obstacle, normal obstacle paleti ile seçilir (selectedObstacle paylaşılır).
         DrawPalette(level);
+        if (IsStackedWallId(selectedObstacle))
+        {
+            eraseOverlayWall = GUILayout.Toolbar(eraseOverlayWall ? 1 : 0,
+                new[] { "Duvar ekle", "Yalnız duvarı sil" }) == 1;
+            EditorGUILayout.HelpBox("Önce Obstacle modunda fenerleri yerleştir. Sonra Overlay → Wall / MetalWall seç; " +
+                "aynı Parça No ile tıklayıp sürükleyerek tek duvar yolu çiz. Yeni Parça ayrı yıkılan bir grup başlatır. " +
+                "Yalnız duvarı sil, altındaki feneri ve diğer katmanları korur.", MessageType.Info);
+        }
     }
 
     // Overlay modu: stackedObstacles[]'a bir entry ekler (origin + obstacleId). Altındaki içerik
@@ -1918,6 +2237,7 @@ public class LevelDataEditor : Editor
     // ObstacleStateService geri yükler. Safe'in generic karşılığı.
     private void PlaceStackedObstacle(LevelData level, int bx, int by)
     {
+        if (selectedObstacle == ObstacleId.FlyFruit) { StampObstacle(level, bx, by, ObstacleId.FlyFruit); return; }
         if (!level.InBounds(bx, by)) return;
         if (selectedObstacle == ObstacleId.None) return;
         if (selectedObstacle == ObstacleId.AncientSeal)
@@ -1939,6 +2259,15 @@ public class LevelDataEditor : Editor
         }
 
         int originIdx = level.Index(bx, by);
+        if (IsStackedWallId(selectedObstacle))
+        {
+            if (level.cells[originIdx] != (int)CellType.Normal) return;
+            if (eraseOverlayWall)
+            {
+                RemoveStackedWallAtCell(level, originIdx, selectedObstacle);
+                return;
+            }
+        }
         // Bilardo cebi yığına girmez: üstüne de bir şey konmaz (top cebe düşebilmeli).
         if (level.obstacles != null && level.obstacles[originIdx] == (int)ObstacleId.BilliardPocket)
         {
@@ -1962,6 +2291,15 @@ public class LevelDataEditor : Editor
         for (int i = 0; i < current.Length; i++)
             if (current[i].originCellIndex == originIdx && current[i].obstacleId == selectedObstacle)
             {
+                if (IsStackedWallId(selectedObstacle))
+                {
+                    var existing = current[i];
+                    existing.wallPieceId = Mathf.Max(1, selectedWallPiece);
+                    current[i] = existing;
+                    RecomputeStackedWallOrigins(level);
+                }
+                if (DimerdalRules.IsShutter(selectedObstacle))
+                    level.SetDimerdalProductionCount(originIdx, selectedObstacle, selectedDimerdalCount);
                 if (StackedObstacleEntry.SupportsInitialHits(selectedObstacle))
                 {
                     var existing = current[i];
@@ -1985,19 +2323,26 @@ public class LevelDataEditor : Editor
             originCellIndex = originIdx,
             obstacleId      = selectedObstacle,
             stackOrder      = NextStackOrder(level),
+            wallPieceId = IsStackedWallId(selectedObstacle) ? Mathf.Max(1, selectedWallPiece) : 0,
             initialRemainingHits = StackedObstacleEntry.SupportsInitialHits(selectedObstacle) ? selectedInitialCrateHits : 0
         };
 
         var list = new System.Collections.Generic.List<StackedObstacleEntry>(
             level.stackedObstacles ?? System.Array.Empty<StackedObstacleEntry>()) { entry };
         level.stackedObstacles = list.ToArray();
+        if (IsStackedWallId(selectedObstacle)) RecomputeStackedWallOrigins(level);
+        if (DimerdalRules.IsShutter(selectedObstacle))
+            level.SetDimerdalProductionCount(originIdx, selectedObstacle, selectedDimerdalCount);
         if (selectedObstacle == ObstacleId.TarpStatue)
             level.SetTarpStatue(originIdx, selectedTarpColor, selectedTarpCount, selectedTarpSize);
+        if (selectedObstacle == ObstacleId.FlyFruit)
+            level.SetFruitDimensions(originIdx, selectedFruitWidth, selectedFruitHeight);
     }
 
     private void RemoveStackedAtCell(LevelData level, int cellIndex)
     {
         if (level.stackedObstacles == null || level.stackedObstacles.Length == 0) return;
+        RecomputeStackedWallOrigins(level);
 
         int W = level.width;
         var lib = level.obstacleLibrary;
@@ -2014,6 +2359,17 @@ public class LevelDataEditor : Editor
                 list.RemoveAt(s);
         }
         level.stackedObstacles = list.ToArray();
+        RecomputeStackedWallOrigins(level);
+    }
+
+    private static void RemoveStackedWallAtCell(LevelData level, int cellIndex, ObstacleId id)
+    {
+        if (level.stackedObstacles == null || !IsStackedWallId(id)) return;
+        RecomputeStackedWallOrigins(level);
+        var list = new System.Collections.Generic.List<StackedObstacleEntry>(level.stackedObstacles);
+        list.RemoveAll(e => e.originCellIndex == cellIndex && e.obstacleId == id);
+        level.stackedObstacles = list.ToArray();
+        RecomputeStackedWallOrigins(level);
     }
 
     private void PlaceTube(LevelData level, int bx, int by)
@@ -2126,6 +2482,7 @@ public class LevelDataEditor : Editor
 
     private void ClearCell(LevelData level, int idx)
     {
+        RemoveDimerdalAtCell(level, idx);
         level.ClearColorCrateInitialHitsAt(idx);
         if (level.hamsterSatietyByCell != null && idx < level.hamsterSatietyByCell.Length)
             level.hamsterSatietyByCell[idx] = 0;
@@ -2183,6 +2540,12 @@ public class LevelDataEditor : Editor
         Vector2Int size = PlacementFootprint(id, def);
         int w = Mathf.Max(1, size.x);
         int h = Mathf.Max(1, size.y);
+        if (id == ObstacleId.FlyFruit)
+        {
+            fruitPlacementError = level.InBounds(ax, ay) && TryStampFruit(level, level.Index(ax, ay), w, h)
+                ? null : "Elma yerleştirilmedi: seçilen alan tahta içinde, açık ve boş olmalı. Mevcut engelleri silgiyle kaldırabilirsin.";
+            return;
+        }
         if (!level.InBounds(ax, ay) || !level.InBounds(ax + w - 1, ay + h - 1)) return;
         for (int y = ay; y < ay + h; y++)
         for (int x = ax; x < ax + w; x++)
@@ -2193,6 +2556,9 @@ public class LevelDataEditor : Editor
         int originIdx = level.Index(ax, ay);
         if (StackedObstacleEntry.SupportsInitialHits(id)
             && UpdateExistingStackedCrate(level, originIdx, id)) return;
+        for (int y = ay; y < ay + h; y++)
+        for (int x = ax; x < ax + w; x++)
+            RemoveDimerdalAtCell(level, level.Index(x, y));
         for (int y = ay; y < ay + h; y++)
         for (int x = ax; x < ax + w; x++)
         {
@@ -2212,9 +2578,32 @@ public class LevelDataEditor : Editor
             level.hamsterSatietyByCell[originIdx] = Mathf.Max(1, selectedHamsterSatiety);
         if (id == ObstacleId.TarpStatue)
             level.SetTarpStatue(originIdx, selectedTarpColor, selectedTarpCount, selectedTarpSize);
+        if (DimerdalRules.IsShutter(id))
+            level.SetDimerdalProductionCount(originIdx, id, selectedDimerdalCount);
         // Başka engel duvar hücrelerinin üstüne basıldıysa kalan duvar parçalarını yeniden kur.
         if (level.wallPieceIds != null && System.Array.Exists(level.wallPieceIds, p => p > 0))
             RecomputeWallOrigins(level);
+    }
+
+    private static void RemoveDimerdalAtCell(LevelData level, int cell)
+    {
+        var id = (ObstacleId)level.obstacles[cell];
+        if (id == ObstacleId.FlyFruit)
+        {
+            int fruitOrigin = level.obstacleOrigins[cell];
+            for (int i = 0; i < level.obstacles.Length; i++)
+                if (level.obstacles[i] == (int)id && level.obstacleOrigins[i] == fruitOrigin)
+                { level.obstacles[i] = 0; level.obstacleOrigins[i] = -1; }
+            return;
+        }
+        if (!DimerdalRules.IsShutter(id)) return;
+        int origin = level.obstacleOrigins[cell];
+        for (int i = 0; i < level.obstacles.Length; i++)
+            if (level.obstacles[i] == (int)id && level.obstacleOrigins[i] == origin)
+            {
+                level.obstacles[i] = (int)ObstacleId.None;
+                level.obstacleOrigins[i] = -1;
+            }
     }
 
     // Normal Obstacle fırçası, çamur vb. üzerinde zaten duran sandığın yalnız aşamasını değiştirir.
@@ -2718,6 +3107,21 @@ public class LevelDataEditor : Editor
     private void DrawObstaclePreview(ObstacleLibrary library, ObstacleDef def, Rect rect, float padding, int remainingHits = 0)
     {
         if (def == null) return;
+        if (def.id == ObstacleId.FlyEggBox && def.auxiliarySprites != null && def.auxiliarySprites.Count > 1)
+        {
+            DrawSpriteInRect(def.auxiliarySprites[1], rect, padding); return;
+        }
+        if (DimerdalRules.IsShutter(def.id) && def.auxiliarySprites != null && def.auxiliarySprites.Count >= 3)
+        {
+            var r = new Rect(rect.x + padding, rect.y + padding, rect.width - padding * 2, rect.height - padding * 2);
+            DrawSpriteInRect(def.auxiliarySprites[0], r, 0);
+            DrawSpriteInRect(def.auxiliarySprites[1], new Rect(r.x + r.width * .22f, r.y + r.height * .23f, r.width * .56f, r.height * .54f), 0);
+            var inside = new Rect(r.x + r.width * .108f, r.y + r.height * .115f, r.width * .784f, r.height * .753f);
+            int hits = remainingHits > 0 ? Mathf.Clamp(remainingHits, 0, 4) : 4;
+            for (int i = 0; i < hits; i++)
+                DrawSpriteInRect(def.auxiliarySprites[2], new Rect(inside.x, inside.y + inside.height * i * .25f, inside.width, inside.height * .25f), 0);
+            return;
+        }
         if (GelLauncherPressPreview.TryDraw(def.id, rect, padding, remainingHits)) return;
         if (def.id == ObstacleId.GrassWaterLily)
         {

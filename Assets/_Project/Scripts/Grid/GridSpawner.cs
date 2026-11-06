@@ -346,6 +346,8 @@ public class GridSpawner : MonoBehaviour
         board.ObstacleVisualChanged -= HandleObstacleVisualChanged;
         board.ObstacleVisualChanged += HandleObstacleVisualChanged;
 
+        BuildDimerdals();
+        BuildFlyFruit();
         BuildInitialGrid();
         board.WarmTilePool();
 
@@ -1175,6 +1177,13 @@ public class GridSpawner : MonoBehaviour
         board.RegisterTile(view, x, y);
 
         Sprite obstacleSprite = def.GetPreviewSprite();
+        if (DimerdalRules.IsDiamond(obsId))
+        {
+            view.ApplyDimerdalDiamond(DimerdalRules.DiamondTile(obsId), obstacleSprite);
+            board.ObstacleStateService.TryPromoteDimerdalDiamondAt(x, y);
+            board.SyncTileData(x, y);
+            return;
+        }
         if (obstacleSprite != null)
             view.SetMovableObstacleSprite(obstacleSprite);
 
@@ -1261,6 +1270,8 @@ public class GridSpawner : MonoBehaviour
 
         var clone = Instantiate(source);
         clone.name = $"{source.name}_Runtime";
+        clone.SynchronizeDimerdalGoals();
+        clone.SynchronizeFruitGoals();
         return clone;
     }
 
@@ -1783,7 +1794,7 @@ public class GridSpawner : MonoBehaviour
                 // temizlenince altındaki kanal açığa çıkar ve normal kuralla (üstündeki taş eşleşince) açılır.
                 var authored = (ObstacleId)lvl.obstacles[cell];
                 bool cover = authored != ObstacleId.None && authored != ObstacleId.WaterChannel
-                    && lvl.obstacleOrigins[cell] == cell && IsSingleCellObstacle(lvl, authored);
+                    && lvl.obstacleOrigins[cell] == cell && IsSingleCellObstacle(lvl, authored, cell);
                 if (authored != ObstacleId.None && authored != ObstacleId.WaterChannel && !cover
                     && GameDiagnostics.CriticalErrors)
                     Debug.LogWarning($"[WaterChannel] Hücre {cell}: çok hücreli engel kanal üstünde desteklenmiyor ({authored}), silindi.");
@@ -1806,10 +1817,10 @@ public class GridSpawner : MonoBehaviour
         channelCovers.Clear();
     }
 
-    private static bool IsSingleCellObstacle(LevelData lvl, ObstacleId id)
+    private static bool IsSingleCellObstacle(LevelData lvl, ObstacleId id, int origin)
     {
         var def = lvl.obstacleLibrary != null ? lvl.obstacleLibrary.Get(id) : null;
-        var foot = lvl.GetObstacleFootprint(id, 0, def);
+        var foot = lvl.GetObstacleFootprint(id, origin, def);
         return foot.x == 1 && foot.y == 1;
     }
 
@@ -1960,6 +1971,9 @@ public class GridSpawner : MonoBehaviour
         int W = lvl.width, H = lvl.height;
         int origin = entry.originCellIndex;
         if (origin < 0 || origin >= lvl.obstacles.Length) return;
+        // Placement stays per cell; a layered wall route shares one destruction origin.
+        // Zero metadata preserves all existing stacked entries. No board scan or fall-rule change.
+        int runtimeOrigin = entry.ResolveRuntimeOrigin(lvl.obstacles.Length);
 
         var lib = lvl.obstacleLibrary;
         var def = lib != null ? lib.Get(overId) : null;
@@ -1988,10 +2002,10 @@ public class GridSpawner : MonoBehaviour
                 MaterializePendingCoveringOverlay(lvl, cell);
 
                 // 1) Altındaki authored içeriği beneath store için işaretle.
-                pendingStampedBeneath.Add((cell, (ObstacleId)lvl.obstacles[cell], lvl.obstacleOrigins[cell], origin));
+                pendingStampedBeneath.Add((cell, (ObstacleId)lvl.obstacles[cell], lvl.obstacleOrigins[cell], runtimeOrigin));
                 // 2) Üstteki obstacle ile stamp et.
                 lvl.obstacles[cell]       = (int)overId;
-                lvl.obstacleOrigins[cell] = origin;
+                lvl.obstacleOrigins[cell] = runtimeOrigin;
             }
     }
 
@@ -2923,6 +2937,15 @@ public class GridSpawner : MonoBehaviour
         {
             if (obstacleViewsByOrigin.TryGetValue(originIndex, out var image) && image != null)
             {
+                if (DimerdalRules.IsShutter(obstacleId)
+                    && image.TryGetComponent<DimerdalView>(out var dimerdal))
+                {
+                    StopObstacleHitShake(originIndex, image.rectTransform);
+                    // The host Image is transparent; shatter its opaque child frame.
+                    // Capture here, before destruction or beneath-layer promotion.
+                    PlayObstacleShatter(new ObstacleVisualChange(originIndex, obstacleId, true, 0, null),
+                        dimerdal.PrepareForBreak());
+                }
                 if (obstacleId != ObstacleId.Grass || waterLilyService == null
                     || !waterLilyService.TryPlayGrassBreak(originIndex, image))
                     Destroy(image.gameObject);
@@ -4102,8 +4125,45 @@ public class GridSpawner : MonoBehaviour
         return initialRemainingHits > 0 ? initialRemainingHits : Mathf.Max(1, def.hits);
     }
 
+    private void BuildFlyFruit()
+    {
+        bool found = false;
+        if (resolvedLevel?.obstacles != null)
+            foreach (int id in resolvedLevel.obstacles)
+                if (id >= (int)ObstacleId.FlyEggBox && id <= (int)ObstacleId.FlyFruit) { found = true; break; }
+        if (!found && resolvedLevel?.stackedObstacles != null)
+            foreach (var entry in resolvedLevel.stackedObstacles)
+                if (entry.obstacleId == ObstacleId.FlyEggBox || entry.obstacleId == ObstacleId.FlyEgg || entry.obstacleId == ObstacleId.FlyFruit) { found = true; break; }
+        if (found) FlyFruitService.Ensure(board).Build(board, resolvedLevel);
+        else if (board.TryGetComponent<FlyFruitService>(out var previous)) previous.Clear();
+    }
+
+    private void BuildDimerdals()
+    {
+        bool hasDimerdal = false;
+        if (resolvedLevel?.obstacles != null)
+            foreach (int id in resolvedLevel.obstacles)
+                if (DimerdalRules.IsShutter((ObstacleId)id) || DimerdalRules.IsDiamond((ObstacleId)id)) { hasDimerdal = true; break; }
+        if (!hasDimerdal && resolvedLevel?.stackedObstacles != null)
+            foreach (var entry in resolvedLevel.stackedObstacles)
+                if (DimerdalRules.IsShutter(entry.obstacleId) || DimerdalRules.IsDiamond(entry.obstacleId)) { hasDimerdal = true; break; }
+        if (hasDimerdal || board.Dimerdals != null) DimerdalService.Ensure(board).Build(resolvedLevel);
+    }
+
     private void ConfigureObstacleContentView(Image img, ObstacleDef def, int x, int y)
     {
+        if ((def.id == ObstacleId.FlyEggBox || def.id == ObstacleId.FlyFruit) && board != null)
+        {
+            FlyFruitService.Ensure(board).Register(y * width + x, def, img);
+            return;
+        }
+        if (DimerdalRules.IsShutter(def.id) && board != null)
+        {
+            img.rectTransform.anchoredPosition = new Vector2(x * tileSize, -y * tileSize);
+            img.rectTransform.sizeDelta = new Vector2(def.size.x * tileSize, def.size.y * tileSize);
+            DimerdalService.Ensure(board).Register(y * width + x, def, img);
+            return;
+        }
         if (def.id == ObstacleId.PaintCanBox)
         {
             AttachPaintCanBoxView(img, def, x, y);
@@ -4166,6 +4226,25 @@ public class GridSpawner : MonoBehaviour
 
         var obsId = (ObstacleId)resolvedLevel.obstacles[idx];
         if (obsId == ObstacleId.None) return;
+
+        if (DimerdalRules.IsDiamond(obsId))
+        {
+            if (beneathViewsByCell.TryGetValue(idx, out var diamondPreview))
+            {
+                beneathViewsByCell.Remove(idx);
+                if (diamondPreview != null) Destroy(diamondPreview.gameObject);
+            }
+            var tile = board.GetTileViewAt(x, y);
+            if (tile == null) SpawnMovableObstacleTile(x, y);
+            else
+            {
+                var sprite = resolvedLevel.obstacleLibrary.Get(obsId)?.GetPreviewSprite();
+                tile.ApplyDimerdalDiamond(DimerdalRules.DiamondTile(obsId), sprite);
+                board.ObstacleStateService.TryPromoteDimerdalDiamondAt(x, y);
+                board.SyncTileData(x, y);
+            }
+            return;
+        }
 
         // Açığa çıkan katmanın ALTINDAKİ zemin (çamur/jel/su) de çizilir — örtü altında hiç kurulmamış olabilir
         // (ör. mühür > porselen > çamur: mühür açılınca porselen çıkıyor, çamur görünmüyordu).
@@ -4367,7 +4446,7 @@ public class GridSpawner : MonoBehaviour
     {
         if (image == null || image.sprite == null || board == null) return;
         if (change.obstacleId == ObstacleId.Grass || change.obstacleId == ObstacleId.GrassFlower
-            || change.obstacleId == ObstacleId.PaintCanBox)
+            || change.obstacleId == ObstacleId.PaintCanBox || change.obstacleId == ObstacleId.FlyFruit)
             return;
         var def = obstacleDefsByOrigin.TryGetValue(change.originIndex, out var d) ? d
             : resolvedLevel?.obstacleLibrary?.Get(change.obstacleId);

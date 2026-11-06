@@ -1,0 +1,16 @@
+{
+  "revision": "v2-wall-route",
+  "path": "Revisions/v2-wall-route",
+  "levels": [
+    226
+  ],
+  "runtimeAllowed": [
+    "Assets/_Project/Scripts/Core/LevelData.cs",
+    "Assets/_Project/Scripts/Grid/GridSpawner.cs",
+    "Assets/_Project/Scripts/Editor/LevelDataEditor.cs"
+  ],
+  "editorSupport": "Docs/Checks/Wall-Overlay-Editor-2026-11-06/README.md",
+  "additionalLevelRevisions": {
+    "229": "Revisions/v4-229-lily-workshop"
+  }
+}

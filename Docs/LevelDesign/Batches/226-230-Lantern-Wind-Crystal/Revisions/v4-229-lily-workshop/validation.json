@@ -1,0 +1,48 @@
+{
+  "result": "PASS",
+  "protectedProjectFiles": 6055,
+  "changedLevels": [
+    229
+  ],
+  "phases": [
+    {
+      "removed": [],
+      "slots": 59,
+      "natural": 59,
+      "unfilled": 0
+    },
+    {
+      "removed": [
+        28
+      ],
+      "slots": 71,
+      "natural": 71,
+      "unfilled": 0
+    },
+    {
+      "removed": [
+        28,
+        40
+      ],
+      "slots": 83,
+      "natural": 83,
+      "unfilled": 0
+    },
+    {
+      "removed": [
+        28,
+        40,
+        27,
+        69
+      ],
+      "slots": 99,
+      "natural": 99,
+      "unfilled": 0
+    }
+  ],
+  "openingUnderlyingSlots": 59,
+  "lockedLilyCells": 12,
+  "exposedMatchSlots": 47,
+  "buildOrPlay": false,
+  "measuredBalance": false
+}

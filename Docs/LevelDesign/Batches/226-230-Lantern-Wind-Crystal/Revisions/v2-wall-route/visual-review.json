@@ -1,0 +1,12 @@
+{
+  "reviewer": "agent",
+  "userApproved": false,
+  "played": false,
+  "opened": [
+    "../../../../Level226-Ruzgar-Kemeri.png",
+    "../../../../References/13-Fener-Sutunu-Acilis.png",
+    "Comparison226.png"
+  ],
+  "assessment": "V1 kullanıcı tarafından reddedildi. V2 gerçek PNG açıldı: tek24hücreyol/24altfener,ayrıdeğirmenadası,36doğalbaşlangıç,pin0. Referans13 ve yakın örnek111/84 ile karşılaştırıldı. Kullanıcı henüzv2oynamadı/onaylamadı.",
+  "limits": "Statik katman kesiti; serbest renkler temsili. Oynanmış denge veya cihaz performansı yok."
+}

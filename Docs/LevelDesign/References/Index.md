@@ -29,3 +29,13 @@ Kullanıcı açıkça board tasarımı / hole kullanımı için verdi; sandık k
 ## 185 — açık level tasarım referansı
 
 [12 — Aynalı şerit referansı](12-Aynali-Serit-Referansi.png). Kullanıcı bu görselden level istedi: yatay ayna ile küçük alt bölge sağa, ana gövde sola; yumurta alanına dönüşümlü Lantern/PlasticTwoStage satırları; bej/sarı blok şeritlerine SculptingStone. Bu sefer görsel yalnız öğrenme örneği değil açık authoring talebidir. Alt mor öğenin davranışı varsayılmaz; draftta pusula seçimi ayrıca belirtilir. Referansın kasıtlı köşe temaslarını başka levelin sürekli-hole düzeltmesiyle karıştırma.
+
+## 226–227 — açık tasarım referansları · 2026-11-06
+
+[13 — Fener sütunu açılış](13-Fener-Sutunu-Acilis.png), [14 — açıldıktan sonra](14-Fener-Sutunu-Sonra.png):226 için duvar altında fener, seçili sütunlardan düşen ürün ve solda bizim değirmenler. Kullanıcı şekli değiştirme inisiyatifi verdi. Yabancı oyundaki sağ perdelerin davranışı varsayılmadı.
+
+[15 — Dik/yatay şerit tezgâhı](15-Dik-Yatay-Serit-Tezgahi.png):227 için ortogonal LampStrip, SculptingStone ve PlasticTwoStage düşüncesi. Adet/yer/tahta birebir kopyalanmadı.228–230’u bu konseptleri düşünerek tasarlama ayrıca açıkça istendi; referanslar otomatik kullanıcı onayı değildir.
+
+## 226 v1 reddi — kullanıcı oyun ekranı · 2026-11-06
+
+[16 — Tavan altı boşluk ve oyun fikri reddi](16-Level226-Akis-Ve-Oyun-Fikri-Reddi.png).226v1reddedildi:referanstaki duvar yol boyunca tekparça açılıp altındaki fenerleri göstermeli;değirmenler ayrı,special ileerişilecek hücrelerde olmalı. Bu ekran başarılı örnek değildir;v2agenttaslağı da kullanıcı onayı sayılmaz.

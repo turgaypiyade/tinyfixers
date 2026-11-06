@@ -1,0 +1,10 @@
+{
+  "unityBuild": false,
+  "unityPlay": false,
+  "deviceRendered": false,
+  "boardOrBalanceSimulation": false,
+  "published": false,
+  "levelsChanged": false,
+  "methodChecks": "production methods with Unity doubles",
+  "visualReview": "actual sprite assembly opened;not a Unity capture"
+}

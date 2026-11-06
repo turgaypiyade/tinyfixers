@@ -1,5 +1,7 @@
 # Codex Project Instructions
 
+- New or changed obstacles must be visible, recognizable by name and correct sprite, selectable, placeable, and configurable in LevelEditor. Include footprint/size controls, erase/resize behavior and the requested Goals/PreLevel representation in the same task. Verify editor integration through code/asset checks; do not call a runtime-only change complete. The user performs manual editor/game tests. Do not control the user's computer or operate Unity/browser/native UI unless they explicitly request it. Do not create test levels or run builds, Play mode, or simulations without an explicit request; preserve the user's levels.
+
 - For numbered level design, revisions, or design-reference feedback, read `Docs/LevelDesign/Memory.md` and `Docs/LevelDesign/Skills/tinyfixers-level-design/SKILL.md`, then resume from `Docs/LevelDesign/Design-State.md` before changing assets. Memory.md records the latest user rules and supersedes older conflicting design notes. Preserve user-approved levels; record explicit feedback separately from the agent's own visual assessment.
 
 - Do not run Unity builds, `dotnet build`, or other project build commands for this repository unless the user explicitly asks for a build in that turn.

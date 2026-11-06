@@ -1,0 +1,404 @@
+{
+  "result": "PASS",
+  "protectedFiles": 3390,
+  "intentionalRuntimeFiles": [
+    "Assets/_Project/Scripts/Core/LevelData.cs",
+    "Assets/_Project/Scripts/Editor/LevelDataEditor.cs",
+    "Assets/_Project/Scripts/Grid/GridSpawner.cs"
+  ],
+  "changedProtectedFiles": [],
+  "unchangedLevels": "1–225 and227–230 during226v2",
+  "levels": [
+    {
+      "level": 226,
+      "active": 68,
+      "moves": 28,
+      "difficulty": "Normal",
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 55,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 21300000, guid: 6c0ba6037bf64886943108e3d2b24c2c, type: 3}",
+          "amount": 1
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 75,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 21300000, guid: 127c84f422d442eaa045deb663e1494a, type: 3}",
+          "amount": 24
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 83,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 21300000, guid: 82e571b9292d4818b15a8179863d6e02, type: 3}",
+          "amount": 16
+        }
+      ],
+      "originCounts": {
+        "75": 24,
+        "80": 2,
+        "55": 1
+      },
+      "opening": {
+        "tileSlots": 36,
+        "naturallyFed": 36,
+        "shadowSeeded": 0,
+        "authoredPins": 0,
+        "intentionallyEmpty": []
+      },
+      "phases": [
+        {
+          "removed": [],
+          "slots": 36,
+          "naturallyFed": 36,
+          "shadowSeeded": 0,
+          "withoutFeed": []
+        },
+        {
+          "removed": [
+            55
+          ],
+          "slots": 36,
+          "naturallyFed": 36,
+          "shadowSeeded": 0,
+          "withoutFeed": []
+        },
+        {
+          "removed": [
+            55,
+            75,
+            80
+          ],
+          "slots": 68,
+          "naturallyFed": 68,
+          "shadowSeeded": 0,
+          "withoutFeed": []
+        }
+      ]
+    },
+    {
+      "level": 227,
+      "active": 88,
+      "moves": 26,
+      "difficulty": "Normal",
+      "goals": [
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 79,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 21300000, guid: 48dd5e127f774d97bcd9e89db73e0951, type: 3}",
+          "amount": 5
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 28,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: -208678888245249099, guid: ef8c216bfe75e4a949d7dc56a98d8d62, type: 3}",
+          "amount": 12
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 40,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 21300000, guid: d7401d43cad5d4227bec8df46bceda83, type: 3}",
+          "amount": 17
+        }
+      ],
+      "originCounts": {
+        "40": 17,
+        "79": 5,
+        "28": 12
+      },
+      "opening": {
+        "tileSlots": 44,
+        "naturallyFed": 40,
+        "shadowSeeded": 0,
+        "authoredPins": 0,
+        "intentionallyEmpty": [
+          42,
+          65,
+          83,
+          88
+        ]
+      },
+      "phases": [
+        {
+          "removed": [],
+          "slots": 44,
+          "naturallyFed": 40,
+          "shadowSeeded": 0,
+          "withoutFeed": [
+            42,
+            65,
+            83,
+            88
+          ]
+        },
+        {
+          "removed": [
+            79
+          ],
+          "slots": 59,
+          "naturallyFed": 58,
+          "shadowSeeded": 0,
+          "withoutFeed": [
+            88
+          ]
+        },
+        {
+          "removed": [
+            28,
+            40,
+            79
+          ],
+          "slots": 88,
+          "naturallyFed": 88,
+          "shadowSeeded": 0,
+          "withoutFeed": []
+        }
+      ]
+    },
+    {
+      "level": 228,
+      "active": 90,
+      "moves": 26,
+      "difficulty": "Normal",
+      "goals": [
+        {
+          "targetType": 2,
+          "tileType": 0,
+          "obstacleId": 0,
+          "collectibleId": 4,
+          "iconOverride": "{fileID: 21300000, guid: 179d3baa3ac1554b83aacde25786b9eb, type: 3}",
+          "amount": 12
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 75,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 21300000, guid: 127c84f422d442eaa045deb663e1494a, type: 3}",
+          "amount": 15
+        }
+      ],
+      "originCounts": {
+        "75": 15,
+        "95": 1
+      },
+      "opening": {
+        "tileSlots": 66,
+        "naturallyFed": 66,
+        "shadowSeeded": 0,
+        "authoredPins": 0,
+        "intentionallyEmpty": []
+      },
+      "phases": [
+        {
+          "removed": [],
+          "slots": 66,
+          "naturallyFed": 66,
+          "shadowSeeded": 0,
+          "withoutFeed": []
+        },
+        {
+          "removed": [
+            75
+          ],
+          "slots": 81,
+          "naturallyFed": 81,
+          "shadowSeeded": 0,
+          "withoutFeed": []
+        },
+        {
+          "removed": [
+            75,
+            95
+          ],
+          "slots": 90,
+          "naturallyFed": 90,
+          "shadowSeeded": 0,
+          "withoutFeed": []
+        }
+      ]
+    },
+    {
+      "level": 229,
+      "active": 87,
+      "moves": 27,
+      "difficulty": "Super Hard",
+      "goals": [
+        {
+          "targetType": 2,
+          "tileType": 0,
+          "obstacleId": 0,
+          "collectibleId": 4,
+          "iconOverride": "{fileID: 21300000, guid: 179d3baa3ac1554b83aacde25786b9eb, type: 3}",
+          "amount": 16
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 83,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 21300000, guid: 82e571b9292d4818b15a8179863d6e02, type: 3}",
+          "amount": 24
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 71,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 21300000, guid: cb4dfdec96f04b2eb5cd09f9b669bf8d, type: 3}",
+          "amount": 12
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 42,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 21300000, guid: e2b5868e696b9449183864216e1e8588, type: 3}",
+          "amount": 12
+        }
+      ],
+      "originCounts": {
+        "80": 4,
+        "71": 12,
+        "88": 1,
+        "85": 1,
+        "42": 12
+      },
+      "opening": {
+        "tileSlots": 51,
+        "naturallyFed": 43,
+        "shadowSeeded": 0,
+        "authoredPins": 8,
+        "intentionallyEmpty": []
+      },
+      "phases": [
+        {
+          "removed": [],
+          "slots": 51,
+          "naturallyFed": 43,
+          "shadowSeeded": 0,
+          "withoutFeed": []
+        },
+        {
+          "removed": [
+            42,
+            71
+          ],
+          "slots": 63,
+          "naturallyFed": 62,
+          "shadowSeeded": 0,
+          "withoutFeed": []
+        },
+        {
+          "removed": [
+            42,
+            71,
+            80,
+            85,
+            88
+          ],
+          "slots": 87,
+          "naturallyFed": 87,
+          "shadowSeeded": 0,
+          "withoutFeed": []
+        }
+      ]
+    },
+    {
+      "level": 230,
+      "active": 90,
+      "moves": 30,
+      "difficulty": "Boss Duel",
+      "goals": [
+        {
+          "targetType": 2,
+          "tileType": 0,
+          "obstacleId": 0,
+          "collectibleId": 2,
+          "iconOverride": "{fileID: 21300000, guid: bd8a2a2aabdf46fcabea5eb683bc76d9, type: 3}",
+          "amount": 660
+        },
+        {
+          "targetType": 2,
+          "tileType": 0,
+          "obstacleId": 0,
+          "collectibleId": 4,
+          "iconOverride": "{fileID: 21300000, guid: 179d3baa3ac1554b83aacde25786b9eb, type: 3}",
+          "amount": 12
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 75,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 21300000, guid: 127c84f422d442eaa045deb663e1494a, type: 3}",
+          "amount": 16
+        },
+        {
+          "targetType": 1,
+          "tileType": 0,
+          "obstacleId": 83,
+          "collectibleId": 0,
+          "iconOverride": "{fileID: 21300000, guid: 82e571b9292d4818b15a8179863d6e02, type: 3}",
+          "amount": 16
+        }
+      ],
+      "originCounts": {
+        "75": 16,
+        "85": 1,
+        "94": 1,
+        "80": 2
+      },
+      "opening": {
+        "tileSlots": 58,
+        "naturallyFed": 56,
+        "shadowSeeded": 2,
+        "authoredPins": 0,
+        "intentionallyEmpty": []
+      },
+      "phases": [
+        {
+          "removed": [],
+          "slots": 58,
+          "naturallyFed": 56,
+          "shadowSeeded": 2,
+          "withoutFeed": []
+        },
+        {
+          "removed": [
+            75
+          ],
+          "slots": 74,
+          "naturallyFed": 72,
+          "shadowSeeded": 2,
+          "withoutFeed": []
+        },
+        {
+          "removed": [
+            75,
+            80,
+            85,
+            94
+          ],
+          "slots": 90,
+          "naturallyFed": 90,
+          "shadowSeeded": 0,
+          "withoutFeed": []
+        }
+      ]
+    }
+  ],
+  "limits": "Static YAML/geometry/layer/feed-source checks only; no Unity/project build, Play/device, bot, gravity/cascade simulation, publishing or measured balance/performance."
+}

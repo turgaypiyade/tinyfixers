@@ -424,12 +424,31 @@ public class PatchBotTargetCoordinator
         {
             var goal = activeGoalsBuffer[i];
             if (goal.targetType == LevelGoalTargetType.Obstacle && goal.obstacleId != ObstacleId.None)
+            {
                 activeObstacleGoals.Add(goal.obstacleId);
+                // Flour is produced by the mill: opening its source advances the same goal.
+                // Blocking goal sources precede already-spread under-tile flour for solo bots.
+                if (goal.obstacleId == ObstacleId.Flour)
+                    activeObstacleGoals.Add(ObstacleId.Windmill);
+                if (goal.obstacleId == ObstacleId.FlyFruit)
+                {
+                    activeObstacleGoals.Add(ObstacleId.FlyEggBox);
+                    activeObstacleGoals.Add(ObstacleId.FlyEgg);
+                }
+            }
             else if (goal.targetType == LevelGoalTargetType.Collectible && goal.collectibleId == CollectibleId.EnergyOrb)
             {
                 // EnergyOrb hem EnergyContainer hem HatLauncher'dan çıkar → ikisi de goal obstacle.
                 activeObstacleGoals.Add(ObstacleId.EnergyContainer);
                 activeObstacleGoals.Add(ObstacleId.HatLauncher);
+            }
+            else if (goal.targetType == LevelGoalTargetType.Collectible && goal.collectibleId == CollectibleId.Diamond)
+            {
+                // Every diamond color counts. Closed shutters are useful opening targets;
+                // effective remaining hits excludes open permanent frames automatically.
+                for (int id = 84; id <= 95; id++) activeObstacleGoals.Add((ObstacleId)id);
+                for (int type = (int)TileType.DiamondBlue; type <= (int)TileType.DiamondRed; type++)
+                    activeTileGoals.Add((TileType)type);
             }
             else if (goal.targetType == LevelGoalTargetType.Collectible
                      && CollectibleSources.ProducerOf(goal.collectibleId) != ObstacleId.None)

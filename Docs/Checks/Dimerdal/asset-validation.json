@@ -1,0 +1,10 @@
+{
+  "status": "PASS",
+  "sharedTextures": 12,
+  "shutterDefinitions": 12,
+  "diamondDefinitions": 4,
+  "oldLibraryPreserved": true,
+  "preExistingLevelAssetsPreserved": true,
+  "separatelyAuthorizedLevelAddition": 221,
+  "diamondsAllowExistingDiagonalFlow": true
+}

@@ -301,7 +301,40 @@ var tests=@"
    Check(s.board.holds==0&&s.board.reserved==0,""invalid landing releases original cell ownership"");
    s.OnDisable();Check(s.board.jobs==0,""failed flight job cancelled on teardown"");
   }
-  Console.WriteLine(""PASS: ""+checks+"" water-lily impact, immediate/late landing, repeat-hit, large-petal, shared hit-sway and teardown checks."");
+  // Supplied strips: grid-side identity, open-to-closed playback, closed-only return,
+  // existing stored pose and interrupted flight ownership are production methods.
+  for(int side=0;side<4;side++){
+   s=Setup();l=s.flowers[0];l.cell=4;s.frames=new List<Sprite>();for(int i=0;i<25;i++)s.frames.Add(new Sprite());
+   int[] xs={1,2,1,0},ys={0,1,2,1};
+   var food=new TileView{X=xs[side],Y=ys[side],special=TileSpecial.PulseCore,type=TileType.Core};
+   s.Swallow(l,food);Check(l.swallowDirection==side,""direction follows adjacent grid cell, side ""+side);
+   int[] expected={0,1,2,4,4,4,4};float[] times={0,.40f,.49f,.58f,.68f,.82f,.96f};
+   for(int i=0;i<times.Length;i++){
+    l.age=SwallowSeconds*times[i];s.AnimateSwallow(l);
+    Check(ReferenceEquals(l.image.sprite,s.frames[5+side*5+expected[i]]),""correct directional strip frame, side ""+side+"" step ""+i);
+    Check(Near(l.rect.localScale.x,l.rect.localScale.y)&&Near(l.rect.localRotation.x,0)&&Near(l.rect.localRotation.y,0),""authored strip aspect preserved"");
+   }
+   var closed=l.image.sprite;l.age=SwallowSeconds*.68f;s.AnimateSwallow(l);float far=l.rect.anchoredPosition.sqrMagnitude;
+   l.age=SwallowSeconds*.96f;s.AnimateSwallow(l);
+   Check(ReferenceEquals(l.image.sprite,closed)&&l.rect.anchoredPosition.sqrMagnitude<far,""returns only in closed pose, no reverse strip"");
+   l.age=SwallowSeconds;s.AnimateSwallow(l);
+   Check(ReferenceEquals(l.image.sprite,s.frames[4])&&l.stored==TileSpecial.PulseCore&&s.board.jobs==0&&l.age<0,""home uses original swollen pose and completes one job"");
+   Check(food.special==TileSpecial.None&&food.type==TileType.Core&&food.gameObject.activeSelf,""swallow preserves normal tile"");
+   // External idle/re-enable assignments cannot be hidden by the frame-index cache.
+   l.image.sprite=s.frames[0];s.SetFrame(l,4);Check(ReferenceEquals(l.image.sprite,s.frames[4]),""sprite cache recovers after direct idle assignment"");
+   s.OnDisable();
+  }
+  foreach(float interrupted in new[]{.2f,.75f}){
+   s=Setup();l=s.flowers[0];s.frames=new List<Sprite>();for(int i=0;i<25;i++)s.frames.Add(new Sprite());
+   s.Swallow(l,new TileView{X=1,Y=0,special=TileSpecial.PatchBot});l.age=SwallowSeconds*interrupted;s.AnimateSwallow(l);
+   s.OnDisable();Check(s.board.jobs==0&&s.board.holds==0&&l.flight==null&&l.age<0&&Near(l.rect.localScale.x,1),""directional cancellation returns pooled flight, job and pose"");
+  }
+  s=Setup();l=s.flowers[0];s.frames=new List<Sprite>();for(int i=0;i<25;i++)s.frames.Add(new Sprite());
+  s.Swallow(l,new TileView{X=1,Y=0,special=TileSpecial.PulseCore});l.age=SwallowSeconds*.5f;s.AnimateSwallow(l);
+  s.Hit(0,ObstacleHitContext.SpecialActivation);
+  Check(l.outbound&&s.board.jobs==1&&ReferenceEquals(l.image.sprite,s.frames[4]),""hit interrupts directional swallow into original spit pose with one job"");
+  Tick(s,1.2f);Check(l.stored==TileSpecial.None&&s.board.jobs==0&&s.board.holds==0,""interrupted swallow ejects safely once"");s.OnDisable();
+  Console.WriteLine(""PASS: ""+checks+"" water-lily directional frames, impact, immediate/late landing, repeat-hit, shared hit-sway and teardown checks."");
  }
 ";
 // UI construction and sprite lookup use doubles; response, animation and cleanup methods are production code.

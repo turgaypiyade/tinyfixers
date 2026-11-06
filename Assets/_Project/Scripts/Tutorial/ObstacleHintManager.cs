@@ -97,6 +97,9 @@ public class ObstacleHintManager : MonoBehaviour
             if (!dismissed) yield break;
 
             MarkHintSeen(id);
+            // All Dimerdal colors and square sizes share one mechanic and one introduction.
+            if (DimerdalRules.IsShutter(id))
+                for (int c = 84; c <= 95; c++) MarkHintSeen((ObstacleId)c);
             // Renkli alet tehditleri (sarı/kırmızı/mavi/yeşil) TEK kural → biri anlatılınca hepsi görülmüş.
             if (IsColoredToolThreat(id))
                 for (var c = ObstacleId.ToolThreatYellow; c <= ObstacleId.ToolThreatGreen; c++) MarkHintSeen(c);

@@ -1,0 +1,8 @@
+{
+  "Assets/_Project/Scripts/Core/LevelData.cs": "4bb5c707d2905fb3c5fcbca3f3c58e6f8ff19fb2ba4b23c3443bc6a504d1edb4",
+  "Assets/_Project/Scripts/Editor/LevelDataEditor.cs": "c932307ce7c137f7e142702468d85c115d46838d69c338d2191b650a3dc8e907",
+  "Assets/_Project/Scripts/Grid/Board/Obstacles/DimerdalService.cs": "1142df5e729faf26b00b1d133a550b4f86fce7fbe164e6c51514835df4fab22b",
+  "Assets/_Project/Scripts/Grid/Board/Obstacles/DimerdalProductionFx.cs": "08b4fb5c0c6d9dc1b54d889dab318b36a962ae7d403f33b1c4da4218967dc25f",
+  "Assets/_Project/Scripts/Grid/Board/Obstacles/ObstacleStateService.cs": "b993eb841a7276b0c19d513848d0fc43a560a73db39a8c8193e64da88068cd93",
+  "Assets/_Project/Scripts/Grid/GridSpawner.cs": "836a4b45f0b75becd66bb19c342e398a754f7e1df1a636d239a959ca72595b76"
+}

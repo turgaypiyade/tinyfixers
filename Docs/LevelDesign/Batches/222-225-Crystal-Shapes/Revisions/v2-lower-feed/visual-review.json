@@ -1,0 +1,11 @@
+{
+  "level225UpdatedPngOpened": true,
+  "agentVisualAssessment": "Side lanes and lower4x2normalworkarea are populated; only2cells below closed seal remain empty.",
+  "userApprovedLevelsPreserved": [
+    222,
+    223,
+    224
+  ],
+  "runtimeUiVisualTest": "production C# with Unity doubles; no actual Unity/GPU/device rendering",
+  "visualApprovalOfRevisionByUser": false
+}

@@ -1,0 +1,39 @@
+{
+  "reviewedBy": "agent",
+  "userApproval": false,
+  "playedBalance": false,
+  "levels": [
+    222,
+    223,
+    224,
+    225
+  ],
+  "finalPngsOpened": true,
+  "historicalSpriteComparisonsOpened": [
+    [
+      222,
+      221,
+      103
+    ],
+    [
+      223,
+      94,
+      120
+    ],
+    [
+      224,
+      111,
+      170
+    ],
+    [
+      225,
+      148,
+      101
+    ]
+  ],
+  "corrections": [
+    "224 anchor shaft connected; wood32 to34",
+    "Detail-sheet goals moved below descriptions to remove overlap"
+  ],
+  "limits": "Static current project sprites; illustrative free colors; cutaway is not a played frame. No Unity, build, simulation, device or measured performance."
+}

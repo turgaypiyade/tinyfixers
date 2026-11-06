@@ -1,0 +1,65 @@
+[
+  {
+    "level": 221,
+    "levelKey": "LevelCL_0221",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00002210.asset",
+    "dimerdals": [
+      {
+        "originCellIndex": 66,
+        "obstacleId": 85,
+        "count": 4
+      },
+      {
+        "originCellIndex": 68,
+        "obstacleId": 85,
+        "count": 4
+      }
+    ]
+  },
+  {
+    "level": 222,
+    "levelKey": "LevelCL_0222",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00002220.asset",
+    "dimerdals": [
+      {
+        "originCellIndex": 85,
+        "obstacleId": 88,
+        "count": 10
+      }
+    ]
+  },
+  {
+    "level": 224,
+    "levelKey": "LevelCL_0224",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00002240.asset",
+    "dimerdals": [
+      {
+        "originCellIndex": 72,
+        "obstacleId": 85,
+        "count": 6
+      },
+      {
+        "originCellIndex": 78,
+        "obstacleId": 94,
+        "count": 6
+      }
+    ]
+  },
+  {
+    "level": 225,
+    "levelKey": "LevelCL_0225",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00002250.asset",
+    "dimerdals": [
+      {
+        "originCellIndex": 72,
+        "obstacleId": 88,
+        "count": 8
+      },
+      {
+        "originCellIndex": 78,
+        "obstacleId": 91,
+        "count": 8
+      }
+    ]
+  }
+]

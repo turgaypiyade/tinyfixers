@@ -1,0 +1,7 @@
+{
+  "Assets/_Project/Scripts/Grid/Board/Obstacles/DimerdalService.cs": "cc4ef6a854598cac02773563105d8891e9e1fdce978a8c15d75c5a20ddd102a2",
+  "Assets/_Project/Scripts/Grid/Board/Obstacles/DimerdalView.cs": "98fbbadeefcdefe5a3e14d9124a361ac3c36b789c18640423f26f1e37d06d495",
+  "Assets/_Project/Scripts/Grid/Board/Obstacles/ObstacleStateService.cs": "c30681eec1d98019b0306169ef38217b5b2914ef06d85b90c567df09db639a79",
+  "Assets/_Project/Scripts/Grid/GridSpawner.cs": "57a77d4e24bbcb3cc7040665b05a8cfc4e2c042262fad83b6ef84ab6050f5d1a",
+  "Assets/_Project/Scripts/VFX/ObstacleShatterFx.cs": "a852500cd529b5546158607157679de97ef1e013cea87633e0331d4579ae6fcb"
+}

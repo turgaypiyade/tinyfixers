@@ -166,8 +166,9 @@ public sealed class SpecialChainRunner : BoardAction
         if (obstacles != null)
         {
             var id = obstacles.GetObstacleIdAt(cell.x, cell.y);
-            // PatchBot payload stays on the hittable endpoint/base, even on a straight path.
-            if (id == ObstacleId.Magnet || id == ObstacleId.Tube) return false;
+            // Keep payload on the hittable endpoint/base or weakest wall cell.
+            if (id == ObstacleId.Magnet || id == ObstacleId.Tube
+                || id == ObstacleId.Wall || id == ObstacleId.MetalWall) return false;
         }
         int origin = obstacles != null ? obstacles.GetObstacleOriginAt(cell.x, cell.y) : -1;
         if (origin < 0) return false;

@@ -445,8 +445,8 @@ public class PatchbotDashUI : MonoBehaviour
 
     // Görsel varış noktası. Hedef hücre çok-hücreli bir obstacle'a aitse (Safe NxN gibi)
     // drone footprint'in dünya-merkezine iner; hasar yine mantıksal hedef hücreye işler.
-    // Magnet uçları ve tüp tabanı doğrudan hedef hücrede gösterilir; düz yol da
-    // dolu dikdörtgen olsa bile borunun merkezine inilmez. Diğer ayrık/delikli
+    // Magnet uçları, tüp tabanı ve duvarın seçilen zayıf hücresi doğrudan hedeflenir;
+    // dolu dikdörtgen olsalar bile parçanın merkezine inilmez. Diğer ayrık/delikli
     // footprint'lerde de hedef hücreye inilir.
     internal static Vector3 AimWorldPosition(BoardController board, int x, int y)
     {
@@ -454,7 +454,8 @@ public class PatchbotDashUI : MonoBehaviour
         if (obstacleService != null)
         {
             var id = obstacleService.GetObstacleIdAt(x, y);
-            if (id == ObstacleId.Magnet || id == ObstacleId.Tube)
+            if (id == ObstacleId.Magnet || id == ObstacleId.Tube
+                || id == ObstacleId.Wall || id == ObstacleId.MetalWall)
                 return board.GetCellWorldPosition(x, y);
         }
         int origin = obstacleService != null ? obstacleService.GetObstacleOriginAt(x, y) : -1;

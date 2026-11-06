@@ -1,0 +1,93 @@
+{
+  "status": "PASS",
+  "externalBackup": "/Users/turgayp/Desktop/Wondi Paylaşım/codex/Dimerdal-Elmas-Yedek-2026-11-05",
+  "backupVerifiedFiles": 9,
+  "replacements": [
+    {
+      "asset": "Assets/_Project/Art/UI/Obstacles/Dimerdal/DimerdalDiamondBlue.png",
+      "source": "/Users/turgayp/Downloads/bluedimerdal.png",
+      "sha256": "4197128a6865992b110bd93cc5a4b762ca3d032ec611c8d4178b9f8e31a3b463",
+      "metaSha256": "22a084eeaf895698ee4330c4fc870f3cac2f5705131514cacee44a0279673584",
+      "spriteRect": [
+        93,
+        108,
+        1048,
+        954
+      ],
+      "guid": "cd4cc64b02cb5540a781f425f10b8a33",
+      "preservedFileID": 21300000
+    },
+    {
+      "asset": "Assets/_Project/Art/UI/Obstacles/Dimerdal/DimerdalDiamondGreen.png",
+      "source": "/Users/turgayp/Downloads/greendimerdal.png",
+      "sha256": "f6942bcf6caa06820419f29b7dff152be9684f8066163b83ba64de3fa64dece0",
+      "metaSha256": "610e3bba46ff0627737c716bd57a9572bbcc6f462a1993aa20d938e6ab0d290f",
+      "spriteRect": [
+        128,
+        144,
+        996,
+        883
+      ],
+      "guid": "933abc4fe9ca5670898c27125c9a3c26",
+      "preservedFileID": 21300000
+    },
+    {
+      "asset": "Assets/_Project/Art/UI/Obstacles/Dimerdal/DimerdalDiamondRed.png",
+      "source": "/Users/turgayp/Downloads/reddimerdal.png",
+      "sha256": "0642af4f23fb3388c71cd1297b66834ad05253864fab0f9be7d5408e2f6882d5",
+      "metaSha256": "1ea13acca8d694ec577119c284896b055b2316a537705f59a96c7ef993fb5af1",
+      "spriteRect": [
+        94,
+        112,
+        1046,
+        950
+      ],
+      "guid": "1194997e00575129be200356e785ace8",
+      "preservedFileID": 21300000
+    },
+    {
+      "asset": "Assets/_Project/Art/UI/Obstacles/Dimerdal/DimerdalDiamondYellow.png",
+      "source": "/Users/turgayp/Downloads/yellowdimerdal.png",
+      "sha256": "cd394106e87c94756557a853aef2e6def01e8bafa22a35d2a4737e75c8cf5c16",
+      "metaSha256": "4ea18980952666343ec33e912c8d3a7e7d3c28c2cc11bf0839417aae35d75164",
+      "spriteRect": [
+        82,
+        95,
+        1084,
+        981
+      ],
+      "guid": "97f9e491dadc54ee9d64a180373591f6",
+      "preservedFileID": 21300000
+    }
+  ],
+  "unchangedFrameAndSlatFiles": {
+    "Assets/_Project/Art/UI/Obstacles/Dimerdal/DimerdalSlatRed.png.meta": "24a618739e8e19960a06fafdc1b7ee95302cc1d7b4e7cebe590e26dea984afa7",
+    "Assets/_Project/Art/UI/Obstacles/Dimerdal/DimerdalFrameYellow.png.meta": "60f5dcd542697bb022ea6e38bc3e9f1e260ceb28cb21c0fdb334ceff6c10b153",
+    "Assets/_Project/Art/UI/Obstacles/Dimerdal/DimerdalSlatYellow.png.meta": "1514922983faa8e995effa943eb2c7861a7647ce144a9b9a8276fe44949941e0",
+    "Assets/_Project/Art/UI/Obstacles/Dimerdal/DimerdalSlatGreen.png.meta": "d5e2ee76a3eff9c2a06fd645d271449a53485aadd9303b538a6d7126901b5170",
+    "Assets/_Project/Art/UI/Obstacles/Dimerdal/DimerdalFrameYellow.png": "3b0e4494993bc8ff8eacdd7bb77660aabc54355e7f20ca4d5a3d401a3d0782d4",
+    "Assets/_Project/Art/UI/Obstacles/Dimerdal/DimerdalFrameBlue.png": "4fe596710b70fa786106fc7b3c707d369c7c4219cb1933cc6fc2334b1cf6149f",
+    "Assets/_Project/Art/UI/Obstacles/Dimerdal/DimerdalFrameRed.png.meta": "beb08c9ad8309ca224cda432f22dc53c0389a8e13bc51dc6f64819356009e58b",
+    "Assets/_Project/Art/UI/Obstacles/Dimerdal/DimerdalFrameGreen.png.meta": "19917e9c91845432c52eaa9a97443135feba914ba35e4c948c7131994fa2e92f",
+    "Assets/_Project/Art/UI/Obstacles/Dimerdal/DimerdalFrameGreen.png": "a5ea38727159b2eb9f55b161ad83a71c8780e2991bacada5c363f91af408ce81",
+    "Assets/_Project/Art/UI/Obstacles/Dimerdal/DimerdalSlatYellow.png": "483efa0b16c9e2be3dd6035dadf09467721cbdb8b0f18897b2c7419ee7b3737c",
+    "Assets/_Project/Art/UI/Obstacles/Dimerdal/DimerdalSlatRed.png": "d8a69b797eabb743dbb10f64927a17670bdf846b93fbfd3b77dcb9c15a2251b9",
+    "Assets/_Project/Art/UI/Obstacles/Dimerdal/DimerdalSlatGreen.png": "15606a7d158efcb2dd7d98e2a0f406c288e5200bdc63eff22a92ff8da1ff6658",
+    "Assets/_Project/Art/UI/Obstacles/Dimerdal/DimerdalSlatBlue.png.meta": "45bdcf5dfb2a3ae3a8383f20163303fd65ed0dbfe47198afbccd9454dfc39503",
+    "Assets/_Project/Art/UI/Obstacles/Dimerdal/DimerdalFrameBlue.png.meta": "b1f2590eddd567e1bd1c05613164fadfb5adbd4234fad469484432ba6c1e36de",
+    "Assets/_Project/Art/UI/Obstacles/Dimerdal/DimerdalFrameRed.png": "497d9f36f5d25c6bacbaaa3f4da62b8d888e6693cb92ade24105e90fd70e4991",
+    "Assets/_Project/Art/UI/Obstacles/Dimerdal/DimerdalSlatBlue.png": "b006566a48f3f2871562ffe8394ca6a13dc38f56902713fafa0f21790e1349a4"
+  },
+  "pngBytesExactlyMatchUserAttachments": true,
+  "spriteIdentityPreserved": true,
+  "runtimeOrLevelChanges": false,
+  "verifiedBoxVariants": 12,
+  "verifiedBoardDiamonds": 4,
+  "yamlParse": "PASS",
+  "visualPreviewOpened": true,
+  "unchangedRuntimeHashes": true,
+  "unrelatedDifferencesAgainstPreviousTurn": [
+    "Assets/_Project/Settings/ProLevels/LevelV1_00000110.asset"
+  ],
+  "limits": "Static sprite preview and asset/reference checks. No level files written by this task. No Unity build, Play or device test."
+}

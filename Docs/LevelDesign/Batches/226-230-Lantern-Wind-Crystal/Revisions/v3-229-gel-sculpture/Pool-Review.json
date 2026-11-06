@@ -1,0 +1,671 @@
+{
+  "scope": "Only229 new design; all other levels preserved",
+  "availableDefinitions": [
+    {
+      "id": 2,
+      "name": "Blue",
+      "firstActiveCatalogUse": null,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 44,
+      "name": "KeyGenerator",
+      "firstActiveCatalogUse": 96,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 3,
+      "name": "Green",
+      "firstActiveCatalogUse": null,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 4,
+      "name": "Blue",
+      "firstActiveCatalogUse": 1,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 6,
+      "name": "chest3",
+      "firstActiveCatalogUse": 4,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 5,
+      "name": "chest2",
+      "firstActiveCatalogUse": 2,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 7,
+      "name": "plastic",
+      "firstActiveCatalogUse": 18,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 1,
+      "name": "Yellow",
+      "firstActiveCatalogUse": null,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 8,
+      "name": "plastic_orange",
+      "firstActiveCatalogUse": 16,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 9,
+      "name": "Plastic_Yellow",
+      "firstActiveCatalogUse": null,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 11,
+      "name": "Plastic_Blue",
+      "firstActiveCatalogUse": 17,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 12,
+      "name": "Plastic_Red",
+      "firstActiveCatalogUse": 24,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 13,
+      "name": "Plastic_Green",
+      "firstActiveCatalogUse": null,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 14,
+      "name": "Oil",
+      "firstActiveCatalogUse": 11,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 21,
+      "name": "ColorChest",
+      "firstActiveCatalogUse": 26,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 22,
+      "name": "EnergyContainer",
+      "firstActiveCatalogUse": null,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 23,
+      "name": "BatteryBox",
+      "firstActiveCatalogUse": null,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 24,
+      "name": "OmegaModul",
+      "firstActiveCatalogUse": null,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 25,
+      "name": "Mud",
+      "firstActiveCatalogUse": 6,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 27,
+      "name": "Wardrobe",
+      "firstActiveCatalogUse": 36,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 28,
+      "name": "SculptingStone",
+      "firstActiveCatalogUse": 51,
+      "selected": true,
+      "reminder": false
+    },
+    {
+      "id": 30,
+      "name": "HelmetPorcelain",
+      "firstActiveCatalogUse": 46,
+      "selected": true,
+      "reminder": false
+    },
+    {
+      "id": 31,
+      "name": "HatLauncher",
+      "firstActiveCatalogUse": 31,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 32,
+      "name": "GoldMoney",
+      "firstActiveCatalogUse": 76,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 33,
+      "name": "Safe",
+      "firstActiveCatalogUse": 76,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 64,
+      "name": "AncientSeal",
+      "firstActiveCatalogUse": 151,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 34,
+      "name": "Cargo",
+      "firstActiveCatalogUse": 21,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 35,
+      "name": "PlayerShieldPickup",
+      "firstActiveCatalogUse": 30,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 36,
+      "name": "EnemyShieldPickup",
+      "firstActiveCatalogUse": 30,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 38,
+      "name": "RocketBasket",
+      "firstActiveCatalogUse": 81,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 37,
+      "name": "Barrel",
+      "firstActiveCatalogUse": null,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 39,
+      "name": "SculptingSpecial",
+      "firstActiveCatalogUse": 56,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 40,
+      "name": "PlasticTwoStage",
+      "firstActiveCatalogUse": 61,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 41,
+      "name": "Barrell_v2",
+      "firstActiveCatalogUse": 86,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 42,
+      "name": "Grass",
+      "firstActiveCatalogUse": 66,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 43,
+      "name": "OverrideBatteryBox",
+      "firstActiveCatalogUse": 106,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 29,
+      "name": "Magnet",
+      "firstActiveCatalogUse": 91,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 45,
+      "name": "EggBird",
+      "firstActiveCatalogUse": 111,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 46,
+      "name": "SpreadingGel",
+      "firstActiveCatalogUse": 101,
+      "selected": true,
+      "reminder": false
+    },
+    {
+      "id": 26,
+      "name": "Tube",
+      "firstActiveCatalogUse": 41,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 47,
+      "name": "ToolThreat",
+      "firstActiveCatalogUse": 140,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 48,
+      "name": "ToolThreatYellow",
+      "firstActiveCatalogUse": null,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 49,
+      "name": "ToolThreatRed",
+      "firstActiveCatalogUse": null,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 50,
+      "name": "ToolThreatBlue",
+      "firstActiveCatalogUse": null,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 51,
+      "name": "ToolThreatGreen",
+      "firstActiveCatalogUse": null,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 52,
+      "name": "WaterTank",
+      "firstActiveCatalogUse": 116,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 53,
+      "name": "WaterPuddle",
+      "firstActiveCatalogUse": null,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 54,
+      "name": "WaterTankSmall",
+      "firstActiveCatalogUse": null,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 55,
+      "name": "Wall",
+      "firstActiveCatalogUse": 121,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 56,
+      "name": "MetalWall",
+      "firstActiveCatalogUse": 131,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 57,
+      "name": "Hamster",
+      "firstActiveCatalogUse": 136,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 58,
+      "name": "GrassFlower",
+      "firstActiveCatalogUse": 126,
+      "selected": false,
+      "reminder": true
+    },
+    {
+      "id": 59,
+      "name": "GelLauncherUp",
+      "firstActiveCatalogUse": 141,
+      "selected": true,
+      "reminder": false
+    },
+    {
+      "id": 60,
+      "name": "GelLauncherDown",
+      "firstActiveCatalogUse": null,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 61,
+      "name": "GelLauncherLeft",
+      "firstActiveCatalogUse": 215,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 62,
+      "name": "GelLauncherRight",
+      "firstActiveCatalogUse": 215,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 63,
+      "name": "PaintCanBox",
+      "firstActiveCatalogUse": 146,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 65,
+      "name": "LaserCannon",
+      "firstActiveCatalogUse": 156,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 66,
+      "name": "BilliardBall",
+      "firstActiveCatalogUse": null,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 67,
+      "name": "BilliardPocket",
+      "firstActiveCatalogUse": null,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 68,
+      "name": "TarpStatue",
+      "firstActiveCatalogUse": 161,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 69,
+      "name": "GrassWaterLily",
+      "firstActiveCatalogUse": 166,
+      "selected": false,
+      "reminder": true
+    },
+    {
+      "id": 70,
+      "name": "RhodesStatue",
+      "firstActiveCatalogUse": 171,
+      "selected": true,
+      "reminder": false
+    },
+    {
+      "id": 71,
+      "name": "ColorCrateYellow",
+      "firstActiveCatalogUse": 178,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 72,
+      "name": "ColorCrateRed",
+      "firstActiveCatalogUse": 176,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 73,
+      "name": "ColorCrateBlue",
+      "firstActiveCatalogUse": 178,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 74,
+      "name": "ColorCrateGreen",
+      "firstActiveCatalogUse": 176,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 75,
+      "name": "Lantern",
+      "firstActiveCatalogUse": 181,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 76,
+      "name": "WaterChannel",
+      "firstActiveCatalogUse": 186,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 77,
+      "name": "GoldCoin",
+      "firstActiveCatalogUse": 71,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 78,
+      "name": "BirdHouse",
+      "firstActiveCatalogUse": 201,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 79,
+      "name": "LampStrip",
+      "firstActiveCatalogUse": 191,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 80,
+      "name": "Windmill",
+      "firstActiveCatalogUse": 206,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 81,
+      "name": "FlourSack",
+      "firstActiveCatalogUse": null,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 82,
+      "name": "FlourSackV",
+      "firstActiveCatalogUse": null,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 83,
+      "name": "Flour",
+      "firstActiveCatalogUse": null,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 84,
+      "name": "DimerdalBlue1x1",
+      "firstActiveCatalogUse": null,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 85,
+      "name": "85",
+      "firstActiveCatalogUse": 221,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 86,
+      "name": "86",
+      "firstActiveCatalogUse": null,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 96,
+      "name": "DimerdalDiamondBlue",
+      "firstActiveCatalogUse": null,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 87,
+      "name": "DimerdalGreen1x1",
+      "firstActiveCatalogUse": null,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 88,
+      "name": "88",
+      "firstActiveCatalogUse": 222,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 89,
+      "name": "89",
+      "firstActiveCatalogUse": null,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 97,
+      "name": "97",
+      "firstActiveCatalogUse": null,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 90,
+      "name": "DimerdalYellow1x1",
+      "firstActiveCatalogUse": null,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 91,
+      "name": "91",
+      "firstActiveCatalogUse": 225,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 92,
+      "name": "92",
+      "firstActiveCatalogUse": null,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 98,
+      "name": "DimerdalDiamondYellow",
+      "firstActiveCatalogUse": null,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 93,
+      "name": "DimerdalRed1x1",
+      "firstActiveCatalogUse": null,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 94,
+      "name": "94",
+      "firstActiveCatalogUse": 224,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 95,
+      "name": "95",
+      "firstActiveCatalogUse": 228,
+      "selected": false,
+      "reminder": false
+    },
+    {
+      "id": 99,
+      "name": "99",
+      "firstActiveCatalogUse": null,
+      "selected": false,
+      "reminder": false
+    }
+  ],
+  "selectedMechanics": [
+    46,
+    28,
+    59,
+    70,
+    30
+  ],
+  "selectionReasons": [
+    "Gel under sculpting opens a spread source instead of another chest layer",
+    "Two adjacent upward presses open real middle columns; fixed pieces sit on the bottom",
+    "Two Rhodes add special planning after the first opening",
+    "Porcelain gives a moving one-hit counterweight to the three-hit sculpting spine"
+  ],
+  "otherFamiliesConsidered": {
+    "recentGenerators": "Dimerdal/windmill/bird/key considered; recent228/230 and old229 already use source collection",
+    "covers": "Safe/seal/tarp/grass considered; this request benefits from changing the cover-and-chest pattern",
+    "paths": "Canal/tube/magnet available; chosen press/spread loop is a different first decision",
+    "helpers": "Egg/rocket/battery considered; presses already provide two purposeful helper pieces",
+    "otherLiquids": "Mud/oil/water considered; gel produces propagation rather than another cleanup floor",
+    "newReminder": "GrassFlower58 and GrassWaterLily69 remain in the pool; not forced into this229"
+  },
+  "newIntroduction": false
+}

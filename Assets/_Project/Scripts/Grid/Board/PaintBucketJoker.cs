@@ -122,7 +122,7 @@ public sealed class PaintBucketJoker : MonoBehaviour
 
     private bool IsConvertible(int x, int y, TileView tile)
     {
-        if (tile == null || !tile || tile.GetSpecial() != TileSpecial.None) return false;
+        if (tile == null || !tile || tile.GetSpecial() != TileSpecial.None || DimerdalRules.IsDiamond(tile.GetTileType())) return false;
         if (board.Holes[x, y]) return false;
         var obstacles = board.ObstacleStateService;
         if (obstacles == null) return true;

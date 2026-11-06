@@ -1,0 +1,18 @@
+{
+  "status": "Three broad legacy harnesses fail on missing Dimerdal doubles from existing code, not on changed226 methods.",
+  "unchangedExtractedSpawnerMethods": {
+    "ConfigureObstacleContentView": true,
+    "ResolveObstacleViewRemainingHits": true,
+    "AttachPaintCanBoxView": true,
+    "HandleWardrobeOpened": true,
+    "HandleObstacleCreatedDynamic": true,
+    "HandleObstacleDestroyed": true,
+    "IsTrackedObstacleViewFor": true
+  },
+  "legacyFailures": {
+    "check_layered_obstacle_contents.csx": "Missing DimerdalRules/DimerdalService doubles",
+    "check_layered_content_registry.csx": "Missing Dimerdal view/shatter/promotion doubles",
+    "check_covered_origin_view_reveal.csx": "Missing Dimerdal view/shatter/promotion doubles"
+  },
+  "newFocusedHarness": "check_stacked_wall_route.csx; actual changed stamp, entry origin and editor goal methods plus beneath store and wall wave"
+}

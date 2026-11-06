@@ -1,0 +1,97 @@
+{
+  "AppleBite": {
+    "source": "applebit.wav",
+    "sourceSHA256": "09129e39a37445e50080b4e290d88cc59d5b903cdac25def8a2d0aa0cda0c2cb",
+    "before": {
+      "duration": 0.4865,
+      "rmsDB": -26.505930888820025,
+      "peakDB": -1.561489170850285
+    },
+    "after": {
+      "duration": 0.367,
+      "rmsDB": -25.45396269604045,
+      "peakDB": -7.000277331019928
+    },
+    "trimStartSeconds": 0.0,
+    "trimEndSeconds": 0.1195,
+    "loop": false,
+    "mixVolume": 0.82,
+    "sourceUnchanged": true
+  },
+  "EggBreak": {
+    "source": "eggbreak.wav",
+    "sourceSHA256": "7c01f8a41a69ebf4cafe8ba43ad76a6c86d9b25e9f444622300a8dfd984c2825",
+    "before": {
+      "duration": 0.4865,
+      "rmsDB": -34.141988114569614,
+      "peakDB": -9.300100733850647
+    },
+    "after": {
+      "duration": 0.367,
+      "rmsDB": -23.327518573827977,
+      "peakDB": -6.000000472660868
+    },
+    "trimStartSeconds": 0.0,
+    "trimEndSeconds": 0.1195,
+    "loop": false,
+    "mixVolume": 0.85,
+    "sourceUnchanged": true
+  },
+  "EggFlight": {
+    "source": "eggfly.wav",
+    "sourceSHA256": "38d4ffe0624ea982d523db6d46a18c386028b0b600e7c759bab6bcb6bcb798b8",
+    "before": {
+      "duration": 0.6865,
+      "rmsDB": -26.840577003572037,
+      "peakDB": -6.862100541978441
+    },
+    "after": {
+      "duration": 0.372,
+      "rmsDB": -20.54840671584021,
+      "peakDB": -5.142451494472674
+    },
+    "trimStartSeconds": 0.0,
+    "trimEndSeconds": 0.3145,
+    "loop": false,
+    "mixVolume": 1.0,
+    "sourceUnchanged": true
+  },
+  "FlyBuzzLoop": {
+    "source": "flyflying.wav",
+    "sourceSHA256": "082a9d61281f685fd2c345b7a553be01e0894b934fd4efee81e7cd36cf934be9",
+    "before": {
+      "duration": 0.8865,
+      "rmsDB": -21.54006568968944,
+      "peakDB": -7.988079773902111
+    },
+    "after": {
+      "duration": 0.8665,
+      "rmsDB": -19.0,
+      "peakDB": -11.42647202046534
+    },
+    "trimStartSeconds": 0.0,
+    "trimEndSeconds": 0.0,
+    "loop": true,
+    "mixVolume": 0.9,
+    "sourceUnchanged": true
+  },
+  "BoxBreak": {
+    "source": "woodencrack.wav",
+    "sourceSHA256": "4b382a532e011a379bc080f5ab3b958f9692168cba25e6622f20ddcb34f278b3",
+    "before": {
+      "duration": 0.4865,
+      "rmsDB": -21.935695929624302,
+      "peakDB": 0.6259858241677381
+    },
+    "after": {
+      "duration": 0.395,
+      "rmsDB": -20.769371637027533,
+      "peakDB": -4.000317049232075
+    },
+    "trimStartSeconds": 0.042,
+    "trimEndSeconds": 0.0495,
+    "loop": false,
+    "mixVolume": 0.9,
+    "sourceUnchanged": true
+  }
+}

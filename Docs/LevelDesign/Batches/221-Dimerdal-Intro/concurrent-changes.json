@@ -1,0 +1,12 @@
+{
+  "Assets/_Project/Scripts/Grid/Board/CascadeLogic.cs": {
+    "reason": "Appeared concurrently in shared workspace during Dimerdal work; observed and preserved, not authored/reverted or approved as a Dimerdal fix by this task.",
+    "beforeSha256": "01ad875e0e4dd85b5b48d5dcaeaf55c7363a49b1bcc1cd7c7429b8e9010f55ab",
+    "afterSha256": "0719fadbc169310818cd5b7cdac70de814eeae0cd0dce2accfead0917d1259fd"
+  },
+  "Assets/_Project/Scripts/Grid/Board/TileFallMotionSystem.cs": {
+    "reason": "Appeared concurrently in shared workspace during Dimerdal work; observed and preserved, not authored/reverted or approved as a Dimerdal fix by this task.",
+    "beforeSha256": "03b320644babc716c960717336882f3f2164ad26bd583ff41ac4ed307f26a388",
+    "afterSha256": "9bac8eb35ea99aba041377beb77753f995e5cda82c65cf50d90e692869f01336"
+  }
+}

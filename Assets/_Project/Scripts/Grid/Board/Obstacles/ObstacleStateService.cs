@@ -241,6 +241,12 @@ public class ObstacleStateService : ISimObstacleQuery
     public Action<int> HatLauncherHitInterceptor;
     /// <summary>KeyGenerator: set by KeyGeneratorService. Returns true only when a key is produced.</summary>
     public Func<int, bool> KeyGeneratorHitInterceptor;
+    public Func<int, ObstacleHitContext, TileType?, bool> DimerdalHitInterceptor;
+    public Func<int, int> DimerdalRemainingHitsQuery;
+    public Func<bool> DimerdalCanProduceQuery;
+    public Func<int, bool> DimerdalCanProduceAtQuery;
+    public Func<int, ObstacleHitContext, bool> FlyEggBoxHitInterceptor;
+    public Func<int, int> FlyEggBoxRemainingQuery;
     /// <summary>BirdHouse: set by BirdHouseService (origin, context). true = vuruş tüketildi (kapak açıldı / kuş
     /// uçtu / hamle sınırı); false = kota bitti → engel vuruş almaz. Ev hiçbir zaman kendi HP'sini düşürmez.</summary>
     public Func<int, ObstacleHitContext, bool> BirdHouseHitInterceptor;
@@ -588,6 +594,23 @@ public class ObstacleStateService : ISimObstacleQuery
                 return new ObstacleHitResult(true, true, false, hlChange, default, Array.Empty<int>());
             }
             return new ObstacleHitResult(false, false, true, default, default, Array.Empty<int>());
+        }
+
+        // Fruit is eaten only by reserved fly arrivals, never direct damage/tools.
+        if (id == ObstacleId.FlyFruit)
+            return new ObstacleHitResult(false, false, true, default, default, Array.Empty<int>());
+        if (id == ObstacleId.FlyEggBox)
+        {
+            bool hit = context == ObstacleHitContext.SpecialActivation && FlyEggBoxHitInterceptor?.Invoke(origin, context) == true;
+            return new ObstacleHitResult(hit, hit, !hit,
+                new ObstacleVisualChange(origin, id, false, FlyEggBoxRemainingQuery?.Invoke(origin) ?? 4, null), default, Array.Empty<int>());
+        }
+        if (DimerdalRules.IsShutter(id))
+        {
+            bool hit = DimerdalHitInterceptor?.Invoke(origin, context, sourceTileType) == true;
+            int dimerdalRemaining = DimerdalRemainingHitsQuery?.Invoke(origin) ?? DimerdalRules.OpeningHits;
+            return new ObstacleHitResult(hit, hit, !hit,
+                new ObstacleVisualChange(origin, id, false, dimerdalRemaining, null), default, Array.Empty<int>());
         }
 
         // KeyGenerator is a permanent static producer. Hits never decrement its own HP;
@@ -1967,6 +1990,15 @@ public class ObstacleStateService : ISimObstacleQuery
         return true;
     }
 
+    // Legacy level IDs remain compatible, but diamonds join the normal tile layer
+    // when spawned/revealed. Do not emit a destruction or collection event here.
+    public bool TryPromoteDimerdalDiamondAt(int x, int y)
+    {
+        if (!IsValidCell(x, y) || !DimerdalRules.IsDiamond(GetObstacleIdAt(x, y))) return false;
+        RestoreCellAfterMovableLeft(level.Index(x, y));
+        return true;
+    }
+
     public bool IsMovableObstacleAt(int x, int y)
     {
         if (!IsValidCell(x, y)) return false;
@@ -2575,12 +2607,21 @@ public class ObstacleStateService : ISimObstacleQuery
         if (id == ObstacleId.None) return 0;
 
         if (id == ObstacleId.AncientSeal) return 0;
+        if (id == ObstacleId.FlyFruit) return 0;
+        if (id == ObstacleId.FlyEggBox) return FlyEggBoxRemainingQuery?.Invoke(level.obstacleOrigins[idx]) ?? 0;
         if (id == ObstacleId.Tube) return 1;
 
         if (id == ObstacleId.HatLauncher)
             return HatLauncherHitInterceptor != null && HatLauncherCanProduceQuery != null
                    && HatLauncherCanProduceQuery() ? 1 : 0;
 
+        if (DimerdalRules.IsShutter(id))
+        {
+            int shutterHits = DimerdalRemainingHitsQuery?.Invoke(level.obstacleOrigins[idx]) ?? DimerdalRules.OpeningHits;
+            bool canProduce = DimerdalCanProduceAtQuery != null
+                ? DimerdalCanProduceAtQuery(level.obstacleOrigins[idx]) : DimerdalCanProduceQuery?.Invoke() == true;
+            return shutterHits > 0 ? shutterHits : canProduce ? 1 : 0;
+        }
         if (id == ObstacleId.KeyGenerator)
             return KeyGeneratorCanProduceQuery != null && KeyGeneratorCanProduceQuery() ? 1 : 0;
 
@@ -3080,6 +3121,30 @@ public class ObstacleStateService : ISimObstacleQuery
             return;
 
         ClearObstacleFromLevel(origin, ObstacleId.RocketBasket);
+    }
+
+    /// Retire an exposed, exhausted diamond source through the normal layer/unlock
+    /// path. Covered sources wait for reveal; no cover or underlying layer is lost.
+    public bool TryRetireDimerdal(int origin, ObstacleId id)
+    {
+        if (!DimerdalRules.IsShutter(id) || level == null || level.obstacles == null
+            || level.obstacleOrigins == null || origin < 0 || origin >= level.obstacles.Length
+            || origin >= level.obstacleOrigins.Length || level.width <= 0
+            || level.obstacles[origin] != (int)id || level.obstacleOrigins[origin] != origin
+            || IsHitLockedAt(origin % level.width, origin / level.width)) return false;
+
+        ClearObstacleFromLevel(origin, id);
+        return true;
+    }
+
+    public bool TryCompleteFlyFruitObstacle(int origin, ObstacleId id)
+    {
+        if (id != ObstacleId.FlyEggBox && id != ObstacleId.FlyFruit) return false;
+        if (level == null || level.width <= 0 || level.obstacles == null || level.obstacleOrigins == null || origin < 0
+            || origin >= level.obstacles.Length || level.obstacles[origin] != (int)id
+            || level.obstacleOrigins[origin] != origin || IsHitLockedAt(origin % level.width, origin / level.width)) return false;
+        ClearObstacleFromLevel(origin, id);
+        return true;
     }
 
     public bool TryRemoveOilAt(int x, int y)

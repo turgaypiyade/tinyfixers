@@ -1,0 +1,41 @@
+{
+  "result": "PASS",
+  "level": 225,
+  "protectedFiles": 3388,
+  "changedProtectedFiles": [],
+  "unchangedLevels": "1–224",
+  "initialEmptyBefore": 12,
+  "initialEmptyAfter": 2,
+  "naturallyFedBefore": 36,
+  "naturallyFedAfter": 46,
+  "lowerNormalRowsFullyFed": true,
+  "emptyCellsImmediatelyBelowSeal": [
+    67,
+    68
+  ],
+  "unchanged": [
+    "mask",
+    "dimensions",
+    "moves25",
+    "goals16/1/16/16",
+    "obstacle counts",
+    "seal9/9/9",
+    "GUID/meta",
+    "catalog",
+    "names",
+    "pins0"
+  ],
+  "authorizedRuntimeFiles": [
+    "Assets/_Project/Scripts/Grid/Board/Obstacles/DimerdalView.cs",
+    "Assets/_Project/Scripts/Grid/Board/Obstacles/DimerdalService.cs",
+    "Assets/_Project/Scripts/Grid/Board/Obstacles/DimerdalProductionFx.cs"
+  ],
+  "laterAuthorizedRuntimeOverlay": {
+    "Assets/_Project/Scripts/Grid/Board/Obstacles/DimerdalService.cs": "cc4ef6a854598cac02773563105d8891e9e1fdce978a8c15d75c5a20ddd102a2",
+    "Assets/_Project/Scripts/Grid/Board/Obstacles/DimerdalView.cs": "98fbbadeefcdefe5a3e14d9124a361ac3c36b789c18640423f26f1e37d06d495",
+    "Assets/_Project/Scripts/Grid/Board/Obstacles/ObstacleStateService.cs": "c30681eec1d98019b0306169ef38217b5b2914ef06d85b90c567df09db639a79",
+    "Assets/_Project/Scripts/Grid/GridSpawner.cs": "57a77d4e24bbcb3cc7040665b05a8cfc4e2c042262fad83b6ef84ab6050f5d1a",
+    "Assets/_Project/Scripts/VFX/ObstacleShatterFx.cs": "a852500cd529b5546158607157679de97ef1e013cea87633e0331d4579ae6fcb"
+  },
+  "limits": "Static YAML/geometry and code source checks only. No Unity/project build, GPU shader compilation, Play/device or gravity/cascade simulation. Runtime feedback is separately tested with production C# and Unity doubles."
+}

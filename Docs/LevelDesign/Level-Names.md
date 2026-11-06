@@ -1,4 +1,4 @@
-# Level isimleri — LevelCatalogProV1 (1–212)
+# Level isimleri — LevelCatalogProV1 (1–230)
 
 2026-10-28: Oyun `Settings/ProLevels/LevelCatalogProV1`'e geçti; numaralar YENİ sıradır. Boş seviyeler (4, 8, 106) henüz tasarlanmadığı için isimsizdir. Eski numaralı liste ve eşleşme: Masaüstü Wondi Paylaşım/LevelCatalogProV1_Plan.xlsx.
 
@@ -225,3 +225,13 @@ Yeni level tasarlarken aynı JSON'a TR + EN isim ekle, bu tabloyu ve ilgili not/
 | 218 | Kıvrılan Nehir |
 | 219 | Çiçekli Taç |
 | 220 | Büyük Festival |
+| 221 | Mavi Vitrin |
+| 222 | Zümrüt Yaprak |
+| 223 | Uçan Anahtar |
+| 224 | Kristal Çapa |
+| 225 | Mühürlü Kristal Kalesi |
+| 226 | Rüzgâr Kemeri |
+| 227 | Işık Tezgâhı |
+| 228 | Kristal Ünlem |
+| 229 | Rüzgâr Burgusu |
+| 230 | Büyük Işık Düellosu |

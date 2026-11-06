@@ -1,6 +1,27 @@
 # Engel tasarım rehberi
 
+## Sinek kutusu / yumurta / elma — ID100–102 · henüz level tanıtımı yok
+
+Kullanıcı2026-11-06: FlyEggBox1002×2,4görünür yumurta;yalnız special vuruşu1yumurta atar,dördü de başarıyla yerleşince kalkar. FlyEgg1011×1movable,normal eşleşme/special ile1hit;gelecekte2hit isteği ayrıca değerlendirilir. Her yumurtadan3sinek çıkar;FlyFruit1026lokma(iki sürü) ister,3lokmada yenmiş görsel gösterir. Meyve doğrudan match/special/booster ile kırılmaz;çevreye hasar yok. Bir kutu2elmayı tamamlar. Goals/PreLevelyalnızmeyve adedi;bu ailede kutu/yumurta hedefsiz kaynaklar açık kullanıcı istisnasıdır.1×1/2×2ve diğerboyutlar aynıID;LevelData.fruits origin,width,height ve GetObstacleFootprint kullanılır. Yeterli iniş hücresi bırak;sabit kutu/meyve altında beslemesiz cep kurma. Kaynaklara erişim ve düşen yumurtaları kırma işi ayrı değerlendirilir. Henüz hiçbir üretim leveline eklenmedi;tanıtılmış eski havuz gibi otomatik kullanma. [Teknik kayıt](../Checks/FlyFruit-2026-11-06/README.md).
+
+
+## Dimerdal — V1 ilk tanıtım221 · güncel2026-11-05
+
+**Ortak hedef ikonu:** Goals/HUD, PreLevel ve sonuçta kullanıcının mor elması (`DimerdalDiamondGoal.png`) bütün renklerin toplamını temsil eder. Tahta/kutu/üretim uçuşu renkli sprite'ını korur. Mevcut elmas hedeflerinde renkli override bırakılmaz.
+
+**Üretim ve kırılma:** Her kutuya editörde kendi üretim adedi girilir (`LevelData.dimerdals`, origin+tür/count); Goals bu adetlerin toplamıdır, başlangıç elması varsa eklenir. Kutu kendi adedini üretip son ürünü başarıyla tahtaya yerleşince tek başına havuzlu büyük-parça efektiyle kalkar; başka kutu kendi adedine devam eder. Kutu başına rezervasyon/uçuş ayrı tutulur; iptal/timeout kendi hakkını geri verir. Örtülü kaynak açılınca kırılır, alt katman korunur. Kabul edilen açılış/üretim hitinin kısa büyüme/silkelenme/parlaması sürer. Önceki ortak üretim kotası ve toplu kırılma kuralı kaldırıldı.
+
+- Dört renk, her renkte1×1/2×2/3×3kare boyut:ID84–95. Mavi84–86/Bolt,yeşil87–89/Plate,sarı90–92/Gear,kırmızı93–95/Core.221yalnızmavi2×2/85 kullanır.
+- Kendi üretim adedi dolana kadar sabit kutu; dört aynı renk komşu eşleşmesi veya special/tool vuruşuyla dört kepenk dilimi aşağıdan açılır. Yanlış renk ve scripted hit açmaz. Açıldıktan sonra kendi üretim adedi tamamlanana kadar hücreleri bloke etmeye devam eder; taşın kutunun içinden geçmesi eski ve geçersiz fikirdir.
+- Önceden açık kutunun yanında aynı renk bir eşleşme grubu veya renk bağımsız special/joker vuruşu1renkli elmas üretir. Aynı grup iki açık kutuya değse bile1elmas. Dördüncü açma vuruşu ayrıca üretim yapmaz. Oluşan special korunur; farklı/kopuk eşleşme grupları ayrı üretim yapabilir.
+- Ürün normal `TileType.DiamondBlue/Green/Yellow/Red` taşıdır. ID96–99 authoring/ikon uyumu için korunur; authored elmas spawn/reveal sırasında normal taşa çevrilir. Normal takas/düşüş/yana kayma/special oluşturma vardır; yalnız aynı renk elmaslarla eşleşir veya special ile temizlenir. Komşu normal match kırmaz. **Hedef Collectible Diamond4**, bütün renkler ortak collectible hedefine yazılır; kutu kırılması veya her renkten ayrı zorunlu adet hedeflenmez.
+- Her kutu için kendi üretim adedini planla; Diamond hedefi bunların toplamıdır, başlangıçtaki açık/örtülü elmaslar da hedefe eklenir. Random refill veyaKeyGenerator ürün havuzuna eklenmez.
+- Kutulara erişilebilir aynı-renk eşleşme yüzü ve besleme bırak. Üretim sonuna kadar kutu yerinde kalır; başlangıçta altında beslemesiz normal cep oluşturma; tabana dayalı grup ilk tanıtım için okunaklıdır. İlk tanıtım1/6kolaylık kuralına tabidir;221ilk deneme24hamle/8elmas henüz ölçülmedi.
+- Sprite katmanları: sabit çerçeve/içzemin,elmas,maskeli4dilim. Tek Update aktif animasyonları ilerletir; eşleşme tamponları ve dilim dokuları tekrar kullanılır. Örtüden çıkış kalan durumu korur; eşleşme tamamen temizlenir, üretim uçuşu sonrasında canlı renkli taş değişir. Düşüş yaşam sürümü ve hareketi korunur; eski kuyruklu normal temizliğin izni kaldırılır. Ses merkezi engel yolunda; cihaz performansı ölçülmedi. Teknik kayıt `Docs/Checks/Dimerdal/README.md`.
+
 108 hazırlanırken mevcut kod, `ObstacleLibrary.asset` ve `LevelCatalogPro.asset` üzerinden çıkarıldı. Tasarım amaçlı yaşayan nottur; eski dokümanlarla çelişirse güncel servis kodu ve asset ayarları esas alınır. Yeni engel veya davranış değiştiğinde güncellenir.
+
+**Son kullanıcı yönü (2026-11-05):** Elmaslar artık engel değil normal `TileType.Diamond*` taşıdır: takas/düşüş/yana kayma/special oluşturma; yalnız aynı renk elmaslarla eşleşme veya special ile temizlenme. Komşu normal match elması kırmaz. Üretim yalnız hareketsiz, iniş görseli tamamlanmış normal taşa yerleşir; hareketlenirse hedef yeniden seçilir. Sayaç TarpStatue uçuşu varışında bir kez iner. Eski havada dönüştürme/komşu match ile toplama notları tarihseldir. Son davranış cihazda tekrar oynanmadı; `Docs/Checks/Dimerdal/README.md` günceldir.
 
 ## BirdHouse78 / Collectible Bird3 — V1 ilk tanıtım201 (2026-10-31)
 
@@ -167,3 +188,17 @@ Yol `waterChannels[].pathCellIndices` içinde sıralı int dizisidir; kaynak dı
 `StackedObstacleEntry.initialRemainingHits` yalnız ColorCrate71–74 için geçerlidir. 0 veya eksik alan library varsayılanıdır; pozitif değer1…def.hits aralığına clamp olur. Max hits3 kalır; kalan2 ikinci görsel/kural aşaması, kalan1 son aşamadır (`holdsTile=1` de o aşamadan gelir). 179'da satırlar3/2/1/1, son12hücrede örtü altında taş tutulur.
 
 State kurulumda id+origin anahtarıyla başlangıç hitlerini bir kez toplar; exposed ve beneath kaydı aynı değeri kullanır. Kırılma/snapshot mevcut kalan-hit akışıyla sürer. Spawn/editor/PNG başlangıç aşamasını görselleştirir. Başka bir kapak aynı origin'de diye sandığın başlangıç hitini devralmaz. Eski levellarda alan0 kalır; paylaşılan library değişmez. Başlangıç aşaması normal **Obstacle → ColorCrate → Başlangıç kalan vuruş (1/2/3)** yolundan seçilir. Normal sandıklar `LevelData.colorCrateInitialHits` girdisinde saklanır; yeni katman oluşturulmaz. Aynı sandığa tıklamak aşamasını değiştirir; silme/üzerine başka engel boyama başlangıç kaydını temizler. Gerçek üst katmanlar için Overlay mevcut `StackedObstacleEntry.initialRemainingHits` desteğini korur. Obstacle fırçası, aynı origin üzerinde mevcut en üst generic katman aynı sandıksa yalnız aşamasını günceller; 179 gibi Mud tabanını korur. Kütüphanenin ortak Hits/stage ayarları tüm levelları etkilediğinden ayrı, kapalı bir foldout altında gösterilir. Bu UI düzeltmesi level assetlerini değiştirmedi; doğrulama `Checks/ColorCrate-Obstacle-Brush/` içinde. Unity derleme/Play yapılmadı.
+
+## Örtülü içerik üstünde tek duvar yolu · 2026-11-06
+
+StackedObstacleEntry.wallPieceOriginPlusOne,Wall/MetalWall yığın hücrelerini tekorigin altında birleştirir;değer ortak en küçük origin+1,0eski bağımsız hücre davranışıdır. originCellIndex her kapağın gerçek yerleştirme hücresi olarak kalır. Aynı bağlı parçanın tüm Wallentryleri aynı değeri taşır;altındaki Lantern75 kendi origin/HP’sini korur. Tekhücre beşinci vuruş bütün Wallparçasının mevcut komşuluk dalgasını başlatır;hedef bir parçadır.226v2bu alanı kullanır;eski assetler otomatik değiştirilmedi. Düşüş,animasyon ve ses kuralları aynı.
+
+
+## Wall Overlay editör akışı · 2026-11-06
+
+Alt içerik Obstacle modunda; duvar Overlay modunda numaralı fırçayla boyanır. Wall/MetalWall aynı Parça No ve kenar komşuluğuyla bağlanır. Yeni Parça ayırır; Yalnız duvarı sil alt feneri korur. Editör wallPieceId numarasını saklar ve ortak runtime origin’i yeniden kurar; bütün eski level assetleri bu tur aynıdır. Ayrıntı: `Docs/Checks/Wall-Overlay-Editor-2026-11-06/README.md`.
+
+
+## PatchBot hedefleme — duvar ve un kaynağı · 2026-11-06
+
+Wall/MetalWall parçasını seçen PatchBot+special, en çatlak açık hücreye gider; Line/Pulse alanı ve görsel iniş o hücrede kalır. Tek botun mevcut seçimi korunur. Un hedefi aktifken Windmill bu hedefin kaynağı sayılır ve mevcut un hücrelerinden önce hedeflenir; HUD’a ayrı değirmen hedefi eklenmez. Diğer hedef engellerle birlikte değerlendirilir, zorunlu tek birinci hedef değildir. Ayrıntı: `Docs/Checks/PatchBot-Wall-WeakPoint-2026-11-06/README.md`.

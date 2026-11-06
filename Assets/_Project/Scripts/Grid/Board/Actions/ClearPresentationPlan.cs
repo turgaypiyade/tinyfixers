@@ -22,6 +22,15 @@ public sealed class ClearPresentationPlan
     private readonly Dictionary<TileView, int> tileLifetimes = new();
     private bool lifetimesCaptured;
 
+    // A flying diamond can replace a stone referenced by an older queued match.
+    // Revoke only this plan's clear permission; the tile/fall lifetime stays intact.
+    public void ExcludeConvertedTile(TileView tile)
+    {
+        CaptureTileLifetimes();
+        FinalClearTiles.Remove(tile);
+        tileLifetimes.Remove(tile);
+    }
+
     public void CaptureTileLifetimes()
     {
         if (lifetimesCaptured) return;

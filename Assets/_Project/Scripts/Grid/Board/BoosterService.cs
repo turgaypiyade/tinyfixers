@@ -1267,6 +1267,11 @@ public class BoosterService
             TileType[,] finalTypes;
             if (!TryBuildPermutationShuffleTypes(currentTypes, lockedMask, out finalTypes))
             {
+                // The recolor fallback may only regenerate ordinary colors. Keep
+                // committed goal diamonds if a safe permutation could not be found.
+                for (int y = 0; y < board.Height; y++)
+                    for (int x = 0; x < board.Width; x++)
+                        if (DimerdalRules.IsDiamond(currentTypes[x, y])) lockedMask[x, y] = true;
                 finalTypes = boardInitService.SimulateInitialTypes(
                     board.Width, board.Height, lockedMask, board.RandomPool);
                 if (finalTypes == null) yield break;

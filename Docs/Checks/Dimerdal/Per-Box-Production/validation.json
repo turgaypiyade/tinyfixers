@@ -1,0 +1,36 @@
+{
+  "result": "PASS",
+  "protectedFiles": 3032,
+  "unrelatedChanges": [],
+  "levels": {
+    "221": [
+      4,
+      4
+    ],
+    "222": [
+      10
+    ],
+    "224": [
+      6,
+      6
+    ],
+    "225": [
+      8,
+      8
+    ]
+  },
+  "preserved": [
+    "all level fields except appended source settings",
+    "goal amounts and purple icon",
+    "catalog/names/meta",
+    "other levels including current user edits",
+    "art assets",
+    "fall/gravity code"
+  ],
+  "limits": "YAML/data/source-path audit; actual C# tests use Unity doubles. No Unity build/Play/device, gameplay simulation, publishing or CPU/GC/FPS measurement.",
+  "productionChecks": 409,
+  "perBoxChecks": 289,
+  "matchingChecks": 39,
+  "feedbackChecks": 64,
+  "layerChecks": 7
+}

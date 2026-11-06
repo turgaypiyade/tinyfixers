@@ -1,0 +1,126 @@
+using System;using System.Linq;using System.Collections.Generic;
+/* ENUM */
+public enum CellType{Empty,Normal}
+public enum TarpStatueColor{Red}
+public struct Vector2Int{public int x,y;public Vector2Int(int x,int y){this.x=x;this.y=y;}public static Vector2Int one=>new Vector2Int(1,1);}
+public static class Mathf{
+ public static int Max(int a,int b)=>Math.Max(a,b);public static int Min(int a,int b)=>Math.Min(a,b);
+ public static int Clamp(int n,int a,int b)=>Math.Max(a,Math.Min(n,b));public static float Repeat(float x,float y)=>x%y;
+}
+public struct Color{
+ public float r,g,b,a;public Color(float r,float g,float b,float a){this.r=r;this.g=g;this.b=b;this.a=a;}
+ public static Color white=>new Color(1,1,1,1);public static Color black=>new Color(0,0,0,1);
+ public static Color HSVToRGB(float h,float s,float v)=>new Color(h,s,v,1);
+}
+public struct Rect{public float x,y,width,height;public Rect(float x,float y,float w,float h){this.x=x;this.y=y;width=w;height=h;}public float xMax=>x+width;public float yMax=>y+height;}
+public enum TextAnchor{MiddleCenter}
+public class GUIStyle{public TextAnchor alignment;public int fontSize;public class State{public Color textColor;}public State normal=new State();public GUIStyle(object o){}}
+public static class GUI{public static readonly List<string> labels=new List<string>();public static void Label(Rect r,string text,GUIStyle s){labels.Add(text);}}
+public static class EditorStyles{public static object boldLabel=new object();}
+public static class EditorGUI{public static void DrawRect(Rect r,Color c){}}
+public static class GameDiagnostics{public static bool EditorTools=false;}
+public static class Debug{public static void LogWarning(string t){}}
+public static class DimerdalRules{public static bool IsShutter(ObstacleId id)=>(int)id>=84&&(int)id<=95;}
+public static class ObstacleStateService{/* SEE THROUGH */}
+public class ObstacleDef{public int hits;public Vector2Int size;public bool IsMovableObstacle;}
+public class ObstacleLibrary{
+ public Dictionary<ObstacleId,ObstacleDef> defs=new Dictionary<ObstacleId,ObstacleDef>();
+ public ObstacleLibrary(){/* LIBRARY */}
+ public ObstacleDef Get(ObstacleId id)=>defs.TryGetValue(id,out var d)?d:null;
+}
+/* ENTRY */
+public struct Region{public int originCellIndex,width,height,stackOrder;}
+public struct Tube{public int[] path;}
+public struct Magnet{public int[] pathCellIndices;}
+public static class TubeObstacleService{public static int[] GetCellIndices(Tube t,int w,int h)=>t.path;}
+public class LevelData{
+ public int width=6,height=6;public int[] cells=Enumerable.Repeat(1,36).ToArray(),obstacles=Enumerable.Repeat((int)ObstacleId.Lantern,36).ToArray(),obstacleOrigins=Enumerable.Range(0,36).ToArray(),wallPieceIds=new int[36];
+ public ObstacleLibrary obstacleLibrary=new ObstacleLibrary();public StackedObstacleEntry[] stackedObstacles=new StackedObstacleEntry[0];
+ public Region[] safes,ancientSeals;public Tube[] tubes;public Magnet[] magnets;
+ public bool InBounds(int x,int y)=>x>=0&&y>=0&&x<width&&y<height;public int Index(int x,int y)=>y*width+x;
+ public Vector2Int GetObstacleFootprint(ObstacleId id,int origin,ObstacleDef def)=>def!=null?def.size:Vector2Int.one;
+ public void SetDimerdalProductionCount(int origin,ObstacleId id,int count){}
+ public void SetColorCrateInitialHits(int origin,ObstacleId id,int count){}
+ public void SetTarpStatue(int origin,TarpStatueColor c,int count,int size){}
+}
+public class Editor{
+ ObstacleId selectedObstacle;int selectedWallPiece=1,selectedInitialCrateHits=3,selectedDimerdalCount=6,selectedTarpCount=6,selectedTarpSize=2;
+ TarpStatueColor selectedTarpColor;bool eraseOverlayWall;const int cellPx=30;
+ public readonly List<ObstacleDef> previews=new List<ObstacleDef>();
+ void DrawObstaclePreview(ObstacleLibrary l,ObstacleDef d,Rect r,float pad,int remaining=0){previews.Add(d);}
+ /* METHODS */
+ public void Paint(LevelData l,int cell,ObstacleId id,int piece=1,bool erase=false){selectedObstacle=id;selectedWallPiece=piece;eraseOverlayWall=erase;PlaceStackedObstacle(l,cell%l.width,cell/l.width);}
+ public void Erase(LevelData l,int cell,ObstacleId id){Paint(l,cell,id,1,true);}
+ public void EraseAll(LevelData l,int cell)=>RemoveStackedAtCell(l,cell);
+ public static void BaseRecompute(LevelData l)=>RecomputeWallOrigins(l);
+ public static void Normalize(LevelData l)=>RecomputeStackedWallOrigins(l);
+ public static int Count(LevelData l,ObstacleId id)=>CountGoalObstacles(l,id);
+ public static int Next(LevelData l)=>NextWallPieceNumber(l);
+ public static bool Cover(LevelData l,int cell,ObstacleId id)=>ValidateFullCover(l,new HashSet<int>{cell},id,-1);
+ public void Draw(LevelData l){previews.Clear();GUI.labels.Clear();DrawStackedWallPieces(l,0,0);}
+}
+public static class Checks{
+ static int checks;static void Check(bool b,string why){checks++;if(!b)throw new Exception(why);}
+ static void BaseUnchanged(LevelData l,int[] ids,int[] origins){Check(l.obstacles.SequenceEqual(ids)&&l.obstacleOrigins.SequenceEqual(origins),"Overlay edits must preserve every authored underlying lantern");}
+ public static void Run(bool before){
+  foreach(var id in new[]{ObstacleId.Wall,ObstacleId.MetalWall}){
+   foreach(var order in new[]{new[]{13,14,15},new[]{15,14,13},new[]{14,15,13},new[]{14,13,15}}){
+    var l=new LevelData();var e=new Editor();var ids=(int[])l.obstacles.Clone();var origins=(int[])l.obstacleOrigins.Clone();
+    foreach(int i in order)e.Paint(l,i,id);
+    if(before){Check(l.stackedObstacles.All(s=>s.wallPieceId==0&&s.wallPieceOriginPlusOne==0)&&Editor.Count(l,id)==3,"Old editor must leave manually painted wall cells ungrouped");Console.WriteLine("REPRODUCED: existing Overlay wall brush paints three independent caps despite using one piece number.");return;}
+    Check(l.stackedObstacles.Length==3&&l.stackedObstacles.All(s=>s.wallPieceId==1&&s.wallPieceOriginPlusOne==14),"Manual brush must join adjacent cells, regardless of paint order");
+    Check(Editor.Count(l,id)==1,"Manual wall route must count one goal");BaseUnchanged(l,ids,origins);
+    e.Paint(l,14,id);Check(l.stackedObstacles.Length==3,"Repainting cannot duplicate a layer");
+    e.Erase(l,14,id);Check(Editor.Count(l,id)==2,"Removing a bridge must split the route into two live pieces");
+    Check(l.stackedObstacles.All(s=>s.wallPieceOriginPlusOne==s.originCellIndex+1),"Split pieces must have actual surviving origins");BaseUnchanged(l,ids,origins);
+    e.Paint(l,14,id);Check(Editor.Count(l,id)==1,"Restoring a bridge must reconnect both pieces");
+    e.Erase(l,13,id);Check(l.stackedObstacles.All(s=>s.wallPieceOriginPlusOne==15),"Deleting an origin must re-anchor surviving cells");
+    e.Paint(l,14,id,2);Check(Editor.Count(l,id)==2,"Changing piece number separates adjacent cells");
+    e.Paint(l,14,id,1);Check(Editor.Count(l,id)==1,"Repainting original number reconnects cells");
+    Check(Editor.Next(l)==2,"New Piece must inspect overlay numbers");
+    e.Paint(l,30,id,9);Check(Editor.Next(l)==10&&Editor.Count(l,id)==2,"Disconnected brush islands are independent; next number includes overlay-only pieces");
+    BaseUnchanged(l,ids,origins);
+   }
+  }
+  {
+   var l=new LevelData();var e=new Editor();e.Paint(l,13,ObstacleId.Wall);e.Paint(l,14,ObstacleId.MetalWall);
+   Check(l.stackedObstacles.All(s=>s.wallPieceOriginPlusOne==s.originCellIndex+1),"Wall and MetalWall must never join");
+   var d=new LevelData();e.Paint(d,5,ObstacleId.Wall);e.Paint(d,6,ObstacleId.Wall);Check(Editor.Count(d,ObstacleId.Wall)==2,"Row edges must not wrap into neighbors");
+   d.cells[8]=0;int count=d.stackedObstacles.Length;e.Paint(d,8,ObstacleId.Wall);Check(d.stackedObstacles.Length==count,"Wall brush cannot stamp a hole");
+  }
+  {
+   var l=new LevelData();var e=new Editor();foreach(int i in new[]{13,14,15}){
+    l.wallPieceIds[i]=1;l.stackedObstacles=l.stackedObstacles.Concat(new[]{new StackedObstacleEntry{originCellIndex=i,obstacleId=ObstacleId.Wall,wallPieceOriginPlusOne=14}}).ToArray();
+   }
+   Editor.BaseRecompute(l);Check(l.wallPieceIds.All(i=>i==0),"Base-only origin rebuilding may clear its own array");
+   Check(l.stackedObstacles.All(s=>s.wallPieceId==1&&s.wallPieceOriginPlusOne==14),"Already-authored226-style overlay numbers must survive base edits");
+   e.Erase(l,13,ObstacleId.Wall);Check(l.stackedObstacles.All(s=>s.wallPieceOriginPlusOne==15),"Legacy authored grouped route must remain editable after origin removal");
+   var legacy=new LevelData();legacy.stackedObstacles=new[]{new StackedObstacleEntry{originCellIndex=13,obstacleId=ObstacleId.Wall},new StackedObstacleEntry{originCellIndex=14,obstacleId=ObstacleId.Wall}};
+   Editor.Normalize(legacy);Check(legacy.stackedObstacles.All(s=>s.wallPieceId==0&&s.wallPieceOriginPlusOne==0),"Unnumbered legacy wall caps must remain independent");
+  }
+  {
+   var l=new LevelData();var e=new Editor();e.Paint(l,13,ObstacleId.Wall);e.Paint(l,14,ObstacleId.Wall);
+   e.Paint(l,13,ObstacleId.Grass);e.Erase(l,13,ObstacleId.Wall);
+   Check(l.stackedObstacles.Any(s=>s.originCellIndex==13&&s.obstacleId==ObstacleId.Grass),"Wall-only eraser must retain other overlays");
+   Check(l.obstacles[13]==(int)ObstacleId.Lantern&&l.obstacleOrigins[13]==13,"Wall-only eraser must retain base lantern");
+   e.EraseAll(l,14);Check(l.stackedObstacles.All(s=>s.originCellIndex!=14)&&l.obstacles[14]==(int)ObstacleId.Lantern,"Existing all-overlay eraser still removes overlay entries only");
+  }
+  {
+   var l=new LevelData();var e=new Editor();e.Paint(l,13,ObstacleId.Wall);e.Paint(l,14,ObstacleId.Wall);
+   Check(!Editor.Cover(l,13,ObstacleId.Stone),"Opaque one-cell layer cannot partially cover a grouped wall");
+   Check(Editor.Cover(l,13,ObstacleId.Grass),"Existing transparent grass cover remains allowed");
+   e.Draw(l);Check(GUI.labels.Count==2&&GUI.labels.All(s=>s=="1")&&e.previews.Count==4,"Wall preview must show numbered wall cells and underlying lantern windows");
+   e.Paint(l,13,ObstacleId.Grass);e.Draw(l);Check(GUI.labels.Count==2,"Grass must not hide the editor's wall footprint");
+   var hidden=new LevelData();e.Paint(hidden,13,ObstacleId.Wall);hidden.stackedObstacles=hidden.stackedObstacles.Concat(new[]{new StackedObstacleEntry{originCellIndex=13,obstacleId=ObstacleId.Stone,stackOrder=10}}).ToArray();
+   e.Draw(hidden);Check(GUI.labels.Count==0,"A higher opaque overlay must not be painted over by the wall preview");
+  }
+  {
+   var l=new LevelData();var e=new Editor();e.Paint(l,13,ObstacleId.Stone);e.Paint(l,13,ObstacleId.Stone);
+   Check(l.stackedObstacles.Length==1&&l.stackedObstacles[0].wallPieceId==0&&l.stackedObstacles[0].wallPieceOriginPlusOne==0,"Existing working stone overlay and deduplication remain unchanged");
+   e.Paint(l,13,ObstacleId.Grass);Check(l.stackedObstacles.Length==2&&l.stackedObstacles[1].stackOrder>l.stackedObstacles[0].stackOrder,"Existing overlay stacking order remains unchanged");
+   var c=new LevelData();foreach(int i in new[]{7,8,13,14}){c.obstacles[i]=(int)ObstacleId.ColorChest;c.obstacleOrigins[i]=7;}
+   e.Paint(c,7,ObstacleId.Wall);Check(c.stackedObstacles.Length==0,"Wall brush must retain the existing full-cover restriction over a2x2 chest");
+  }
+  Console.WriteLine("PASS: "+checks+" production editor paint/group/erase/cover/draw checks; actual library footprints, no Unity/board simulation.");
+ }
+}

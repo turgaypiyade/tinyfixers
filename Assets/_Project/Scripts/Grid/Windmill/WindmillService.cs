@@ -318,7 +318,8 @@ public sealed class WindmillService : MonoBehaviour
         var tile = board.Tiles[x, y];
         if (tile == null || board.GridData[x, y] == null) return false;
         if (!tile.IsRuntimeIdle || tile.WasDragging) return false;
-        if (tile.GetSpecial() != TileSpecial.None || tile.GetTileType() == TileType.Key) return false;
+        if (tile.GetSpecial() != TileSpecial.None || tile.GetTileType() == TileType.Key
+            || DimerdalRules.IsDiamond(tile.GetTileType())) return false;
         if (board.IsPendingTriggeredSpecialCell(x, y) || board.IsReservedTileTargetCell(x, y)) return false;
         return true;
     }

@@ -706,11 +706,13 @@ internal sealed class TileFallMotionSystem
         return byColumn != 0 ? byColumn : a.sequence.CompareTo(b.sequence);
     }
 
-    private DiagonalRegion DescribeDiagonal(Motion m, Vector2 end)
+    private DiagonalRegion DescribeDiagonal(Motion m, Vector2 end) => DescribeDiagonal(m.pos, end);
+
+    private DiagonalRegion DescribeDiagonal(Vector2 start, Vector2 end)
     {
         int size = board.TileSize;
-        int x0 = Mathf.RoundToInt(m.pos.x / size), x1 = Mathf.RoundToInt(end.x / size);
-        int y0 = Mathf.RoundToInt(-m.pos.y / size), y1 = Mathf.RoundToInt(-end.y / size);
+        int x0 = Mathf.RoundToInt(start.x / size), x1 = Mathf.RoundToInt(end.x / size);
+        int y0 = Mathf.RoundToInt(-start.y / size), y1 = Mathf.RoundToInt(-end.y / size);
         return new DiagonalRegion
         {
             left = x0 < x1 ? x0 : x1, right = x0 > x1 ? x0 : x1,
@@ -732,6 +734,22 @@ internal sealed class TileFallMotionSystem
                 m.waitBlocker = transit.owner;
                 return false;
             }
+
+        // PLAN SIRASI (2026-11-04, kullanıcı: "3x3 engelin altına kayarken taşlar sıralarını kaybediyor"): aynı çıkış
+        // sütununa planlı, hedefi DAHA DERİN ve dönüşü bu dönüşle kesişen taş önce döner. Kök: plan (CascadeLogic.
+        // TrySlideInto) eşit köşelerde SAĞDAKİNİ önce kaydırıp cebin dibine planlıyor; hareket ise aynı yükseklikteki
+        // taşları soldan sağa işleyip SOLDAKİNİ önce döndürüyordu → sığ hedefli taş cebe önce girip oturuyor, derin hedefli
+        // taş onun altına geçemiyordu (3x3 gölgenin ortası iki yan gölgeden beslenir). Arkasında aynı sütunda duran taş
+        // beklenmez (zaten öne geçemez → kilitlenme olmaz).
+        foreach (var k in order)
+        {
+            if (k == m || k.stationary || k.diagonal != null || !IsOwned(k)) continue;
+            if (k.target.x != m.target.x || k.target.y <= m.target.y) continue;
+            if (Mathf.Abs(k.pos.x - m.pos.x) < 0.5f && k.pos.y > m.pos.y) continue;
+            if (!TryGetPendingTurn(k, out var kTurn) || !SharesTurn(next, kTurn)) continue;
+            m.waitBlocker = k;
+            return false;
+        }
 
         // A lower stone can be waiting for its explicit start delay or for another turn.
         // It retains priority at this entrance, independent of FallAction registration order.
@@ -757,6 +775,8 @@ internal sealed class TileFallMotionSystem
                 return false;
             }
             if (leader.points.Count == 0 || Mathf.Abs(leader.points[0].x - leader.pos.x) < 0.5f) continue;
+            // Plan sırası: aynı sütuna daha SIĞ hedefli öndeki taş bu taşı (daha derin) bekler — yukarıdaki kural.
+            if (leader.target.x == m.target.x && leader.target.y < m.target.y) continue;
             if (SharesTurn(next, DescribeDiagonal(leader, leader.points[0])))
             {
                 m.waitBlocker = leader;
@@ -788,6 +808,24 @@ internal sealed class TileFallMotionSystem
         float followerSpeed = Mathf.Max(m.velocity, 0.01f) * size;
         float travel = Vector2.Distance(m.pos, end) / followerSpeed;
         return leader.pos.y - leader.velocity * 0.8f * size * travel <= clearY;
+    }
+
+    // Taşın önündeki ilk çapraz dönüş (henüz girmediyse). Dikey iniş sonra gelecek dönüşleri de kapsar.
+    private bool TryGetPendingTurn(Motion k, out DiagonalRegion region)
+    {
+        Vector2 prev = k.pos;
+        for (int i = 0; i < k.points.Count; i++)
+        {
+            Vector2 p = k.points[i];
+            if (Mathf.Abs(p.x - prev.x) >= 0.5f)
+            {
+                region = DescribeDiagonal(prev, p);
+                return true;
+            }
+            prev = p;
+        }
+        region = default;
+        return false;
     }
 
     private static void ReleaseDiagonal(Motion m)

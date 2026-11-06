@@ -1,0 +1,14 @@
+{
+  "level": 226,
+  "before": "Before/Docs/LevelDesign/Batches/226-230-Lantern-Wind-Crystal/designs.json",
+  "after": "../../designs.json",
+  "beforeUserStatus": "rejected",
+  "afterUserStatus": "not_reviewed",
+  "source": "References/16-Level226-Akis-Ve-Oyun-Fikri-Reddi.png",
+  "reasons": [
+    "Referanstaki bağlı domino yolu kaybedildi",
+    "Tavan bloğu altında dolum boşluğu oluştu",
+    "Değirmenler ayrı special işi kurmadı"
+  ],
+  "scope": "Only226; not approval or redesign of227–230"
+}

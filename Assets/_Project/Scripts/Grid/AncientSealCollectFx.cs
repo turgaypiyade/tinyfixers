@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -43,20 +44,29 @@ public sealed class AncientSealCollectFx : IDisposable
     private Image haloImage;
     private FlightTrailFx trail;
     private readonly MonoBehaviour host;
+    private readonly bool pooledVisuals;
+    private readonly List<Image> rentedImages;
+    private const string RootPoolKey = "Collection.GatherRoot";
+    private const string ImagePoolKey = "Collection.GatherImage";
 
     internal AncientSealCollectFx(MonoBehaviour host, RectTransform overlay, BoardController board,
         ICollectionFxTarget target, TileType type, int color, Vector3 worldStart,
-        AncientSealService.GatherBatch batch, int order, Color? tintOverride = null)
+        AncientSealService.GatherBatch batch, int order, Color? tintOverride = null,
+        Sprite spriteOverride = null, bool pooledVisuals = false)
     {
         this.host = host;
         this.target = target;
         this.color = color;
         this.batch = batch;
         this.order = order;
+        this.pooledVisuals = pooledVisuals;
+        if (pooledVisuals) rentedImages = new List<Image>(12);
         tint = tintOverride ?? (color == 0 ? new Color(1f, 0.25f, 0.3f)
             : color == 1 ? new Color(1f, 0.82f, 0.2f) : new Color(0.3f, 1f, 0.45f));
 
-        var go = new GameObject("SealStoneFlight", typeof(RectTransform));
+        var go = pooledVisuals ? UiVfxPool.RentRect(RootPoolKey, overlay, "SealStoneFlight")
+            : new GameObject("SealStoneFlight", typeof(RectTransform));
+        if (go == null) return;
         go.layer = overlay.gameObject.layer;
         root = (RectTransform)go.transform;
         root.SetParent(overlay, false);
@@ -69,10 +79,10 @@ public sealed class AncientSealCollectFx : IDisposable
             board.TilesRoot.TransformVector(Vector3.right * board.TileSize)).magnitude);
 
         // Hale taşın arkasında (önce oluşturulur), toplanma boyunca renkli parlar.
-        halo = FlightTrailFx.CreateImage(root, "CollectedHalo", FlightTrailFx.GlowSprite(), FlightTrailFx.WithAlpha(tint, 0f), cellSize * 1.15f);
+        halo = NewImage("CollectedHalo", FlightTrailFx.GlowSprite(), FlightTrailFx.WithAlpha(tint, 0f), cellSize * 1.15f);
         haloImage = halo.GetComponent<Image>();
         halo.anchoredPosition = start;
-        stone = FlightTrailFx.CreateImage(root, "CollectedStone", board.GetIcon(type), Color.white, cellSize * 0.7f);
+        stone = NewImage("CollectedStone", spriteOverride != null ? spriteOverride : board.GetIcon(type), Color.white, cellSize * 0.7f);
         stoneImage = stone.GetComponent<Image>();
         stoneImage.preserveAspect = true;
         stone.anchoredPosition = start;
@@ -167,7 +177,7 @@ public sealed class AncientSealCollectFx : IDisposable
         trail = null;
         onArrival?.Invoke();
 
-        var flash = FlightTrailFx.CreateImage(root, "SealArrivalGlow", FlightTrailFx.GlowSprite(), tint, cellSize);
+        var flash = NewImage("SealArrivalGlow", FlightTrailFx.GlowSprite(), tint, cellSize);
         flash.anchoredPosition = impact;
         var flashImage = flash.GetComponent<Image>();
         RectTransform ring = null;
@@ -175,7 +185,7 @@ public sealed class AncientSealCollectFx : IDisposable
         var ringArt = Ring();
         if (ringArt != null)
         {
-            ring = FlightTrailFx.CreateImage(root, "SealArrivalRing", ringArt, tint, cellSize * 0.5f);
+            ring = NewImage("SealArrivalRing", ringArt, tint, cellSize * 0.5f);
             ring.anchoredPosition = impact;
             ringImage = ring.GetComponent<Image>();
         }
@@ -183,7 +193,7 @@ public sealed class AncientSealCollectFx : IDisposable
         var sparkImages = new Image[sparks.Length];
         for (int i = 0; i < sparks.Length; i++)
         {
-            sparks[i] = FlightTrailFx.CreateImage(root, "SealArrivalSpark", FlightTrailFx.GlowSprite(), Color.white, cellSize * 0.13f);
+            sparks[i] = NewImage("SealArrivalSpark", FlightTrailFx.GlowSprite(), Color.white, cellSize * 0.13f);
             sparkImages[i] = sparks[i].GetComponent<Image>();
         }
         const float impactTime = 0.26f;
@@ -230,11 +240,43 @@ public sealed class AncientSealCollectFx : IDisposable
         return ringSprite;
     }
 
+    private RectTransform NewImage(string name, Sprite sprite, Color color, float size)
+    {
+        if (!pooledVisuals) return FlightTrailFx.CreateImage(root, name, sprite, color, size);
+        var image = UiVfxPool.RentImage(ImagePoolKey, root, name);
+        image.gameObject.layer = root.gameObject.layer;
+        image.sprite = sprite;
+        image.color = color;
+        image.rectTransform.sizeDelta = Vector2.one * size;
+        rentedImages.Add(image);
+        return image.rectTransform;
+    }
+
     public void Dispose()
     {
         trail?.Finish();
         trail = null;
-        if (root != null) UnityEngine.Object.Destroy(root.gameObject);
+        if (pooledVisuals)
+        {
+            if (rentedImages != null)
+            {
+                foreach (var image in rentedImages)
+                    if (image != null) UiVfxPool.Return(ImagePoolKey, image.gameObject);
+                rentedImages.Clear();
+            }
+            // Trail dots own short coroutines; they must never remain attached to
+            // a root that is about to be reused by a different collection flight.
+            if (root != null)
+                for (int i = root.childCount - 1; i >= 0; i--)
+                {
+                    var child = root.GetChild(i);
+                    child.gameObject.SetActive(false);
+                    child.SetParent(null, false);
+                    UnityEngine.Object.Destroy(child.gameObject);
+                }
+            if (root != null) UiVfxPool.Return(RootPoolKey, root.gameObject);
+        }
+        else if (root != null) UnityEngine.Object.Destroy(root.gameObject);
         root = null;
     }
 }

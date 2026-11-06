@@ -173,7 +173,8 @@ public static class BossDuelObstaclePressure
                 if (!tile.IsRuntimeIdle || tile.WasDragging
                     || board.IsPendingTriggeredSpecialCell(cell.x, cell.y)
                     || board.IsReservedTileTargetCell(cell.x, cell.y)) return LandResult.Retry;
-                if (tile.GetSpecial() != TileSpecial.None || tile.GetTileType() == TileType.Key) return LandResult.Drop;
+                if (tile.GetSpecial() != TileSpecial.None || tile.GetTileType() == TileType.Key
+                    || DimerdalRules.IsDiamond(tile.GetTileType())) return LandResult.Drop;
                 if (!CanLandWithoutBlockingBoard(board, cell, landingPool)) return LandResult.Drop;
                 if (!board.ObstacleStateService.TrySpawnSingleCellObstacleAt(cell.x, cell.y, id)) return LandResult.Drop;
 

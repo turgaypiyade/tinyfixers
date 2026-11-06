@@ -1,0 +1,53 @@
+{
+  "result": "PASS",
+  "changedExisting": [
+    "Assets/_Project/Settings/ObstacleLibrary.asset",
+    "Assets/_Project/Fonts/BakBakOne/BakbakOne-Regular SDF.asset",
+    "Assets/_Project/Fonts/Inter/Static/Inter_28pt-ExtraBold SDF.asset",
+    "Assets/_Project/Fonts/Inter/Static/Inter_28pt-Bold SDF.asset",
+    "Assets/_Project/Scripts/Audio/EventSfx.cs",
+    "Assets/_Project/Scripts/Audio/BoardAudioDirector.cs",
+    "Assets/_Project/Scripts/Editor/LevelDataEditor.cs",
+    "Assets/_Project/Scripts/Grid/Board/Obstacles/FlyEggProductionFx.cs",
+    "Assets/_Project/Scripts/Grid/Board/Obstacles/FlyFruitService.cs",
+    "Assets/_Project/Settings/ProLevels/LevelV1_00002310.asset"
+  ],
+  "preservedExisting": 6078,
+  "preservationAsserted": false,
+  "outsideTaskChanges": [
+    "Assets/_Project/Fonts/BakBakOne/BakbakOne-Regular SDF.asset",
+    "Assets/_Project/Fonts/Inter/Static/Inter_28pt-Bold SDF.asset",
+    "Assets/_Project/Fonts/Inter/Static/Inter_28pt-ExtraBold SDF.asset",
+    "Assets/_Project/Settings/ProLevels/LevelV1_00002310.asset"
+  ],
+  "allLevelFilesPreserved": null,
+  "sourceFilesUnchanged": true,
+  "waves": {
+    "AppleBite": {
+      "seconds": 0.367,
+      "peakDB": -7.0,
+      "loopSeamDelta": null
+    },
+    "EggBreak": {
+      "seconds": 0.367,
+      "peakDB": -6.0,
+      "loopSeamDelta": null
+    },
+    "EggFlight": {
+      "seconds": 0.372,
+      "peakDB": -5.14,
+      "loopSeamDelta": null
+    },
+    "FlyBuzzLoop": {
+      "seconds": 0.8665,
+      "peakDB": -11.43,
+      "loopSeamDelta": 0.003662
+    },
+    "BoxBreak": {
+      "seconds": 0.395,
+      "peakDB": -4.0,
+      "loopSeamDelta": null
+    }
+  },
+  "manualUnityTest": false
+}

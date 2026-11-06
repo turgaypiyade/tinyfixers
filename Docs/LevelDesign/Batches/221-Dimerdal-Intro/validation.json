@@ -1,0 +1,30 @@
+{
+  "status": "PASS",
+  "level": 221,
+  "activeCells": 68,
+  "normalSpawnAccessibleCells": 60,
+  "blueDimerdal2x2": 2,
+  "moves": 24,
+  "diamondGoal": 8,
+  "fixedNormalPins": 6,
+  "fixedSpecials": 0,
+  "firstBlueThreeGeometry": "pinned adjacent swap above both boxes",
+  "otherLevelsPreserved": true,
+  "recordedRuntimeFixes": [
+    "Assets/_Project/Settings/ObstacleLibrary.asset",
+    "Assets/_Project/Scripts/Editor/LevelDataEditor.cs",
+    "Assets/_Project/Scripts/Grid/AncientSealCollectFx.cs",
+    "Assets/_Project/Scripts/Grid/TileView.cs",
+    "Assets/_Project/Scripts/Grid/Board/BoardController.cs",
+    "Assets/_Project/Scripts/Grid/Board/Obstacles/ObstacleStateService.cs",
+    "Assets/_Project/Scripts/Grid/Board/Obstacles/DimerdalRules.cs",
+    "Assets/_Project/Scripts/Grid/Board/Obstacles/DimerdalService.cs",
+    "Assets/_Project/Scripts/Grid/Board/Actions/ClearPresentationPlan.cs",
+    "Assets/_Project/Scripts/Grid/Board/Actions/MatchClearAction.cs"
+  ],
+  "observedConcurrentChanges": [
+    "Assets/_Project/Scripts/Grid/Board/CascadeLogic.cs",
+    "Assets/_Project/Scripts/Grid/Board/TileFallMotionSystem.cs"
+  ],
+  "limits": "Static data, footprint, source-route and pin geometry checks; no gameplay, gravity, cascade, bot, PlayMode, build, balance measurement or publication."
+}

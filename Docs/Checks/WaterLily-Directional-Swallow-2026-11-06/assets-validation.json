@@ -1,0 +1,14 @@
+{
+  "result": "PASS",
+  "protectedFiles": 6054,
+  "allLevelAssetsPreserved": true,
+  "changedExistingProjectFiles": [
+    "Assets/_Project/Scripts/Grid/Grass/GrassWaterLilyService.cs",
+    "Assets/_Project/Settings/ObstacleLibrary.asset"
+  ],
+  "directionalFrames": 20,
+  "originalFramesRetained": 5,
+  "sourceSheets": 4,
+  "otherObstacleDefinitionsPreserved": true,
+  "unityBuildOrPlay": false
+}

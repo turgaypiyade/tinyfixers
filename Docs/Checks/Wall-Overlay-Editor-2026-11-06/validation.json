@@ -1,0 +1,16 @@
+{
+  "result": "PASS",
+  "editorProductionMethodChecks": 130,
+  "existingLayeredWallMethodChecks": 265,
+  "oldEditorBug": "Reproduced with pre-change production PlaceStackedObstacle: one brush number gives three independent caps",
+  "protectedProjectFiles": 6054,
+  "changedLevelAssets": [],
+  "otherOverlayScope": "User clarified these are working examples; Stone/Grass deduplication, stacking, transparent cover and content preservation checked",
+  "limits": "Presentation doubles and real production methods/library footprints; no live Unity inspector, project build/Play, gravity/cascade simulation, publish or commit.",
+  "previous226BatchAudit": {
+    "result": "Stopped on pre-existing user asset drift",
+    "asset": "Assets/_Project/Settings/ProLevels/LevelV1_00002260.asset",
+    "unchangedDuringEditorTask": true,
+    "action": "Preserved user changes; did not restore model or adopt asset hash"
+  }
+}

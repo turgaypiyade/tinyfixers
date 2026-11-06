@@ -1,5 +1,133 @@
 # Level tasarım çalışma durumu
 
+## Güncel — elma önceden boyut seçimi ve ses/uçuş düzeltmesi · 2026-11-06
+
+Kullanıcı elmanın Safe gibi yerleştirmeden önce Width/Height ile ayarlanmasını istedi. Elma modu eklendi;paletten Elma seçmek bu moda geçer. Sliderlar yalnız sonraki yerleştirmeyi ayarlar. Mevcut elma boyut listesi/tıklayarak resize kaldırıldı;dolu alanın üstüne yerleştirme bütün footprint için atomik reddedilir. Örtü/kasa/mühür/tüp/mıknatıs/kanal/pinli içerik korunur. Elma adedi Goals/PreLevel hedefidir.
+
+Sinek sesi kullanıcıya düşük geldi: ilk artışa son istekte+3dB daha eklendi, toplam yaklaşık+11.6dB;yumurta uçuşu+6.5dB ve yükselişin0.12s anında merkezi ses çağrısı. Yumurta yükselişte0.65→2.0 büyür,inişte1.0olur;hedef yeniden seçilince boyut/açı sıçramaz. Sineklerin2.1tepe ve farklı rastgele yolları korunur. Son kullanıcı isteğiyle üçlü formasyon0.65→1.05hücre aralığına açılır; yükselişte kademeli ayrılır, ayrı kavis/iniş bölgeleriyle toplu ama daha açık uçar.357izole yöntem kontrolü ve WAV/asset auditPASS;Unity/UI/Play çalıştırılmadı,manuel test kullanıcıdadır. Level tasarım işi açılmadı;mevcut levellar korunur.
+
+
+## Güncel — editör erişimi, sesler ve kullanıcı test tercihi · 2026-11-06
+
+Kullanıcı yeni engellerin LevelEditor’da görünür/seçilebilir/yerleştirilebilir olmasını kalıcı kural yaptı. AGENTS.md’ye eklendi. FlyFruit ailesi palette Elma / Sinek Yumurtası / Sinek Kutusu isimleriyle üstte seçilebilir; arama Türkçe ve enum adını destekler. Yanlış baykuş/oyma taşı görüntüsüne yol açan100–102legacySprite yedekleri düzeltildi; kopyadan kalan wardrobeItemSprites temizlendi. Son görsel doğrulama kullanıcıdadır.
+
+Kullanıcı “ben test ederim, sen normal işleri yap” dedi: açıkça istemedikçe bilgisayar/Unity/browser/native UI kontrolü yok. Build/Play/simülasyon/test leveli oluşturma yok. Dosya/kod ve izole yöntem kontrolleri yapılabilir; manuel editör/oyun testi kullanıcıya aittir. Bu tercih önceki UI doğrulama beklentisini değiştirir.
+
+Beş yeni FlyFruit WAV sessizlik/gain/peak/loop düzenlemesiyle merkezi ses sistemine bağlandı; Downloads orijinalleri korundu. Sinekler kullanıcının son isteğiyle yükselirken0.85→2.10 büyür, ayrılmada1.20’ye ve elmaya yaklaşırken1.00 normal boyuta döner. Son kullanıcı isteğiyle yükseliş/kavis/zamanlama/salınım ve elmadaki iniş noktaları hafif rastgeleleştirildi; parametreler uçuş başında bir kez seçilip havuzdaki sürüde saklanır. Kayıtlar Docs/Checks/FlyFruit-Editor-Visibility-2026-11-06 ve FlyFruit-Audio-2026-11-06.354izole mekanik ve12ses sahipliği kontrolü; Unity oynanış veya performans ölçümü değildir. Kullanıcının231dahil mevcut levelları korunur; level tasarım görevi açılmadı.
+
+
+## Güncel — yeni sinek/meyve ailesi, level değişmedi · 2026-11-06
+
+Son görev kullanıcı görsellerinden FlyEggBox100/FlyEgg101/FlyFruit102mekaniğidir. Kutu yalnız special ile4yumurta salar;yumurta1×1movableve1hit;3sinek yarım elma,iki sürü tam elma. Meyve Width/Height origin bazında dinamiktir;Goals/PreLevel yalnız meyve adedidir. İlk özel kayıt `Docs/Checks/FlyFruit-2026-11-06/README.md`. Yeni aile mevcut levellara otomatik konmadı.229v4/diğer levellar ve kullanıcı225/226assetleri aynı;231+istenmedi.
+
+Statik veri,izole gerçek yöntem kontrolleri ve gerçek sprite parça incelemesi yapıldı;Unitybuild/Play/cihaz/denge/FPS ölçümü/yayın/baseline/commit yok.229hamlesi28ve kullanıcı oynanmış onayı yok. Önceki level snapshot’larının sonradan yetkili runtime/library değişikliklerini drift görmesi normaldir;eski yazarları çalıştırıp hash benimsetme.
+
+
+## Güncel — nilüfer yönlü yutma görseli tamamlandı · 2026-11-06
+
+229v4level işi tamamlandıktan sonra kullanıcı dört lilly sheet adımıyla yönlü special yutma istedi. Grid yönüne göre Up/Right/Down/Left açık→kapalı kareleri kullanılır;sol kaynak ters sıradadır. Dönüş yalnız kapalı kareyle,merkezde eskişişkinCF5ile biter. EskiCF1–CF5,yaprak/hasar/hedef/bekleme/geri fırlatma/ses kuralları korundu.
+
+Kayıt `Docs/Checks/WaterLily-Directional-Swallow-2026-11-06/README.md`;662üretim-yöntemi kontrolü ve20spritebağlantısı/6054dosyakoruma auditPASS. Gerçek kareler/statikTimeline açıldı;Unitybuild/Play/cihazrender/ölçülmüşperformans/yayın/commit yok. Bu ayrı görsel iş yalnızGrassWaterLilyService,library69auxlistesi ve dört yeniatlası değiştirir;229v4vebütün diğerlevelassetleri aynı.229v4:28hamle,12nilüfer/4dolap/12oyma/12iki aşamalı plastik;henüzoynanmadı/onaylanmadı. Eski229koruma snapshot’ının bu sonradan yetkiliiki dosya değişimini drift sayması beklenir;hashleri sessizce güncelleme.231+istenmedi.
+
+
+## Güncel — 229 jel/pres reddi ve v4 · 2026-11-06
+
+Kullanıcı229v3jel/presi erken bitecek oyun ve kuralları anlamama gerekçesiyle reddetti;devam istedi. Açılış sonrası kalan gerçek iş değerlendirilmeden statik PASS/PNG ile SuperHard iddia edilmez. Bu yalnız229revizyonudur.
+
+Aktif229v4:9×11/99aktif,28hamle SuperHard;12GrassWaterLily69/4Wardrobe27/12SculptingStone28/12PlasticTwoStage40. Jel/pres/çim-altı-sandık yok.47açık eşleşme yuvası +12kilitli nilüferaltı taş=59/59doğal dolum,pin0,boş0. İlk nilüfer speciali sonraki yaprak/çimi;dolap kapağı içeriği bitirmez. Mevcut isim/GUID/katalog korunur.
+
+Kayıt `Batches/226-230-Lantern-Wind-Crystal/Revisions/v4-229-lily-workshop/`;root229not/PNG güncel.6055diğer proje dosyası/diğer levellar ve225/226kullanıcı düzenlemeleri korundu. Eski parentauthor/226modeli çalıştırılmaz. Statik kontrol PASS;gerçek229PNG ve3/126karşılaştırması açıldı;şekil benzersiz veya denge ölçülmüş diye sunulmaz.28hamle ilkayar,yeni taslak kullanıcı onaylı/oynanmış değil. Build/Play/bot/düşüş-kaskat simülasyonu/yayın/baseline/commit yok.231+istenmedi.
+
+Sıradaki açık iş: kullanıcı 229bitince dört yönlü lillydown/left/right/up sprite sheet adımlarıyla nilüfer special yutma animasyonu istedi. Geri toplanırken kapalı kareden mevcut şişkin görsele geçilecek. Bu ayrı yetkili görsel iştir;level geometrisini değiştirmez.
+
+
+## Güncel — yalnız229 yeni tasarım · 2026-11-06
+
+Kullanıcı229 için yeni level istedi;“çim altında sandık kullanma” dedi. GrassFlower58 ve GrassWaterLily69 bütün havuzda değerlendirilecek seçeneklerdir; bu levele hemen eklenmeleri gerekmiyor. Bu açık istek,önceki “levelı ben tasarlayacağım” kapsamını **yalnız229 için** değiştirir;diğer levelları yeniden tasarlama yetkisi vermez.
+
+229 Rüzgâr Burgusu / Crystal Whirl yeni taslak:9×11/99aktif,28hamle SuperHard;12jel tabanı üstünde12oyma,sağda12porselen,tabanda iki yukarı jel presi ve ikiRodos. Hedef99jel/12oyma/2Rodos/12porselen. Çim/sandık yok;63/63başlangıç yuvası doğal beslenir,pin0,boş0. Güncel kayıt `Batches/226-230-Lantern-Wind-Crystal/Revisions/v3-229-gel-sculpture/README.md`; root229not/gerçekPNG güncel. Eski parenttopluPNG229 için tarihseldir.
+
+6055diğer proje dosyası ve1–228/230 aynı;225=27hamle,226=20hamle ve mevcut kullanıcı geometri değişiklikleri korundu. Eski226model/hash’ini kullanıcı assetine benimsetme veya eski batchauthor’ı çalıştırma.229isim/GUID/meta/katalog korundu. Statik YAML/katman/hedef/footprint/besleme kontrolleri PASS;114/183gerçek sprite karşılaştırması ve yeniPNG açıldı. Bu agent görsel değerlendirmesidir;28hamle ilkayar,yeni229henüz oynanmadı/onaylanmadı. Runtime/art/akış kodu değişmedi;build/Play/bot/düşüş-kaskat simülasyonu,yayın/baseline/commit yok.231+istenmedi. Alttaki eski229çim/sandık/27hamle kayıtları tarihseldir.
+
+## Güncel — PatchBot special / duvar zayıf noktası / değirmen önceliği · 2026-11-06
+
+Kullanıcı tek PatchBot’un Wall zayıf hücre seçiminin doğru olduğunu, PatchBot+special kombosunun yanlış seçtiğini netleştirdi. Sonraki açık yön: değirmen un kaynağı olduğu için hedef sayılmalı, mevcut undan önce seçilmeli. Bu tur yalnız bu hedefleme/iniş/Pulse merkezi düzeltmeleri yetkilidir; level tasarımı kullanıcıdadır ve assetler değiştirilmez.
+
+Kombo puanlayıcısı Wall/MetalWall parçasında en yüksek aşamadaki vurulabilir hücreleri aday yapar; eşit aşamada alan faydası karşılaştırılır. Dikdörtgen duvarın merkezine geri kaydırma dash görselinden ve sanal Pulse’tan kaldırıldı. Tek botun Wall seçim algoritması korunur. Aktif Flour hedefi Windmill’i de kaynak hedef yapar; tek botta bloklayan hedef grubunda un zemininden önce gelir, komboda uygun/rezerve edilmemiş değirmen varken doğrudan Flour hedefi ertelenir. Diğer hedef engellerin önüne koşulsuz birincilik verilmez; HUD’da hâlâ un hedefi vardır. Dolgu taşı merkezleri Wall/kaynak varken öncelik çalmaz; gerçek taş hedefleri/cargo/jel seçenekleri korunur.
+
+Kayıt `Docs/Checks/PatchBot-Wall-WeakPoint-2026-11-06/README.md`. Eski üretim yöntemleriyle sorun yeniden üretildi;260 yeni +147 mevcut hedefleme +85 mıknatıs/uç/merkez kontrolü geçti. Mevcut snapshot dizileri/scorer yeniden kullanılır; yeni flight-tick taraması veya efekt/ses kaynağı yok.6052 diğer proje dosyası ve bütün level/katalog/adlar aynı. Unity build/Play/cihaz/bot/düşüş-kaskat simülasyonu,yayın/baseline/commit veya ölçülmüş FPS yok.226’daki kullanıcı düzenlemeleri korunur; eski taslak assetine döndürülmez.
+
+## Son kullanıcı kapsamı — tasarım kullanıcıda, yalnız editör · 2026-11-06
+
+Kullanıcının son açık talimatı: “sen levelı tasarlama ben yapacağım sadece leveleditor çalışsın”. Bu görev yalnız LevelEditor düzeltmesidir; level tasarımı veya226/diğer assetleri yeniden üretme yetkisi yoktur. Kullanıcının226 maskesi/baseWall/parça numarası düzenlemeleri korunur. Eski batch modelini/asset hash’ini güncel kullanıcı assetine zorla uydurma; author taslağını yeniden çalıştırma. Diğer Overlay engelleri çalışan örneklerdir; istenen Wall/MetalWall elle Overlay fırçasının çalışmasıdır. Numara/grup, sürükleyerek boyama ve yalnız duvarı silme düzeltildi;130 gerçek editör yöntem kontrolü ve265 mevcut runtime katman kontrolü geçti. Unity GUI/Play veya build yapılmadı. Teknik kayıt `Docs/Checks/Wall-Overlay-Editor-2026-11-06/README.md`.
+
+## Güncel — Wall Overlay elle numaralı boyama · 2026-11-06
+
+**226 kullanıcı düzenlemesi:** 226 asseti bu editör görevinin başlangıcında eski v2 tasarım modelinden zaten farklıydı (maske,baseWall/partNo dizileri). Bu görevin başlangıç SHA’sı ile son SHA’sı aynı; kullanıcı düzenlemeleri korunur. Eski226 batch doğrulaması asset drift korumasında beklenen şekilde durdu; batch PASS iddiası yok, eski model/hash assete benimsetilmedi. Yeni editör yöntem kontrolleri130 ve mevcut runtime katman kontrolleri265 geçti.
+
+Kullanıcı Wall/MetalWall’ı editörde elle Overlay olarak kuramadığını söyledi; diğer Overlay engellerini çalışan örnek olarak verdiğini netleştirdi. Numara seçimi vardı fakat Overlay girişlerine yazılmıyor/gruplar yeniden kurulmuyordu. Artık Overlay → Wall/MetalWall → Parça No → Duvar ekle ile tıklama/sol tuş sürükleme bağlı yolu kurar; Yeni Parça ayırır, yeniden numaralama/silme origin ve bağlantıları yeniler. Yalnız duvarı sil alt feneri/diğer katmanları korur; genel Erase tüm hücreyi temizlemeye devam eder. Numara/bağlı kenarlar ve alt içerik penceresi görünür. Goals/Wall/Eşitle gerçek parça sayısını kullanır.
+
+StackedObstacleEntry.wallPieceId yalnız editör numarasıdır; runtime ortak origin, düşüş/akış, VFX ve ses değişmedi. Inspector görüntülemek kayıtları otomatik yeniden yazmaz;226 tipi eski ortak originli kayıtlar yalnız açık düzenlemede taşınır, numarasız bağımsız kapaklar otomatik birleştirilmez. Eski gerçek boyama yöntemiyle sorun tekrar üretildi;130 editör yöntem kontrolü ve265 mevcut runtime katman kontrolü geçti.6054 diğer proje dosyası ve tüm level/katalog/adlar aynı. Kayıt `Docs/Checks/Wall-Overlay-Editor-2026-11-06/README.md`. Unity GUI/Play/build/cihaz/yayın/commit yok;226v2 tasarım/28hamle ve onay durumu değişmedi.
+
+## Güncel — 226 v1 reddi / bağlı duvar yolu v2 · 2026-11-06
+
+Kullanıcı226 v1’i açıkça reddetti: duvar referanstaki gibi yol boyunca bağlı olmalı, bir hücresi yıkılınca domino gibi ilerlemeli ve altından fenerler çıkmalı. Sağ üstte tavan bloğu altı boşluk/akış sorunu yarattı; değirmenler ana normal alanın yanında kalıp farklı bir oyun kurmadı. Değirmenler special ile erişilecek ayrı hücre grubunda istenir. Ekran kanıtı `References/16-Level226-Akis-Ve-Oyun-Fikri-Reddi.png`. Önceki226 için agent görsel değerlendirmesi kullanıcı onayı değildir.
+
+**226 v2 Rüzgâr Kemeri:**9×11/68aktif,28hamleNormal; tek24hücre duvar yolu, tamamının altında24 gerçek Fener75; sağdaki ayrı2×4adada iki Windmill80. Hedefler1Duvar/24Fener/16Un. Duvar sağ koldan tabana döner, altına normal taş cebi bırakmaz.36 başlangıç taş yuvasının hepsi doğal beslenir; pin/hazırspecial/başlangıçboşu yok. Bir hücrede mevcut beşinci vuruş tek parçanın zincirini başlatır. Değirmen adası gerçek hole ile ayrılır; bütün değirmen satırlarına ana çalışma alanından yatay special erişimi vardır.24 gizli fener hedefi karşılar; fazladan fener üretim kotası yok.
+
+Mevcut yığın damgalama her Wall hücresini ayrı origin yaptığı için gerekli küçük destek eklendi: StackedObstacleEntry.wallPieceOriginPlusOne(0eski davranış), GridSpawner ortak origin ile üst duvar/alt içerik kaydı, editörde tek parça hedef sayımı. Düşüş/akış,duvar animasyonu/ses/FX kodu değişmedi; yeni tarama veya per-hit allocation yok.265 gerçek yöntem katman/origin/hedef/beneath/dalga kontrolü ve1356 mevcut zincir/sırayla açılma/havuz/iptal kontrolü geçti. Eski damgalama ile24 ayrı parça hatası yeniden üretildi. Üç eski genel harness mevcut Dimerdal doubles eksikliğiyle çalışmıyor; bu revizyonun öncesiyle aynı yedi yöntem doğrulandı ve sınırlama kaydedildi.
+
+Aktif kayıt `Batches/226-230-Lantern-Wind-Crystal/Revisions/v2-wall-route/`; parentauthor/notyazıcısı eski226’yı geri basamaz. Yeni gerçek PNG ve katman kesiti açıldı; görsel değerlendirme agent’a aittir.5278 diğer oyun dosyası,1–225ve227–230 assetleri,katalog/TR–EN adlar korundu. Yeni taslak kullanıcı tarafından henüz oynanmadı/onaylanmadı;28hamle ilk ayar. Unitybuild/Play/cihaz/bot/düşüş-kaskat simülasyonu,yayın/baseline/commit yok.231+istenmedi.
+
+## Güncel devam — 226–230 taslakları · 2026-11-06
+
+Son açık istekler226 ve227 için referanslı tasarım, ardından228–229 ve230Boss’un tasarımıdır. Beş taslak tamamlandı:226 Rüzgâr Kemeri28Normal;227 Işık Tezgâhı26Normal;228 Kristal Ünlem26Normal;229 Rüzgâr Burgusu27Super Hard;230 Büyük Işık Düellosu30Boss(9×10,660 toplamHP/3rakip). Bölüm10, aktifV1 katalog1–230 ve TR/EN isimler güncel.226 dört duvar kapağı altında dört gerçek fener ve yalnız sağ iki sütundan16 ek fener/iki değirmen;227 beş üçlü lamba çerçevesi+oyma+plastik;228 ünlem;229 çim üstte sarıL/dört değirmen;230 üst fener sahnesi/yan kristal locaları/dip değirmenleri. Dimerdal kotaları228[12],229[6,10],230[6,6]; bağımsız kırılma, toplam mor hedef.
+
+Kayıt `Batches/226-230-Lantern-Wind-Crystal/README.md`; beş ayrı not/gerçek sprite PNG, toplu PNG ve eski örneklerle karşılaştırma var. Statik audit geçti;3393 kapsam dışı oyun dosyası ve1–225 korundu. Başlangıç pinleri226=20,229=8;227’de dört bilinçli açılabilir gölge boşu var. Açılma sonrası besleme erişimi statik doğrulandı. Görsel inceleme agent değerlendirmesidir; kullanıcı onayı veya oynanmış denge değildir. Hamleler ilk ayar. Build/Play/cihaz/bot/kaskat/düşüş simülasyonu, yayın/baseline/commit yok; runtime/art/akış değiştirilmedi.231+ istenmedi. Alttaki “226+istenmedi” kayıtları tarihseldir.
+
+## Güncel — her Dimerdal'ın ayrı üretim adedi / otomatik Goals · 2026-11-05
+
+Son açık kullanıcı isteği: kutu yerleştirirken kendi sayısını belirlemek; Goals bunun toplamı olsun (8+8 veya6+10). `LevelData.dimerdals` origin+tür/count; editörde yeni kutu “Üreteceği elmas”, var olan kutuların koordinatlı ayrı adetleri ve grid rozeti. Goals Diamond miktarı ve mor ikonu otomatik yönetilir. Runtime'da kutular bağımsız limit/rezervasyon/uçuş taşır; yalnız kendi son yerleşimi tamamlanınca kırılır. İptal/timeout hakkı ilgili kutuya döner, başka kutuyu tüketmez. Toplama hedef sayımı aynı. Eski ortak üretim kotası açıklamaları geçersizdir.
+
+Mevcut dört assete yalnız yeni kayıt listesi eklendi:221[4,4] hedef8;222[10] hedef10;224[6,6] hedef12;225[8,8] hedef16. Diziler,hamleler,hedefler,ikon,katalog,ad/meta aynı.223 ve diğer3032 asset/kod dosyası korundu. 225v2yerleşimi ve222–224görsel onayları sürer. Güncel kayıt `Docs/Checks/Dimerdal/Per-Box-Production/`; batch active-revision v4 oraya yönelir. 289 per-box +409 mevcut +39 matching,ortak toplama ve64/7 feedback/katman/kırılma kontrolleri; statik YAML/koruma var. Unity GUI/Play/build/cihaz/CPU/GC/FPS veya denge ölçümü,yayın/commit/baseline yok.226+istenmedi.
+
+## Güncel ikon — bütün elmasların ortak mor hedefi · 2026-11-05
+
+Kullanıcının `modimerdal.png` görseli Goals/HUD, PreLevel ve sonuç hedefleri için ortak elmas ikonu oldu. Aktif katalogdan çözülen 221/222/224/225'te yalnız Diamond `iconOverride` satırları ve kütüphanedeki 16 Dimerdal `goalIconSprite` güncellendi. Diğer hedefler, dört tahta/kutu rengi, hamleler ve yerleşimler korunur. Mor ikon toplam elması temsil eder. Yeni sprite aynı kaynak PNG bytes'ı ve sıkı importer rect ile eklendi. Mevcut batch modelleri, hash ve gerçek sprite önizlemeleri güncellendi. Aktif revizyon `v3-shared-goal-icon`; bağımsız statik doğrulama 3035 dosyayı korur. Unity build/Play/cihaz testi veya yayın yok; oynanmış denge/onay çıkarılmaz.
+
+## Güncel mekanik — Dimerdal üretim sonrası parçalanma · 2026-11-05
+
+Kullanıcı önceki gri kapanışı KeyGenerator'a benzetti; üretim bitince kutuların kırılıp yok olması uygulandı. Son başarılı yerleşimden sonra ortak kotadaki görünür kutular mevcut havuzlu büyük-parça efektiyle kalkar. Bütün footprint hücreleri serbest kalır, alt katman geri açılır, mevcut resolve yeniden istenir; düşüş motoru değiştirilmedi. Örtülü kaynaklar açılınca kaldırılır. Uçuş/rezervasyon/iptal erken kırılma yaratmaz. Gri shader/material kaldırıldı; önceki gri kapanış kayıtları tarihseldir. 1–225 level assetleri/katalog/adlar bu tur aynı; 222–224 onayı ve 225 v2 korunur. İzole gerçek C# kontrolleri ve sınırlar `Docs/Checks/Dimerdal/Exhaustion-Break/README.md` içinde. Cihazda oynanmış denge veya animasyon onayı yok; build/Play/yayın yok.
+
+## Son kullanıcı düzeltmesi — 225 alt geçiş / Dimerdal tepkisi · 2026-11-05
+
+- Kaynak: kullanıcı “hepsi güzel”; sadece225alt boşluğunu besleyecek geçiş ve Dimerdal vuruş animasyonu/üretim sonrası gri, düşük alfa kapalı görünüm istedi. **222–224 görsel onaylı ve korundu**.225genel beğeni aldı; v2yerel revizyon henüz oynanmadı.
+- 225: aynı8×11/88hücre/25hamleHard,hedef16elmas/1mühür/16pusula/16çamur ve9/9/9mühür. Pusulalar iki1×8dış sütuna,kutular alt köşelere alındı;x1/x6açıkbeslemeşeritleri,ortada4hücrelikaltalan. Alt iki sıra doğal doluyor; başlangıçboş12→2,beslenen36→46. Son2yuva yalnızmühüraltı. Pin/hazırspecial/motor değişikliği yok.
+- Dimerdal tüm levellarda: kabul edilenhit0.26sn büyüme/silkelenme/içparlama. Ortak kotanın son elması tahtaya yerleşince0.30sn'de kepenkler kapanır ve gerçekgri/%45opak olur. İptal/başarısız uçuş kotayı geri verir; erken kapanma yok. Reveal/disable/build görseli/animasyon/işleri temizler; tekservisdöngüsü ve paylaşılanmaterial,perhitGameObject/texture/material üretimi yok. Ses yolu değişmedi.
+- Güncel kayıt `Batches/222-225-Crystal-Shapes/Revisions/v2-lower-feed/`; active-revision.jsonparentauthor'u eski taslağı basmaktan korur.3391kapsamdışı dosya ve1–224aynı;225not/gerçekPNGgüncel.409+39+46üretim/MatchFinder/feedback test ve ortak toplama rutini geçti(Unitydoubles);shader kaynak kontratıkontrolü var,GPUcompileyok. Build/Play/cihaz/bot/gravity-cascade simülasyonu/yayın/baseline yok;oynandengesi/FPSölçülmedi.226+istenmedi.
+
+## Güncel devam — 222–225 · 2026-11-05
+
+- **Son açık yetki:** “222–225 level tasarlamamız lazım”; “bazen board gridleri bir şekle benzer bazen içindeki engelleri de bir şekle benzetebiliriz”. Bu istek eski “222 istenmedi” kayıtlarının önündedir. 226+ istenmedi.
+- **222 Zümrüt Yaprak:** 9×11, 60 aktif, 24 hamle Normal; `LevelV1_00002220.asset` / `LevelCL_0222`.
+- **223 Uçan Anahtar:** 9×7, 45 aktif, 23 hamle Normal; `LevelV1_00002230.asset` / `LevelCL_0223`.
+- **224 Kristal Çapa:** 8×11, 88 aktif, 24 hamle Normal; `LevelV1_00002240.asset` / `LevelCL_0224`.
+- **225 Mühürlü Kristal Kalesi:** 8×11, 88 aktif, 25 hamle Hard; `LevelV1_00002250.asset` / `LevelCL_0225`.
+- 222 dış yaprak maskesi, çapraz 16 çim ve tek yeşil Dimerdal ile 10 elmas; 223 yatay anahtar maskesi, 14 Key / 8 porselen / 6 oyma / 6 çamur; 224 iç engellerden kesintisiz çapa, 12 elmas / 34 tek-hit ahşap / 1 heykel / 4 üst çim; 225 4×4 mühür (9/9/9) üstünde kapalı çamur avlusu, iki 2×4 special-only pusula suru ve tabanda kristal kapıları, 16 elmas / 1 mühür / 16 pusula taşı / 16 çamur.
+- Asset/meta, aktif V1 katalog, TR/EN adlar ve dört not/gerçek sprite PNG'si hazır. Kayıt `Batches/222-225-Crystal-Shapes/`; tekrar envanterleri `Reviews/222-Crystal-Shapes` … `225-Crystal-Shapes`. `design.py` sahip olunan hash'leri kontrol eder; kullanıcı değişikliğini sessizce ezmez.
+- Statik YAML/dizi/origin/katman/hedef/ikon/dolum/katalog/isim kontrolü geçti; 3.409 kapsam dışı dosya ve 1–221 aynı. Kalıcı kaynak grupları tabana dayanır. Açılabilir kapak gölgesindeki boş başlangıç yuvaları PNG'de gösterilir; renk pini/hazır special yok. Açılabilir katmanlar kalkınca kaynak altında beslemesiz cep kalmaz.
+- PNG'ler açılıp incelendi. **Bu agent görsel değerlendirmesidir; kullanıcı dört taslağı henüz oynamadı/onaylamadı.** Hamleler ilk ayar. Build/Play/cihaz/bot/gravity-cascade simülasyonu, yayın ve release baseline yok. Gameplay/akış kodu veya library değiştirilmedi.
+- 211=24, onaylı 212 yelkeni, 213–220 son hamleleri ve 221'in onaylı 24 hamle/8 elmas/6 pin düzeni korundu. 221–230'daki Dimerdal renkleri tek mekanik ailesidir; ikinci mekanik 226+ isteğinde ayrıca seçilir.
+- **Güncel mekanik:** Elmaslar artık engel değil normal `TileType.Diamond*` taşıdır: takas/düşüş/yana kayma/special oluşturma; yalnız aynı renk elmaslarla eşleşme veya special ile temizlenme. Komşu normal match elması kırmaz. Üretim yalnız hareketsiz, iniş görseli tamamlanmış normal taşa yerleşir; hareketlenirse hedef yeniden seçilir. Sayaç TarpStatue uçuşu varışında bir kez iner. Eski havada dönüştürme/komşu match ile toplama notları tarihseldir. Son davranış cihazda tekrar oynanmadı; `Docs/Checks/Dimerdal/README.md` günceldir.
+
+## 221 · Mavi Dimerdal tanıtımı — 2026-11-04
+
+- **Açık kullanıcı isteği:** “şimdi sadece tek rengi tanıştırdığımız 221.levelı yaparmısın”. Önceki “221 istenmedi” kayıtları tarihsel kalmıştır; bu tur yalnız221 yetkilidir.
+- **İlk deneme:** Mavi Vitrin / Blue Showcase;8×10,68aktif,60doğal dolumlu normal hücre. Alt kaidede bitişik iki2×2 mavi Dimerdal85, origin66/68; başka engel veya Dimerdal rengi yok. **24hamle, Collectible Diamond4 hedef8**; ikon atanmış. Normal taş havuzu4renk;6gerçek renk pini iki kutunun üstünde tam mavi üçlü fırsatı sunar. Hazır special/başlangıç elması/örtü yok.
+- **Mekanik / son kullanıcı yönü:** 4uygun renk/special hitinde açılır. Açık kutu yanındaki mavi eşleşme veya renk bağımsız special/joker vuruşu1elmas üretir. Elmas canlı, havada bile olan taşın yerine geçerken düşüş/kimlik/bump/diyagonal akışını korur; PatchBot hedefi kalabilir. Boardda ayrıca toplanır; TarpStatue ile aynı toplanma/dönüş/uçuş efekti kullanılır, hedef sayacı varışta iner. Kare çizim esnemesin diye1×1/2×2/3×3varyantları korundu.
+- **Kayıt:** `Level221-Mavi-Vitrin.md/.png`, `Batches/221-Dimerdal-Intro/` (önceki snapshot/hash, yazıcı, doğrulama, renderer), `Reviews/221-Dimerdal-Intro/`. Aktif katalog `LevelCL_0221`, asset `LevelV1_00002210.asset`, TR/EN adlar eklendi. Önceki220level ve mevcut Dimerdal runtime/art/diğer kaynaklar hash ile korundu. Gerçek sprite önizlemesi ve220level tekrar envanteri incelendi.
+- **Kullanıcı görsel onayı / sınır:** “güzel kurdun oyunu beğendim”;221düzeni korundu, hamle/hedef/pin değişmedi. Görsel beğeni oynanmış denge onayı değildir. Kullanıcının üretim sonrası donma raporu için runtime düzeltmesi ve gerçek motor/yöntemlerle izole kontroller yapıldı; `Docs/Checks/Dimerdal/README.md`. Yeni davranış Unity Play/cihazda tekrar oynanmadı; build, level denge simülasyonu, releasebaseline veya yayın yapılmadı. **222 istenmedi.**
+
 <!-- current: boss-goal-icons-2026-11-04 -->
 
 - **Boss ikonları — 2026-11-04:** Kullanıcı goals ve PreLevel/editörde boss ikonunun görünmediğini bildirdi. Aktif V1’de22BossDamage hedefi tarandı; yalnız210/220ikonları fileID0 idi. Önceki20bossun BadgerIdle sprite’ı (bd8a2a2aabdf46fcabea5eb683bc76d9) bu iki hedefe atandı. HUD/PreLevel override önceliği ve editör Sprite alanı kontrol edildi; runtime UI değişmedi. İki authoring yazıcısı ve statik PNG renderer explicit boss ikonunu korur. V4 `Batches/213-220-Showcase/Revisions/v4-boss-goal-icons/` aktif; iki assette yalnız ikon değiştiği ve diğer443seviye/meta/katalog/isim dosyasının aynı kaldığı doğrulandı. Hamle/HP/hedef miktarı/tahta aynı. Unity build/Play/cihaz/yayın yok.

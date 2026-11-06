@@ -71,6 +71,7 @@ public class BoardBreakFxService
             TileType.Bolt => true,
             TileType.Plate => true,
             TileType.Key => true,
+            TileType.DiamondBlue or TileType.DiamondGreen or TileType.DiamondYellow or TileType.DiamondRed => true,
             TileType.Normal => true,
             _ => false
         };
@@ -954,6 +955,10 @@ public class BoardBreakFxService
         TileType.Bolt => new Color(0.30f, 0.60f, 1.00f, 1f),
         TileType.Plate => new Color(0.35f, 0.85f, 0.45f, 1f),
         TileType.Key => new Color(1.00f, 0.42f, 0.70f, 1f),
+        TileType.DiamondBlue => new Color(0.30f, 0.60f, 1.00f, 1f),
+        TileType.DiamondGreen => new Color(0.35f, 0.85f, 0.45f, 1f),
+        TileType.DiamondYellow => new Color(1.00f, 0.78f, 0.25f, 1f),
+        TileType.DiamondRed => new Color(0.95f, 0.30f, 0.30f, 1f),
 
         TileType.LineEmitter_H => new Color(0.95f, 0.30f, 0.30f, 1f),
         TileType.LineEmitter_V => new Color(0.30f, 0.60f, 1.00f, 1f),

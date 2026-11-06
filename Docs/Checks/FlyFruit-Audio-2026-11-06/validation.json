@@ -1,0 +1,42 @@
+{
+  "result": "PASS",
+  "changedExisting": [
+    "Assets/_Project/Settings/ObstacleLibrary.asset",
+    "Assets/_Project/Scripts/Audio/EventSfx.cs",
+    "Assets/_Project/Scripts/Audio/BoardAudioDirector.cs",
+    "Assets/_Project/Scripts/Editor/LevelDataEditor.cs",
+    "Assets/_Project/Scripts/Grid/Board/Obstacles/FlyEggProductionFx.cs",
+    "Assets/_Project/Scripts/Grid/Board/Obstacles/FlyFruitService.cs"
+  ],
+  "preservedExisting": 6082,
+  "allLevelFilesPreserved": true,
+  "sourceFilesUnchanged": true,
+  "waves": {
+    "AppleBite": {
+      "seconds": 0.367,
+      "peakDB": -7.0,
+      "loopSeamDelta": null
+    },
+    "EggBreak": {
+      "seconds": 0.367,
+      "peakDB": -6.0,
+      "loopSeamDelta": null
+    },
+    "EggFlight": {
+      "seconds": 0.372,
+      "peakDB": -5.14,
+      "loopSeamDelta": null
+    },
+    "FlyBuzzLoop": {
+      "seconds": 0.8665,
+      "peakDB": -14.43,
+      "loopSeamDelta": 0.002563
+    },
+    "BoxBreak": {
+      "seconds": 0.395,
+      "peakDB": -4.0,
+      "loopSeamDelta": null
+    }
+  },
+  "manualUnityTest": false
+}

@@ -1,0 +1,5 @@
+{
+  "revision": "v4-per-box-production",
+  "author": "../../../Checks/Dimerdal/Per-Box-Production/migrate_levels.py",
+  "verifier": "../../../Checks/Dimerdal/Per-Box-Production/verify.py"
+}

@@ -12,13 +12,13 @@ internal sealed class PatchBotImpactScorer
     private struct Cell
     {
         public ObstacleId id;
-        public int origin, hits, value, cargo;
-        public bool hittable, candidate, gel, perCell;
+        public int origin, hits, value, cargo, wallStage;
+        public bool hittable, candidate, gel, perCell, tileGoal;
     }
 
     private struct Footprint
     {
-        public int count, minX, minY, maxX, maxY;
+        public int count, minX, minY, maxX, maxY, weakestWallStage;
     }
 
     private readonly BoardController board;
@@ -54,6 +54,9 @@ internal sealed class PatchBotImpactScorer
         Array.Clear(footprints, 0, size);
         int usefulWaveWork = 0, bestSingleGoal = 0;
         bool nearReadyHelper = false;
+        bool hasWallCandidate = false, hasFlourSource = false, wallLookupDone = false;
+        bool flourGoal = obstacleGoals.Contains(ObstacleId.Flour);
+        WallObstacleService wallService = null;
         NextStamp();
         for (int y = 0; y < height; y++)
             for (int x = 0; x < width; x++)
@@ -81,12 +84,22 @@ internal sealed class PatchBotImpactScorer
                     c.value = goal ? 12 : 5;
                     c.candidate = board.TargetPool.ObstacleCapacityAt(x, y) > 0;
                     if (!c.candidate) c.value = 0; // already covered by other airborne hits
+                    if (c.candidate && (c.id == ObstacleId.Wall || c.id == ObstacleId.MetalWall))
+                    {
+                        if (!wallLookupDone) { wallLookupDone = true; board.TryGetComponent(out wallService); }
+                        c.wallStage = wallService != null ? Mathf.Max(0, wallService.GetStageAt(i)) : 0;
+                        if (c.origin >= 0 && c.origin < size)
+                            footprints[c.origin].weakestWallStage = Mathf.Max(footprints[c.origin].weakestWallStage, c.wallStage);
+                        hasWallCandidate = true;
+                    }
+                    if (c.candidate && flourGoal && c.id == ObstacleId.Windmill) hasFlourSource = true;
                     if (c.candidate && c.id == ObstacleId.OverrideBatteryBox && c.hits <= 2)
                         nearReadyHelper = true;
                 }
                 else if (tileHit && (c.id == ObstacleId.None || c.id == ObstacleId.SpreadingGel))
                 {
                     bool tileGoal = tileGoals.Contains(tile.GetTileType());
+                    c.tileGoal = tileGoal;
                     c.value = tileGoal ? 6 : 1;
                     if (tileGoal) usefulWaveWork += c.value;
                     c.candidate = tile.GetSpecial() == TileSpecial.None && tile != source && tile != partner
@@ -158,10 +171,20 @@ internal sealed class PatchBotImpactScorer
         {
             var c = cells[i];
             if (!c.candidate) continue;
+            // Wall cells progress independently: dense intact cells must not outvote
+            // the weakest hittable cell of the same piece. Other obstacle goals retain
+            // their payload-area comparison; normal filler tiles are only fallbacks.
+            bool wall = c.id == ObstacleId.Wall || c.id == ObstacleId.MetalWall;
+            if (wall && c.origin >= 0 && c.origin < size
+                && c.wallStage < footprints[c.origin].weakestWallStage) continue;
+            if ((hasWallCandidate || hasFlourSource) && !c.hittable && !c.tileGoal && c.cargo == 0 && !c.gel) continue;
+            // Finish an available mill before selecting the flour it already spread.
+            // Incidental flour cleared by another useful payload remains valid work.
+            if (hasFlourSource && c.id == ObstacleId.Flour) continue;
             if (!area && (c.id != ObstacleId.OverrideBatteryBox || c.hits > 2)) continue;
             int cx = i % width, cy = i / width;
             if (payload == TileSpecial.PulseCore && c.origin >= 0 && c.origin < size
-                && c.id != ObstacleId.Magnet && c.id != ObstacleId.Tube)
+                && c.id != ObstacleId.Magnet && c.id != ObstacleId.Tube && !wall)
             {
                 var f = footprints[c.origin];
                 if (f.count > 1 && f.count == (f.maxX - f.minX + 1) * (f.maxY - f.minY + 1))

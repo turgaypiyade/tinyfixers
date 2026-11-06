@@ -5,7 +5,7 @@ using UnityEngine;
 public class MatchClearAction : BoardAction
 {
     private HashSet<TileView> matches;
-    private readonly Dictionary<TileView, int> matchLifetimes = new Dictionary<TileView, int>();
+    private readonly Dictionary<TileView, (int lifetime, TileType type)> matchLifetimes = new();
     // Kurulumda special OLMAYAN taşlar. Dinamik girdide iki temizlik geçişi örtüşebilir: bu eylem taşı normal
     // olarak listeler, başka bir geçiş onu special'a çevirir (kazanılmış hak). Normal temizlik onu silerse
     // special patlamadan kaybolur (+ havuzdan dönen taşta kalan fitil animasyonu). Bkz. ExecuteFrom.
@@ -69,7 +69,7 @@ public class MatchClearAction : BoardAction
         foreach (var tile in this.matches)
             if (tile != null)
             {
-                matchLifetimes[tile] = tile.LifetimeVersion;
+                matchLifetimes[tile] = (tile.LifetimeVersion, tile.GetTileType());
                 if (tile.GetSpecial() == TileSpecial.None) capturedNonSpecial.Add(tile);
             }
         this.doShake = doShake;
@@ -117,6 +117,15 @@ public class MatchClearAction : BoardAction
         if (!isSpecialActivationPhase)
             matches.RemoveWhere(tile => tile != null && capturedNonSpecial.Contains(tile)
                                         && tile.GetSpecial() != TileSpecial.None);
+        // Revoke an old normal clear's permission without revoking the fall owner's
+        // lifetime when a flying diamond replaces a queued match's stone.
+        var dimerdalContext = PresentationPlan?.ObstacleHitContext ?? obstacleHitContext ?? ObstacleHitContext.NormalMatch;
+        if (!isSpecialActivationPhase && dimerdalContext == ObstacleHitContext.NormalMatch)
+            ExcludeDimerdalReplacements(board);
+        var dimerdals = board != null ? board.Dimerdals : null;
+        var dimerdalProduction = !isSpecialActivationPhase && dimerdalContext == ObstacleHitContext.NormalMatch
+            ? dimerdals?.PrepareMatches(matches, PresentationPlan) : null;
+        bool dimerdalClearCompleted = false;
         bool useFlow = board != null && board.UseFlowActivities;
         System.IDisposable clearActivity = useFlow
             ? (allowLocalizedDynamicInput && isBlocking && !isSpecialActivationPhase && PresentationPlan == null
@@ -135,15 +144,29 @@ public class MatchClearAction : BoardAction
             var inner = RunClear(sequencer);
             while (inner.MoveNext())
                 yield return inner.Current;
+            dimerdalClearCompleted = true;
         }
         finally
         {
             footprintHold?.Dispose();
             MarkMatchRuntimeState(TileRuntimeState.Idle);
+            dimerdals?.FinishMatches(dimerdalProduction, dimerdalClearCompleted);
             sweepActivity?.Dispose();
             clearActivity?.Dispose();
             clearJob?.Dispose();
         }
+    }
+
+    private void ExcludeDimerdalReplacements(BoardController board)
+    {
+        if (board == null) return;
+        foreach (var tile in capturedNonSpecial)
+            if (IsOriginalMatch(tile) && DimerdalRules.IsDiamond(tile.GetTileType())
+                && matchLifetimes.TryGetValue(tile, out var snapshot) && snapshot.type != tile.GetTileType())
+            {
+                matches.Remove(tile);
+                PresentationPlan?.ExcludeConvertedTile(tile);
+            }
     }
 
     // Bu temizlik sürerken tahtada yerinde kalması gereken ek taşlar (ör. formation'daki yeni special).
@@ -204,8 +227,8 @@ public class MatchClearAction : BoardAction
     }
 
     private bool IsOriginalMatch(TileView tile) => tile != null
-        && matchLifetimes.TryGetValue(tile, out int version)
-        && tile.IsCurrentLifetime(version);
+        && matchLifetimes.TryGetValue(tile, out var snapshot)
+        && tile.IsCurrentLifetime(snapshot.lifetime);
 
     private IEnumerator RunClear(ActionSequencer sequencer)
     {

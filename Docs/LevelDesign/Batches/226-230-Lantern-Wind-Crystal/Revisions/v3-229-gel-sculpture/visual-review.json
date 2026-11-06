@@ -1,0 +1,11 @@
+{
+  "reviewer": "agent",
+  "userApproved": false,
+  "played": false,
+  "opened": [
+    "Level229.png",
+    "Comparison.png"
+  ],
+  "assessment": "Bitişik çapraz omurga, sağ porselen sütunları ve tabanda bağlı pres/Rodos grubu okunaklı. Açılışta gerçek boş yuva yok.114/183ile karşılaştırmada katman açılma ve special işi farklı;basamak ritmi ortak.",
+  "limits": "Real project sprites; representative normal colors, static cutaway and press rod approximation. No measured balance/performance."
+}

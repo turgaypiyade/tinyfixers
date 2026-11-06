@@ -1,0 +1,53 @@
+{
+  "Assets/_Project/Settings/ObstacleLibrary.asset": {
+    "reason": "User requires flowing airborne replacement; only four diamond definitions now permit the existing diagonal flow. All earlier obstacle definitions preserved.",
+    "beforeSha256": "d0838119912a52642665bbfc3bebd0934f0efd173398eae4285bb4ec5ebefda9",
+    "afterSha256": "e31c6172fdec68aaad03c1f94e2809347220a8faf8701284542c78b710ee9393"
+  },
+  "Assets/_Project/Scripts/Editor/LevelDataEditor.cs": {
+    "reason": "Update Dimerdal help for open special/tool production and airborne replacement; square variants retained to avoid art distortion.",
+    "beforeSha256": "73a854528d53737d878c6ca83a3b3fde4d5664c248ef4a37919f447e53e64ca0",
+    "afterSha256": "022249b4f369d5e15b9a85cf7daa80befe8f695ee1b58822814d2aa3ca5883b3"
+  },
+  "Assets/_Project/Scripts/Grid/AncientSealCollectFx.cs": {
+    "reason": "User explicitly requests the same TarpStatue collection animation. Add optional diamond sprite override and pooled principal visuals; existing callers retain defaults.",
+    "beforeSha256": "8500bf5b026e98e86153ab40fb9404db1ced6655388d37dcaabaa41b1c34435a",
+    "afterSha256": "5ca91d4d639b0c0163bbed8d0e72406e3e177b61510839aafc270f2d535b5dd2"
+  },
+  "Assets/_Project/Scripts/Grid/TileView.cs": {
+    "reason": "Replace conversion lifetime renewal with in-place content/sprite application preserving fall ownership and landing response.",
+    "beforeSha256": "ca429ef5a0a2b8d15c152f4529293bc33c980cb71f96e75fca88041b46760a6f",
+    "afterSha256": "55a00746c520d8b97612ba45b8f8d42fe41d3afc0a2924802f577e7a67a2cd51"
+  },
+  "Assets/_Project/Scripts/Grid/Board/BoardController.cs": {
+    "reason": "Validate in-place airborne replacement and capture collected diamond icon before view release. No fall/cascade algorithm edits by this task.",
+    "beforeSha256": "bd39c6eef14c888097c739c6b05c97795b50ac80e983976a5f172773a9a8bd93",
+    "afterSha256": "53c07618434c52873fa3bca8c0db43939069f5981d1120c44ea994551a4e8412"
+  },
+  "Assets/_Project/Scripts/Grid/Board/Obstacles/ObstacleStateService.cs": {
+    "reason": "Retain CS0136 scope correction; expose available open-producer capacity for specials and remove obsolete same-clear diamond protection.",
+    "beforeSha256": "115721e16dcc3fd52f77110dec4feebe13d409c6f982088766c45fbb8675e52c",
+    "afterSha256": "6bb67223deb0d697361a0f1671e8ccff6eca2367c1025984a296a9f0c487cef6",
+    "priorScopeOnlyFixSha256": "9c34946c6fe7873544ed7a907f6eef19bc69f9fc77340b5c952e162a94ed5e90"
+  },
+  "Assets/_Project/Scripts/Grid/Board/Obstacles/DimerdalRules.cs": {
+    "reason": "Explicit ordinary-color target eligibility for diamond replacement.",
+    "beforeSha256": "d199e601429441d49df4d648bb95a20366d94c167c451af874d092e256265568",
+    "afterSha256": "38ee7cc47d0d97bb3681744a1b5737ff0c0cc4758e522848545608b7519941c2"
+  },
+  "Assets/_Project/Scripts/Grid/Board/Obstacles/DimerdalService.cs": {
+    "reason": "User-authorized open special production, post-clear production batches, nonblocking flights and TarpStatue collection with quota/cancellation cleanup.",
+    "beforeSha256": "f996a889acb80e0e3ba339adf6875b99f4d37ad134864028402b0e60c1fa1531",
+    "afterSha256": "2f89a2848e13f93e00e29595dc3149d4230b42e99e51bf63f675825b68617463"
+  },
+  "Assets/_Project/Scripts/Grid/Board/Actions/ClearPresentationPlan.cs": {
+    "reason": "Clarify permission revocation for queued normal clears without revoking the fall lifetime.",
+    "beforeSha256": "e87402bb0695746b2b0a0bbb96be325b89cf3c4f27a552c6cc4a425c9af62104",
+    "afterSha256": "b477d80c74d8a507b20294e879a6087bb8ec3d9158198c5771b2b432550db692"
+  },
+  "Assets/_Project/Scripts/Grid/Board/Actions/MatchClearAction.cs": {
+    "reason": "Snapshot requests before opening hits, launch after successful clear, cancel interrupted batch and exclude stale normal-clear references to converted diamonds.",
+    "beforeSha256": "be87ee1fbad747e0631cf6ee5028ac0223128da0438397f0cf0ee4dde11943cc",
+    "afterSha256": "209519ff6e238ac384c3527a62f092fcfa35e3e54311c5fdf3f071527be231f8"
+  }
+}

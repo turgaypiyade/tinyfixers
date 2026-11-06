@@ -1,0 +1,107 @@
+using System;using System.Collections.Generic;using System.Linq;using System.Reflection;
+public class Component {
+ GameObject owner;public GameObject gameObject{get=>owner??(owner=new GameObject());set=>owner=value;}
+ public RectTransform transform=>gameObject.transform;
+ public bool TryGetComponent<T>(out T v)where T:class{v=gameObject.GetComponent<T>();return v!=null;}
+}
+public class MonoBehaviour:Component {public bool enabled=true,isActiveAndEnabled=true;}
+public class GameObject {
+ public static int created;public int layer;public bool activeSelf=true;public bool activeInHierarchy=>activeSelf;public RectTransform transform;
+ readonly Dictionary<Type,object> parts=new Dictionary<Type,object>();
+ public GameObject(string name="",params Type[]types){created++;transform=new RectTransform{gameObject=this};parts[typeof(RectTransform)]=transform;foreach(var t in types)if(t!=typeof(RectTransform))Add(t);}
+ object Add(Type t){var o=Activator.CreateInstance(t);parts[t]=o;if(o is Component c)c.gameObject=this;return o;}
+ public T AddComponent<T>()where T:class,new()=>(T)Add(typeof(T));public T GetComponent<T>()where T:class=>parts.TryGetValue(typeof(T),out var v)?v as T:null;
+ public void SetActive(bool v){activeSelf=v;}
+}
+public struct Vector2 {
+ public float x,y;public Vector2(float x,float y){this.x=x;this.y=y;}public static Vector2 zero=>default;public static Vector2 one=>new Vector2(1,1);public static Vector2 up=>new Vector2(0,1);public static Vector2 right=>new Vector2(1,0);
+ public static Vector2 operator+(Vector2 a,Vector2 b)=>new Vector2(a.x+b.x,a.y+b.y);public static Vector2 operator-(Vector2 a,Vector2 b)=>new Vector2(a.x-b.x,a.y-b.y);public static Vector2 operator*(Vector2 a,float v)=>new Vector2(a.x*v,a.y*v);public static Vector2 operator*(float v,Vector2 a)=>a*v;
+ public static float Distance(Vector2 a,Vector2 b)=>(float)Math.Sqrt((a.x-b.x)*(a.x-b.x)+(a.y-b.y)*(a.y-b.y));public static Vector2 Lerp(Vector2 a,Vector2 b,float t)=>a+(b-a)*Mathf.Clamp01(t);public static Vector2 LerpUnclamped(Vector2 a,Vector2 b,float t)=>a+(b-a)*t;
+ public static implicit operator Vector2(Vector3 v)=>new Vector2(v.x,v.y);
+}
+public struct Vector3 {
+ public float x,y,z;public Vector3(float x,float y,float z=0){this.x=x;this.y=y;this.z=z;}public static Vector3 one=>new Vector3(1,1,1);public static Vector3 zero=>default;
+ public static implicit operator Vector3(Vector2 v)=>new Vector3(v.x,v.y);public static Vector3 operator+(Vector3 a,Vector3 b)=>new Vector3(a.x+b.x,a.y+b.y,a.z+b.z);public static Vector3 operator-(Vector3 a,Vector3 b)=>new Vector3(a.x-b.x,a.y-b.y,a.z-b.z);public static Vector3 operator*(Vector3 a,float b)=>new Vector3(a.x*b,a.y*b,a.z*b);
+}
+public struct Vector2Int {public int x,y;public Vector2Int(int x,int y){this.x=x;this.y=y;}public static Vector2Int one=>new Vector2Int(1,1);}
+public struct Quaternion {public float x,y,z;public static Quaternion identity=>default;public static Quaternion Euler(float x,float y,float z)=>new Quaternion{x=x,y=y,z=z};}
+public struct Rect {public Vector2 center=>Vector2.zero;}
+public struct Color {public static Color white=>default;}
+public class RectTransform:Transform {
+ public Vector2 anchorMin,anchorMax,sizeDelta,pivot,offsetMin,offsetMax;public Vector3 localPosition,localScale=Vector3.one;public Quaternion localRotation;
+ public Vector2 anchoredPosition{get=>localPosition;set=>localPosition=value;}public Rect rect=>new Rect();public Vector3 position=>localPosition;
+ public Vector3 TransformPoint(Vector3 p)=>localPosition+p;public Vector3 InverseTransformPoint(Vector3 p)=>p;
+ public void SetParent(Transform p,bool w){}public void SetAsLastSibling(){}
+}
+public class Transform:Component {}
+public class CanvasRenderer:Component {}
+public class Sprite {}
+public class AudioClip {}
+public class Image:Component {public Sprite sprite;public bool raycastTarget,preserveAspect;public Color color;public RectTransform rectTransform=>transform;}
+public static class Time {public static float deltaTime=.05f;}
+public static class Mathf {
+ public const float PI=(float)Math.PI,Rad2Deg=180/PI;public static int Max(int a,int b)=>Math.Max(a,b);public static float Max(float a,float b)=>Math.Max(a,b);public static float Min(float a,float b)=>Math.Min(a,b);public static float Abs(float v)=>Math.Abs(v);
+ public static int Clamp(int v,int a,int b)=>Math.Max(a,Math.Min(b,v));public static float Clamp01(float v)=>Math.Max(0,Math.Min(1,v));public static float Clamp(float v,float a,float b)=>Math.Max(a,Math.Min(b,v));public static float Sin(float v)=>(float)Math.Sin(v);public static float Pow(float v,float p)=>(float)Math.Pow(v,p);public static float Atan2(float a,float b)=>(float)Math.Atan2(a,b);
+ public static float Lerp(float a,float b,float t)=>a+(b-a)*Clamp01(t);public static float SmoothStep(float a,float b,float t){t=Clamp01(t);return a+(b-a)*t*t*(3-2*t);}
+}
+public static class TestRandom {static int sample;public static int Range(int a,int b)=>a;public static float Range(float a,float b)=>a+(b-a)*((sample++%5)*.25f);}
+/* ENUMS */
+public enum TileSpecial {None,LineH,LineV,PatchBot,PulseCore,SystemOverride}
+public struct FruitObstacleEntry {public int originCellIndex,width,height;}
+public struct StackedObstacleEntry {public int originCellIndex,stackOrder,wallPieceOriginPlusOne;public ObstacleId obstacleId;public int ResolveRuntimeOrigin(int n)=>wallPieceOriginPlusOne>0?wallPieceOriginPlusOne-1:originCellIndex;}
+public struct SafeEntry {public int originCellIndex,width,height,stackOrder;}
+public struct AncientSealEntry {public int originCellIndex,width,height,stackOrder;}
+public struct TubeEntry {public int[]pathCellIndices;}
+public struct MagnetEntry {public int[]pathCellIndices;}
+public struct WaterChannelEntry {public int[]pathCellIndices;}
+public static class TubeObstacleService {public static int[]GetCellIndices(TubeEntry t,int w,int h)=>t.pathCellIndices;}
+public class LevelGoalDefinition {public LevelGoalTargetType targetType;public ObstacleId obstacleId;public CollectibleId collectibleId;public TileType tileType;public int amount;public Sprite iconOverride;}
+public class ObstacleDef {public ObstacleId id;public Vector2Int size=Vector2Int.one;public int hits=1;public bool fullCellSprite;public AudioClip hitSound,breakSound,flightLoopSound;public float hitSoundVolume=1,breakSoundVolume=1,flightLoopSoundVolume=1;public List<Sprite>auxiliarySprites=new List<Sprite>();public Sprite icon=new Sprite();public Sprite GetPreviewSprite()=>icon;public Sprite GetGoalIconSprite()=>icon;}
+public class Library {readonly Dictionary<ObstacleId,ObstacleDef>d=new Dictionary<ObstacleId,ObstacleDef>();public ObstacleDef Get(ObstacleId id){if(!d.TryGetValue(id,out var v)){v=new ObstacleDef{id=id};for(int i=0;i<6;i++)v.auxiliarySprites.Add(new Sprite());d[id]=v;}return v;}}
+public class TarpEntry {public int Size=2;}
+public class LevelData {
+ public int width=8,height=8;public int[]cells=Enumerable.Repeat(1,64).ToArray(),obstacles=new int[64],obstacleOrigins=Enumerable.Repeat(-1,64).ToArray();public FruitObstacleEntry[]fruits;public StackedObstacleEntry[]stackedObstacles;public LevelGoalDefinition[]goals;public Library obstacleLibrary=new Library();
+ public int[]pinnedTileTypes,pinnedSpecialTypes;public SafeEntry[]safes;public AncientSealEntry[]ancientSeals;public TubeEntry[]tubes;public MagnetEntry[]magnets;public WaterChannelEntry[]waterChannels;
+ public bool InBounds(int x,int y)=>x>=0&&y>=0&&x<width&&y<height;public int Index(int x,int y)=>y*width+x;public TarpEntry GetTarpStatue(int o)=>new TarpEntry();
+ /* FRUIT DATA */
+}
+public class TileView:Component {
+ public int X,Y,LifetimeVersion=1;public bool IsRuntimeIdle=true,HasActiveLandingVisual,IsPlannedToMoveThisFallPass,WasDragging,movable;
+ public TileType type=TileType.Core;public TileSpecial special;public Image IconImage=new GameObject("Icon",typeof(Image)).GetComponent<Image>();public RectTransform RectTransform=>transform;
+ public enum TileVisualLayout {Centered}public void SetVisualLayout(TileVisualLayout x){}public void SetUseFullCellIcon(bool x){}public void SetFullCellMovableSprite(bool x){}public void SetMovableObstacleTile(bool x){movable=x;}public void SetMovableObstacleSprite(Sprite s){IconImage.sprite=s;}public void ApplyTileSize(float s){}
+ public bool IsCurrentLifetime(int v)=>LifetimeVersion==v&&gameObject.activeInHierarchy;public TileType GetTileType()=>type;public TileSpecial GetSpecial()=>special;
+}
+public class Motion {public bool pending;public bool HasPendingMotion(TileView t)=>pending;}
+public class Audio {public int calls,loops,starts;public void PlayOneShotClip(AudioClip c,float v){if(c!=null)calls++;}public IDisposable StartLoopClip(AudioClip c,float v){if(c==null)return null;loops++;starts++;return new Handle(()=>loops--);}}
+public class ObstacleVisualChange {public ObstacleVisualChange(int o,ObstacleId id,bool dead,int hits,object p){}}
+public class ObstacleHitResult {public bool Accepted;public ObstacleHitResult(bool a,bool b,bool c,object d,object e,int[]f){Accepted=a;}}
+public class ObstacleStateService {
+ public LevelData level;public BoardController board;public Func<int,ObstacleHitContext,bool>FlyEggBoxHitInterceptor;public Func<int,int>FlyEggBoxRemainingQuery;public HashSet<int>locked=new HashSet<int>(),buried=new HashSet<int>();public int fruitGoals,boxClears,clears;
+ public ObstacleId GetObstacleIdAt(int x,int y)=>(ObstacleId)level.obstacles[y*level.width+x];public bool IsHitLockedAt(int x,int y)=>buried.Contains(y*level.width+x);public bool IsInteractionLockedAt(int x,int y)=>locked.Contains(y*level.width+x);public bool HasObstacleAt(int x,int y)=>GetObstacleIdAt(x,y)!=ObstacleId.None;
+ public bool TrySpawnSingleCellObstacleAt(int x,int y,ObstacleId id){int i=y*level.width+x;if(level.obstacles[i]!=0)return false;level.obstacles[i]=(int)id;level.obstacleOrigins[i]=i;return true;}
+ private void ClearObstacleFromLevel(int o,ObstacleId id){for(int i=0;i<level.obstacles.Length;i++)if(level.obstacles[i]==(int)id&&level.obstacleOrigins[i]==o){level.obstacles[i]=0;level.obstacleOrigins[i]=-1;}clears++;if(id==ObstacleId.FlyFruit)fruitGoals++;if(id==ObstacleId.FlyEggBox)boxClears++;board.cleared?.Invoke(id);}
+ /* COMPLETE */
+ public ObstacleHitResult ApplyNew(int origin,ObstacleId id,ObstacleHitContext context){/* HIT BRANCHES */return new ObstacleHitResult(false,false,true,null,null,new int[0]);}
+}
+public class BoardController:MonoBehaviour {
+ public enum BoardJobKind {KeyFlight,EggBirdFlight}
+ public LevelData ActiveLevelData=>ObstacleStateService.level;public LevelData levelData=>ActiveLevelData;public ObstacleStateService ObstacleStateService;public ObstacleStateService obstacleStateService=>ObstacleStateService;
+ public int width=>ActiveLevelData.width;public int height=>ActiveLevelData.height;public int Width=>width;public int Height=>height;public int jobs,resolves,syncs;public float TileSize=100;
+ public FlyFruitService FlyFruits;public RectTransform ContentRoot=new GameObject().transform,BreakFxParent;public Audio Audio=new Audio();public Motion fallMotion=new Motion();public HashSet<int>pending=new HashSet<int>(),reserved=new HashSet<int>();public HashSet<Vector2Int>reservedKeyLandingCells=new HashSet<Vector2Int>();
+ public TileView[,]tiles=new TileView[8,8];public Action<ObstacleId>cleared;
+ public TileView GetTileViewAt(int x,int y)=>tiles[x,y];public bool IsPendingTriggeredSpecialCell(int x,int y)=>pending.Contains(y*width+x);public bool IsReservedTileTargetCell(int x,int y)=>reserved.Contains(y*width+x);
+ public void SyncTileData(int x,int y){syncs++;}public void RaiseObstacleCreatedDynamic(int x,int y){}public void RequestResolveAfterActionSequence(){resolves++;}
+ public Vector3 GetCellWorldCenterPosition(int x,int y)=>new Vector3(x*100,-y*100);public Vector3 WorldToAnchoredIn(RectTransform r,Vector3 p)=>p;
+ public IDisposable BeginJob(BoardJobKind k){jobs++;return new Handle(()=>jobs--);}
+ /* BOARD METHODS */
+}
+public class Handle:IDisposable {Action a;public Handle(Action v){a=v;}public void Dispose(){var v=a;a=null;v?.Invoke();}}
+public static class UiVfxPool {
+ static readonly Dictionary<string,Stack<GameObject>>pools=new Dictionary<string,Stack<GameObject>>();public static int rented,returned;
+ public static GameObject RentRect(string k,RectTransform parent,string n){rented++;if(pools.TryGetValue(k,out var s)&&s.Count>0){var g=s.Pop();g.SetActive(true);return g;}return new GameObject(n);}
+ public static Image RentImage(string k,RectTransform p,string n){var g=RentRect(k,p,n);var im=g.GetComponent<Image>()??g.AddComponent<Image>();return im;}
+ public static void Return(string k,GameObject g,int cap=96){if(g==null)return;returned++;g.SetActive(false);if(!pools.TryGetValue(k,out var s))pools[k]=s=new Stack<GameObject>();s.Push(g);}
+}
+public static class EditorResize { /* RESIZE */ }
+/* PRODUCTION */
+/* TESTS */

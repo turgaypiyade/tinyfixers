@@ -18,6 +18,10 @@ string Methods(string file, params string[] names) => string.Join("\n", CSharpSy
     .DescendantNodes().OfType<MethodDeclarationSyntax>().Where(m => names.Contains(m.Identifier.ValueText)).Select(m => m.ToFullString()));
 string Nested(string file, string name) => CSharpSyntaxTree.ParseText(Read(file)).GetRoot().DescendantNodes()
     .OfType<ClassDeclarationSyntax>().Single(c => c.Identifier.ValueText == name).ToFullString().Replace("private sealed class", "public sealed class");
+string EnumSource(string name) => CSharpSyntaxTree.ParseText(Read("Core/LevelData.cs")).GetRoot().DescendantNodes()
+    .OfType<EnumDeclarationSyntax>().Single(e => e.Identifier.ValueText == name).ToFullString();
+string ClassSource(string name) => CSharpSyntaxTree.ParseText(Read("Core/LevelData.cs")).GetRoot().DescendantNodes()
+    .OfType<ClassDeclarationSyntax>().Single(c => c.Identifier.ValueText == name).ToFullString();
 
 var hatEligibility = CSharpSyntaxTree.ParseText(Read("Grid/Board/Obstacles/ObstacleStateService.cs")).GetRoot()
     .DescendantNodes().OfType<MethodDeclarationSyntax>().Single(m => m.Identifier.ValueText == "GetActiveMeaningfulHitsAt")
@@ -27,14 +31,14 @@ var harness = @"
 using System;
 using System.Collections.Generic;
 public struct Vector2Int {public int x,y; public Vector2Int(int x,int y){this.x=x;this.y=y;} public static Vector2Int zero=>new Vector2Int();}
+public struct Vector3 {public float x,y,z;public Vector3(float x,float y,float z){this.x=x;this.y=y;this.z=z;}public static Vector3 operator+(Vector3 a,Vector3 b)=>new Vector3(a.x+b.x,a.y+b.y,a.z+b.z);public static Vector3 operator*(Vector3 a,float b)=>new Vector3(a.x*b,a.y*b,a.z*b);}
 public static class Mathf {public static int Max(int a,int b)=>Math.Max(a,b);public static int Abs(int a)=>Math.Abs(a);public static float Abs(float a)=>Math.Abs(a);public static int Min(int a,int b)=>Math.Min(a,b);}
 public static class Random {public static int Range(int a,int b)=>a;}
 public static class Time {public static float unscaledTime;}
-public enum ObstacleId {None,KeyGenerator,SpreadingGel,Hamster,Tube,Magnet,EnergyContainer,HatLauncher,Grass,GrassFlower,Stone,LaserCannon,Wall,MetalWall,OverrideBatteryBox,Plastic,Cargo,Safe}
-public enum TileType {Gear,Key}
+" + EnumSource("ObstacleId").Replace("plastic = 7", "plastic = 7, Plastic = 7") + Source("Grid/TileType.cs") + @"
 public enum TileSpecial {None,PatchBot,LineH,LineV,PulseCore,SystemOverride}
 public enum LevelGoalTargetType {Obstacle,Tile,Collectible}
-public enum CollectibleId {None,EnergyOrb}
+" + EnumSource("CollectibleId") + ClassSource("CollectibleSources") + @"
 public class TileView {public int X,Y;public TileType Type;public TileSpecial Special;public bool GelContaminated;public static implicit operator bool(TileView t)=>t!=null;public TileType GetTileType()=>Type;public TileSpecial GetSpecial()=>Special;}
 public class TopHudController {
  public struct ActiveGoal {public LevelGoalTargetType targetType;public ObstacleId obstacleId;public TileType tileType;public CollectibleId collectibleId;}
@@ -51,19 +55,22 @@ public class ObstacleStateService {
 " + hatEligibility + @"
  return id==ObstacleId.KeyGenerator?(CanProduce?1:0):Hits.TryGetValue(UnitOrigins.TryGetValue(y*Width+x,out var unit)?unit:Origins.TryGetValue(x,out var origin)?origin:y*Width+x,out var hits)?hits:1;}
  public bool IsExitAtBottomAt(int x,int y)=>false;public bool IsHitLockedAt(int x,int y)=>Locked.Contains(y*Width+x);
- public bool IsFullyDisabledAt(int x,int y)=>false;public bool IsUnderTileObstacleAt(int x,int y)=>false;
+ public bool IsFullyDisabledAt(int x,int y)=>false;public bool IsUnderTileObstacleAt(int x,int y)=>ids[x,y]==ObstacleId.Flour||ids[x,y]==ObstacleId.Mud||ids[x,y]==ObstacleId.WaterPuddle;
  public bool IsUnbreakableObstacleAt(int x,int y)=>ids[x,y]==ObstacleId.Cargo;public bool IsUnbreakableMovableAt(int x,int y)=>ids[x,y]==ObstacleId.Cargo;public bool IsTarpStatueCoveredAt(int x,int y)=>false;public bool IsMagnetEndpoint(int x,int y)=>Endpoints.Contains(y*Width+x);public bool TakesPerCellHits(int x,int y)=>ids[x,y]==ObstacleId.Magnet||ids[x,y]==ObstacleId.Wall||ids[x,y]==ObstacleId.MetalWall;
  public bool HasGrassFlowerAt(int origin)=>false;public bool IsMovableObstacleAt(int x,int y)=>false;
 }
 public class BoardController {
- public int Width=3,Height=3;public bool KeyGeneratorProductionComplete;
+ public int Width=3,Height=3;public bool KeyGeneratorProductionComplete;public WallObstacleService Walls=new WallObstacleService();
  public TileView[,] Tiles=new TileView[3,3];public object[,] GridData=new object[3,3];public bool[,] Holes=new bool[3,3];
  public ObstacleStateService ObstacleStateService=new ObstacleStateService();public TopHudController TopHud=new TopHudController();
- public bool TryGetComponent<T>(out T value){value=default(T);return false;}public bool IsGelSpreadActiveThisMove;public SpreadingGelService SpreadingGelService=new SpreadingGelService();public bool IsMaskHoleCell(int x,int y)=>Holes[x,y];
+ public bool TryGetComponent<T>(out T value){value=typeof(T)==typeof(WallObstacleService)?(T)(object)Walls:default(T);return value!=null;}public bool IsGelSpreadActiveThisMove;public SpreadingGelService SpreadingGelService=new SpreadingGelService();public bool IsMaskHoleCell(int x,int y)=>Holes[x,y];
+ public Vector3 GetCellWorldPosition(int x,int y)=>new Vector3(x*10,y*10,0);
  public BoardTargetPool TargetPool;public BoardController(int width=3,int height=3){Width=width;Height=height;Tiles=new TileView[width,height];GridData=new object[width,height];Holes=new bool[width,height];ObstacleStateService.ids=new ObstacleId[width,height];ObstacleStateService.Width=width;SpreadingGelService.Covered=new bool[width,height];TargetPool=new BoardTargetPool(this);}
 }
 public class SpreadingGelService {public bool[,] Covered=new bool[3,3];public bool IsGelAt(int x,int y)=>Covered[x,y];public bool IsSpreadSourceAt(int x,int y)=>IsGelAt(x,y);}
-public class WallObstacleService {public int GetStageAt(int i)=>0;}
+public class WallObstacleService {public Dictionary<int,int> Stages=new Dictionary<int,int>();public int Reads;public int GetStageAt(int i){Reads++;return Stages.TryGetValue(i,out var s)?s:0;}}
+public class LampStripService {public bool IsLitAt(int i)=>true;}
+public class WindmillService {public bool IsLitAt(int i)=>true;}
 public class HatProducer {
  public int totalGroupReleased,Capacity=2;public int TotalCapacity=>Capacity;public TopHudController topHud;
  public CollectibleId ResolveCollectibleId()=>CollectibleId.EnergyOrb;

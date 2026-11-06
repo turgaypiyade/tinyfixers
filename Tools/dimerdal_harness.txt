@@ -1,0 +1,186 @@
+using System;using System.Collections;using System.Linq;using System.Collections.Generic;using System.Reflection;
+public class Component {
+ GameObject owner; public GameObject gameObject {get=>owner??(owner=new GameObject());set=>owner=value;}
+ public RectTransform transform=>gameObject.transform;
+ public bool TryGetComponent<T>(out T value)where T:class {value=gameObject.GetComponent<T>();return value!=null;}
+}
+public class MonoBehaviour:Component {public bool isActiveAndEnabled=true;}
+public class GameObject {
+ public static int created;
+ public bool activeInHierarchy=true;public int layer;
+ readonly Dictionary<Type,object> parts=new Dictionary<Type,object>();
+ public RectTransform transform;
+ public GameObject(string name="",params Type[] types){created++;transform=new RectTransform{gameObject=this};parts[typeof(RectTransform)]=transform;foreach(var t in types)if(t!=typeof(RectTransform))Add(t);}
+ object Add(Type t){var obj=Activator.CreateInstance(t);parts[t]=obj;if(obj is Component c)c.gameObject=this;return obj;}
+ public T AddComponent<T>()where T:class,new()=> (T)Add(typeof(T));
+ public T GetComponent<T>()where T:class=>parts.TryGetValue(typeof(T),out var obj)?obj as T:null;
+}
+public class RectTransform:Component {public Vector2 anchorMin,anchorMax,sizeDelta,anchoredPosition,pivot;public Quaternion localRotation;public Vector3 localScale=Vector3.one;public Rect rect=>new Rect();public Vector2 TransformPoint(Vector2 p)=>anchoredPosition+p;public Vector2 InverseTransformPoint(Vector2 p)=>p;public void SetAsLastSibling(){}public void SetParent(object parent,bool stay){}}
+public struct Rect {public float width=>200;public float height=>200;public Vector2 center=>Vector2.zero;}
+public struct Color {public float r,g,b,a;public Color(float r,float g,float b,float a=1){this.r=r;this.g=g;this.b=b;this.a=a;}public static Color white=>new Color(1,1,1);public static Color Lerp(Color x,Color y,float t)=>new Color(Mathf.Lerp(x.r,y.r,t),Mathf.Lerp(x.g,y.g,t),Mathf.Lerp(x.b,y.b,t),Mathf.Lerp(x.a,y.a,t));}
+public class Material {}public static class Resources {private static readonly Material spent=new Material();public static T Load<T>(string path)where T:class=>typeof(T)==typeof(Material)?spent as T:new Sprite()as T;}
+public struct Quaternion {public float z;public static Quaternion identity=>new Quaternion();public static Quaternion Euler(float x,float y,float z)=>new Quaternion{z=z};}
+public class CanvasRenderer:Component {}public class RectMask2D:Component {}public class Sprite {}
+public class Image:Component {public bool enabled=true;public Color color=Color.white;public Material material;public Sprite sprite;public bool raycastTarget,preserveAspect;public RectTransform rectTransform=>transform;}
+public struct Vector2 {public float x,y;public Vector2(float x,float y){this.x=x;this.y=y;}public static Vector2 zero=>new Vector2();public static Vector2 one=>new Vector2(1,1);public static Vector2 up=>new Vector2(0,1);public static Vector2 operator+(Vector2 a,Vector2 b)=>new Vector2(a.x+b.x,a.y+b.y);public static Vector2 operator*(Vector2 a,float b)=>new Vector2(a.x*b,a.y*b);public static Vector2 operator*(float b,Vector2 a)=>a*b;public static float Distance(Vector2 a,Vector2 b)=>(float)Math.Sqrt((a.x-b.x)*(a.x-b.x)+(a.y-b.y)*(a.y-b.y));public static Vector2 LerpUnclamped(Vector2 a,Vector2 b,float t)=>a*(1-t)+b*t;}
+public struct Vector3 {public float x,y,z;public Vector3(float x,float y,float z){this.x=x;this.y=y;this.z=z;}public static implicit operator Vector3(Vector2 v)=>new Vector3(v.x,v.y,0);public static Vector3 operator+(Vector3 a,Vector3 b)=>new Vector3(a.x+b.x,a.y+b.y,a.z+b.z);public static Vector3 one=>new Vector3(1,1,1);public static Vector3 operator*(Vector3 a,float b)=>new Vector3(a.x*b,a.y*b,a.z*b);}
+public struct Vector2Int {public int x,y;public Vector2Int(int x,int y){this.x=x;this.y=y;}}
+public static class Time {public static float deltaTime=.1f;public static int frameCount;}
+public static class Mathf {
+ public static int Max(int a,int b)=>Math.Max(a,b);public static int Clamp(int v,int lo,int hi)=>Math.Max(lo,Math.Min(v,hi));
+ public const float PI=(float)Math.PI,Deg2Rad=PI/180;public static float Sin(float v)=>(float)Math.Sin(v);public static float Cos(float v)=>(float)Math.Cos(v);public static float Pow(float a,float b)=>(float)Math.Pow(a,b);public static float Clamp(float v,float a,float b)=>Math.Max(a,Math.Min(b,v));public static float Min(float a,float b)=>Math.Min(a,b);public static float Max(float a,float b)=>Math.Max(a,b);
+ public static float Clamp01(float v)=>Math.Max(0,Math.Min(1,v));public static float Lerp(float a,float b,float t)=>a+(b-a)*Clamp01(t);
+ public static bool Approximately(float a,float b)=>Math.Abs(a-b)<.00001f;
+}
+/* ENUMS */
+public enum TileSpecial {None,LineH}
+public enum TileRuntimeState {Idle,Falling,Clearing,Swapping,Special}
+public class TileModel {public TileType type;public void SetType(TileType t){type=t;}}
+public class TileView:Component {public int X,Y,LifetimeVersion=1,token=7,landingVersion=4;public TileModel model=new TileModel();public TileType color{get=>model.type;set=>model.type=value;}public TileSpecial special;public bool HasActiveLandingVisual;public bool CageGrace,IsPlannedToMoveThisFallPass,WasDragging,DimerdalCollectionStarted;public int lastAppliedTileSize=100;public static implicit operator bool(TileView t)=>t!=null;public TileRuntimeState RuntimeState;public bool IsRuntimeIdle=>RuntimeState==TileRuntimeState.Idle;public bool isMovableObstacleTile,isFullCellMovableSprite;public Sprite movableObstacleSprite;public Image iconImage=new GameObject("icon",typeof(Image)).GetComponent<Image>();public Image IconImage=>iconImage;public RectTransform RectTransform=>transform;public TileType GetTileType()=>color;public void SetType(TileType value){color=value;}/* APPLY */public Sprite GetIconSprite()=>iconImage.sprite??new Sprite();public TileSpecial GetSpecial()=>special;public bool IsCurrentLifetime(int v)=>LifetimeVersion==v&&gameObject.activeInHierarchy;}
+public class LevelGoalDefinition {public LevelGoalTargetType targetType;public CollectibleId collectibleId;public Sprite iconOverride;public int amount;}
+public struct StackedObstacleEntry {public int originCellIndex;public ObstacleId obstacleId;}
+public class LevelData {public const int DimerdalDefaultCount=6;public DimerdalEntry[] dimerdals;public StackedObstacleEntry[] stackedObstacles;public int width=8,height=8;public int[] cells=Enumerable.Repeat(1,64).ToArray(),obstacles=new int[64],obstacleOrigins=Enumerable.Repeat(-1,64).ToArray();public LevelGoalDefinition[] goals;public Library obstacleLibrary=new Library();/* DIMERDAL SETTINGS */}
+public class Library {private readonly Dictionary<ObstacleId,ObstacleDef> defs=new Dictionary<ObstacleId,ObstacleDef>();public ObstacleDef Get(ObstacleId id){if(!defs.TryGetValue(id,out var def))defs[id]=def=new ObstacleDef{id=id};return def;}}
+public class ObstacleDef {public ObstacleId id;public Sprite GetPreviewSprite()=>auxiliarySprites[1];public Sprite GetGoalIconSprite()=>auxiliarySprites[1];public List<Sprite> auxiliarySprites=new List<Sprite>{new Sprite(),new Sprite(),new Sprite()};}
+public class GoalFlyFx {public RectTransform OverlayRoot=new GameObject().transform;}
+public class Hud {public RectTransform target=new GameObject().transform;public bool TryGetGoalTargetRectForCollectible(CollectibleId id,out RectTransform r){r=target;return r!=null;}public int collected;public void NotifyCollectibleCollected(CollectibleId id,int amount){if(id==CollectibleId.Diamond)collected+=amount;}}
+public class ObstacleStateService {
+ public BoardController board;public LevelData level;public HashSet<int> locked=new HashSet<int>(),buried=new HashSet<int>();
+ public Func<int,ObstacleHitContext,TileType?,bool> DimerdalHitInterceptor;public Func<int,int>DimerdalRemainingHitsQuery;public Func<bool>DimerdalCanProduceQuery;
+ public Func<int,bool>DimerdalCanProduceAtQuery;
+ public event Action<int,ObstacleId> OnObstacleDestroyed;
+ public int retirements,unlocked;public void Reveal(){buried.Clear();OnObstacleDestroyed?.Invoke(0,ObstacleId.Grass);}
+ private void ClearObstacleFromLevel(int origin,ObstacleId id){for(int i=0;i<level.obstacles.Length;i++)if(level.obstacles[i]==(int)id&&level.obstacleOrigins[i]==origin){level.obstacles[i]=0;level.obstacleOrigins[i]=-1;unlocked++;}retirements++;OnObstacleDestroyed?.Invoke(origin,id);}
+ /* RETIRE */
+ public ObstacleId GetObstacleIdAt(int x,int y)=>(ObstacleId)level.obstacles[y*8+x];
+ public int GetObstacleOriginAt(int x,int y)=>level.obstacleOrigins[y*8+x];
+ public bool IsUnbreakableMovableAt(int x,int y)=>false;public bool IsMovableObstacleAt(int x,int y)=>DimerdalRules.IsDiamond(GetObstacleIdAt(x,y));public bool IsOverTileBlockerAt(int x,int y)=>DimerdalRules.IsShutter(GetObstacleIdAt(x,y));public bool IsSpecialTargetableBlockerAt(int x,int y)=>false;public bool HasObstacleAt(int x,int y)=>GetObstacleIdAt(x,y)!=ObstacleId.None;
+ public bool IsInteractionLockedAt(int x,int y)=>locked.Contains(y*8+x);
+ public bool IsHitLockedAt(int x,int y)=>buried.Contains(y*8+x);
+ public int CountAllLiveOrigins(ObstacleId id)=>level.obstacles.Count(v=>v==(int)id);
+ public bool TrySpawnSingleCellObstacleAt(int x,int y,ObstacleId id){int i=y*8+x;if(level.obstacles[i]!=0)return false;level.obstacles[i]=(int)id;level.obstacleOrigins[i]=i;return true;}
+ public void Collect(int i){board.CollectDimerdalDiamond(board.tiles[i%8,i/8]);}
+}
+public class BoardController:MonoBehaviour {
+ public RectTransform ContentRoot=new GameObject().transform;public RectTransform BreakFxParent;public LevelData ActiveLevelData=>ObstacleStateService.level;public LevelData levelData=>ActiveLevelData;public int jobs,resolves;public GoalFlyFx GoalFlyFx=new GoalFlyFx();
+ public HashSet<Vector2Int>reservedKeyLandingCells=new HashSet<Vector2Int>();public Dictionary<Vector2Int,int>reservedTileTargetCells=new Dictionary<Vector2Int,int>();public MotionDouble fallMotion=new MotionDouble();
+ public Vector2 WorldToAnchoredIn(RectTransform r,Vector2 p)=>p;public Vector2 GetCellWorldCenterPosition(int x,int y)=>new Vector2(x*100,-y*100);
+ public enum BoardJobKind {KeyFlight,GoalOrbFlight}public class Job:IDisposable {BoardController b;public Job(BoardController b){this.b=b;b.jobs++;}public void Dispose(){if(b==null)return;b.jobs--;b=null;}}public IDisposable BeginJob(BoardJobKind k)=>new Job(this);public void RequestResolveAfterActionSequence(){resolves++;}
+ public DimerdalService Dimerdals{get;set;}public int width=8,height=8;public int Width=>width;public int Height=>height;
+ public TileView[,]tiles=new TileView[8,8];public TileView[,]Tiles=>tiles;public bool[,]Holes=new bool[8,8];public object[,]GridData=new object[8,8];public TargetPoolFixture TargetPool=new TargetPoolFixture();public ObstacleStateService ObstacleStateService;ObstacleStateService obstacleStateService=>ObstacleStateService;public Hud TopHud=new Hud();
+ public HashSet<int>pending=new HashSet<int>(),reserved=new HashSet<int>();public int refreshes,syncs;
+ public TileView GetTileViewAt(int x,int y)=>tiles[x,y];
+ public bool IsPendingTriggeredSpecialCell(int x,int y)=>pending.Contains(y*8+x);public bool IsReservedTileTargetCell(int x,int y)=>reserved.Contains(y*8+x);
+ public void RefreshTileObstacleVisual(TileView t){refreshes++;}public void SyncTileData(int x,int y){syncs++;GridData[x,y]=tiles[x,y]!=null?new object():null;}
+ /* CONVERT */
+}
+public class MotionDouble {public bool pending=false;public bool HasPendingMotion(TileView t)=>pending;}
+public static class TestRandom {public static int Range(int a,int b)=>0;}
+public static class UiVfxPool {static readonly Stack<Image>images=new Stack<Image>();public static int rented,returned;public static Image RentImage(string k,RectTransform root,string n){rented++;return images.Count>0?images.Pop():new GameObject(n,typeof(Image)).GetComponent<Image>();}public static void Return(string k,GameObject go){returned++;images.Push(go.GetComponent<Image>());}}
+public interface IClearEffectDescriptor {IList<TileView>TargetTiles{get;}}
+public class SpecialCreationFormationEffectDescriptor:IClearEffectDescriptor {public IList<TileView>TargetTiles{get;set;}public TileView CreatedTile;}
+public class PatchbotComboService {public bool IsGelSpreadTarget(int x,int y,TileView t)=>false;}
+public class TargetPoolFixture {public bool IsHittableObstacleCell(int x,int y)=>true;}
+/* PATCHBOT */
+/* PLAN */
+public class QueuedMatchClear {
+ public HashSet<TileView> matches=new HashSet<TileView>(),capturedNonSpecial=new HashSet<TileView>();public Dictionary<TileView,(int lifetime,TileType type)>matchLifetimes=new Dictionary<TileView,(int lifetime,TileType type)>();public ClearPresentationPlan PresentationPlan=new ClearPresentationPlan();
+ /* MATCH GUARD */
+}
+/* RULES */
+/* VIEW */
+/* SERVICE */
+/* FLIGHT */
+public interface ICollectionFxTarget {bool IsCollectionAlive{get;}Vector3 GetCollectionTarget(int color);bool IsCollectionTargetReady(int color);}
+public static class AncientSealService {public class GatherBatch {public Vector3 worldSum;public int count;}}
+public class AncientSealCollectFx:IDisposable {public static int started,disposed;Action arrival;public AncientSealCollectFx(MonoBehaviour h,RectTransform r,BoardController b,ICollectionFxTarget t,TileType type,int color,Vector3 world,AncientSealService.GatherBatch batch,int order,Color? tintOverride=null,Sprite spriteOverride=null,bool pooledVisuals=false){if(spriteOverride==null||!pooledVisuals)throw new Exception("Dimerdal must use the shared TarpStatue effect with its own diamond sprite and pooling");started++;}public IEnumerator Play(Action arrived){for(int i=0;i<4;i++)yield return null;arrived();yield return null;}public void Dispose(){disposed++;}}
+/* COLLECTION */
+public static class Checks {
+ static int checks;
+ static void Check(bool ok,string why){checks++;if(!ok)throw new Exception(why);}
+ static void Invoke(object obj,string name)=>obj.GetType().GetMethod(name,BindingFlags.Instance|BindingFlags.NonPublic).Invoke(obj,null);
+ static BoardController Make(int goal=10){var level=new LevelData{goals=new[]{new LevelGoalDefinition{targetType=LevelGoalTargetType.Collectible,collectibleId=CollectibleId.Diamond,amount=goal}}};var b=new BoardController{ObstacleStateService=new ObstacleStateService{level=level}};b.ObstacleStateService.board=b;DimerdalService.Ensure(b).Build(level);return b;}
+ static Image Host()=>new GameObject("host",typeof(Image)).GetComponent<Image>();
+ static void Gate(BoardController b,int x,int y,ObstacleId id,int size){int origin=y*8+x;for(int yy=y;yy<y+size;yy++)for(int xx=x;xx<x+size;xx++){int cell=yy*8+xx;b.ObstacleStateService.level.obstacles[cell]=(int)id;b.ObstacleStateService.level.obstacleOrigins[cell]=origin;}b.ActiveLevelData.SetDimerdalProductionCount(origin,id,b.ActiveLevelData.goals[0].amount);b.Dimerdals.Register(origin,new ObstacleDef{id=id},Host());}
+ static void Open(BoardController b,int origin,TileType color){for(int i=4;i>0;i--){Check(b.ObstacleStateService.DimerdalHitInterceptor(origin,ObstacleHitContext.NormalMatch,color),"correct-color opening hit");Check(b.ObstacleStateService.DimerdalRemainingHitsQuery(origin)==i-1,"exact remaining slats");}}
+ static HashSet<TileView> Match(BoardController b,TileType color,params int[]cells){var set=new HashSet<TileView>();foreach(int cell in cells){var t=Stone(b,cell,color);set.Add(t);}return set;}
+ static TileView Stone(BoardController b,int cell,TileType color=TileType.Core){var t=new TileView{X=cell%8,Y=cell/8,color=color};b.tiles[t.X,t.Y]=t;return t;}
+ static void Clear(BoardController b,HashSet<TileView> group){foreach(var t in group){b.tiles[t.X,t.Y]=null;t.LifetimeVersion++;}}
+ static void Tick(BoardController b,int frames=20){for(int i=0;i<frames;i++){Time.frameCount++;Invoke(b.Dimerdals,"Update");}}
+ static int Diamonds(BoardController b)=>b.tiles.Cast<TileView>().Count(v=>v!=null&&DimerdalRules.IsDiamond(v.GetTileType()));
+ public static void Run(){
+  foreach(var pair in new[]{(ObstacleId.DimerdalBlue1x1,TileType.Bolt),(ObstacleId.DimerdalGreen1x1,TileType.Plate),(ObstacleId.DimerdalYellow1x1,TileType.Gear),(ObstacleId.DimerdalRed1x1,TileType.Core)})
+   for(int size=1;size<=3;size++){
+    var b=Make(2);var id=(ObstacleId)((int)pair.Item1+size-1);Gate(b,2,2,id,size);var svc=b.ObstacleStateService;
+    Check(!svc.DimerdalHitInterceptor(18,ObstacleHitContext.NormalMatch,TileType.Normal),"wrong color cannot open");
+    Check(!svc.DimerdalHitInterceptor(18,ObstacleHitContext.NormalMatch,null),"missing color cannot open");
+    Check(!svc.DimerdalHitInterceptor(18,ObstacleHitContext.Scripted,null),"scripted context cannot open");
+    var group=Match(b,pair.Item2,9,10,11);Check(b.Dimerdals.PrepareMatches(group,null)==null,"closed cannot produce");Open(b,18,pair.Item2);
+    var plan=new ClearPresentationPlan();foreach(var t in group)plan.FinalClearTiles.Add(t);plan.CaptureTileLifetimes();
+    var batch=b.Dimerdals.PrepareMatches(group,plan);
+    Check(batch!=null&&batch.origins.Count==1&&group.Count==3&&Diamonds(b)==0,"match only reserves production; all three stones clear normally");
+    Check(group.All(t=>t.LifetimeVersion==1&&plan.TryGetCurrentTileLifetime(t,out _)),"pre-clear does not change tile lifetime or permissions");
+    Clear(b,group);var target=Stone(b,63);target.RuntimeState=TileRuntimeState.Idle;target.RectTransform.anchoredPosition=new Vector2(17,42);target.IconImage.rectTransform.anchoredPosition=new Vector2(3,9);target.IconImage.rectTransform.localScale=new Vector3(.8f,1.2f,1);b.reservedTileTargetCells[new Vector2Int(7,7)]=1;
+    b.Dimerdals.FinishMatches(batch,true);Check(b.jobs==1&&b.TopHud.collected==0,"production job nonblocking; generation is not collection");Tick(b);
+    Check(target.GetTileType()==DimerdalRules.DiamondTile(DimerdalRules.DiamondFor(id))&&svc.GetObstacleIdAt(7,7)==ObstacleId.None,"produced color follows shutter");
+    Check(target.LifetimeVersion==1&&target.token==7&&target.RuntimeState==TileRuntimeState.Idle,"idle replacement keeps lifetime, move token and state");
+    Check(target.RectTransform.anchoredPosition.y==42&&target.IconImage.rectTransform.anchoredPosition.y==0&&target.IconImage.rectTransform.sizeDelta.x==85&&target.IconImage.rectTransform.sizeDelta.y==85&&target.IconImage.rectTransform.localScale.y==1&&target.IconImage.rectTransform.localScale.x==1&&target.landingVersion==4,"root pose preserved; diamond uses square bounds and neutral scale");
+    Check(b.reservedTileTargetCells[new Vector2Int(7,7)]==1&&b.jobs==0,"fall reservation untouched and flight job released");
+    Check(svc.DimerdalHitInterceptor(18,ObstacleHitContext.SpecialActivation,null),"open special hit produces without color");var second=Stone(b,62);Tick(b);Check(Diamonds(b)==2,"normal plus special produce exact quota");
+    Check(!svc.DimerdalCanProduceQuery()&&!svc.DimerdalHitInterceptor(18,ObstacleHitContext.SpecialActivation,null),"quota also gates special targetability");
+    svc.Collect(63);Check(b.TopHud.collected==0,"collection counts on arrival, not destruction");Tick(b);Check(b.TopHud.collected==1,"collected diamond counted exactly once");svc.Collect(63);Tick(b);Check(b.TopHud.collected==1,"duplicate destruction ignored");
+    Invoke(b.Dimerdals,"OnDisable");
+   }
+  {
+   var b=Make(1);Gate(b,2,2,ObstacleId.DimerdalBlue1x1,1);Open(b,18,TileType.Bolt);var group=Match(b,TileType.Bolt,9,10,11);
+   var batch=b.Dimerdals.PrepareMatches(group,null);b.Dimerdals.FinishMatches(batch,false);Check(b.ObstacleStateService.DimerdalCanProduceQuery()&&b.jobs==0&&Diamonds(b)==0,"interrupted clear returns quota and owns no flight");
+   batch=b.Dimerdals.PrepareMatches(group,null);Invoke(b.Dimerdals,"OnDisable");Invoke(b.Dimerdals,"OnEnable");b.Dimerdals.FinishMatches(batch,true);Check(b.ObstacleStateService.DimerdalCanProduceQuery()&&b.jobs==0,"stale batch cannot launch after disable");
+   Check(b.ObstacleStateService.DimerdalHitInterceptor(18,ObstacleHitContext.Booster,null),"booster opens production path");Tick(b,4);
+   foreach(var t in group)t.RuntimeState=TileRuntimeState.Clearing;Tick(b,40);Check(b.jobs==0&&b.ObstacleStateService.DimerdalCanProduceQuery(),"unavailable target times out and releases quota");Invoke(b.Dimerdals,"OnDisable");
+  }
+  {
+   var b=Make(1);Gate(b,2,2,ObstacleId.DimerdalBlue1x1,1);Open(b,18,TileType.Bolt);var a=Stone(b,63);b.ObstacleStateService.DimerdalHitInterceptor(18,ObstacleHitContext.SpecialActivation,null);Tick(b,5);
+   a.LifetimeVersion++;a.special=TileSpecial.LineH;var fresh=Stone(b,62);Tick(b);Check(fresh.GetTileType()==TileType.DiamondBlue&&b.ObstacleStateService.GetObstacleIdAt(6,7)==ObstacleId.None&&a.special==TileSpecial.LineH,"recycled/special target reroutes without overwriting special");Check(b.jobs==0,"reroute releases one job");Invoke(b.Dimerdals,"OnDisable");
+  }
+  {
+   var b=Make(1);Gate(b,2,2,ObstacleId.DimerdalBlue1x1,1);Open(b,18,TileType.Bolt);var a=Stone(b,63);b.ObstacleStateService.DimerdalHitInterceptor(18,ObstacleHitContext.SpecialActivation,null);Tick(b,4);
+   b.tiles[7,7]=null;a.X=6;a.Y=6;b.tiles[6,6]=a;Tick(b);Check(a.GetTileType()==TileType.DiamondBlue&&b.ObstacleStateService.GetObstacleIdAt(6,6)==ObstacleId.None&&b.ObstacleStateService.GetObstacleIdAt(7,7)==ObstacleId.None,"live target follows tile through logical retargeting");Invoke(b.Dimerdals,"OnDisable");
+  }
+  {
+   var b=Make(2);Gate(b,2,2,ObstacleId.DimerdalBlue1x1,1);Open(b,18,TileType.Bolt);Stone(b,63);b.ObstacleStateService.DimerdalHitInterceptor(18,ObstacleHitContext.SpecialActivation,null);b.ObstacleStateService.DimerdalHitInterceptor(18,ObstacleHitContext.SpecialActivation,null);Tick(b,12);Check(Diamonds(b)==1,"simultaneous flights never convert same view twice");Invoke(b.Dimerdals,"OnDisable");Check(b.jobs==0,"disable cancels waiting flight and releases jobs");Check(b.ObstacleStateService.DimerdalHitInterceptor==null&&b.ObstacleStateService.DimerdalCanProduceQuery==null,"disable unbinds delegates");
+  }
+  {
+   var b=Make();Gate(b,3,2,ObstacleId.DimerdalBlue1x1,1);Open(b,19,TileType.Bolt);var group=Match(b,TileType.Bolt,9,11,12);var earned=Stone(b,10,TileType.Bolt);earned.special=TileSpecial.LineH;
+   var plan=new ClearPresentationPlan();foreach(var t in group)plan.FinalClearTiles.Add(t);plan.Effects.Add(new SpecialCreationFormationEffectDescriptor{CreatedTile=earned,TargetTiles=group.ToList()});plan.CaptureTileLifetimes();var batch=b.Dimerdals.PrepareMatches(group,plan);Check(batch!=null&&batch.origins.Count==1&&group.Count==3,"earned special bridges group without being converted");b.Dimerdals.FinishMatches(batch,false);Invoke(b.Dimerdals,"OnDisable");
+  }
+  {
+   var b=Make();var t=Stone(b,63);t.RuntimeState=TileRuntimeState.Falling;b.reservedTileTargetCells[new Vector2Int(7,7)]=2;Check(!b.CanConvertDimerdalDiamond(t),"foreign reservation not displaced");b.reservedTileTargetCells[new Vector2Int(7,7)]=1;b.fallMotion.pending=false;Check(!b.CanConvertDimerdalDiamond(t),"reservation without owned fall rejected");b.reservedTileTargetCells.Clear();t.RuntimeState=TileRuntimeState.Clearing;Check(!b.CanConvertDimerdalDiamond(t),"active clear cannot be overwritten");t.RuntimeState=TileRuntimeState.Idle;t.special=TileSpecial.LineH;Check(!b.CanConvertDimerdalDiamond(t),"special never replaced");t.special=TileSpecial.None;b.pending.Add(63);Check(!b.CanConvertDimerdalDiamond(t),"pending trigger preserved");b.pending.Clear();b.ObstacleStateService.locked.Add(63);Check(!b.CanConvertDimerdalDiamond(t),"locked tile preserved");Invoke(b.Dimerdals,"OnDisable");
+  }
+  {
+   var b=Make();var tile=Stone(b,63);b.SyncTileData(7,7);var intent=new PatchBotIntent{TargetTile=tile,ObstacleOriginIndex=-1,InitialCell=new Vector2Int(7,7)};
+   var queued=new QueuedMatchClear();queued.matches.Add(tile);queued.capturedNonSpecial.Add(tile);queued.matchLifetimes[tile]=(tile.LifetimeVersion,tile.GetTileType());queued.PresentationPlan.FinalClearTiles.Add(tile);queued.PresentationPlan.CaptureTileLifetimes();
+   Check(intent.IsAlive(b),"actual PatchBot intent starts on live normal stone");Check(b.TryConvertDimerdalDiamond(tile,ObstacleId.DimerdalDiamondBlue),"PatchBot target may convert");Check(intent.IsAlive(b)&&intent.CurrentCell(b).x==7&&SpecialUtils.CanTargetTileContent(b,7,7),"actual PatchBot intent still targets converted diamond");
+   queued.ExcludeDimerdalReplacements(b);Check(queued.matches.Count==0&&!queued.PresentationPlan.FinalClearTiles.Contains(tile)&&!queued.PresentationPlan.TryGetCurrentTileLifetime(tile,out _),"actual queued-match guard revokes stale clear without changing fall lifetime");Check(tile.LifetimeVersion==1,"old normal clear cannot revoke motion owner");
+   b.tiles[7,7]=null;tile.X=6;tile.Y=6;b.tiles[6,6]=tile;b.GridData[6,6]=new object();
+   Check(intent.IsAlive(b)&&intent.CurrentCell(b).x==6&&intent.CurrentCell(b).y==6,"actual PatchBot intent follows same falling diamond view");
+   b.Dimerdals.CollectDiamond(tile,ObstacleId.DimerdalDiamondBlue);Check(b.TopHud.collected==0&&b.jobs==1,"collection waits for shared FX arrival");Invoke(b.Dimerdals,"OnDisable");Check(b.TopHud.collected==1&&b.jobs==0,"disable credits already collected diamond once and frees job");
+   Invoke(b.Dimerdals,"OnEnable");b.Dimerdals.CollectDiamond(tile,ObstacleId.DimerdalDiamondBlue);var oldHud=b.TopHud;b.ObstacleStateService.level=new LevelData();Tick(b);Check(oldHud.collected==1&&b.jobs==0,"old level collection cannot credit new HUD");Invoke(b.Dimerdals,"OnDisable");
+  }
+  {
+   var b=Make(3);Gate(b,2,2,ObstacleId.DimerdalBlue1x1,1);Gate(b,4,2,ObstacleId.DimerdalBlue1x1,1);Open(b,18,TileType.Bolt);Open(b,20,TileType.Bolt);
+   var group=Match(b,TileType.Bolt,10,11,12);var batch=b.Dimerdals.PrepareMatches(group,null);Check(batch!=null&&batch.origins.Count==1,"one group touching two boxes produces only one request");b.Dimerdals.FinishMatches(batch,false);
+   var separate=Match(b,TileType.Bolt,9,10,11,25,26,27);batch=b.Dimerdals.PrepareMatches(separate,null);Check(batch!=null&&batch.origins.Count==2,"separate connected groups produce separately");b.Dimerdals.FinishMatches(batch,false);
+   Check(b.Dimerdals.PrepareMatches(Match(b,TileType.Core,10,11,12),null)==null,"wrong-color group cannot produce");Check(b.Dimerdals.PrepareMatches(Match(b,TileType.Bolt,0,1,2),null)==null,"diagonal-only adjacency cannot produce");
+   var host=Host();b.Dimerdals.Register(18,new ObstacleDef{id=ObstacleId.DimerdalBlue1x1},host);var view=host.gameObject.GetComponent<DimerdalView>();var panel=(RectTransform)typeof(DimerdalView).GetField("panel",BindingFlags.NonPublic|BindingFlags.Instance).GetValue(view);Check(panel.anchorMin.y==1,"cover/view reattachment preserves open panel");view.SetRemaining(4,false);Check(panel.anchorMin.y==0,"closed panel fills aperture");view.SetRemaining(3,true);view.Tick(1);Check(panel.anchorMin.y==.25f,"one opening hit reveals one quarter");view.SetRemaining(0,true);view.Tick(1);Check(panel.anchorMin.y==1,"four opening hits reveal all diamond");Invoke(b.Dimerdals,"OnDisable");
+  }
+  {
+   var b=Make(1);var t=Stone(b,63);t.RuntimeState=TileRuntimeState.Falling;Check(!b.CanConvertDimerdalDiamond(t),"falling target rejected");t.RuntimeState=TileRuntimeState.Idle;t.IsPlannedToMoveThisFallPass=true;Check(!b.CanConvertDimerdalDiamond(t),"planned fall rejected");t.IsPlannedToMoveThisFallPass=false;b.fallMotion.pending=true;Check(!b.CanConvertDimerdalDiamond(t),"pending motor rejected");b.fallMotion.pending=false;t.WasDragging=true;Check(!b.CanConvertDimerdalDiamond(t),"dragged stone rejected");t.WasDragging=false;t.HasActiveLandingVisual=true;Check(!b.CanConvertDimerdalDiamond(t),"landing response finishes before replacement");t.HasActiveLandingVisual=false;Check(b.CanConvertDimerdalDiamond(t),"idle stone accepted");
+   Gate(b,2,2,ObstacleId.DimerdalBlue1x1,1);Open(b,18,TileType.Bolt);b.ObstacleStateService.DimerdalHitInterceptor(18,ObstacleHitContext.SpecialActivation,null);Tick(b,5);t.RuntimeState=TileRuntimeState.Falling;var fresh=Stone(b,62);Tick(b);Check(fresh.GetTileType()==TileType.DiamondBlue&&t.GetTileType()==TileType.Core,"flight reroutes when its target starts falling");Check(b.jobs==0,"rerouted flight releases job");Invoke(b.Dimerdals,"OnDisable");
+  }
+  {
+   var b=Make();var t=Stone(b,63);b.TryConvertDimerdalDiamond(t,ObstacleId.DimerdalDiamondBlue);var queued=new QueuedMatchClear();queued.matches.Add(t);queued.capturedNonSpecial.Add(t);queued.matchLifetimes[t]=(t.LifetimeVersion,t.GetTileType());queued.ExcludeDimerdalReplacements(b);Check(queued.matches.Contains(t),"a queued real diamond match is retained");b.CollectDimerdalDiamond(t);b.CollectDimerdalDiamond(t);Tick(b);Check(b.TopHud.collected==1,"normal tile collection starts exactly once");Invoke(b.Dimerdals,"OnDisable");
+  }
+  Check(UiVfxPool.rented==UiVfxPool.returned,"all pooled ghosts returned after success, timeout, reroute and cancellation");
+  Console.WriteLine("PASS: "+checks+" production-code Dimerdal opening, match/special generation, idle placement ownership, reroute, quota and cleanup checks (Unity doubles).");
+ }
+}

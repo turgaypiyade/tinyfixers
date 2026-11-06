@@ -25,6 +25,8 @@ Keep every level's Turkish name (`name`) and English name (`nameEn`) in `Assets/
 
 Form a clear visual composition and player decision before authoring: what shape is visible, which region opens first, and what that unlocks. Consider a few distinct concepts internally and choose without requiring approval for routine design choices. Check repetition across the existing catalog, then inspect the closest historical boards as well as nearby levels. A long gap since an obstacle's last use does not establish novelty.
 
+Check the strongest plausible early helper/chain against the remaining mandatory work. A spread goal and an area-clearing helper can accelerate the same task; do not count them as independent difficulty. Static validity and a readable PNG do not establish the intended difficulty. Record the user’s rejection and change the interaction, rather than only reducing moves.
+
 Early-game simplicity still needs a visible idea and a meaningful opening beat. Do not substitute
 a large empty rectangle plus edge blockers for a level concept. If a gate intentionally delays
 refill, show its initially empty cells honestly, verify the feed route after opening it, and

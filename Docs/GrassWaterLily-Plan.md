@@ -1,5 +1,10 @@
 # GrassWaterLily
 
+## Güncel görsel — dört yönlü yutma · 2026-11-06
+
+Yutma için kullanıcı sheet’lerinden Up/Right/Down/Left beşer adım eklenmiştir;auxiliarySprites0–4eskiCF1–CF5,5–24yeni yönlü karelerdir. Sol kaynak ters oynatılır. Grid yönü seçilir; açık→kapalı animasyonun ardından sadece kapalı kareyle geri toplanır ve merkezde eski şişkinCF5’e geçilir. Spit/yaprak/idle/ikon için eski görseller korunur. Aşağıdaki CF1→CF5yutma anlatımı tarihseldir. Mekanik,bekleme,hasar/hedef ve ses kuralları aynı. Yeni karelerde tuvalpad’i için1.44uniformölçek vardır;yeni eksenesnetmesi/3Değme yok.662üretim yöntemi veasset auditgeçti;cihazrender/build/Play yapılmadı. [Kayıt](Checks/WaterLily-Directional-Swallow-2026-11-06/README.md).
+
+
 `ObstacleId.GrassWaterLily = 69`, `Assets/_Project/Settings/ObstacleLibrary.asset` içinde ayrı bir 1×1 obstacle kaydıdır. LevelData editörünün Obstacle ve Overlay paletlerinde bu Library’den seçilir. Beş kapanış görseli `auxiliarySprites` içinde CF1–CF5 sırasındadır; CF1 önizleme ve hedef ikonudur. Mevcut GrassFlower değiştirilmedi. Mevcut level tasarımlarına otomatik yerleştirilmedi. GrassWaterLily tek seçimle konur; ayrıca Grass yerleştirmek gerekmez. Editör paleti, taban grid hücresi ve stacked mini önizleme çim ile nilüferi birlikte çizer.
 
 ## Akış

@@ -17,5 +17,11 @@ public enum TileType
         SystemOverride,
 
         // Generator-produced matchable goal tile. Not part of randomPool by default.
-        Key
+        Key,
+
+        // Dimerdal-produced stones. Appended to preserve serialized tile IDs.
+        DiamondBlue,
+        DiamondGreen,
+        DiamondYellow,
+        DiamondRed
 }

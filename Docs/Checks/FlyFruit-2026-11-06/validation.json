@@ -1,0 +1,19 @@
+{
+  "result": "PASS",
+  "newMethodChecks": 349,
+  "dimerdalChecks": 409,
+  "dimerdalPerBoxChecks": 289,
+  "patchbotRegressionChecks": 147,
+  "wallComboSourceChecks": 260,
+  "totalMethodChecks": 1454,
+  "syntax": "10modified/new actual C# sources parsed;new family production methods compiled/executed with Unity doubles",
+  "assetAudit": "asset-validation.json",
+  "visualsOpened": [
+    "Prepared-Assets.png",
+    "Review.png"
+  ],
+  "unityBuild": false,
+  "unityPlay": false,
+  "deviceOrBalanceMeasured": false,
+  "published": false
+}

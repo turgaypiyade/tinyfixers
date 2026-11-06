@@ -1,0 +1,337 @@
+{
+  "result": "PASS",
+  "previousCatalogEntriesPreserved": 221,
+  "protectedFiles": 3409,
+  "changedProtectedFiles": [],
+  "priorNamesPreserved": 218,
+  "levels": [
+    {
+      "level": 222,
+      "name": "Zümrüt Yaprak",
+      "moves": 24,
+      "difficulty": "Normal",
+      "active": 60,
+      "goals": [
+        {
+          "label": "Diamond",
+          "amount": 10
+        },
+        {
+          "label": "42",
+          "amount": 16
+        }
+      ],
+      "initialInstances": {
+        "42": 16,
+        "88": 1
+      },
+      "goalCount": 2,
+      "phases": [
+        {
+          "name": "opening",
+          "tileSlots": 56,
+          "natural": 56,
+          "shadowSeeded": 0,
+          "empty": []
+        },
+        {
+          "name": "shown cutaway",
+          "tileSlots": 56,
+          "natural": 56,
+          "shadowSeeded": 0,
+          "empty": []
+        },
+        {
+          "name": "all removable layers cleared",
+          "tileSlots": 56,
+          "natural": 56,
+          "shadowSeeded": 0,
+          "empty": []
+        }
+      ],
+      "permanentSources": [
+        {
+          "obstacleId": 88,
+          "origin": 85,
+          "footprint": [
+            85,
+            86,
+            94,
+            95
+          ]
+        }
+      ],
+      "pins": 0,
+      "preparedSpecials": 0
+    },
+    {
+      "level": 223,
+      "name": "Uçan Anahtar",
+      "moves": 23,
+      "difficulty": "Normal",
+      "active": 45,
+      "goals": [
+        {
+          "label": "Key",
+          "amount": 14
+        },
+        {
+          "label": "30",
+          "amount": 8
+        },
+        {
+          "label": "28",
+          "amount": 6
+        },
+        {
+          "label": "25",
+          "amount": 6
+        }
+      ],
+      "initialInstances": {
+        "30": 8,
+        "25": 6,
+        "44": 4,
+        "28": 6
+      },
+      "goalCount": 4,
+      "phases": [
+        {
+          "name": "opening",
+          "tileSlots": 27,
+          "natural": 25,
+          "shadowSeeded": 0,
+          "empty": [
+            51,
+            60
+          ]
+        },
+        {
+          "name": "shown cutaway",
+          "tileSlots": 41,
+          "natural": 41,
+          "shadowSeeded": 0,
+          "empty": []
+        },
+        {
+          "name": "all removable layers cleared",
+          "tileSlots": 41,
+          "natural": 41,
+          "shadowSeeded": 0,
+          "empty": []
+        }
+      ],
+      "permanentSources": [
+        {
+          "obstacleId": 44,
+          "origin": 52,
+          "footprint": [
+            52
+          ]
+        },
+        {
+          "obstacleId": 44,
+          "origin": 53,
+          "footprint": [
+            53
+          ]
+        },
+        {
+          "obstacleId": 44,
+          "origin": 61,
+          "footprint": [
+            61
+          ]
+        },
+        {
+          "obstacleId": 44,
+          "origin": 62,
+          "footprint": [
+            62
+          ]
+        }
+      ],
+      "pins": 0,
+      "preparedSpecials": 0
+    },
+    {
+      "level": 224,
+      "name": "Kristal Çapa",
+      "moves": 24,
+      "difficulty": "Normal",
+      "active": 88,
+      "goals": [
+        {
+          "label": "Diamond",
+          "amount": 12
+        },
+        {
+          "label": "4",
+          "amount": 34
+        },
+        {
+          "label": "68",
+          "amount": 1
+        },
+        {
+          "label": "42",
+          "amount": 4
+        }
+      ],
+      "initialInstances": {
+        "68": 1,
+        "4": 34,
+        "85": 1,
+        "94": 1,
+        "42": 4
+      },
+      "goalCount": 4,
+      "phases": [
+        {
+          "name": "opening",
+          "tileSlots": 42,
+          "natural": 38,
+          "shadowSeeded": 0,
+          "empty": [
+            42,
+            45,
+            82,
+            85
+          ]
+        },
+        {
+          "name": "shown cutaway",
+          "tileSlots": 76,
+          "natural": 76,
+          "shadowSeeded": 0,
+          "empty": []
+        },
+        {
+          "name": "all removable layers cleared",
+          "tileSlots": 80,
+          "natural": 80,
+          "shadowSeeded": 0,
+          "empty": []
+        }
+      ],
+      "permanentSources": [
+        {
+          "obstacleId": 85,
+          "origin": 72,
+          "footprint": [
+            72,
+            73,
+            80,
+            81
+          ]
+        },
+        {
+          "obstacleId": 94,
+          "origin": 78,
+          "footprint": [
+            78,
+            79,
+            86,
+            87
+          ]
+        }
+      ],
+      "pins": 0,
+      "preparedSpecials": 0
+    },
+    {
+      "level": 225,
+      "name": "Mühürlü Kristal Kalesi",
+      "moves": 25,
+      "difficulty": "Hard",
+      "active": 88,
+      "goals": [
+        {
+          "label": "Diamond",
+          "amount": 16
+        },
+        {
+          "label": "64",
+          "amount": 1
+        },
+        {
+          "label": "39",
+          "amount": 16
+        },
+        {
+          "label": "25",
+          "amount": 16
+        }
+      ],
+      "initialInstances": {
+        "25": 16,
+        "39": 16,
+        "88": 1,
+        "91": 1,
+        "64": 1
+      },
+      "goalCount": 4,
+      "phases": [
+        {
+          "name": "opening",
+          "tileSlots": 48,
+          "natural": 36,
+          "shadowSeeded": 0,
+          "empty": [
+            66,
+            67,
+            68,
+            69,
+            72,
+            73,
+            78,
+            79,
+            80,
+            81,
+            86,
+            87
+          ]
+        },
+        {
+          "name": "shown cutaway",
+          "tileSlots": 80,
+          "natural": 80,
+          "shadowSeeded": 0,
+          "empty": []
+        },
+        {
+          "name": "all removable layers cleared",
+          "tileSlots": 80,
+          "natural": 80,
+          "shadowSeeded": 0,
+          "empty": []
+        }
+      ],
+      "permanentSources": [
+        {
+          "obstacleId": 88,
+          "origin": 74,
+          "footprint": [
+            74,
+            75,
+            82,
+            83
+          ]
+        },
+        {
+          "obstacleId": 91,
+          "origin": 76,
+          "footprint": [
+            76,
+            77,
+            84,
+            85
+          ]
+        }
+      ],
+      "pins": 0,
+      "preparedSpecials": 0
+    }
+  ],
+  "limits": "Static independent Unity YAML, layers, footprints, initial feed geometry and source access. No Unity/build/Play/bot/gravity/cascade simulation, publication or release baseline. Balance and device performance unmeasured."
+}

@@ -386,6 +386,31 @@ public class TileView : MonoBehaviour,
     // Board-hosted coroutines survive StopAllCoroutines on this component. A pooled
     // view keeps its object identity, so deferred work must also check its lifetime.
     internal int LifetimeVersion { get; private set; }
+    internal bool DimerdalCollectionStarted { get; set; }
+    internal bool HasActiveLandingVisual => landingPoseApplied || activeSettleCo != null;
+
+    // Only idle stones are converted. Retain root pose, lifetime and motion ownership;
+    // use the same square aspect-preserving icon bounds as the production ghost.
+    internal void ApplyDimerdalDiamond(TileType type, Sprite sprite)
+    {
+        model.SetType(type);
+        DimerdalCollectionStarted = false;
+        isMovableObstacleTile = false;
+        isFullCellMovableSprite = false;
+        movableObstacleSprite = null;
+        iconImage.sprite = sprite;
+        iconImage.preserveAspect = true;
+        iconImage.rectTransform.localScale = Vector3.one;
+        ApplyDimerdalIconBounds(lastAppliedTileSize);
+    }
+
+    private void ApplyDimerdalIconBounds(int tileSize)
+    {
+        var icon = iconImage.rectTransform;
+        icon.anchorMin = icon.anchorMax = icon.pivot = new Vector2(.5f, .5f);
+        icon.anchoredPosition = Vector2.zero;
+        icon.sizeDelta = Vector2.one * (Mathf.Max(1, tileSize) * DimerdalRules.BoardDiamondSize);
+    }
 
     internal bool IsCurrentLifetime(int version) =>
         this != null && LifetimeVersion == version && gameObject.activeInHierarchy;
@@ -643,6 +668,7 @@ public class TileView : MonoBehaviour,
 
     public void Init(BoardController board, int x, int y)
     {
+        DimerdalCollectionStarted = false;
         LifetimeVersion++;
         activeMoveToken++;
         this.board = board;
@@ -2837,6 +2863,10 @@ public class TileView : MonoBehaviour,
 
     public void SetSpecial(TileSpecial sp, bool deferVisualUpdate = false)
     {
+        // A normal diamond consumed to create/implant a special counts once, even
+        // though the special retains its base type until it is eventually cleared.
+        if (sp != TileSpecial.None && model.special == TileSpecial.None)
+            board?.CollectDimerdalDiamond(this);
         model.SetSpecial(sp);
 
         if (!deferVisualUpdate)
@@ -2878,6 +2908,7 @@ public class TileView : MonoBehaviour,
     // tarafı Init(ResetVisualState) + SetType + SetSpecial ile taşı yeniden kurar → havuz taşı "yeni" gelir.
     public void PrepareForRelease()
     {
+        DimerdalCollectionStarted = false;
         LifetimeVersion++;
         activeMoveToken++;
         // Bu taşın ÜSTÜNDE koşan her coroutine ölsün (fall/settle/reveal/idle-FX). Havuzdan yeniden
@@ -2991,6 +3022,13 @@ public class TileView : MonoBehaviour,
 
         bool isSpecial = model != null && model.special != TileSpecial.None;
         bool isMovable = isMovableObstacleTile;
+
+        if (!isSpecial && model != null && DimerdalRules.IsDiamond(model.type))
+        {
+            ApplyDimerdalIconBounds(tileSize);
+            iconImage.preserveAspect = true;
+            return;
+        }
 
         if (isMovable && isFullCellMovableSprite)
         {

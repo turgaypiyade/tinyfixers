@@ -1,5 +1,91 @@
 # Tasarım geri bildirimi
 
+## 229 — jel/pres taslağı reddi; açılış sonrası gerçek iş · kullanıcı · 2026-11-06
+
+**Kaynak:**“taşın altına jel koymuşsun sonra spreading jel var … diye bitecek bir oyun bu … bazen beni hiç anlamadığını ve kurallara uymadığını düşünüyorum”;ardından“devam eder misin”.
+
+**Durum:**v3 açıkça reddedildi. Statik PASS/PNG düzeni zorluk veya kaliteli oyun fikri kanıtı değildir. Çok sayıda gömülü jel kaynağını presin tam sütun temizlemesiyle birleştirmek bu229’da hedef yükünü erken tüketir. Sorun yalnız hamle veya görsel değildir.
+
+**Ders/kapsam:**En güçlü erken açılış/yardımcı etkisinden sonra hangi zorunlu işin kaldığını mekanik üzerinden değerlendir. Birbirini kolaylaştıran yayılma/alan temizlemeyi bağımsız zorluk katmanı sayma. Bu,her levelde jeli veya örtülü jeli yasaklama talebi değildir. Önceki çim altında sandık kullanmama yönü229 için geçerli;GrassFlower/Lily havuz hatırlatması zorunlu liste değildir.
+
+**Agent revizyonu:**v4nilüfer/dolap/oyma/iki aşamalı plastik;aynı28hamle. İlk special yaprak/alt çimi,dolap kapağı içerikleri bitirmez.47açık eşleşme yuvası ve12kilitli nilüferaltı taş doğal beslenir. Bu taslak henüz kullanıcı tarafından oynanmadı/onaylanmadı;statik/görsel kontrol denge kanıtı diye sunulmaz. v3 karşı örnek olarak arşivlenir.
+
+
+## 229 — yeni tasarım / çim-sandık tekrarı / havuz hatırlatması · kullanıcı · 2026-11-06
+
+**Kaynak:**“229 için yeni bir level tasarla lütfen çim altında sandık kullanma farklı birşeyler kullanabilirsin… şu anda eklemene gerek yok ama grass flower ve grass lilly bazen pas mı geçiyorsun hatırlatma için yazıyorum”.
+
+**Durum/kapsam:**Eski229yerine yeni tasarım açıkça istenir;bu229’da çim altında sandık kullanılmaz. Diğer level tasarımlarını değiştirme yetkisi yoktur. GrassFlower58 ve GrassWaterLily69 gözden kaçırılmayacak havuz seçenekleridir;229’a zorunlu ekleme değildir. Bütün levellarda çim veya sandık yasaklandı diye genellenmez.
+
+**Tekrar kullanılacak ders:**Yalnız son eklenen kaynakları veya çim-sandık döngüsünü tekrarlama;mevcut havuzdaki farklı açılma/yayılma/yardımcı mekaniklerini değerlendir. Kullanıcının hatırlatması bir zorunlu bileşen listesi değildir.
+
+**Agent uygulaması/sınır:**229’da oyma altıjel,iki pres,ikiRodos ve porselen sütunu seçildi;28hamle SuperHard. Flower/Lily bu seçime zorlanmadı. Statik/görsel kontrol var;yeni taslağın kullanıcı onayı veya oynanmış dengesi yok. Önceki229not/asset/PNG revizyonBeforeklasöründe saklı.
+
+## 226 — oyun fikri ve akış reddi · kullanıcı · 2026-11-06
+
+**Kullanıcı kaynağı:** “226 olmamış… duvarın verdiğim referans gibi bir yolun içerisinde olmasını… bir yerden yıkılınca domino taşları gibi yıkılması… altından da fenerler çıkacaktı… sağ üst köşeye… bu tür konumlamalar altta boşluk oluşturduğu için taş akışını bozuyor… değirmenler için ayrılmış biraz bağımsız duran ve specialla ulaşılması gereken hücrelerde… bu şekilde farklı bir oyun olmamış”.
+
+**Durum:**226 v1 reddedildi. Bu geri bildirim yalnız226’nın yeniden kurulmasını yetkilendirir;227–230 için onay veya revizyon isteği değildir.
+
+**Tekrar kullanılacak ders:** Referansın yalnız engel ailesini veya genel siluetini almak yeterli değildir. Bağlı bir yolun tek olayla açılması, altındaki içerik ve bağımsız alana special erişimi ilk kararın kendisidir. Bir tavan bloğunu sağ üste taşımak bu ilişkiyi kaybedip altında boş cepler yaratabilir. Önizlemede pinle dolu gösterilen bir başlangıç, açılan ilk taşlardan sonra aynı bölgenin beslenebileceğini kanıtlamaz. Katmanlar açılmadan önce de çalışma alanının fiziksel beslemesini değerlendir. Ayrı değirmen adası bu226 fikrine özeldir; bütün levellara zorunlu şablon yapılmaz.
+
+**Agent uygulaması / sınır:** Tek24hücre duvar yolu,24 gerçek gizli fener ve hole ile ayrılmış2×4değirmen adası. Başlangıç36/36 doğal dolum,pin0. Statik ve gerçek sprite görsel kontrolü var;v2 kullanıcı onayı/oynanmış denge yok. Önceki v1 görünümü ve asseti karşı örnek olarak revizyon Before klasöründe saklandı.
+
+## 226/227 referansları ve228–230 tasarım yetkisi — kullanıcı · 2026-11-06
+
+**Kullanıcı kaynağı:**226 için “duvarı, altında fener çıkar ama sütun bazlı dökülür sol tarafta bizim yel değirmenleri olabilir… şeklinde biraz inisiyatif”;227 referansı için “sculpting stones, strip lamp, plastic two obstacle”;228–230 için “diğer3 levelı228-229-230 (boss olacak) sen tasarla… fener, yeldeğirmeni,dimerdal… kullanıyor olabilirsin”.
+
+**Kapsam / ders:** Referansın açılma sırası ve dik/yatay ritmi alınır; başka oyunun bilinmeyen perde/kapı mekaniği kopyalanmaz.226/227 açık tasarım talebidir;228–230’da adı geçen üç engel her levele birlikte konacak zorunlu liste değildir.230Boss ve en fazla10satır.231 için yetki çıkarılmaz.
+
+**Agent uygulaması:**226 örtülü fener+sütun üretimi;227 raflar;228ünlem;229burgu;230arena. Bu beş taslak henüz kullanıcı tarafından değerlendirilmedi. Görsel agent değerlendirmesi batch visual-review kaydındadır; oynanmış denge yok.
+
+## Dimerdal üretimi kutu başına ayarlanır — kullanıcı · 2026-11-05
+
+**Kaynak:** “aslında leveleditor de kutuyu koyarken ben sayı vereyim. sen goals tabında onların toplamını kullan. yani 8 8 de diyebilirim biri için 6 diğerine 10 da diyebilirim”.
+
+**Kabul / kapsam:** Her yerleştirilmiş kutu kendi üretim adedine sahiptir; Goals miktarı toplamdan hesaplanır. Kendi adedini üreten kutu tek başına kırılır, diğer kutu devam eder. 6+10 veya8+8 toplam16'dır. Eski ortak üretim kotası ve toplu kırılma kuralı bu açık yönün gerisindedir. Ortak collectible ve mor ikon sürer; toplanan renkli ürünler aynı hedefe yazılır. Bu istek yerleşim/hamle değiştirme yetkisi değildir.
+
+**Agent uygulaması / sınır:** Ayar alanı/liste/rozet, otomatik hedef ve bağımsız runtime sayaçları eklendi. Eski toplamlar yalnız yeni kutu ayarları eklenerek korundu. İzole gerçek C# ve statik kontroller geçti. Unity editör etkileşimi/cihaz animasyonu veya oynanmış denge kullanıcı tarafından henüz değerlendirilmedi.
+
+## Mor elmas bütün renklerin ortak hedef sembolü — kullanıcı · 2026-11-05
+
+**Kaynak:** `modimerdal.png`; “goals prelevels ta bütün taşların ortak imajı olarak gösterelim”, yeşil ikon atanmışken sarının da toplanmasının problem yarattığını belirtti.
+
+**Kabul / kapsam:** Bütün elmas renkleri ortak bir hedef sayacına girdiği için Goals/PreLevel ikonu tek bir tahta rengini zorunluymuş gibi göstermemeli. Kullanıcının verdiği mor elmas ortak semboldür. Tahta, kutu içi ve uçuş kendi dört rengiyle sürer; renk eşleşme kuralı aynıdır. Mevcut onaylı level yerleşimlerine dokunulmaz; bu istek sadece elmas hedef ikonlarını değiştirme yetkisidir.
+
+**Agent kontrolü / sınır:** 221/222/224/225 override ve 16 varsayılan ikon, diğer 3035 dosya koruma, YAML ve HUD/PreLevel/sonuç çözüm yolları statik kontrol edildi. Gerçek sprite önizlemeleri açıldı. Kullanıcı bu son görseli cihazda henüz değerlendirmedi.
+
+## Dimerdal üretim sonunda yok olsun — kullanıcı · 2026-11-05
+
+**Kaynak:** “böyle biraz keygeneratora benzedi sanki, acaba taş üretimi bittiğinde kırılıp yok mu olsalar”.
+
+**Kabul / kapsam:** Gri ve düşük alfa kapanış yerine elmas kutusu üretimini tamamlayınca parçalanıp kalkar. Bu Dimerdal'ın tüm renk/boyutlarına ait ortak mekanik yönüdür; level yerleşimlerini değiştirme yetkisi değildir. Üretim tamamlanması son gerekli elmasın başarılı yerleşimidir, toplanması veya yalnız uçuşa çıkması değildir.
+
+**Agent uygulaması / sınır:** Mevcut büyük-parça havuzu kullanıldı; gerçek footprint serbest bırakıldı, alt katman/örtü ve başarısız uçuş korunuyor. Vuruş animasyonu kaldı. Kullanıcı yeni animasyonu cihazda henüz görmedi; bu kayıt oynanmış denge veya görsel sonuç onayı değildir.
+
+## 222–224 beğenisi,225 alt besleme ve Dimerdal tepkisi — kullanıcı · 2026-11-05
+
+**Kullanıcı:** “hepsi güzel.. sadece225.levelda altta çok boşluk var arada taşların kayacağı bir boşluk bıraksan da taşlar aşağıya yerleşse”; “elmas kutumuz hit alınca hiç animasyon yok ne koyabiliriz. Ayrıca üretmesi gereken elması üretince kapansın ve griye yakın alphası düşük bir renk olsun”.
+
+**Kabul / kapsam:**222–224görsel olarak beğenildi ve korunur.225'in genel fikri beğenildi;yalnız alt bölgeyi gerçekbesleme ile dolduran yerelrevizyon istenir. Başlangıçtaki boş cep bilinçli olsa bile kullanıcı daha dolu alt alan istiyorsa fiziksel besleme aç; önizlemede hayali taş veya motor değişikliğiyle kapatma. Kalıcı üretici gerekli ürünü tamamladığında kapalı/solukgri görünerek tükenmiş olduğunu açıkça anlatmalıdır. Vuruş tepkisi yalnız kabul edilen hasar/üretimi gösterir.
+
+**Agent uygulaması / ayrı değerlendirme:**225sayacı ve25hamlesi korunarak yan geçişler/köşekutuları düzenlendi,boş12→2. Dimerdal'a kısa büyüme/silkelenme/parlama ve son başarılı yerleşim sonrası kapalı/gri%45opak görünüm eklendi. Bunlar statik/izole kod kontrolü ve agent PNG incelemesidir; kullanıcı henüz v2'yi oynamadı,onaylanmış denge çıkarılmaz.
+
+## 222–225 kapsamı ve iki türlü şekil dili — kullanıcı · 2026-11-05
+
+**Kaynak / açık söz:** “şimdi 222 iyi tasarlarmısın kurallarımıza göre 225 dahil 222–225 level tasarlamamız lazım. bazen board gridleri birşekle benzer bazen içindeki engelleride birşekle benzetebiliriz”.
+
+**Kabul edilen kural ve kapsam:** yalnız 222–225 yetkilidir; bazen maskenin kendisi, bazen düz maskede engeller tanınabilir şekli oluşturur. Her boardu aynı dış siluete veya aynı iki kanada çevirmek gerekmez. Bu mesaj dört yeni taslağın görsel veya oynanmış denge onayı değildir; 1–221 ve 226+ için revizyon yetkisi vermez.
+
+**Agent'ın uygulaması / ayrı değerlendirme:** 222 yaprak ve 223 yatay anahtar maskesi; 224 iç çapa; 225 mühürlü kale avlusu. Görsel inceleme ve statik sonuçlar batch README'dedir. Kullanıcı henüz bu dört leveli denemedi.
+
+## 221 için yalnız tek Dimerdal rengi · 2026-11-04
+
+- **Kullanıcının açık talebi:** “şimdi sadece tek rengi tanıştırdığımız 221.levelı yaparmısın”. Dimerdal kod entegrasyonundan sonra yalnız221 tasarımı istenir. Önceki mekanik/görsel onay, bu levelin düzeni veya dengesi için onay değildir.
+- **Kabul edilen kapsam:** Tek Dimerdal rengi tanıtılır; normal taş havuzu farklı renkler içerebilir. Diğer Dimerdal renklerini ve ilgisiz yeni engelleri aynı levelde tanıştırma. Hedef kutu kırma değil, üretilip boardda ayrıca toplanan elmas adedidir.
+- **İlk taslak / son görsel onay:** Mavi Vitrin; iki mavi2×2 kutu,24hamle/8elmas,6normal renk pini. Kullanıcı oynarken “güzel kurdun oyunu beğendim” dedi; yerleşim korunur. Başarı oranı/hamle dengesi onayı değildir. Açık kutuda special üretimi ve üretim sonrası donma düzeltmesi istendi; sonrasında havadaki taşı aynı hareketiyle değiştirme, PatchBot hedefinin kalabilmesi ve TarpStatue ile aynı toplama animasyonu açıkça belirtildi. Teknik sonuç ve sınırlar `Docs/Checks/Dimerdal/README.md`; yeni runtime cihazda tekrar denenmedi.
+- **Koruma:** Önceki220level, kullanıcının211hamle24 ayarı,212onaylı yelken maskesi ve mevcutruntime aynen tutuldu.222'ye geçilmez.
+
 ## Eksik boss hedef ikonları · 2026-11-04
 
 - **Kullanıcı:** “boss levellarda goals te boss ikonu görünmüyor ... preleveleditorde de ... son eklediklerin için ikon eklememiş olabilirsin”.

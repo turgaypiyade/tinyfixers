@@ -1,0 +1,122 @@
+[
+  {
+    "asset": "Assets/_Project/Art/UI/Obstacles/Dimerdal/DimerdalFrameBlue.png",
+    "sha256": "4fe596710b70fa786106fc7b3c707d369c7c4219cb1933cc6fc2334b1cf6149f",
+    "spriteRect": [
+      136,
+      145,
+      978,
+      960
+    ]
+  },
+  {
+    "asset": "Assets/_Project/Art/UI/Obstacles/Dimerdal/DimerdalDiamondBlue.png",
+    "sha256": "4197128a6865992b110bd93cc5a4b762ca3d032ec611c8d4178b9f8e31a3b463",
+    "spriteRect": [
+      93,
+      108,
+      1048,
+      954
+    ]
+  },
+  {
+    "asset": "Assets/_Project/Art/UI/Obstacles/Dimerdal/DimerdalSlatBlue.png",
+    "sha256": "b006566a48f3f2871562ffe8394ca6a13dc38f56902713fafa0f21790e1349a4",
+    "spriteRect": [
+      108,
+      191,
+      1955,
+      342
+    ]
+  },
+  {
+    "asset": "Assets/_Project/Art/UI/Obstacles/Dimerdal/DimerdalFrameGreen.png",
+    "sha256": "a5ea38727159b2eb9f55b161ad83a71c8780e2991bacada5c363f91af408ce81",
+    "spriteRect": [
+      132,
+      143,
+      984,
+      966
+    ]
+  },
+  {
+    "asset": "Assets/_Project/Art/UI/Obstacles/Dimerdal/DimerdalDiamondGreen.png",
+    "sha256": "f6942bcf6caa06820419f29b7dff152be9684f8066163b83ba64de3fa64dece0",
+    "spriteRect": [
+      128,
+      144,
+      996,
+      883
+    ]
+  },
+  {
+    "asset": "Assets/_Project/Art/UI/Obstacles/Dimerdal/DimerdalSlatGreen.png",
+    "sha256": "15606a7d158efcb2dd7d98e2a0f406c288e5200bdc63eff22a92ff8da1ff6658",
+    "spriteRect": [
+      99,
+      189,
+      1974,
+      353
+    ]
+  },
+  {
+    "asset": "Assets/_Project/Art/UI/Obstacles/Dimerdal/DimerdalFrameYellow.png",
+    "sha256": "3b0e4494993bc8ff8eacdd7bb77660aabc54355e7f20ca4d5a3d401a3d0782d4",
+    "spriteRect": [
+      132,
+      144,
+      985,
+      964
+    ]
+  },
+  {
+    "asset": "Assets/_Project/Art/UI/Obstacles/Dimerdal/DimerdalDiamondYellow.png",
+    "sha256": "cd394106e87c94756557a853aef2e6def01e8bafa22a35d2a4737e75c8cf5c16",
+    "spriteRect": [
+      82,
+      95,
+      1084,
+      981
+    ]
+  },
+  {
+    "asset": "Assets/_Project/Art/UI/Obstacles/Dimerdal/DimerdalSlatYellow.png",
+    "sha256": "483efa0b16c9e2be3dd6035dadf09467721cbdb8b0f18897b2c7419ee7b3737c",
+    "spriteRect": [
+      104,
+      189,
+      1964,
+      347
+    ]
+  },
+  {
+    "asset": "Assets/_Project/Art/UI/Obstacles/Dimerdal/DimerdalFrameRed.png",
+    "sha256": "497d9f36f5d25c6bacbaaa3f4da62b8d888e6693cb92ade24105e90fd70e4991",
+    "spriteRect": [
+      131,
+      144,
+      986,
+      964
+    ]
+  },
+  {
+    "asset": "Assets/_Project/Art/UI/Obstacles/Dimerdal/DimerdalDiamondRed.png",
+    "sha256": "0642af4f23fb3388c71cd1297b66834ad05253864fab0f9be7d5408e2f6882d5",
+    "spriteRect": [
+      94,
+      112,
+      1046,
+      950
+    ]
+  },
+  {
+    "asset": "Assets/_Project/Art/UI/Obstacles/Dimerdal/DimerdalSlatRed.png",
+    "sha256": "d8a69b797eabb743dbb10f64927a17670bdf846b93fbfd3b77dcb9c15a2251b9",
+    "spriteRect": [
+      103,
+      190,
+      1966,
+      348
+    ]
+  }
+]

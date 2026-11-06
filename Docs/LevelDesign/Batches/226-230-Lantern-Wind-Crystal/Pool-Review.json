@@ -1,0 +1,539 @@
+{
+  "source": "Current ObstacleLibrary, LevelData.cs and active V1 catalog through225; raw IDs are not mechanic-family counts.",
+  "pool": [
+    {
+      "id": 1,
+      "name": "Down",
+      "firstActiveV1Appearance": null
+    },
+    {
+      "id": 2,
+      "name": "Right",
+      "firstActiveV1Appearance": null
+    },
+    {
+      "id": 3,
+      "name": "Shield2",
+      "firstActiveV1Appearance": null
+    },
+    {
+      "id": 4,
+      "name": "hits",
+      "firstActiveV1Appearance": 1
+    },
+    {
+      "id": 5,
+      "name": "chest2",
+      "firstActiveV1Appearance": 2
+    },
+    {
+      "id": 6,
+      "name": "chest3",
+      "firstActiveV1Appearance": 4
+    },
+    {
+      "id": 7,
+      "name": "plastic",
+      "firstActiveV1Appearance": 18
+    },
+    {
+      "id": 8,
+      "name": "plastic_orange",
+      "firstActiveV1Appearance": 16
+    },
+    {
+      "id": 9,
+      "name": "Plastic_Yellow",
+      "firstActiveV1Appearance": null
+    },
+    {
+      "id": 10,
+      "name": "PipeV_1x2",
+      "firstActiveV1Appearance": null
+    },
+    {
+      "id": 11,
+      "name": "Plastic_Blue",
+      "firstActiveV1Appearance": 17
+    },
+    {
+      "id": 12,
+      "name": "Plastic_Red",
+      "firstActiveV1Appearance": 24
+    },
+    {
+      "id": 13,
+      "name": "Plastic_Green",
+      "firstActiveV1Appearance": null
+    },
+    {
+      "id": 14,
+      "name": "Oil",
+      "firstActiveV1Appearance": 11
+    },
+    {
+      "id": 20,
+      "name": "Big_4x4",
+      "firstActiveV1Appearance": null
+    },
+    {
+      "id": 21,
+      "name": "ColorChest",
+      "firstActiveV1Appearance": 26
+    },
+    {
+      "id": 22,
+      "name": "EnergyContainer",
+      "firstActiveV1Appearance": null
+    },
+    {
+      "id": 23,
+      "name": "BatteryBox",
+      "firstActiveV1Appearance": null
+    },
+    {
+      "id": 24,
+      "name": "OmegaModul",
+      "firstActiveV1Appearance": null
+    },
+    {
+      "id": 25,
+      "name": "Mud",
+      "firstActiveV1Appearance": 6
+    },
+    {
+      "id": 26,
+      "name": "Tube",
+      "firstActiveV1Appearance": 41
+    },
+    {
+      "id": 27,
+      "name": "Wardrobe",
+      "firstActiveV1Appearance": 36
+    },
+    {
+      "id": 28,
+      "name": "SculptingStone",
+      "firstActiveV1Appearance": 51
+    },
+    {
+      "id": 29,
+      "name": "Magnet",
+      "firstActiveV1Appearance": 91
+    },
+    {
+      "id": 30,
+      "name": "HelmetPorcelain",
+      "firstActiveV1Appearance": 46
+    },
+    {
+      "id": 31,
+      "name": "HatLauncher",
+      "firstActiveV1Appearance": 31
+    },
+    {
+      "id": 32,
+      "name": "GoldMoney",
+      "firstActiveV1Appearance": 76
+    },
+    {
+      "id": 33,
+      "name": "Safe",
+      "firstActiveV1Appearance": 76
+    },
+    {
+      "id": 34,
+      "name": "Cargo",
+      "firstActiveV1Appearance": 21
+    },
+    {
+      "id": 35,
+      "name": "PlayerShieldPickup",
+      "firstActiveV1Appearance": 30
+    },
+    {
+      "id": 36,
+      "name": "EnemyShieldPickup",
+      "firstActiveV1Appearance": 30
+    },
+    {
+      "id": 37,
+      "name": "Barrel",
+      "firstActiveV1Appearance": null
+    },
+    {
+      "id": 38,
+      "name": "RocketBasket",
+      "firstActiveV1Appearance": 81
+    },
+    {
+      "id": 39,
+      "name": "SculptingSpecial",
+      "firstActiveV1Appearance": 56
+    },
+    {
+      "id": 40,
+      "name": "PlasticTwoStage",
+      "firstActiveV1Appearance": 61
+    },
+    {
+      "id": 41,
+      "name": "Barrell_v2",
+      "firstActiveV1Appearance": 86
+    },
+    {
+      "id": 42,
+      "name": "Grass",
+      "firstActiveV1Appearance": 66
+    },
+    {
+      "id": 43,
+      "name": "OverrideBatteryBox",
+      "firstActiveV1Appearance": 106
+    },
+    {
+      "id": 44,
+      "name": "KeyGenerator",
+      "firstActiveV1Appearance": 96
+    },
+    {
+      "id": 45,
+      "name": "EggBird",
+      "firstActiveV1Appearance": 111
+    },
+    {
+      "id": 46,
+      "name": "SpreadingGel",
+      "firstActiveV1Appearance": 101
+    },
+    {
+      "id": 47,
+      "name": "ToolThreat",
+      "firstActiveV1Appearance": 140
+    },
+    {
+      "id": 48,
+      "name": "ToolThreatYellow",
+      "firstActiveV1Appearance": null
+    },
+    {
+      "id": 49,
+      "name": "ToolThreatRed",
+      "firstActiveV1Appearance": null
+    },
+    {
+      "id": 50,
+      "name": "ToolThreatBlue",
+      "firstActiveV1Appearance": null
+    },
+    {
+      "id": 51,
+      "name": "ToolThreatGreen",
+      "firstActiveV1Appearance": null
+    },
+    {
+      "id": 52,
+      "name": "WaterTank",
+      "firstActiveV1Appearance": 116
+    },
+    {
+      "id": 53,
+      "name": "WaterPuddle",
+      "firstActiveV1Appearance": null
+    },
+    {
+      "id": 54,
+      "name": "WaterTankSmall",
+      "firstActiveV1Appearance": null
+    },
+    {
+      "id": 55,
+      "name": "Wall",
+      "firstActiveV1Appearance": 121
+    },
+    {
+      "id": 56,
+      "name": "MetalWall",
+      "firstActiveV1Appearance": 131
+    },
+    {
+      "id": 57,
+      "name": "Hamster",
+      "firstActiveV1Appearance": 136
+    },
+    {
+      "id": 58,
+      "name": "GrassFlower",
+      "firstActiveV1Appearance": 126
+    },
+    {
+      "id": 59,
+      "name": "GelLauncherUp",
+      "firstActiveV1Appearance": 141
+    },
+    {
+      "id": 60,
+      "name": "GelLauncherDown",
+      "firstActiveV1Appearance": null
+    },
+    {
+      "id": 61,
+      "name": "GelLauncherLeft",
+      "firstActiveV1Appearance": 215
+    },
+    {
+      "id": 62,
+      "name": "GelLauncherRight",
+      "firstActiveV1Appearance": 215
+    },
+    {
+      "id": 63,
+      "name": "PaintCanBox",
+      "firstActiveV1Appearance": 146
+    },
+    {
+      "id": 64,
+      "name": "AncientSeal",
+      "firstActiveV1Appearance": 151
+    },
+    {
+      "id": 65,
+      "name": "LaserCannon",
+      "firstActiveV1Appearance": 156
+    },
+    {
+      "id": 66,
+      "name": "BilliardBall",
+      "firstActiveV1Appearance": null
+    },
+    {
+      "id": 67,
+      "name": "BilliardPocket",
+      "firstActiveV1Appearance": null
+    },
+    {
+      "id": 68,
+      "name": "TarpStatue",
+      "firstActiveV1Appearance": 161
+    },
+    {
+      "id": 69,
+      "name": "GrassWaterLily",
+      "firstActiveV1Appearance": 166
+    },
+    {
+      "id": 70,
+      "name": "RhodesStatue",
+      "firstActiveV1Appearance": 171
+    },
+    {
+      "id": 71,
+      "name": "ColorCrateYellow",
+      "firstActiveV1Appearance": 178
+    },
+    {
+      "id": 72,
+      "name": "ColorCrateRed",
+      "firstActiveV1Appearance": 176
+    },
+    {
+      "id": 73,
+      "name": "ColorCrateBlue",
+      "firstActiveV1Appearance": 178
+    },
+    {
+      "id": 74,
+      "name": "ColorCrateGreen",
+      "firstActiveV1Appearance": 176
+    },
+    {
+      "id": 75,
+      "name": "Lantern",
+      "firstActiveV1Appearance": 181
+    },
+    {
+      "id": 76,
+      "name": "WaterChannel",
+      "firstActiveV1Appearance": 186
+    },
+    {
+      "id": 77,
+      "name": "GoldCoin",
+      "firstActiveV1Appearance": 71
+    },
+    {
+      "id": 78,
+      "name": "BirdHouse",
+      "firstActiveV1Appearance": 201
+    },
+    {
+      "id": 79,
+      "name": "LampStrip",
+      "firstActiveV1Appearance": 191
+    },
+    {
+      "id": 80,
+      "name": "Windmill",
+      "firstActiveV1Appearance": 206
+    },
+    {
+      "id": 81,
+      "name": "FlourSack",
+      "firstActiveV1Appearance": null
+    },
+    {
+      "id": 82,
+      "name": "FlourSackV",
+      "firstActiveV1Appearance": null
+    },
+    {
+      "id": 83,
+      "name": "Flour",
+      "firstActiveV1Appearance": null
+    },
+    {
+      "id": 84,
+      "name": "DimerdalBlue1x1",
+      "firstActiveV1Appearance": null
+    },
+    {
+      "id": 85,
+      "name": "DimerdalBlue2x2",
+      "firstActiveV1Appearance": 221
+    },
+    {
+      "id": 86,
+      "name": "DimerdalBlue3x3",
+      "firstActiveV1Appearance": null
+    },
+    {
+      "id": 87,
+      "name": "DimerdalGreen1x1",
+      "firstActiveV1Appearance": null
+    },
+    {
+      "id": 88,
+      "name": "DimerdalGreen2x2",
+      "firstActiveV1Appearance": 222
+    },
+    {
+      "id": 89,
+      "name": "DimerdalGreen3x3",
+      "firstActiveV1Appearance": null
+    },
+    {
+      "id": 90,
+      "name": "DimerdalYellow1x1",
+      "firstActiveV1Appearance": null
+    },
+    {
+      "id": 91,
+      "name": "DimerdalYellow2x2",
+      "firstActiveV1Appearance": 225
+    },
+    {
+      "id": 92,
+      "name": "DimerdalYellow3x3",
+      "firstActiveV1Appearance": null
+    },
+    {
+      "id": 93,
+      "name": "DimerdalRed1x1",
+      "firstActiveV1Appearance": null
+    },
+    {
+      "id": 94,
+      "name": "DimerdalRed2x2",
+      "firstActiveV1Appearance": 224
+    },
+    {
+      "id": 95,
+      "name": "DimerdalRed3x3",
+      "firstActiveV1Appearance": null
+    },
+    {
+      "id": 96,
+      "name": "DimerdalDiamondBlue",
+      "firstActiveV1Appearance": null
+    },
+    {
+      "id": 97,
+      "name": "DimerdalDiamondGreen",
+      "firstActiveV1Appearance": null
+    },
+    {
+      "id": 98,
+      "name": "DimerdalDiamondYellow",
+      "firstActiveV1Appearance": null
+    },
+    {
+      "id": 99,
+      "name": "DimerdalDiamondRed",
+      "firstActiveV1Appearance": null
+    }
+  ],
+  "focus": [
+    {
+      "id": 55,
+      "name": "Wall",
+      "firstActiveV1Appearance": 121
+    },
+    {
+      "id": 75,
+      "name": "Lantern",
+      "firstActiveV1Appearance": 181
+    },
+    {
+      "id": 79,
+      "name": "LampStrip",
+      "firstActiveV1Appearance": 191
+    },
+    {
+      "id": 80,
+      "name": "Windmill",
+      "firstActiveV1Appearance": 206
+    },
+    {
+      "id": 84,
+      "name": "DimerdalBlue1x1",
+      "firstActiveV1Appearance": null
+    },
+    {
+      "id": 85,
+      "name": "DimerdalBlue2x2",
+      "firstActiveV1Appearance": 221
+    },
+    {
+      "id": 88,
+      "name": "DimerdalGreen2x2",
+      "firstActiveV1Appearance": 222
+    },
+    {
+      "id": 94,
+      "name": "DimerdalRed2x2",
+      "firstActiveV1Appearance": 224
+    },
+    {
+      "id": 95,
+      "name": "DimerdalRed3x3",
+      "firstActiveV1Appearance": null
+    }
+  ],
+  "selectedFamilies": [
+    "Wall",
+    "Lantern",
+    "Windmill/Flour",
+    "LampStrip",
+    "SculptingStone",
+    "PlasticTwoStage",
+    "ColorCrate/Grass",
+    "Dimerdal"
+  ],
+  "alternativesConsidered": {
+    "Safe/AncientSeal": "225 just used the large seal; another seal gate would repeat the recent opening.",
+    "WaterChannel/WaterTank/Gel": "Extra floor/liquid goals distract from the reference and compete with flour placement.",
+    "BirdHouse/KeyGenerator": "Keep the final three focused on the requested diamond/wind/lantern families.",
+    "Tube/Magnet": "Not needed to recreate the reference; current special lines cross mask gaps directly.",
+    "GoldCoin": "Column-fill machinery supports the request, but bonus gold is not the requested lantern content."
+  }
+}

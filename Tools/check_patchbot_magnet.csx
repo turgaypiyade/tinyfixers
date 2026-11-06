@@ -19,7 +19,7 @@ using System.Collections.Generic;
 public struct Vector2Int {public int x,y;public Vector2Int(int x,int y){this.x=x;this.y=y;}}
 public struct Vector3 {public float x,y,z;public Vector3(float x,float y,float z){this.x=x;this.y=y;this.z=z;}public static Vector3 operator+(Vector3 a,Vector3 b)=>new Vector3(a.x+b.x,a.y+b.y,a.z+b.z);public static Vector3 operator*(Vector3 a,float b)=>new Vector3(a.x*b,a.y*b,a.z*b);}
 public static class Mathf {public static int Min(int a,int b)=>Math.Min(a,b);public static int Max(int a,int b)=>Math.Max(a,b);}
-public enum ObstacleId {None,SpreadingGel,Hamster,KeyGenerator,Tube,Magnet,Safe,Stone}
+public enum ObstacleId {None,SpreadingGel,Hamster,KeyGenerator,Tube,Magnet,Safe,Stone,Wall,MetalWall}
 public enum TileSpecial {None,LineH,LineV,PulseCore}
 public class TileView {public int X,Y;}
 public class PatchbotComboService {public bool IsGelSpreadTarget(int x,int y,TileView tile)=>false;}

@@ -72,19 +72,24 @@ def load(catalog_path=None):
         events=[(s.get('stackOrder',0),0,s['obstacleId'],s) for s in custom['stackedObstacles']]
         events += [(s.get('stackOrder',0),1,33,s) for s in custom['safes']]
         events += [(s.get('stackOrder',0),2,64,s) for s in custom['ancientSeals']]
+        grouped_walls=set()
         for order,kind,o,s in sorted(events,key=lambda e:e[:2]):
             origin=s['originCellIndex'];bw,bh=(s.get('width',2),s.get('height',2)) if kind else footprint(o)
+            runtime_origin=origin
+            if o in (55,56) and 0<s.get('wallPieceOriginPlusOne',0)<=origin+1:
+                runtime_origin=s['wallPieceOriginPlusOne']-1
             if o==68:
                 entry=next((x for x in custom['tarpStatues'] if x['originCellIndex']==origin),{})
                 bw=bh=max(2,entry.get('size',2))
-            counts[o]+=1
+            if runtime_origin==origin and not s.get('wallPieceOriginPlusOne',0):counts[o]+=1
+            elif (o,runtime_origin) not in grouped_walls:counts[o]+=1;grouped_walls.add((o,runtime_origin))
             for dy in range(bh):
                 for dx in range(bw):
                     x,y=origin%w+dx,origin//w+dy
                     if not(0<=x<w and 0<=y<h):
                         issues.append(dict(obstacleId=o,origin=origin,reason='overlay footprint outside board; omitted from geometry'))
                         continue
-                    j=y*w+x;top[j]=o;origins[j]=origin;depth[j]+=1
+                    j=y*w+x;top[j]=o;origins[j]=runtime_origin;depth[j]+=1
         blocked=[bool(data['cells'][i] and o and (stage(o,'blocksCells') or stage(o,'behavior')==3)) for i,o in enumerate(top)]
         levels.append(dict(level=n,name=names.get(n,''),levelKey=level_key,asset=str(p.relative_to(ROOT)),width=w,height=h,moves=int_field(t,'moves'),kind=int_field(t,'levelKind'),data=data,top=top,topOrigins=origins,blocked=blocked,obstacleInstances=dict(counts),custom=custom,maxAuthoredDepth=max(depth),geometryWarnings=issues,goals=parse_entries(t,'goals')))
     assert len({d['level'] for d in levels})==len(levels)

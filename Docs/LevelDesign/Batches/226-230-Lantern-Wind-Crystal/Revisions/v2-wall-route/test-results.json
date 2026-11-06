@@ -1,0 +1,14 @@
+{
+  "result": "PASS for scoped checks",
+  "productionLayeredWallChecks": 265,
+  "productionProgressiveCollapseChecks": 1356,
+  "oldStampReproduction": "24 individual origins reproduced",
+  "protectedFiles": 5278,
+  "changedLevelAssets": [
+    226
+  ],
+  "unchangedLevelAssets": "1\u2013225 and227\u2013230",
+  "legacyHarnessLimits": "See legacy-harness-status.json; existing Dimerdal doubles gaps, seven extracted production methods unchanged from Before",
+  "buildOrPlayOrBoardSimulation": false,
+  "balanceMeasured": false
+}

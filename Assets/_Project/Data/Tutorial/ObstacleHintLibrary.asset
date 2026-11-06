@@ -469,3 +469,75 @@ MonoBehaviour:
     fallbackTitle: Flour
     locKey: hint_obstacle_flour
     fallbackText:
+  - id: 84
+    iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_dimerdal_name
+    fallbackTitle: Dimerdal
+    locKey: hint_obstacle_dimerdal
+    fallbackText: Open the four shutter slats with adjacent matching colors or specials. Each matching-color group beside the open box creates one diamond on the board. Collect diamonds with adjacent matches or specials; every color counts toward the same goal.
+  - id: 85
+    iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_dimerdal_name
+    fallbackTitle: Dimerdal
+    locKey: hint_obstacle_dimerdal
+    fallbackText: Open the four shutter slats with adjacent matching colors or specials. Each matching-color group beside the open box creates one diamond on the board. Collect diamonds with adjacent matches or specials; every color counts toward the same goal.
+  - id: 86
+    iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_dimerdal_name
+    fallbackTitle: Dimerdal
+    locKey: hint_obstacle_dimerdal
+    fallbackText: Open the four shutter slats with adjacent matching colors or specials. Each matching-color group beside the open box creates one diamond on the board. Collect diamonds with adjacent matches or specials; every color counts toward the same goal.
+  - id: 87
+    iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_dimerdal_name
+    fallbackTitle: Dimerdal
+    locKey: hint_obstacle_dimerdal
+    fallbackText: Open the four shutter slats with adjacent matching colors or specials. Each matching-color group beside the open box creates one diamond on the board. Collect diamonds with adjacent matches or specials; every color counts toward the same goal.
+  - id: 88
+    iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_dimerdal_name
+    fallbackTitle: Dimerdal
+    locKey: hint_obstacle_dimerdal
+    fallbackText: Open the four shutter slats with adjacent matching colors or specials. Each matching-color group beside the open box creates one diamond on the board. Collect diamonds with adjacent matches or specials; every color counts toward the same goal.
+  - id: 89
+    iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_dimerdal_name
+    fallbackTitle: Dimerdal
+    locKey: hint_obstacle_dimerdal
+    fallbackText: Open the four shutter slats with adjacent matching colors or specials. Each matching-color group beside the open box creates one diamond on the board. Collect diamonds with adjacent matches or specials; every color counts toward the same goal.
+  - id: 90
+    iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_dimerdal_name
+    fallbackTitle: Dimerdal
+    locKey: hint_obstacle_dimerdal
+    fallbackText: Open the four shutter slats with adjacent matching colors or specials. Each matching-color group beside the open box creates one diamond on the board. Collect diamonds with adjacent matches or specials; every color counts toward the same goal.
+  - id: 91
+    iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_dimerdal_name
+    fallbackTitle: Dimerdal
+    locKey: hint_obstacle_dimerdal
+    fallbackText: Open the four shutter slats with adjacent matching colors or specials. Each matching-color group beside the open box creates one diamond on the board. Collect diamonds with adjacent matches or specials; every color counts toward the same goal.
+  - id: 92
+    iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_dimerdal_name
+    fallbackTitle: Dimerdal
+    locKey: hint_obstacle_dimerdal
+    fallbackText: Open the four shutter slats with adjacent matching colors or specials. Each matching-color group beside the open box creates one diamond on the board. Collect diamonds with adjacent matches or specials; every color counts toward the same goal.
+  - id: 93
+    iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_dimerdal_name
+    fallbackTitle: Dimerdal
+    locKey: hint_obstacle_dimerdal
+    fallbackText: Open the four shutter slats with adjacent matching colors or specials. Each matching-color group beside the open box creates one diamond on the board. Collect diamonds with adjacent matches or specials; every color counts toward the same goal.
+  - id: 94
+    iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_dimerdal_name
+    fallbackTitle: Dimerdal
+    locKey: hint_obstacle_dimerdal
+    fallbackText: Open the four shutter slats with adjacent matching colors or specials. Each matching-color group beside the open box creates one diamond on the board. Collect diamonds with adjacent matches or specials; every color counts toward the same goal.
+  - id: 95
+    iconOverride: {fileID: 0}
+    titleLocKey: hint_obstacle_dimerdal_name
+    fallbackTitle: Dimerdal
+    locKey: hint_obstacle_dimerdal
+    fallbackText: Open the four shutter slats with adjacent matching colors or specials. Each matching-color group beside the open box creates one diamond on the board. Collect diamonds with adjacent matches or specials; every color counts toward the same goal.

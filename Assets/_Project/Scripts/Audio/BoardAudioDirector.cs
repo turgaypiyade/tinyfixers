@@ -16,6 +16,40 @@ public class BoardAudioDirector : MonoBehaviour
     private const float SameClipWindow = 0.06f;
     private readonly Dictionary<AudioClip, float> lastClipTimes = new Dictionary<AudioClip, float>(32);
     private float suppressFallsUntil = -999f;
+    private readonly List<ClipLoop> clipLoops = new List<ClipLoop>(2);
+
+    private sealed class ClipLoop : System.IDisposable
+    {
+        public BoardAudioDirector owner;
+        public AudioClip clip;
+        public float volume;
+        public EventSfx.Handle handle;
+        public void Dispose()
+        {
+            if (owner == null) return;
+            var previous = owner; owner = null;
+            EventSfx.Stop(handle); previous.clipLoops.Remove(this);
+        }
+    }
+
+    public System.IDisposable StartLoopClip(AudioClip clip, float volume = 1f)
+    {
+        if (!isActiveAndEnabled || clip == null) return null;
+        var loop = new ClipLoop { owner = this, clip = clip, volume = Mathf.Clamp01(volume) };
+        clipLoops.Add(loop);
+        if (GameSettings.SoundEnabled) loop.handle = EventSfx.PlayTrackedClip(clip, loop.volume, true);
+        return loop;
+    }
+
+    private void Update()
+    {
+        if (!GameSettings.SoundEnabled) return;
+        for (int i = 0; i < clipLoops.Count; i++)
+        {
+            var loop = clipLoops[i];
+            if (!EventSfx.IsPlaying(loop.handle)) loop.handle = EventSfx.PlayTrackedClip(loop.clip, loop.volume, true);
+        }
+    }
 
     private struct ResolvedPlay
     {
@@ -44,6 +78,7 @@ public class BoardAudioDirector : MonoBehaviour
         ComboBehaviorEvents.ComboTriggered -= HandleComboTriggered;
         SystemOverrideBehaviorEvents.OverrideFanoutStarted -= HandleOverrideFanoutStarted;
         StopAllCoroutines();
+        while (clipLoops.Count > 0) clipLoops[clipLoops.Count - 1].Dispose();
         if (transientSource != null) transientSource.Stop();
         if (accentSource != null && accentSource != transientSource) accentSource.Stop();
     }
@@ -51,6 +86,9 @@ public class BoardAudioDirector : MonoBehaviour
     // Mixer atanmamış board kaynakları da Settings değişikliğine anında uyar.
     private void ApplySoundEnabled(bool enabled)
     {
+        if (!enabled)
+            for (int i = 0; i < clipLoops.Count; i++)
+            { EventSfx.Stop(clipLoops[i].handle); clipLoops[i].handle = default; }
         if (transientSource != null) transientSource.mute = !enabled;
         if (accentSource != null && accentSource != transientSource) accentSource.mute = !enabled;
     }

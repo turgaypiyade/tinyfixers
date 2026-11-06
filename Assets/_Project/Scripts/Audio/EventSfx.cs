@@ -56,10 +56,12 @@ public static class EventSfx
 
         Ensure();
         int i = PickSource();
+        if (i < 0) return default;
         var src = s_pool[i];
         int token = ++s_tokens[i];
         src.Stop();
         src.clip = clip;
+        src.loop = false;
         src.volume = Mathf.Clamp01(cue.volume * volumeScale);
         src.pitch = Mathf.Clamp(pitch * (1f + UnityEngine.Random.Range(-cue.pitchJitter, cue.pitchJitter)), 0.1f, 3f);
         src.mute = !GameSettings.SoundEnabled;
@@ -71,6 +73,24 @@ public static class EventSfx
         return new Handle(i, token);
     }
 
+    // BoardAudioDirector borrows the existing central voice pool for owned clip loops.
+    // Loop voices are protected from one-shot stealing; no obstacle creates AudioSources.
+    public static Handle PlayTrackedClip(AudioClip clip, float volume, bool loop)
+    {
+        if (clip == null || !GameSettings.SoundEnabled) return default;
+        Ensure();
+        int i = PickSource();
+        if (i < 0) return default;
+        var src = s_pool[i]; int token = ++s_tokens[i];
+        src.Stop(); src.clip = clip; src.loop = loop; src.volume = Mathf.Clamp01(volume);
+        src.pitch = 1f; src.mute = !GameSettings.SoundEnabled; src.Play();
+        return new Handle(i, token);
+    }
+
+    public static bool IsPlaying(Handle handle) => handle.Token != 0 && s_pool != null
+        && handle.Index >= 0 && handle.Index < s_pool.Length && s_tokens[handle.Index] == handle.Token
+        && s_pool[handle.Index] != null && s_pool[handle.Index].isPlaying;
+
     public static void Stop(Handle handle)
     {
         if (handle.Token == 0 || s_pool == null || handle.Index < 0 || handle.Index >= s_pool.Length
@@ -80,6 +100,7 @@ public static class EventSfx
         if (source == null) return;
         source.Stop();
         source.clip = null;
+        source.loop = false;
     }
 
     public static void StartAmbient()
@@ -105,9 +126,9 @@ public static class EventSfx
         for (int i = 0; i < s_pool.Length; i++)
             if (!s_pool[i].isPlaying) return i;
         // Hepsi meşgul → en çok ilerlemiş olanı devral.
-        int best = 0;
-        for (int i = 1; i < s_pool.Length; i++)
-            if (s_pool[i].time > s_pool[best].time) best = i;
+        int best = -1;
+        for (int i = 0; i < s_pool.Length; i++)
+            if (!s_pool[i].loop && (best < 0 || s_pool[i].time > s_pool[best].time)) best = i;
         return best;
     }
 

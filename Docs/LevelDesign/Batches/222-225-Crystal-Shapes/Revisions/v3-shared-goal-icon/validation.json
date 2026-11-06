@@ -1,0 +1,23 @@
+{
+  "result": "PASS",
+  "levels": [
+    221,
+    222,
+    224,
+    225
+  ],
+  "sharedDefaultGoalIcons": 16,
+  "protectedFiles": 3035,
+  "unrelatedChanges": [],
+  "exactSourcePng": true,
+  "preserved": [
+    "board and box artwork",
+    "runtime code",
+    "level layouts/layers/pins",
+    "moves",
+    "goal amounts/types",
+    "catalog/names",
+    "other goal icons"
+  ],
+  "limits": "Static YAML, exact scoped asset comparison and UI source-path review. No Unity build/Play/device test or gameplay simulation."
+}

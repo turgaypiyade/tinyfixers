@@ -11,6 +11,9 @@ public sealed class GrassWaterLilyService : MonoBehaviour
     public const float FlowerSizeRatio = 1.12f;
     private const float FallingPetalScale = 1.6f;
     private const float SwallowSeconds = 0.48f;
+    // CF1–CF5 remain the idle/stored/spit poses. Four open→closed strips follow them.
+    private const int DirectionalFrameStart = 5, DirectionalFrameCount = 5;
+    private const float DirectionalFrameScale = 1.44f; // 640px padded canvas; match CF1's visible open size.
     private const float SpitWindup = 0.18f, SpitTravel = 0.88f, SpitLanding = 0.12f;
     private const float HitSwaySeconds = 0.32f, HitSwayImpulse = 280f;
     private const float HitSwayMaxAngle = 6f;
@@ -38,7 +41,7 @@ public sealed class GrassWaterLilyService : MonoBehaviour
         public Vector3 spitLaunch, spitControlA, spitControlB;
         public float spitPopDuration;
         public float age = -1, pose = 1, launchAge = -1, launchScale = 0.12f;
-        public int lastFrame = -1;
+        public int lastFrame = -1, swallowDirection;
         public Vector2 lean, home, spitDirection, swallowOffset;
         public IDisposable job, hold;
         public readonly Vector2Int[] heldCell = new Vector2Int[1];
@@ -201,6 +204,9 @@ public sealed class GrassWaterLilyService : MonoBehaviour
         Vector3 offset = transform.InverseTransformVector(from - to);
         lily.lean = new Vector2(offset.x, offset.y).normalized;
         lily.swallowOffset = new Vector2(offset.x, offset.y);
+        int dx = target.X - lily.cell % board.Width;
+        int dy = target.Y - lily.cell / board.Width;
+        lily.swallowDirection = dy < 0 ? 0 : dx > 0 ? 1 : dy > 0 ? 2 : 3; // Up,Right,Down,Left in grid coordinates.
         // Only the special is removed: the normal tile stays, with no clear/goal/gear credit.
         target.SetSpecial(TileSpecial.None, deferVisualUpdate: true);
         if (lily.baseType != TileType.Gear && lily.baseType != TileType.Core
@@ -486,7 +492,7 @@ public sealed class GrassWaterLilyService : MonoBehaviour
     }
     private void SetFrame(Lily lily, int frame)
     {
-        if (frame == lily.lastFrame) return;
+        if (frame == lily.lastFrame && lily.image.sprite == frames[frame]) return;
         lily.lastFrame = frame; lily.image.sprite = frames[frame];
     }
     private void AnimateSwallow(Lily lily)
@@ -500,14 +506,25 @@ public sealed class GrassWaterLilyService : MonoBehaviour
         rt.localPosition = lily.from;
         rt.localScale = Vector3.one * Mathf.Lerp(1f, 0.02f, bite);
         lily.pose = t;
+        bool directional = frames.Count >= DirectionalFrameStart + 4 * DirectionalFrameCount;
         if (!lily.progress.IsDead && !lily.completed)
-            SetFrame(lily, Mathf.Min(4, (int)(Mathf.Clamp01((t - 0.32f) / 0.42f) * 5)));
+        {
+            // Finish closing before return starts; keep ONLY that closed frame on the way home.
+            int frame = Mathf.Min(4, (int)(Mathf.Clamp01((t - 0.28f) / 0.36f) * 5));
+            SetFrame(lily, directional ? DirectionalFrameStart + lily.swallowDirection * DirectionalFrameCount + frame : frame);
+        }
         lily.rect.anchoredPosition = lily.home + lily.swallowOffset * (0.9f * reach);
-        lily.rect.localScale = new Vector3(1f + Mathf.Abs(lily.lean.x) * 0.18f * reach,
-            1f + Mathf.Abs(lily.lean.y) * 0.18f * reach, 1f);
-        lily.rect.localRotation = Quaternion.Euler(-lily.lean.y * 26f * reach,
-            lily.lean.x * 26f * reach, -lily.lean.x * 12f * reach);
-        if (t >= 1) CompleteFlight(lily);
+        // Direction and deformation are already drawn in the supplied frames; keep their aspect.
+        lily.rect.localScale = directional ? Vector3.one * DirectionalFrameScale
+            : new Vector3(1f + Mathf.Abs(lily.lean.x) * 0.18f * reach,
+                1f + Mathf.Abs(lily.lean.y) * 0.18f * reach, 1f);
+        lily.rect.localRotation = directional ? Quaternion.identity
+            : Quaternion.Euler(-lily.lean.y * 26f * reach, lily.lean.x * 26f * reach, -lily.lean.x * 12f * reach);
+        if (t >= 1)
+        {
+            if (!lily.progress.IsDead && !lily.completed) SetFrame(lily, 4); // Existing swollen stored pose at home.
+            CompleteFlight(lily);
+        }
     }
     private void AnimateSpit(Lily lily)
     {
