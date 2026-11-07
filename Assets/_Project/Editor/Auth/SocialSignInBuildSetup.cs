@@ -2,6 +2,7 @@
 using System.IO;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
+using System.Xml;
 using Facebook.Unity.Settings;
 using UnityEditor;
 using UnityEditor.Build;
@@ -40,6 +41,16 @@ public sealed class SocialSignInBuildSetup : IPreprocessBuildWithReport
             && !string.IsNullOrWhiteSpace(config.facebookClientToken))
         {
             Facebook.Unity.Editor.ManifestMod.GenerateManifest();
+            // The Facebook template hardcodes debuggable=true; let Unity's build type own it.
+            const string manifestPath = "Assets/Plugins/Android/AndroidManifest.xml";
+            var manifest = new XmlDocument();
+            manifest.Load(manifestPath);
+            var application = manifest.SelectSingleNode("/manifest/application") as XmlElement;
+            if (application != null)
+            {
+                application.RemoveAttribute("debuggable", "http://schemas.android.com/apk/res/android");
+                manifest.Save(manifestPath);
+            }
             if (!Facebook.Unity.Editor.ManifestMod.CheckManifest())
                 throw new BuildFailedException("Facebook Android manifest configuration is incomplete.");
         }
