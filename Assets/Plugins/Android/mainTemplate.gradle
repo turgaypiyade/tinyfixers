@@ -6,15 +6,33 @@ apply from: '../shared/common.gradle'
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
 // Android Resolver Dependencies Start
-    implementation 'com.google.android.gms:play-services-base:18.10.0' // Assets/Firebase/Editor/AppDependencies.xml:20
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.4' // Assets/GoogleMobileAds/Editor/GoogleMobileAdsDependencies.xml:12
+    implementation 'androidx.credentials:credentials:1.5.0' // Assets/_Project/Editor/Auth/GoogleSignInDependencies.xml:10
+    implementation 'androidx.credentials:credentials-play-services-auth:1.5.0' // Assets/_Project/Editor/Auth/GoogleSignInDependencies.xml:11
+    implementation 'androidx.fragment:fragment:1.7.1' // Assets/GoogleMobileAds/Editor/GoogleMobileAdsDependencies.xml:22
+    implementation 'androidx.lifecycle:lifecycle-process:2.6.2' // Assets/GoogleMobileAds/Editor/GoogleMobileAdsDependencies.xml:17
+    implementation 'com.android.support:appcompat-v7:25.3.1' // Facebook.Unity.Editor.AndroidSupportLibraryResolver.addSupportLibraryDependency
+    implementation 'com.android.support:cardview-v7:25.3.1' // Facebook.Unity.Editor.AndroidSupportLibraryResolver.addSupportLibraryDependency
+    implementation 'com.android.support:customtabs:25.3.1' // Facebook.Unity.Editor.AndroidSupportLibraryResolver.addSupportLibraryDependency
+    implementation 'com.android.support:support-v4:25.3.1' // Facebook.Unity.Editor.AndroidSupportLibraryResolver.addSupportLibraryDependency
+    implementation 'com.facebook.android:facebook-applinks:[19.0.0,20)' // Assets/FacebookSDK/Plugins/Editor/Dependencies.xml:6
+    implementation 'com.facebook.android:facebook-core:[19.0.0,20)' // Assets/FacebookSDK/Plugins/Editor/Dependencies.xml:5
+    implementation 'com.facebook.android:facebook-gamingservices:[19.0.0,20)' // Assets/FacebookSDK/Plugins/Editor/Dependencies.xml:9
+    implementation 'com.facebook.android:facebook-login:[19.0.0,20)' // Assets/FacebookSDK/Plugins/Editor/Dependencies.xml:7
+    implementation 'com.facebook.android:facebook-share:[19.0.0,20)' // Assets/FacebookSDK/Plugins/Editor/Dependencies.xml:8
+    implementation 'com.google.android.gms:play-services-ads:25.5.0' // Assets/GoogleMobileAds/Editor/GoogleMobileAdsDependencies.xml:7
+    implementation 'com.google.android.gms:play-services-base:18.10.1' // Assets/Firebase/Editor/AppDependencies.xml:20
+    implementation 'com.google.android.libraries.identity.googleid:googleid:1.1.1' // Assets/_Project/Editor/Auth/GoogleSignInDependencies.xml:12
+    implementation 'com.google.android.ump:user-messaging-platform:4.0.0' // Assets/GoogleMobileAds/Editor/GoogleUmpDependencies.xml:7
     implementation 'com.google.firebase:firebase-analytics:23.2.0' // Assets/Firebase/Editor/FirestoreDependencies.xml:18
-    implementation 'com.google.firebase:firebase-analytics-unity:13.13.0' // Assets/Firebase/Editor/AnalyticsDependencies.xml:21
-    implementation 'com.google.firebase:firebase-app-unity:13.13.0' // Assets/Firebase/Editor/AppDependencies.xml:25
-    implementation 'com.google.firebase:firebase-auth:24.1.0' // Assets/Firebase/Editor/AuthDependencies.xml:16
-    implementation 'com.google.firebase:firebase-auth-unity:13.13.0' // Assets/Firebase/Editor/AuthDependencies.xml:23
-    implementation 'com.google.firebase:firebase-common:22.1.0' // Assets/Firebase/Editor/AppDependencies.xml:16
-    implementation 'com.google.firebase:firebase-firestore:26.4.0' // Assets/Firebase/Editor/FirestoreDependencies.xml:16
-    implementation 'com.google.firebase:firebase-firestore-unity:13.13.0' // Assets/Firebase/Editor/FirestoreDependencies.xml:23
+    implementation 'com.google.firebase:firebase-analytics-unity:13.17.1' // Assets/Firebase/Editor/AnalyticsDependencies.xml:21
+    implementation 'com.google.firebase:firebase-app-unity:13.17.1' // Assets/Firebase/Editor/AppDependencies.xml:25
+    implementation 'com.google.firebase:firebase-auth:24.2.0' // Assets/Firebase/Editor/AuthDependencies.xml:16
+    implementation 'com.google.firebase:firebase-auth-unity:13.17.1' // Assets/Firebase/Editor/AuthDependencies.xml:23
+    implementation 'com.google.firebase:firebase-common:22.2.1' // Assets/Firebase/Editor/AppDependencies.xml:16
+    implementation 'com.google.firebase:firebase-firestore:26.6.0' // Assets/Firebase/Editor/FirestoreDependencies.xml:16
+    implementation 'com.google.firebase:firebase-firestore-unity:13.17.1' // Assets/Firebase/Editor/FirestoreDependencies.xml:23
+    implementation 'com.parse.bolts:bolts-android:1.4.0' // Assets/FacebookSDK/Plugins/Editor/Dependencies.xml:4
 // Android Resolver Dependencies End
 **DEPS**}
 
