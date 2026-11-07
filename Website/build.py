@@ -78,6 +78,10 @@ def main() -> None:
     import shell                       # /privacy/ ve /terms/ (TR/EN tek sayfa)
     shell.build(OUT)
 
+    # AdMob app-ads.txt: Android = Julvera yayıncısı, iOS = eski yayıncı (iOS taşınınca güncelle).
+    (OUT / "app-ads.txt").write_text(
+        "google.com, pub-4556545520045571, DIRECT, f08c47fec0942fa0\n"
+        "google.com, pub-2688020202720647, DIRECT, f08c47fec0942fa0\n", encoding="utf-8")
     (OUT / "robots.txt").write_text(f"User-agent: *\nAllow: /\n\nSitemap: {SITE}/sitemap.xml\n", encoding="utf-8")
 
     today = datetime.date.today().isoformat()
