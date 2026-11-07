@@ -1,0 +1,1767 @@
+[
+  {
+    "level": 235,
+    "closest": [
+      {
+        "level": 205,
+        "name": "Mühürlü Kuş Parkı",
+        "blockerOverlap": 0.6667,
+        "maskOverlap": 0.8586,
+        "orientation": "dikey ayna",
+        "sameDirectionOverlap": 0.5,
+        "croppedShapeOverlap": 0.7123,
+        "croppedShapeOrientation": "dikey ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      },
+      {
+        "level": 72,
+        "name": "Hassas Sevkiyat",
+        "blockerOverlap": 0.6452,
+        "maskOverlap": 0.7778,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.6452,
+        "croppedShapeOverlap": 0.6984,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      },
+      {
+        "level": 172,
+        "name": "Mor Akıntı",
+        "blockerOverlap": 0.6,
+        "maskOverlap": 0.9394,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.6,
+        "croppedShapeOverlap": 0.6023,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      },
+      {
+        "level": 24,
+        "name": "Kızıl Hat",
+        "blockerOverlap": 0.5503,
+        "maskOverlap": 0.9394,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.5503,
+        "croppedShapeOverlap": 0.596,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      }
+    ],
+    "cropped": [
+      {
+        "level": 205,
+        "name": "Mühürlü Kuş Parkı",
+        "blockerOverlap": 0.6667,
+        "maskOverlap": 0.8586,
+        "orientation": "dikey ayna",
+        "sameDirectionOverlap": 0.5,
+        "croppedShapeOverlap": 0.7123,
+        "croppedShapeOrientation": "dikey ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      },
+      {
+        "level": 72,
+        "name": "Hassas Sevkiyat",
+        "blockerOverlap": 0.6452,
+        "maskOverlap": 0.7778,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.6452,
+        "croppedShapeOverlap": 0.6984,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      },
+      {
+        "level": 38,
+        "name": "On Dolaplı Salon",
+        "blockerOverlap": 0.5455,
+        "maskOverlap": 0.8535,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.5455,
+        "croppedShapeOverlap": 0.6023,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      },
+      {
+        "level": 168,
+        "name": "Renkli Onarım",
+        "blockerOverlap": 0.5455,
+        "maskOverlap": 0.947,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.5455,
+        "croppedShapeOverlap": 0.6023,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [
+          25
+        ],
+        "familyOverlap": 0.2
+      }
+    ]
+  },
+  {
+    "level": 236,
+    "closest": [
+      {
+        "level": 3,
+        "name": "Renkli Başlangıç",
+        "blockerOverlap": 0.5075,
+        "maskOverlap": 0.9596,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.5075,
+        "croppedShapeOverlap": 0.4826,
+        "croppedShapeOrientation": "aynı yön",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      },
+      {
+        "level": 183,
+        "name": "Boya İskelesi",
+        "blockerOverlap": 0.4912,
+        "maskOverlap": 0.8763,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.4912,
+        "croppedShapeOverlap": 0.4689,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      },
+      {
+        "level": 233,
+        "name": "Kutup Kilidi",
+        "blockerOverlap": 0.4685,
+        "maskOverlap": 0.9711,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.4685,
+        "croppedShapeOverlap": 0.5505,
+        "croppedShapeOrientation": "aynı yön",
+        "sharedFamilies": [
+          30
+        ],
+        "familyOverlap": 0.1429
+      },
+      {
+        "level": 173,
+        "name": "Büyük Restorasyon",
+        "blockerOverlap": 0.459,
+        "maskOverlap": 0.9596,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.459,
+        "croppedShapeOverlap": 0.463,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [
+          25
+        ],
+        "familyOverlap": 0.1429
+      }
+    ],
+    "cropped": [
+      {
+        "level": 233,
+        "name": "Kutup Kilidi",
+        "blockerOverlap": 0.4685,
+        "maskOverlap": 0.9711,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.4685,
+        "croppedShapeOverlap": 0.5505,
+        "croppedShapeOrientation": "aynı yön",
+        "sharedFamilies": [
+          30
+        ],
+        "familyOverlap": 0.1429
+      },
+      {
+        "level": 2,
+        "name": "İki Katlı İş",
+        "blockerOverlap": 0.3622,
+        "maskOverlap": 0.9596,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.3622,
+        "croppedShapeOverlap": 0.5174,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      },
+      {
+        "level": 176,
+        "name": "Kızıl ve Yeşil",
+        "blockerOverlap": 0.3923,
+        "maskOverlap": 0.8882,
+        "orientation": "yatay ayna",
+        "sameDirectionOverlap": 0.3779,
+        "croppedShapeOverlap": 0.5162,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      },
+      {
+        "level": 232,
+        "name": "Kristal Hilal",
+        "blockerOverlap": 0.4474,
+        "maskOverlap": 0.7684,
+        "orientation": "yatay ayna",
+        "sameDirectionOverlap": 0.2571,
+        "croppedShapeOverlap": 0.4945,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      }
+    ]
+  },
+  {
+    "level": 237,
+    "closest": [
+      {
+        "level": 229,
+        "name": "Rüzgâr Burgusu",
+        "blockerOverlap": 0.5,
+        "maskOverlap": 0.9798,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.5,
+        "croppedShapeOverlap": 0.5242,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [
+          28
+        ],
+        "familyOverlap": 0.1429
+      },
+      {
+        "level": 50,
+        "name": "Tamirci Arenası",
+        "blockerOverlap": 0.4783,
+        "maskOverlap": 0.9798,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.4783,
+        "croppedShapeOverlap": 0.399,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      },
+      {
+        "level": 68,
+        "name": "Porselen Bahçesi",
+        "blockerOverlap": 0.4783,
+        "maskOverlap": 0.9798,
+        "orientation": "dikey ayna",
+        "sameDirectionOverlap": 0.0625,
+        "croppedShapeOverlap": 0.399,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      },
+      {
+        "level": 126,
+        "name": "Çiçekli Surlar",
+        "blockerOverlap": 0.4783,
+        "maskOverlap": 0.9798,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.4783,
+        "croppedShapeOverlap": 0.399,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      }
+    ],
+    "cropped": [
+      {
+        "level": 83,
+        "name": "Çim Avlusu",
+        "blockerOverlap": 0.4646,
+        "maskOverlap": 0.7526,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.4646,
+        "croppedShapeOverlap": 0.5505,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      },
+      {
+        "level": 142,
+        "name": "Kilitli Alet Çantası",
+        "blockerOverlap": 0.4524,
+        "maskOverlap": 0.7526,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.4524,
+        "croppedShapeOverlap": 0.543,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [
+          25
+        ],
+        "familyOverlap": 0.1429
+      },
+      {
+        "level": 37,
+        "name": "Kat Kat Onarım",
+        "blockerOverlap": 0.2286,
+        "maskOverlap": 0.9798,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.2286,
+        "croppedShapeOverlap": 0.532,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [
+          25
+        ],
+        "familyOverlap": 0.1429
+      },
+      {
+        "level": 229,
+        "name": "Rüzgâr Burgusu",
+        "blockerOverlap": 0.5,
+        "maskOverlap": 0.9798,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.5,
+        "croppedShapeOverlap": 0.5242,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [
+          28
+        ],
+        "familyOverlap": 0.1429
+      }
+    ]
+  },
+  {
+    "level": 238,
+    "closest": [
+      {
+        "level": 184,
+        "name": "Kargo Rıhtımı",
+        "blockerOverlap": 0.7902,
+        "maskOverlap": 0.9369,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.7902,
+        "croppedShapeOverlap": 0.8182,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [
+          40
+        ],
+        "familyOverlap": 0.1667
+      },
+      {
+        "level": 172,
+        "name": "Mor Akıntı",
+        "blockerOverlap": 0.75,
+        "maskOverlap": 0.9596,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.75,
+        "croppedShapeOverlap": 0.8295,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      },
+      {
+        "level": 73,
+        "name": "Bahçe Sevkiyatı",
+        "blockerOverlap": 0.7179,
+        "maskOverlap": 0.8788,
+        "orientation": "dikey ayna",
+        "sameDirectionOverlap": 0.3673,
+        "croppedShapeOverlap": 0.7264,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      },
+      {
+        "level": 38,
+        "name": "On Dolaplı Salon",
+        "blockerOverlap": 0.6818,
+        "maskOverlap": 0.8737,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.6818,
+        "croppedShapeOverlap": 0.8295,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [
+          27
+        ],
+        "familyOverlap": 0.25
+      }
+    ],
+    "cropped": [
+      {
+        "level": 38,
+        "name": "On Dolaplı Salon",
+        "blockerOverlap": 0.6818,
+        "maskOverlap": 0.8737,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.6818,
+        "croppedShapeOverlap": 0.8295,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [
+          27
+        ],
+        "familyOverlap": 0.25
+      },
+      {
+        "level": 168,
+        "name": "Renkli Onarım",
+        "blockerOverlap": 0.6818,
+        "maskOverlap": 0.9672,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.6818,
+        "croppedShapeOverlap": 0.8295,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      },
+      {
+        "level": 172,
+        "name": "Mor Akıntı",
+        "blockerOverlap": 0.75,
+        "maskOverlap": 0.9596,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.75,
+        "croppedShapeOverlap": 0.8295,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      },
+      {
+        "level": 184,
+        "name": "Kargo Rıhtımı",
+        "blockerOverlap": 0.7902,
+        "maskOverlap": 0.9369,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.7902,
+        "croppedShapeOverlap": 0.8182,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [
+          40
+        ],
+        "familyOverlap": 0.1667
+      }
+    ]
+  },
+  {
+    "level": 239,
+    "closest": [
+      {
+        "level": 13,
+        "name": "Katmanlı Geçit",
+        "blockerOverlap": 0.7143,
+        "maskOverlap": 0.75,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.7143,
+        "croppedShapeOverlap": 0.75,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [
+          25
+        ],
+        "familyOverlap": 0.1429
+      },
+      {
+        "level": 50,
+        "name": "Tamirci Arenası",
+        "blockerOverlap": 0.5,
+        "maskOverlap": 0.9773,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.5,
+        "croppedShapeOverlap": 0.5,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      },
+      {
+        "level": 68,
+        "name": "Porselen Bahçesi",
+        "blockerOverlap": 0.5,
+        "maskOverlap": 0.9773,
+        "orientation": "dikey ayna",
+        "sameDirectionOverlap": 0.0,
+        "croppedShapeOverlap": 0.5,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      },
+      {
+        "level": 126,
+        "name": "Çiçekli Surlar",
+        "blockerOverlap": 0.5,
+        "maskOverlap": 0.9773,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.5,
+        "croppedShapeOverlap": 0.5,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      }
+    ],
+    "cropped": [
+      {
+        "level": 38,
+        "name": "On Dolaplı Salon",
+        "blockerOverlap": 0.3478,
+        "maskOverlap": 0.851,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.3478,
+        "croppedShapeOverlap": 0.8889,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      },
+      {
+        "level": 168,
+        "name": "Renkli Onarım",
+        "blockerOverlap": 0.3478,
+        "maskOverlap": 0.9444,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.3478,
+        "croppedShapeOverlap": 0.8889,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [
+          25
+        ],
+        "familyOverlap": 0.1429
+      },
+      {
+        "level": 172,
+        "name": "Mor Akıntı",
+        "blockerOverlap": 0.381,
+        "maskOverlap": 0.9369,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.381,
+        "croppedShapeOverlap": 0.8889,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      },
+      {
+        "level": 174,
+        "name": "Usta Restoratör",
+        "blockerOverlap": 0.3617,
+        "maskOverlap": 0.9268,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.3617,
+        "croppedShapeOverlap": 0.8223,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [
+          25
+        ],
+        "familyOverlap": 0.1111
+      }
+    ]
+  },
+  {
+    "level": 240,
+    "closest": [
+      {
+        "level": 172,
+        "name": "Mor Akıntı",
+        "blockerOverlap": 0.65,
+        "maskOverlap": 0.9596,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.65,
+        "croppedShapeOverlap": 0.75,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      },
+      {
+        "level": 206,
+        "name": "Değirmen Tepesi",
+        "blockerOverlap": 0.6372,
+        "maskOverlap": 0.9034,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.6372,
+        "croppedShapeOverlap": 0.6275,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      },
+      {
+        "level": 184,
+        "name": "Kargo Rıhtımı",
+        "blockerOverlap": 0.6216,
+        "maskOverlap": 0.9369,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.6216,
+        "croppedShapeOverlap": 0.625,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [
+          25
+        ],
+        "familyOverlap": 0.2
+      },
+      {
+        "level": 152,
+        "name": "Kargo Kemerleri",
+        "blockerOverlap": 0.6098,
+        "maskOverlap": 0.9596,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.6098,
+        "croppedShapeOverlap": 0.7586,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [
+          25,
+          28
+        ],
+        "familyOverlap": 0.4
+      }
+    ],
+    "cropped": [
+      {
+        "level": 152,
+        "name": "Kargo Kemerleri",
+        "blockerOverlap": 0.6098,
+        "maskOverlap": 0.9596,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.6098,
+        "croppedShapeOverlap": 0.7586,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [
+          25,
+          28
+        ],
+        "familyOverlap": 0.4
+      },
+      {
+        "level": 38,
+        "name": "On Dolaplı Salon",
+        "blockerOverlap": 0.5909,
+        "maskOverlap": 0.8737,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.5909,
+        "croppedShapeOverlap": 0.75,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      },
+      {
+        "level": 168,
+        "name": "Renkli Onarım",
+        "blockerOverlap": 0.5909,
+        "maskOverlap": 0.9672,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.5909,
+        "croppedShapeOverlap": 0.75,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [
+          25
+        ],
+        "familyOverlap": 0.2
+      },
+      {
+        "level": 172,
+        "name": "Mor Akıntı",
+        "blockerOverlap": 0.65,
+        "maskOverlap": 0.9596,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.65,
+        "croppedShapeOverlap": 0.75,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      }
+    ]
+  },
+  {
+    "level": 241,
+    "closest": [
+      {
+        "level": 77,
+        "name": "Kızıl Kasa",
+        "blockerOverlap": 0.7111,
+        "maskOverlap": 0.9773,
+        "orientation": "yatay ayna",
+        "sameDirectionOverlap": 0.0,
+        "croppedShapeOverlap": 1.0,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      },
+      {
+        "level": 8,
+        "name": "",
+        "blockerOverlap": 0.5966,
+        "maskOverlap": 0.9773,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.5966,
+        "croppedShapeOverlap": 1.0,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [
+          25
+        ],
+        "familyOverlap": 0.1667
+      },
+      {
+        "level": 36,
+        "name": "Eşya Pazarı",
+        "blockerOverlap": 0.5966,
+        "maskOverlap": 0.7775,
+        "orientation": "yatay ayna",
+        "sameDirectionOverlap": 0.0,
+        "croppedShapeOverlap": 1.0,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      },
+      {
+        "level": 234,
+        "name": "Boya Dalgası",
+        "blockerOverlap": 0.5962,
+        "maskOverlap": 0.8363,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.5962,
+        "croppedShapeOverlap": 0.2727,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [
+          25,
+          28
+        ],
+        "familyOverlap": 0.3333
+      }
+    ],
+    "cropped": [
+      {
+        "level": 1,
+        "name": "İlk Tamir",
+        "blockerOverlap": 0.2105,
+        "maskOverlap": 0.9773,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.2105,
+        "croppedShapeOverlap": 1.0,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      },
+      {
+        "level": 8,
+        "name": "",
+        "blockerOverlap": 0.5966,
+        "maskOverlap": 0.9773,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.5966,
+        "croppedShapeOverlap": 1.0,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [
+          25
+        ],
+        "familyOverlap": 0.1667
+      },
+      {
+        "level": 17,
+        "name": "Mavi Sandıklar",
+        "blockerOverlap": 0.4474,
+        "maskOverlap": 0.9773,
+        "orientation": "yatay ayna",
+        "sameDirectionOverlap": 0.0,
+        "croppedShapeOverlap": 1.0,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      },
+      {
+        "level": 27,
+        "name": "Dört Renkli Depo",
+        "blockerOverlap": 0.2482,
+        "maskOverlap": 0.9773,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.2482,
+        "croppedShapeOverlap": 1.0,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      }
+    ]
+  },
+  {
+    "level": 242,
+    "closest": [
+      {
+        "level": 170,
+        "name": "Kum Saati",
+        "blockerOverlap": 0.5888,
+        "maskOverlap": 0.7828,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.5888,
+        "croppedShapeOverlap": 0.5889,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [
+          25,
+          28
+        ],
+        "familyOverlap": 0.3333
+      },
+      {
+        "level": 125,
+        "name": "Mor Surlar",
+        "blockerOverlap": 0.4865,
+        "maskOverlap": 0.8687,
+        "orientation": "yatay ayna",
+        "sameDirectionOverlap": 0.3095,
+        "croppedShapeOverlap": 0.5087,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      },
+      {
+        "level": 85,
+        "name": "Taş Kasası",
+        "blockerOverlap": 0.4516,
+        "maskOverlap": 0.8182,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.4516,
+        "croppedShapeOverlap": 0.404,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [
+          28
+        ],
+        "familyOverlap": 0.1429
+      },
+      {
+        "level": 153,
+        "name": "Piramit Mührü",
+        "blockerOverlap": 0.4516,
+        "maskOverlap": 0.8969,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.4516,
+        "croppedShapeOverlap": 0.404,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      }
+    ],
+    "cropped": [
+      {
+        "level": 226,
+        "name": "Rüzgâr Kemeri",
+        "blockerOverlap": 0.36,
+        "maskOverlap": 0.8163,
+        "orientation": "yatay ayna",
+        "sameDirectionOverlap": 0.283,
+        "croppedShapeOverlap": 0.6364,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      },
+      {
+        "level": 224,
+        "name": "Kristal Çapa",
+        "blockerOverlap": 0.3594,
+        "maskOverlap": 0.9798,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.3594,
+        "croppedShapeOverlap": 0.6332,
+        "croppedShapeOrientation": "aynı yön",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      },
+      {
+        "level": 30,
+        "name": "İkinci Vardiya",
+        "blockerOverlap": 0.2687,
+        "maskOverlap": 0.9798,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.2687,
+        "croppedShapeOverlap": 0.597,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      },
+      {
+        "level": 106,
+        "name": "",
+        "blockerOverlap": 0.3036,
+        "maskOverlap": 0.9394,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.3036,
+        "croppedShapeOverlap": 0.5966,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      }
+    ]
+  },
+  {
+    "level": 243,
+    "closest": [
+      {
+        "level": 223,
+        "name": "Uçan Anahtar",
+        "blockerOverlap": 0.4426,
+        "maskOverlap": 0.7434,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.4426,
+        "croppedShapeOverlap": 0.596,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [
+          25,
+          28,
+          44
+        ],
+        "familyOverlap": 0.6
+      },
+      {
+        "level": 13,
+        "name": "Katmanlı Geçit",
+        "blockerOverlap": 0.4259,
+        "maskOverlap": 0.7222,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.4259,
+        "croppedShapeOverlap": 0.5028,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [
+          25
+        ],
+        "familyOverlap": 0.1667
+      },
+      {
+        "level": 236,
+        "name": "Cam Ray",
+        "blockerOverlap": 0.4242,
+        "maskOverlap": 0.9485,
+        "orientation": "yatay ayna",
+        "sameDirectionOverlap": 0.1605,
+        "croppedShapeOverlap": 0.3571,
+        "croppedShapeOrientation": "180 derece",
+        "sharedFamilies": [
+          25
+        ],
+        "familyOverlap": 0.1667
+      },
+      {
+        "level": 215,
+        "name": "Vitray Atölyesi",
+        "blockerOverlap": 0.4118,
+        "maskOverlap": 0.9495,
+        "orientation": "dikey ayna",
+        "sameDirectionOverlap": 0.1429,
+        "croppedShapeOverlap": 0.2845,
+        "croppedShapeOrientation": "dikey ayna",
+        "sharedFamilies": [
+          40
+        ],
+        "familyOverlap": 0.1111
+      }
+    ],
+    "cropped": [
+      {
+        "level": 238,
+        "name": "Kuşlu Tribün",
+        "blockerOverlap": 0.2778,
+        "maskOverlap": 0.9495,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.2778,
+        "croppedShapeOverlap": 0.7341,
+        "croppedShapeOrientation": "aynı yön",
+        "sharedFamilies": [
+          28,
+          40
+        ],
+        "familyOverlap": 0.3333
+      },
+      {
+        "level": 234,
+        "name": "Boya Dalgası",
+        "blockerOverlap": 0.2113,
+        "maskOverlap": 0.8411,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.2113,
+        "croppedShapeOverlap": 0.6719,
+        "croppedShapeOrientation": "dikey ayna",
+        "sharedFamilies": [
+          25,
+          28,
+          40
+        ],
+        "familyOverlap": 0.5
+      },
+      {
+        "level": 239,
+        "name": "Baklava Kilidi",
+        "blockerOverlap": 0.36,
+        "maskOverlap": 0.9514,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.36,
+        "croppedShapeOverlap": 0.6705,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [
+          25,
+          28
+        ],
+        "familyOverlap": 0.2857
+      },
+      {
+        "level": 38,
+        "name": "On Dolaplı Salon",
+        "blockerOverlap": 0.2,
+        "maskOverlap": 0.8232,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.2,
+        "croppedShapeOverlap": 0.6186,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      }
+    ]
+  },
+  {
+    "level": 244,
+    "closest": [
+      {
+        "level": 111,
+        "name": "Enerji Kanatları",
+        "blockerOverlap": 0.4957,
+        "maskOverlap": 0.8889,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.4957,
+        "croppedShapeOverlap": 0.4965,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      },
+      {
+        "level": 30,
+        "name": "İkinci Vardiya",
+        "blockerOverlap": 0.4776,
+        "maskOverlap": 0.9798,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.4776,
+        "croppedShapeOverlap": 0.6007,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      },
+      {
+        "level": 106,
+        "name": "",
+        "blockerOverlap": 0.4746,
+        "maskOverlap": 0.9394,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.4746,
+        "croppedShapeOverlap": 0.5153,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      },
+      {
+        "level": 140,
+        "name": "Porsuğun Tacı",
+        "blockerOverlap": 0.4636,
+        "maskOverlap": 0.933,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.4636,
+        "croppedShapeOverlap": 0.4506,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      }
+    ],
+    "cropped": [
+      {
+        "level": 18,
+        "name": "Mor ve Turuncu",
+        "blockerOverlap": 0.4571,
+        "maskOverlap": 0.9798,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.4571,
+        "croppedShapeOverlap": 0.6321,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      },
+      {
+        "level": 30,
+        "name": "İkinci Vardiya",
+        "blockerOverlap": 0.4776,
+        "maskOverlap": 0.9798,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.4776,
+        "croppedShapeOverlap": 0.6007,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      },
+      {
+        "level": 21,
+        "name": "İlk Sevkiyat",
+        "blockerOverlap": 0.0362,
+        "maskOverlap": 0.8535,
+        "orientation": "dikey ayna",
+        "sameDirectionOverlap": 0.0,
+        "croppedShapeOverlap": 0.5654,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [
+          34
+        ],
+        "familyOverlap": 0.25
+      },
+      {
+        "level": 199,
+        "name": "Deniz Kabuğu",
+        "blockerOverlap": 0.1935,
+        "maskOverlap": 0.8969,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.1935,
+        "croppedShapeOverlap": 0.5352,
+        "croppedShapeOrientation": "dikey ayna",
+        "sharedFamilies": [
+          28
+        ],
+        "familyOverlap": 0.125
+      }
+    ]
+  },
+  {
+    "level": 245,
+    "closest": [
+      {
+        "level": 186,
+        "name": "Fenerli Bent",
+        "blockerOverlap": 0.6207,
+        "maskOverlap": 0.9184,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.6207,
+        "croppedShapeOverlap": 0.5169,
+        "croppedShapeOrientation": "aynı yön",
+        "sharedFamilies": [
+          28
+        ],
+        "familyOverlap": 0.2
+      },
+      {
+        "level": 220,
+        "name": "Büyük Festival",
+        "blockerOverlap": 0.604,
+        "maskOverlap": 0.9536,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.604,
+        "croppedShapeOverlap": 0.6565,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      },
+      {
+        "level": 229,
+        "name": "Rüzgâr Burgusu",
+        "blockerOverlap": 0.6,
+        "maskOverlap": 0.9798,
+        "orientation": "yatay ayna",
+        "sameDirectionOverlap": 0.3333,
+        "croppedShapeOverlap": 0.7456,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [
+          28
+        ],
+        "familyOverlap": 0.1667
+      },
+      {
+        "level": 232,
+        "name": "Kristal Hilal",
+        "blockerOverlap": 0.6,
+        "maskOverlap": 0.7526,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.6,
+        "croppedShapeOverlap": 0.56,
+        "croppedShapeOrientation": "aynı yön",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      }
+    ],
+    "cropped": [
+      {
+        "level": 229,
+        "name": "Rüzgâr Burgusu",
+        "blockerOverlap": 0.6,
+        "maskOverlap": 0.9798,
+        "orientation": "yatay ayna",
+        "sameDirectionOverlap": 0.3333,
+        "croppedShapeOverlap": 0.7456,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [
+          28
+        ],
+        "familyOverlap": 0.1667
+      },
+      {
+        "level": 7,
+        "name": "Sandık Koridoru",
+        "blockerOverlap": 0.417,
+        "maskOverlap": 0.9798,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.417,
+        "croppedShapeOverlap": 0.6583,
+        "croppedShapeOrientation": "aynı yön",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      },
+      {
+        "level": 220,
+        "name": "Büyük Festival",
+        "blockerOverlap": 0.604,
+        "maskOverlap": 0.9536,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.604,
+        "croppedShapeOverlap": 0.6565,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      },
+      {
+        "level": 3,
+        "name": "Renkli Başlangıç",
+        "blockerOverlap": 0.4545,
+        "maskOverlap": 0.9798,
+        "orientation": "yatay ayna",
+        "sameDirectionOverlap": 0.242,
+        "croppedShapeOverlap": 0.6547,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      }
+    ]
+  },
+  {
+    "level": 246,
+    "closest": [
+      {
+        "level": 221,
+        "name": "Mavi Vitrin",
+        "blockerOverlap": 0.5625,
+        "maskOverlap": 0.9205,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.5625,
+        "croppedShapeOverlap": 0.5303,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      },
+      {
+        "level": 142,
+        "name": "Kilitli Alet Çantası",
+        "blockerOverlap": 0.4921,
+        "maskOverlap": 0.7594,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.4921,
+        "croppedShapeOverlap": 0.4396,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [
+          25
+        ],
+        "familyOverlap": 0.1667
+      },
+      {
+        "level": 233,
+        "name": "Kutup Kilidi",
+        "blockerOverlap": 0.4595,
+        "maskOverlap": 0.8537,
+        "orientation": "yatay ayna",
+        "sameDirectionOverlap": 0.4497,
+        "croppedShapeOverlap": 0.4452,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [
+          39
+        ],
+        "familyOverlap": 0.1429
+      },
+      {
+        "level": 237,
+        "name": "Dört Vana",
+        "blockerOverlap": 0.4493,
+        "maskOverlap": 0.8119,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.4493,
+        "croppedShapeOverlap": 0.4488,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [
+          25
+        ],
+        "familyOverlap": 0.1667
+      }
+    ],
+    "cropped": [
+      {
+        "level": 157,
+        "name": "Gözcü Kulesi",
+        "blockerOverlap": 0.1991,
+        "maskOverlap": 0.6403,
+        "orientation": "dikey ayna",
+        "sameDirectionOverlap": 0.0613,
+        "croppedShapeOverlap": 0.6922,
+        "croppedShapeOrientation": "dikey ayna",
+        "sharedFamilies": [
+          39
+        ],
+        "familyOverlap": 0.1429
+      },
+      {
+        "level": 65,
+        "name": "Çamurlu Fenerler",
+        "blockerOverlap": 0.2609,
+        "maskOverlap": 0.7449,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.2609,
+        "croppedShapeOverlap": 0.6875,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [
+          25
+        ],
+        "familyOverlap": 0.2
+      },
+      {
+        "level": 181,
+        "name": "Fener Şenliği",
+        "blockerOverlap": 0.3072,
+        "maskOverlap": 0.9247,
+        "orientation": "yatay ayna",
+        "sameDirectionOverlap": 0.2903,
+        "croppedShapeOverlap": 0.66,
+        "croppedShapeOrientation": "aynı yön",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      },
+      {
+        "level": 87,
+        "name": "Bahçedeki Fıçılar",
+        "blockerOverlap": 0.2727,
+        "maskOverlap": 0.7045,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.2727,
+        "croppedShapeOverlap": 0.6585,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [
+          39
+        ],
+        "familyOverlap": 0.2
+      }
+    ]
+  },
+  {
+    "level": 247,
+    "closest": [
+      {
+        "level": 125,
+        "name": "Mor Surlar",
+        "blockerOverlap": 0.6667,
+        "maskOverlap": 0.8889,
+        "orientation": "yatay ayna",
+        "sameDirectionOverlap": 0.4773,
+        "croppedShapeOverlap": 0.662,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [
+          52
+        ],
+        "familyOverlap": 0.1667
+      },
+      {
+        "level": 242,
+        "name": "Pil Kavşağı",
+        "blockerOverlap": 0.6429,
+        "maskOverlap": 0.9798,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.6429,
+        "croppedShapeOverlap": 0.7843,
+        "croppedShapeOrientation": "aynı yön",
+        "sharedFamilies": [
+          28
+        ],
+        "familyOverlap": 0.1429
+      },
+      {
+        "level": 50,
+        "name": "Tamirci Arenası",
+        "blockerOverlap": 0.6,
+        "maskOverlap": 1.0,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.6,
+        "croppedShapeOverlap": 0.5152,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      },
+      {
+        "level": 68,
+        "name": "Porselen Bahçesi",
+        "blockerOverlap": 0.6,
+        "maskOverlap": 1.0,
+        "orientation": "dikey ayna",
+        "sameDirectionOverlap": 0.0,
+        "croppedShapeOverlap": 0.5152,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      }
+    ],
+    "cropped": [
+      {
+        "level": 242,
+        "name": "Pil Kavşağı",
+        "blockerOverlap": 0.6429,
+        "maskOverlap": 0.9798,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.6429,
+        "croppedShapeOverlap": 0.7843,
+        "croppedShapeOrientation": "aynı yön",
+        "sharedFamilies": [
+          28
+        ],
+        "familyOverlap": 0.1429
+      },
+      {
+        "level": 30,
+        "name": "İkinci Vardiya",
+        "blockerOverlap": 0.4179,
+        "maskOverlap": 1.0,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.4179,
+        "croppedShapeOverlap": 0.7612,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      },
+      {
+        "level": 226,
+        "name": "Rüzgâr Kemeri",
+        "blockerOverlap": 0.4444,
+        "maskOverlap": 0.8182,
+        "orientation": "yatay ayna",
+        "sameDirectionOverlap": 0.3448,
+        "croppedShapeOverlap": 0.6694,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [
+          75
+        ],
+        "familyOverlap": 0.1667
+      },
+      {
+        "level": 125,
+        "name": "Mor Surlar",
+        "blockerOverlap": 0.6667,
+        "maskOverlap": 0.8889,
+        "orientation": "yatay ayna",
+        "sameDirectionOverlap": 0.4773,
+        "croppedShapeOverlap": 0.662,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [
+          52
+        ],
+        "familyOverlap": 0.1667
+      }
+    ]
+  },
+  {
+    "level": 248,
+    "closest": [
+      {
+        "level": 229,
+        "name": "Rüzgâr Burgusu",
+        "blockerOverlap": 0.5253,
+        "maskOverlap": 1.0,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.5253,
+        "croppedShapeOverlap": 0.5096,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      },
+      {
+        "level": 65,
+        "name": "Çamurlu Fenerler",
+        "blockerOverlap": 0.5036,
+        "maskOverlap": 0.9495,
+        "orientation": "yatay ayna",
+        "sameDirectionOverlap": 0.3841,
+        "croppedShapeOverlap": 0.5203,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [
+          25
+        ],
+        "familyOverlap": 0.1667
+      },
+      {
+        "level": 70,
+        "name": "Usta Meydanı",
+        "blockerOverlap": 0.4915,
+        "maskOverlap": 0.9268,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.4915,
+        "croppedShapeOverlap": 0.4603,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      },
+      {
+        "level": 170,
+        "name": "Kum Saati",
+        "blockerOverlap": 0.4838,
+        "maskOverlap": 0.803,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.4838,
+        "croppedShapeOverlap": 0.4078,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [
+          25
+        ],
+        "familyOverlap": 0.1429
+      }
+    ],
+    "cropped": [
+      {
+        "level": 181,
+        "name": "Fener Şenliği",
+        "blockerOverlap": 0.2736,
+        "maskOverlap": 0.8182,
+        "orientation": "yatay ayna",
+        "sameDirectionOverlap": 0.2617,
+        "croppedShapeOverlap": 0.5323,
+        "croppedShapeOrientation": "aynı yön",
+        "sharedFamilies": [
+          30
+        ],
+        "familyOverlap": 0.2
+      },
+      {
+        "level": 46,
+        "name": "Porselen Kanal",
+        "blockerOverlap": 0.3468,
+        "maskOverlap": 0.899,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.3468,
+        "croppedShapeOverlap": 0.5249,
+        "croppedShapeOrientation": "dikey ayna",
+        "sharedFamilies": [
+          25,
+          30
+        ],
+        "familyOverlap": 0.3333
+      },
+      {
+        "level": 65,
+        "name": "Çamurlu Fenerler",
+        "blockerOverlap": 0.5036,
+        "maskOverlap": 0.9495,
+        "orientation": "yatay ayna",
+        "sameDirectionOverlap": 0.3841,
+        "croppedShapeOverlap": 0.5203,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [
+          25
+        ],
+        "familyOverlap": 0.1667
+      },
+      {
+        "level": 114,
+        "name": "Jelli Restorasyon",
+        "blockerOverlap": 0.386,
+        "maskOverlap": 0.8687,
+        "orientation": "dikey ayna",
+        "sameDirectionOverlap": 0.101,
+        "croppedShapeOverlap": 0.5158,
+        "croppedShapeOrientation": "dikey ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      }
+    ]
+  },
+  {
+    "level": 249,
+    "closest": [
+      {
+        "level": 197,
+        "name": "Işık Merdiveni",
+        "blockerOverlap": 0.6316,
+        "maskOverlap": 0.7959,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.6316,
+        "croppedShapeOverlap": 0.5906,
+        "croppedShapeOrientation": "aynı yön",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      },
+      {
+        "level": 29,
+        "name": "Sandık Meydanı",
+        "blockerOverlap": 0.6111,
+        "maskOverlap": 0.9742,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.6111,
+        "croppedShapeOverlap": 0.6205,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      },
+      {
+        "level": 79,
+        "name": "Porselen Dolaplar",
+        "blockerOverlap": 0.6111,
+        "maskOverlap": 0.9798,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.6111,
+        "croppedShapeOverlap": 0.601,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [
+          27
+        ],
+        "familyOverlap": 0.2
+      },
+      {
+        "level": 163,
+        "name": "Örtülü Surlar",
+        "blockerOverlap": 0.6111,
+        "maskOverlap": 0.9495,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.6111,
+        "croppedShapeOverlap": 0.601,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      }
+    ],
+    "cropped": [
+      {
+        "level": 75,
+        "name": "Fenerli Rıhtım",
+        "blockerOverlap": 0.3855,
+        "maskOverlap": 0.9192,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.3855,
+        "croppedShapeOverlap": 0.6354,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      },
+      {
+        "level": 119,
+        "name": "Renkli Sandıklar",
+        "blockerOverlap": 0.4432,
+        "maskOverlap": 0.8548,
+        "orientation": "dikey ayna",
+        "sameDirectionOverlap": 0.4067,
+        "croppedShapeOverlap": 0.6299,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      },
+      {
+        "level": 125,
+        "name": "Mor Surlar",
+        "blockerOverlap": 0.4727,
+        "maskOverlap": 0.8687,
+        "orientation": "yatay ayna",
+        "sameDirectionOverlap": 0.3729,
+        "croppedShapeOverlap": 0.6274,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      },
+      {
+        "level": 47,
+        "name": "Beyaz Salon",
+        "blockerOverlap": 0.5285,
+        "maskOverlap": 0.852,
+        "orientation": "dikey ayna",
+        "sameDirectionOverlap": 0.3794,
+        "croppedShapeOverlap": 0.6268,
+        "croppedShapeOrientation": "dikey ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      }
+    ]
+  },
+  {
+    "level": 250,
+    "closest": [
+      {
+        "level": 38,
+        "name": "On Dolaplı Salon",
+        "blockerOverlap": 0.687,
+        "maskOverlap": 0.8737,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.687,
+        "croppedShapeOverlap": 0.687,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      },
+      {
+        "level": 168,
+        "name": "Renkli Onarım",
+        "blockerOverlap": 0.687,
+        "maskOverlap": 0.9672,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.687,
+        "croppedShapeOverlap": 0.687,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      },
+      {
+        "level": 29,
+        "name": "Sandık Meydanı",
+        "blockerOverlap": 0.6447,
+        "maskOverlap": 0.9545,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.6447,
+        "croppedShapeOverlap": 0.673,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      },
+      {
+        "level": 145,
+        "name": "Mor Mozaik",
+        "blockerOverlap": 0.6396,
+        "maskOverlap": 0.697,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.6396,
+        "croppedShapeOverlap": 0.6396,
+        "croppedShapeOrientation": "aynı yön",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      }
+    ],
+    "cropped": [
+      {
+        "level": 37,
+        "name": "Kat Kat Onarım",
+        "blockerOverlap": 0.4861,
+        "maskOverlap": 1.0,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.4861,
+        "croppedShapeOverlap": 0.7138,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      },
+      {
+        "level": 2,
+        "name": "İki Katlı İş",
+        "blockerOverlap": 0.3813,
+        "maskOverlap": 1.0,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.3813,
+        "croppedShapeOverlap": 0.7106,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      },
+      {
+        "level": 173,
+        "name": "Büyük Restorasyon",
+        "blockerOverlap": 0.6324,
+        "maskOverlap": 1.0,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.6324,
+        "croppedShapeOverlap": 0.7055,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      },
+      {
+        "level": 38,
+        "name": "On Dolaplı Salon",
+        "blockerOverlap": 0.687,
+        "maskOverlap": 0.8737,
+        "orientation": "aynı yön",
+        "sameDirectionOverlap": 0.687,
+        "croppedShapeOverlap": 0.687,
+        "croppedShapeOrientation": "yatay ayna",
+        "sharedFamilies": [],
+        "familyOverlap": 0.0
+      }
+    ]
+  }
+]

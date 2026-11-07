@@ -1,0 +1,122 @@
+[
+  {
+    "level": 225,
+    "unchanged": true,
+    "exportMatchesAllSerializedFields": true,
+    "moves": 27,
+    "activeCells": 88,
+    "goals": 4,
+    "dimerdalQuota": 16,
+    "fruitCount": 0,
+    "ordinaryPins": 0,
+    "specialPins": 0
+  },
+  {
+    "level": 226,
+    "unchanged": true,
+    "exportMatchesAllSerializedFields": true,
+    "moves": 20,
+    "activeCells": 81,
+    "goals": 3,
+    "dimerdalQuota": 0,
+    "fruitCount": 0,
+    "ordinaryPins": 0,
+    "specialPins": 0
+  },
+  {
+    "level": 227,
+    "unchanged": true,
+    "exportMatchesAllSerializedFields": true,
+    "moves": 26,
+    "activeCells": 88,
+    "goals": 3,
+    "dimerdalQuota": 0,
+    "fruitCount": 0,
+    "ordinaryPins": 0,
+    "specialPins": 0
+  },
+  {
+    "level": 228,
+    "unchanged": true,
+    "exportMatchesAllSerializedFields": true,
+    "moves": 26,
+    "activeCells": 90,
+    "goals": 2,
+    "dimerdalQuota": 12,
+    "fruitCount": 0,
+    "ordinaryPins": 0,
+    "specialPins": 0
+  },
+  {
+    "level": 229,
+    "unchanged": true,
+    "exportMatchesAllSerializedFields": true,
+    "moves": 28,
+    "activeCells": 99,
+    "goals": 4,
+    "dimerdalQuota": 0,
+    "fruitCount": 0,
+    "ordinaryPins": 0,
+    "specialPins": 0
+  },
+  {
+    "level": 230,
+    "unchanged": true,
+    "exportMatchesAllSerializedFields": true,
+    "moves": 30,
+    "activeCells": 90,
+    "goals": 4,
+    "dimerdalQuota": 12,
+    "fruitCount": 0,
+    "ordinaryPins": 0,
+    "specialPins": 0
+  },
+  {
+    "level": 231,
+    "unchanged": true,
+    "exportMatchesAllSerializedFields": true,
+    "moves": 24,
+    "activeCells": 66,
+    "goals": 1,
+    "dimerdalQuota": 0,
+    "fruitCount": 4,
+    "ordinaryPins": 0,
+    "specialPins": 0
+  },
+  {
+    "level": 232,
+    "unchanged": true,
+    "exportMatchesAllSerializedFields": true,
+    "moves": 32,
+    "activeCells": 73,
+    "goals": 5,
+    "dimerdalQuota": 15,
+    "fruitCount": 2,
+    "ordinaryPins": 0,
+    "specialPins": 0
+  },
+  {
+    "level": 233,
+    "unchanged": true,
+    "exportMatchesAllSerializedFields": true,
+    "moves": 27,
+    "activeCells": 82,
+    "goals": 5,
+    "dimerdalQuota": 0,
+    "fruitCount": 0,
+    "ordinaryPins": 0,
+    "specialPins": 0
+  },
+  {
+    "level": 234,
+    "unchanged": true,
+    "exportMatchesAllSerializedFields": true,
+    "moves": 24,
+    "activeCells": 74,
+    "goals": 5,
+    "dimerdalQuota": 0,
+    "fruitCount": 0,
+    "ordinaryPins": 1,
+    "specialPins": 0
+  }
+]

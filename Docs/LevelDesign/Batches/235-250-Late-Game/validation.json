@@ -1,0 +1,286 @@
+{
+  "levels": [
+    {
+      "level": 235,
+      "result": "PASS",
+      "moves": 18,
+      "goals": 3,
+      "obstacleGoalSlots": 3,
+      "opening": {
+        "activeCells": 97,
+        "normalSlots": 73,
+        "naturallyFed": 73,
+        "shadowPins": [],
+        "specialPins": 0
+      },
+      "allLaterSlotsFed": true,
+      "permanentSourcesAtBottom": false
+    },
+    {
+      "level": 236,
+      "result": "PASS",
+      "moves": 16,
+      "goals": 3,
+      "obstacleGoalSlots": 3,
+      "opening": {
+        "activeCells": 86,
+        "normalSlots": 58,
+        "naturallyFed": 58,
+        "shadowPins": [],
+        "specialPins": 0
+      },
+      "allLaterSlotsFed": true,
+      "permanentSourcesAtBottom": false
+    },
+    {
+      "level": 237,
+      "result": "PASS",
+      "moves": 26,
+      "goals": 4,
+      "obstacleGoalSlots": 4,
+      "opening": {
+        "activeCells": 97,
+        "normalSlots": 65,
+        "naturallyFed": 61,
+        "shadowPins": [
+          36,
+          62,
+          72,
+          98
+        ],
+        "specialPins": 0
+      },
+      "allLaterSlotsFed": true,
+      "permanentSourcesAtBottom": false
+    },
+    {
+      "level": 238,
+      "result": "PASS",
+      "moves": 30,
+      "goals": 4,
+      "obstacleGoalSlots": 3,
+      "opening": {
+        "activeCells": 99,
+        "normalSlots": 69,
+        "naturallyFed": 69,
+        "shadowPins": [],
+        "specialPins": 0
+      },
+      "allLaterSlotsFed": true,
+      "permanentSourcesAtBottom": true
+    },
+    {
+      "level": 239,
+      "result": "PASS",
+      "moves": 33,
+      "goals": 4,
+      "obstacleGoalSlots": 3,
+      "opening": {
+        "activeCells": 86,
+        "normalSlots": 62,
+        "naturallyFed": 62,
+        "shadowPins": [],
+        "specialPins": 0
+      },
+      "allLaterSlotsFed": true,
+      "permanentSourcesAtBottom": false
+    },
+    {
+      "level": 240,
+      "result": "PASS",
+      "moves": 24,
+      "goals": 5,
+      "obstacleGoalSlots": 4,
+      "opening": {
+        "activeCells": 90,
+        "normalSlots": 66,
+        "naturallyFed": 64,
+        "shadowPins": [
+          54,
+          62
+        ],
+        "specialPins": 0
+      },
+      "allLaterSlotsFed": true,
+      "permanentSourcesAtBottom": false
+    },
+    {
+      "level": 241,
+      "result": "PASS",
+      "moves": 24,
+      "goals": 3,
+      "obstacleGoalSlots": 2,
+      "opening": {
+        "activeCells": 78,
+        "normalSlots": 62,
+        "naturallyFed": 62,
+        "shadowPins": [],
+        "specialPins": 0
+      },
+      "allLaterSlotsFed": true,
+      "permanentSourcesAtBottom": true
+    },
+    {
+      "level": 242,
+      "result": "PASS",
+      "moves": 21,
+      "goals": 4,
+      "obstacleGoalSlots": 3,
+      "opening": {
+        "activeCells": 97,
+        "normalSlots": 79,
+        "naturallyFed": 79,
+        "shadowPins": [],
+        "specialPins": 0
+      },
+      "allLaterSlotsFed": true,
+      "permanentSourcesAtBottom": true
+    },
+    {
+      "level": 243,
+      "result": "PASS",
+      "moves": 30,
+      "goals": 4,
+      "obstacleGoalSlots": 3,
+      "opening": {
+        "activeCells": 94,
+        "normalSlots": 78,
+        "naturallyFed": 78,
+        "shadowPins": [],
+        "specialPins": 0
+      },
+      "allLaterSlotsFed": true,
+      "permanentSourcesAtBottom": true
+    },
+    {
+      "level": 244,
+      "result": "PASS",
+      "moves": 24,
+      "goals": 4,
+      "obstacleGoalSlots": 4,
+      "opening": {
+        "activeCells": 97,
+        "normalSlots": 65,
+        "naturallyFed": 65,
+        "shadowPins": [],
+        "specialPins": 0
+      },
+      "allLaterSlotsFed": true,
+      "permanentSourcesAtBottom": false
+    },
+    {
+      "level": 245,
+      "result": "PASS",
+      "moves": 24,
+      "goals": 3,
+      "obstacleGoalSlots": 3,
+      "opening": {
+        "activeCells": 97,
+        "normalSlots": 73,
+        "naturallyFed": 73,
+        "shadowPins": [],
+        "specialPins": 0
+      },
+      "allLaterSlotsFed": true,
+      "permanentSourcesAtBottom": false
+    },
+    {
+      "level": 246,
+      "result": "PASS",
+      "moves": 25,
+      "goals": 3,
+      "obstacleGoalSlots": 3,
+      "opening": {
+        "activeCells": 70,
+        "normalSlots": 54,
+        "naturallyFed": 54,
+        "shadowPins": [],
+        "specialPins": 0
+      },
+      "allLaterSlotsFed": true,
+      "permanentSourcesAtBottom": false
+    },
+    {
+      "level": 247,
+      "result": "PASS",
+      "moves": 16,
+      "goals": 5,
+      "obstacleGoalSlots": 5,
+      "opening": {
+        "activeCells": 99,
+        "normalSlots": 71,
+        "naturallyFed": 71,
+        "shadowPins": [],
+        "specialPins": 0
+      },
+      "allLaterSlotsFed": true,
+      "permanentSourcesAtBottom": false
+    },
+    {
+      "level": 248,
+      "result": "PASS",
+      "moves": 17,
+      "goals": 4,
+      "obstacleGoalSlots": 4,
+      "opening": {
+        "activeCells": 88,
+        "normalSlots": 56,
+        "naturallyFed": 50,
+        "shadowPins": [
+          32,
+          33,
+          40,
+          62,
+          63,
+          71
+        ],
+        "specialPins": 0
+      },
+      "allLaterSlotsFed": true,
+      "permanentSourcesAtBottom": false
+    },
+    {
+      "level": 249,
+      "result": "PASS",
+      "moves": 22,
+      "goals": 4,
+      "obstacleGoalSlots": 4,
+      "opening": {
+        "activeCells": 97,
+        "normalSlots": 53,
+        "naturallyFed": 46,
+        "shadowPins": [
+          63,
+          64,
+          71,
+          76,
+          82,
+          83,
+          84
+        ],
+        "specialPins": 0
+      },
+      "allLaterSlotsFed": true,
+      "permanentSourcesAtBottom": false
+    },
+    {
+      "level": 250,
+      "result": "PASS",
+      "moves": 36,
+      "goals": 5,
+      "obstacleGoalSlots": 3,
+      "opening": {
+        "activeCells": 90,
+        "normalSlots": 42,
+        "naturallyFed": 42,
+        "shadowPins": [],
+        "specialPins": 0
+      },
+      "allLaterSlotsFed": true,
+      "permanentSourcesAtBottom": false
+    }
+  ],
+  "previousLevelFilesPreserved": 470,
+  "simulation": false,
+  "limits": "Static authored layout and flow; runtime pass rate is separate."
+}

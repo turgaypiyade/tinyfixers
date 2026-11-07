@@ -123,3 +123,8 @@ Website/social/reels/*.mp4
 /Assets/FacebookSDK/Resources/FacebookSettings.asset
 /Assets/FacebookSDK/Resources/FacebookSettings.asset.meta
 /PerfLogs/
+
+# Ham ekran kayıtları (reklam kurgusu için, Drive'da tutulur)
+/Videos/
+mono_crash.*.json
+__pycache__/

@@ -72,7 +72,7 @@ public class WonderScene : MonoBehaviour
         if (includeCharacters && def.characters != null)
             foreach (var c in def.characters)
                 if (c != null && c.active)
-                    agents.Add(BuildCharacter(bgRt, c));
+                    agents.Add(BuildCharacter(bgRt, c, charactersWalkImmediately));
         view.ambientAgents = agents.ToArray();
 
         View = view;
@@ -117,7 +117,8 @@ public class WonderScene : MonoBehaviour
         container.SetActive(false);   // kaynak başlayınca AnimateTo açar (ortada flaş olmasın)
     }
 
-    WonderAmbientAgent BuildCharacter(RectTransform parent, WonderCharacter c)
+    // Varsayılan arka plan (WonderBackgroundView) da aynı kurulumu kullanır.
+    internal static WonderAmbientAgent BuildCharacter(RectTransform parent, WonderCharacter c, bool walkImmediately)
     {
         // Konteyner inaktif kur → alanları set et → aktifleştir (Awake veriyle çalışsın)
         var containerGo = new GameObject(string.IsNullOrEmpty(c.name) ? "Character" : c.name,
@@ -153,7 +154,7 @@ public class WonderScene : MonoBehaviour
         agent.pingPong = c.pingPong;
         agent.pauseAtPoint = c.pauseAtPoint;
         agent.pathPoints = c.path;
-        agent.startWalking = charactersWalkImmediately;
+        agent.startWalking = walkImmediately;
         if (c.path != null && c.path.Length > 0) cRt.anchoredPosition = c.path[0];
 
         containerGo.SetActive(true);

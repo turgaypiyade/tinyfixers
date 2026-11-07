@@ -22,6 +22,7 @@ public class WonderBackgroundView : MonoBehaviour
 
     WonderScene _scene;
     Image _defaultImg;
+    WonderAmbientAgent[] _defaultAgents;
     RectTransform _rt;
     Coroutine _slide;
 
@@ -103,6 +104,25 @@ public class WonderBackgroundView : MonoBehaviour
         EnsureDefaultImage();
         _defaultImg.gameObject.SetActive(true);
         _defaultImg.sprite = catalog != null ? catalog.defaultBackground : null;
+        EnsureDefaultCharacters();
+    }
+
+    // Varsayılan arka plandaki ambient karakterler: bir kez kurulur (havuz gibi yeniden kullanılır),
+    // resimle birlikte gizlenir/gösterilir. Yürüyüş her gösterimde yeniden başlar.
+    void EnsureDefaultCharacters()
+    {
+        if (_defaultAgents == null)
+        {
+            var list = new System.Collections.Generic.List<WonderAmbientAgent>();
+            var chars = catalog != null ? catalog.defaultCharacters : null;
+            if (chars != null)
+                foreach (var c in chars)
+                    if (c != null && c.active)
+                        list.Add(WonderScene.BuildCharacter((RectTransform)_defaultImg.transform, c, true));
+            _defaultAgents = list.ToArray();
+        }
+        foreach (var a in _defaultAgents)
+            if (a != null) { a.startWalking = true; a.BeginWalking(); }
     }
 
     void EnsureScene()

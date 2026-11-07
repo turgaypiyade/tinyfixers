@@ -2160,6 +2160,9 @@ public class GridSpawner : MonoBehaviour
     // SetLevelData (ObstacleStateService init + store clear) SONRASINDA çağrılmalıdır.
     private void RegisterPendingStampedBeneath()
     {
+        // Katmansız bir level'a geçişte önceki level'ın kayıtları kalmasın (beneath çizimi ve
+        // LevelHasObstacle bu listeyi okur).
+        stampedBeneathVisuals.Clear();
         if (pendingStampedBeneath.Count == 0) return;
 
         var state = board != null ? board.ObstacleStateService : null;
@@ -4125,28 +4128,32 @@ public class GridSpawner : MonoBehaviour
         return initialRemainingHits > 0 ? initialRemainingHits : Mathf.Max(1, def.hits);
     }
 
-    private void BuildFlyFruit()
+    // Level'da bu aileden bir engel var mı? Stamp SONRASI çağrılır: kasa/mühür/üst katman altındaki
+    // engel obstacles[]'ta görünmez (orada üstteki örtü yazılıdır) → stamp edilen alt katmanlara da bak.
+    // Yalnız görünen hücreye bakmak, örtü altındaki Dimerdal/elma servisini hiç kurmuyordu (239).
+    private bool LevelHasObstacle(System.Func<ObstacleId, bool> match)
     {
-        bool found = false;
         if (resolvedLevel?.obstacles != null)
             foreach (int id in resolvedLevel.obstacles)
-                if (id >= (int)ObstacleId.FlyEggBox && id <= (int)ObstacleId.FlyFruit) { found = true; break; }
-        if (!found && resolvedLevel?.stackedObstacles != null)
+                if (match((ObstacleId)id)) return true;
+        if (resolvedLevel?.stackedObstacles != null)
             foreach (var entry in resolvedLevel.stackedObstacles)
-                if (entry.obstacleId == ObstacleId.FlyEggBox || entry.obstacleId == ObstacleId.FlyEgg || entry.obstacleId == ObstacleId.FlyFruit) { found = true; break; }
+                if (match(entry.obstacleId)) return true;
+        foreach (var p in stampedBeneathVisuals)
+            if (match(p.beneathId)) return true;
+        return false;
+    }
+
+    private void BuildFlyFruit()
+    {
+        bool found = LevelHasObstacle(id => id >= ObstacleId.FlyEggBox && id <= ObstacleId.FlyFruit);
         if (found) FlyFruitService.Ensure(board).Build(board, resolvedLevel);
         else if (board.TryGetComponent<FlyFruitService>(out var previous)) previous.Clear();
     }
 
     private void BuildDimerdals()
     {
-        bool hasDimerdal = false;
-        if (resolvedLevel?.obstacles != null)
-            foreach (int id in resolvedLevel.obstacles)
-                if (DimerdalRules.IsShutter((ObstacleId)id) || DimerdalRules.IsDiamond((ObstacleId)id)) { hasDimerdal = true; break; }
-        if (!hasDimerdal && resolvedLevel?.stackedObstacles != null)
-            foreach (var entry in resolvedLevel.stackedObstacles)
-                if (DimerdalRules.IsShutter(entry.obstacleId) || DimerdalRules.IsDiamond(entry.obstacleId)) { hasDimerdal = true; break; }
+        bool hasDimerdal = LevelHasObstacle(id => DimerdalRules.IsShutter(id) || DimerdalRules.IsDiamond(id));
         if (hasDimerdal || board.Dimerdals != null) DimerdalService.Ensure(board).Build(resolvedLevel);
     }
 

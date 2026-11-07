@@ -74,4 +74,8 @@ public interface ITeamService
 
     /// <summary>Veri değişince (yeni sohbet mesajı vb.) tetiklenir → ekran tazelenir.</summary>
     event System.Action OnChanged;
+
+    /// <summary>Takım ekranı açık/kapalı. Gerçek servis canlı Firestore dinleyicilerini YALNIZ ekran açıkken
+    /// tutar (arka planda okuma yok — kullanıcı kararı). Yerel servisler için anlamsız.</summary>
+    void SetScreenActive(bool active) { }
 }

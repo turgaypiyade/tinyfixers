@@ -1,5 +1,7 @@
 # 225 · Mühürlü Kristal Kalesi / Sealed Crystal Keep
 
+**2026-11-07 güncel hamle: 29.** Bu tur yalnız hamle ayarı yapıldı (27→29); aşağıdaki önceki tasarım notu ve eski görseller tarihsel değerler içerebilir. [Güncel denge incelemesi](Reviews/225-234-Balance-2026-11-07/Review.md).
+
 **2026-11-05 bağımsız kutu adetleri:** 8+8 = 16. Her kutu kendi adedini üretip son elması yerleşince ayrı kırılır. Editör bu adetlerden ortak mor Diamond hedefini otomatik hesaplar. Yerleşim/hamle/diğer hedefler aynı.
 
 **2026-11-05 hedef ikonu:** Ortak Diamond hedefi kullanıcının mor elmasıyla gösterilir. Diğer renklerin toplamını temsil eder; hamle/hedef adedi/yerleşim ve tahtadaki renkler aynı. Güncel PNG yeniden üretildi.

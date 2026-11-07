@@ -1,5 +1,67 @@
 # Level tasarım çalışma durumu
 
+## 240–250 doğa siluetleri — 241–249 yazıldı · 2026-11-07
+
+Kullanıcı: “240 ve sonrası … son engellerden (lamba, yel değirmeni, flyegg) … hole'larla güzel şekil, doğadan esinlen”; 241/242 için “süper olmuşlar, onları oynayayım, sen diğerlerine devam et”. Mevcut GUID/katalog/levelKey korunur; yalnız asset içeriği ve TR/EN ad değişti. Eski asset/not/PNG: `Batches/240-250-Nature/Before/<n>/`.
+
+| Lv | Ad | Zorluk/hamle | Siluet + engeller | Hedefler |
+|---|---|---|---|---|
+| 240 | Gökkuşağı | Boss 30 (650 HP) | 2 bantlı ColorCrate gökkuşağı (kırmızı 15×1, sarı 13×2), kemer altı 3 sütun kuytu; kullanıcı “kazanılamaz” → depolar/birikinti hedefi çıkarıldı, bulut köşeleri taş alanı | boss, 15 kırmızı, 13 sarı |
+| 241 | Lale Tarlası | Normal 28 | lale + sap + yaprak; toprakta 2 Windmill80 | 16 un, 40 kırmızı |
+| 242 | Elma Ağacı | Normal 26 | taç tamamen oyun alanı; 4 elma adacıkta (köşelerde 2×1×1, gövde yanında 2×2×2), 2 BirdHouse, 2 FlyEggBox | 4 elma, 12 kuş |
+| 243 | Yusufçuk | Normal 26 | baş/gövde/4 kanat; kanat uçlarında 4 L LampStrip79 (2 kayar, 2 mor) | 4 çerçeve, 30 mavi |
+| 244 | Dağ Deresi | Normal 27 | tek dağ; zirveden kıvrılan dere + sağ yamaçtan eteğe inen yan dere (kullanıcı: su animasyonu görünsün), 7 kaya | 2 kanal, 7 oyma |
+| 245 | Mantar Ormanı | Hard 27 | 3 mantar; 2×2 Dimerdal (2 kırmızı büyük şapka altında 6 komşulu, 2 sarı yan şapkada 4 komşulu), altları hole | 12 elmas |
+| 246 | Kuş Yuvası | Normal 26 | dal + sarkan yuva; dal uçlarında 2 BirdHouse, yuvada 6 EggBird | 6 yumurta, 12 kuş |
+| 247 | Şelale | Normal 27 | yamaç + dar boğaz + gölet; şelale kanalı 6 kaya altında, mağarada 4 Wall→Lantern | kanal 1, duvar 4, fener 4, oyma 6 |
+| 248 | Ayçiçeği | Normal 24 | hole’lu taç + sap; göbekte 9 Lantern, çevresinde 12 sarı Plastic_Yellow taç yaprağı (kullanıcı: ilk hâli çok kolay) | 9 fener, 12 yaprak, 25 sarı |
+| 250 | Hasat Bayramı | Boss 24 (950 HP, saldırı 3 hamlede bir; kullanıcı iki kez “kolay”) | köşe adacıklarında 2×2 elma, ortada 9 fener direği, 2 Windmill, 1 FlyEggBox; 340 oyuncu HP, 3 dalga | boss, 2 elma, 9 fener, 12 un |
+| 249 | Meyve Bahçesi | Super Hard 26 | ayrık iki taç; altlarından sarkan 4×1×1 elma, 2 BirdHouse, 2 FlyEggBox | 4 elma, 16 kuş |
+
+Hepsinde normal yuvalar statik kontrolde %100 doğal dolum, pin/hazır special yok; çim/BatteryBox/Omega yok. Oynanmadı, sim/build/Unity yok; hamleler ilk tahmin. 240 boss: kullanıcı “239’da sculpting stone kırıyorum 240’ta yine aynısı geldi, kullanıcıyı çok sıkar” → oyma/çamur kaldırıldı. Ardışık levellarda aynı ana iş tekrar edilmez. 250 yazıldı (Hasat Bayramı). Kural: elma = kutu×2. Kuş evleri tek değil grup (1×2…2×4) — 242/246/249 ikişerli gruplara çevrildi.
+
+## 235 v2 — tek kütleli kemer hazır; kullanıcı değerlendirmesi bekliyor · 2026-11-07
+
+Bu tur yalnız235 revize edildi. AktifV1 `LevelV1_00002350.asset` / `LevelCL_0235` / GUID `a8b9134ba6ea4b7da0bcec0d0c72d0fb`; isimler **Bakır Kemer / Copper Arch** aynı. 9×11/85 aktif, **28 hamle ilk ayar · Hard**. Alt kenardan yükselen tek kütle:19 oyma→19 çamur, iki2×2heykel altında8çamur daha. Sol14mavi/sağ14yeşil, ardından her heykelde3special. Hedef2/19/27. İlk U taslağı176/182benzerliği nedeniyle bırakıldı;234’ün üçlüplastikyığını tekrarlanmadı.
+
+Açılış58/58,oyma kalkınca77/77,heykeller kalkınca66/66,ikisi kalkınca85/85 normal yuva statik beslenir. Tek heykel açılması da kontrol edildi. Pin/hazırspecial/başlangıçboşcebi yok. Yeni28hamle oynanmadı/simüle edilmedi; eski18hamle/%35bot tarihseldir. Yeni kullanıcı görsel/oyun onayı yok.
+
+`Batches/235-Copper-Arch-v2/README.md`, `design.json`, `revise.py --verify`, `validation.json`; not/PNG `Level235-Bakir-Kemer.*`; `Reviews/235-Copper-Arch-v2/`. Bir seferlik yazıcı uygulandı. Master modelde yalnız235 güncel, eskiSimLevels/rapor/hashler tarihsel. Uygulama sonrası yedi235alanı dışında6.985Assetsdosyası/meta/katalog/isimler aynı. Kod/library/editor/audio değişmedi. Statik ve PNG kontrolleri geçti; build/Play/sim/UI/yayın/baseline/commit yok. Manuel test kullanıcıda; ayrı236çalışmasına müdahale edilmez.
+
+## Güncel — 235–250 görsel olarak beğenilmedi; BatteryBox/Omega kullanım dışı · 2026-11-07
+
+Kullanıcının son eleştirisinin kapsamı **235 ve sonrası, dün ve bugün yapılanlar**; mevcut teslimde **235–250**. Grubun görsellerini beğenmediğini açıkça bildirdi. Aşağıdaki “yerel teslim hazır/tamam” kayıtları dosya ve teknik teslim geçmişidir; görsel kabul sayılmaz. Bu geri bildirim önceki levellara genellenmez. Tek tek kompozisyon kusurları henüz kullanıcı tarafından ayrıntılandırılmadı.
+
+**BatteryBox23 ve OmegaModul24: şimdilik KULLANILMAYACAK.** Mevcut görselleri kullanıcı tarafından beğenilmiyor; uygun imaj bulunursa ileride yeniden değerlendirilebilir. 242 ve 246 bu engelleri kullanan mevcut taslaklardır. Kütüphane/runtime/editor kaldırılmadı; level assetleri değiştirilmedi. Bu tur geri bildirim ve tasarım tercihi kaydıdır; toplu yeniden tasarım veya sonraki level başlatılmaz. Ayrıntı: `Design-Feedback.md` ve `Obstacle-Design-Guide.md` başı.
+
+## Güncel — 250’ye kadar yerel teslim hazır; üç booster koşusu izin bekliyor · 2026-11-07
+
+**Yetki ve hedefler:** Kullanıcı 225’ten itibaren Mac simülasyonunu, sonuçlara göre hamle ayarını ve ardından 250’ye kadar tasarımı istedi. Geç dönem sonu1–4 oyuncu hedefi **%50–60**;5/9 için **%30 normal**.6–8 için önceki%40–50 yönü agent’ın açık çalışma varsayımıdır; yeni doğrudan6–8 kullanıcı cümlesi değildir. Bot yüzdesi insan yüzdesi değildir. Yayın/build/Unity UI için genel izin çıkarılmaz.
+
+**225–234 tamam:** Hamleler sıra ile **29,23,26,29,32,30,28,35,21,46**. Yalnız moves değişti; maskeler, engeller, goal miktarları, meta/GUID/adlar aynı.232’nin5/5/5 elmas kotası ve231’in kullanıcı yerleşimi korunur.233:27→21, bot18/30=%60.234:24→46, bot11/20=%55; üç katmanlı v2’nin bütçesi24’te çok ağırdı.230:30 korunur;34 hamle denemesinde de can bitimi baskındı.225/228/232’de Dimerdal üretici önceliği botta eksik olduğu için oranı kovalamak amacıyla aşırı hamle eklenmedi. Kayıt: `Reviews/225-234-Balance-2026-11-07/Review.md`, `applied-moves.json`.632 gerçek oyun.234 önizlemesi artık hamleyi canlı assetten okuyarak46 gösterir; eski yazıcıları tekrar çalıştırma.
+
+**235–250 tamam:** Aktif V1 katalog sonu250;16 yeni level/meta ve16 TR/EN ad eklendi. Önceki470 level/meta dosyası hash olarak korunur. Names.md250’ye uzatıldı. Batch: `Batches/235-250-Late-Game/`; finalmodel `designs.json`, guard kayıtları `written.json`/`finalized.json`, check `verify.py`, görsel `Contact.png` ve16 kök PNG/MD. `author.py --write` ve `finish.py` bir kez çalıştı, tekrar yazmayı reddeder. Güncel sim girdileri `SimLevels-Current`; ilk girdiler ve deneme klasörleri sabittir.
+
+Yeni hamleler235→250: **18,16,26,30,33,24,24,21,30,24,24,25,16,17,22,36**.240=900 HP/320 oyuncu HP/3dalga;16 oyma→16 çamur ve2 depo,5goal.250=680 HP/340 oyuncu HP/3dalga;2 elma,10 elmas,16 fener,12 oyma ve boss,5goal. Çim42/58/69 veColorCrate71–74 yok. Yalnız gölge normal yuvalarına destekli sıradan pin, hazır special yok.245,238’e benzer kanatlardan L kaidesine değişti.241 EnergyContainer22 ortak enerji;242 BatteryBox23 dört renk×3=12 vuruş;246 Omega24 aynı iki-hit movable ailesinin görsel varyantı, bağımsız yeni mekanik sayılmaz.241/242’nin EnergyBall ve dolu pil goal ikonları düzeltildi; yeni runtime obstacle eklenmedi.
+
+**Denge/kanıt sınırı:** Yeni batch862 gerçek oyun; bütün görev toplam1494. Yeni son bot örnekleri235%35,236%55,237%50,238%50,239%0/2hata,240%70,241%50,242%65,243%60,244%40,245%40,246%45,247%45,248%55,249%30,250%20.239/250’de Dimerdal üreticisi körlüğü baskın;244’te Cargo çevresi puanlaması/örnek varyansı nedeniyle insan%50–60 doğrulanmadı.240 kombo odaklı daha rahat boss olarak kaldı. Bu tasarımlar kullanıcı tarafından henüz oynanmadı/onaylanmadı. Öncelikli manuel deneme:234,239,244,250;230 için HP/karşı baskı ayrıca değerlendirilmeli. Rapor `Batches/235-250-Late-Game/Balance-Review.md`. Hata kayıtları kayıplara katılmaz; toplam11 runtime hata örneği saklıdır. CPU/GC/FPS ölçümü yok.
+
+**Tek kalan istek: üç başlangıç booster’ı karşılaştırması.** LineH/PulseCore/SystemOverride için `RuntimeSimulationSession`/CLI `--boosters 3` desteği hazır. Gerçek dedicated injector kullanılır, envanter harcanmaz,3 teslimat raporlanmadan bot başlamaz. Ufo sim guard kaydedilmiş streak eklerini engeller; idle event aboneliği normal/iptal/disable/destroy yollarında temizlenir.21 Python test +56 izole sim C# +8 injector cleanup kontrolü PASS. Yeni kaynak kod mevcut Mac binary’sinde yok. **AGENTS.md açık build isteği olmadan build’i yasakladığı için async izin soruldu, henüz cevap yok. Build ve üç booster’lı koşu YAPILMADI.** İzin gelirse kullanıcıdan tekrar sim izni istemeden Macsim’i derle veya kullanıcının yeni derlemesiyle devam et; önce1 oyun booster smoke (raporda tam3), sonra225–234 son hamlelerle koş. UI kontrolü/yayın/release baseline/commit yok. Bütün sim süreçleri kapandı.
+
+**176 kullanıcı tarafından bitirildi; iş kapalı, dokunma.**251 istenmedi.
+
+## Güncel — 234 v2 katmanlı sürüm hazır; 176 kapandı · 2026-11-07
+
+Kullanıcı234v1gridini beğendi,zorluğunu hafif buldu,oynadıktan sonra kolay olduğunu doğruladı. Yalnız234revize edildi. Beğenilen8×11/74aktifmaske,24hamle,isim/GUID/meta/katalog aynı. 176kullanıcının bitirdiği seviyedir veagent işi kapanmıştır;oraya geri dönme.
+
+234 **Boya Dalgası / Paint Wave** / `LevelV1_00002340.asset` / `LevelCL_0234` / chapter10. Solda2ColorChest→2PaintCanBox;alt sol12ve sağ omuz4hücrede **oyma28→iki-aşamalı plastik40→çamur25**,toplam16üç-katman yuvası.5goal2renkli sandık/2boya/16oyma/16plastik/16çamur. Orta plastik yerinden düşünce deçamur ortaya çıkabilir;ikisi ayrı zorunlu hedef olarak sürer.50normal başlangıç yuvasının49’u otomatik beslenir;yalnız(0,4)index32deGearbaşlangıç taşı var,desteği kontrol edildi. Boya çatısı kalkınca bu hücre de doğal doluma açılır. Hazırspecial/çim/ColorCrate yok.
+
+Aktifrevizyon `Batches/234-Paint-Wave/active-revision.json`;yazıcı `revise_v2.py`,verifier `review_v2.py` (`review.py`yönlendirir),render `render.py`. V1kullanıcı tarafından kolay bulundu ve`Revisions/v2-layered/Before/` içine alındı;eskiauthor artıkaktifrevizyonda durur. Not/PNG `Level234-Boya-Dalgasi.*`;`Layers.png`3gerçek spritekesiti incelendi. Son envanter `Reviews/234-Paint-Wave-v2/`.6109diğerAssets dosyası aynı;v2henüzoynanmadı/onaylanmadı.24hamle yeni katmanlarla manueltest bekler;denge/FPS ölçümü,UnityUI/Play/build/bot-kaskat simülasyonu/yayın/commit yok.235istenmedi.
+
+Kullanıcının **öncefikir/tarz seçip paylaşma→yerleşim kurma**, **yokolan engellerle güzel kenar şekilleri**, **yalnız doğal açılış dolumu ulaşmayan yuvalara başlangıç taşı** tercihleri hafızaya,ilkelere,feedback’e veskill’e işlendi.176’nın eskiagenthamle/hedeflerini mevcutkullanıcıassetine geri basma.
+
+Ayrıgörseltalep tamamlandı: gönderilen yeniısırılmış elma,`Resources/FlyFruit/AppleHalf.png`yerine bytesolarak kondu. SpriteGUID`12e9756b758758baa4722910f6feb45e`aynı;FlyFruit102aux[0] ve3.lokma eşiği doğru. Kayıt `Docs/Checks/FlyFruit-Bitten-Apple-2026-11-07/`;234v2snapshot’ında yeni elma korunur.
+
 ## Güncel — yalnız V1 176 yeniden tasarlandı · 2026-11-06
 
 Kullanıcı `LevelV1_00001760` yerleşimini açıkça reddetti; sebep normal taşların ortasında kopuk kutu yerleşiminin mevcut kompozisyon kuralına aykırı olması. Aktif katalog176/`LevelCL_0176`/Kızıl ve Yeşil çözüldü. TarihselDolaplı Geçit notu/PNG’si kaynak değildir ve korunur.

@@ -1,0 +1,3 @@
+Level,Policy,Speed,Attempts,Completed,Wins,Win%,Low95%,High95%,AvgMovesOnWin,Unresolved
+"L226 LevelV1_00002260_Runtime",Auto,10.0,30,30,8,26.7,14.2,44.4,18.3,0
+"L231 LevelV1_00002310_Runtime",Auto,10.0,30,30,7,23.3,11.8,40.9,19.3,0

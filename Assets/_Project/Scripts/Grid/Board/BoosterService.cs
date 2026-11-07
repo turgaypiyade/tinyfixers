@@ -1244,8 +1244,12 @@ public class BoosterService
 
     // BoosterService.cs
 
+    /// Son SafeShuffleBoardRoutine tahtayı gerçekten yeniden yazdı mı (deadlock döngüsü bununla çıkış yapar).
+    internal bool LastShuffleCommitted { get; private set; }
+
     public IEnumerator SafeShuffleBoardRoutine(BoardInitService boardInitService, bool playerShuffle = false)
     {
+        LastShuffleCommitted = false;
         board.BeginBusy();
         ShuffleWandFx wandFx = null;
         var shuffleGrid = board.Tiles;
@@ -1257,7 +1261,8 @@ public class BoosterService
             yield return board.WaitForExclusiveBoardAccess();
             if (!ReferenceEquals(board.Tiles, shuffleGrid) || boardInitService == null || !CanShuffleBoard()) yield break;
             // A timed-out exclusive wait is not permission to overwrite work still in flight.
-            if (board.ActiveBackgroundJobs > 0 || board.IsActionSequencePlaying
+            // (Boss vuruş kuyruğu ve hedef topları taşlara dokunmaz → beklenmez.)
+            if (board.TileAffectingBackgroundJobs > 0 || board.IsActionSequencePlaying
                 || board.DetachedSequencerActions > 0 || board.IsSpecialVisualInFlight) yield break;
 
             var currentTypes = new TileType[board.Width, board.Height];
@@ -1328,6 +1333,7 @@ public class BoosterService
             board.RefreshAllTileObstacleVisuals();
             board.RefreshAllSortingOrders();
             committed = true;
+            LastShuffleCommitted = true;
             if (wandFx != null) yield return wandFx.Exit(0.3f);
         }
         finally

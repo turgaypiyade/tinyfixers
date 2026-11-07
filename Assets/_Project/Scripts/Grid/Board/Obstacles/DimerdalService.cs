@@ -52,6 +52,9 @@ public sealed class DimerdalService : MonoBehaviour
         service.production.OnFinished ??= service.OnProductionFinished;
         service.board = board;
         board.Dimerdals = service;
+        // Build'den geçmeden ilk kez görsel kaydıyla oluşursa (örtü altından açılan kutu) hit
+        // dinleyicileri bağlı olmazdı → kutu hiç vuruş almazdı. Bağlı değilse burada bağla.
+        if (service.state == null) service.Bind();
         return service;
     }
 

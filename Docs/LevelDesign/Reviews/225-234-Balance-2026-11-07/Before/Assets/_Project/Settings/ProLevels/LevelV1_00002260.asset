@@ -1,0 +1,345 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d85e85dc9bc3a4bd2a8772f074d86c37, type: 3}
+  m_Name: LevelV1_00002260
+  m_EditorClassIdentifier: Assembly-CSharp::LevelData
+  width: 9
+  height: 11
+  moves: 20
+  baseCoinReward: 10
+  goals:
+  - targetType: 1
+    tileType: 0
+    obstacleId: 55
+    collectibleId: 0
+    iconOverride: {fileID: 21300000, guid: 6c0ba6037bf64886943108e3d2b24c2c, type: 3}
+    amount: 1
+  - targetType: 1
+    tileType: 0
+    obstacleId: 75
+    collectibleId: 0
+    iconOverride: {fileID: 21300000, guid: 127c84f422d442eaa045deb663e1494a, type: 3}
+    amount: 22
+  - targetType: 1
+    tileType: 0
+    obstacleId: 83
+    collectibleId: 0
+    iconOverride: {fileID: 21300000, guid: 82e571b9292d4818b15a8179863d6e02, type: 3}
+    amount: 16
+  levelKind: 0
+  usesCustomIntro: 0
+  introLeftSprite: {fileID: 0}
+  introRightSprite: {fileID: 0}
+  introSlideInDuration: 0.9
+  introHoldDuration: 1.1
+  bossAttackEveryMoves: 2
+  bossAttackOilCount: 0
+  bossThrownObstacles: 
+  bossMaxPressureObstacles: 8
+  bossToolThreatEnabled: 0
+  bossToolThreatTypes: 
+  bossToolThreatEveryCounters: 4
+  bossToolThreatCountdown: 3
+  bossToolThreatExtraAttacks: 2
+  bossToolThreatLockSeconds: 3
+  playerMaxHp: 900
+  damagePerClearedTile: 10
+  shieldProtectionPerPickup: 2
+  enemyAttackBaseDamage: 25
+  battlefieldBackground: {fileID: 0}
+  bossWaves: []
+  bossWaveCount: 1
+  oilSpreadMaxCells: 0
+  randomPool: 000000000200000003000000
+  refillSpecialGuard: 0.75
+  energyPerContainer: 1
+  rocketBasketFireAllOnHit: 0
+  comboTutorial: 0
+  tutorialSteps: []
+  musicClip: {fileID: 8300000, guid: a75116037af37490bb9f00591892d8d6, type: 3}
+  musicVolume: 0.593
+  obstacleLibrary: {fileID: 11400000, guid: 542e279c729681244b475a353cdd0e8f, type: 2}
+  cells: 010000000100000001000000010000000100000001000000000000000000000000000000010000000100000001000000010000000100000001000000000000000000000000000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000000000000100000001000000000000000100000001000000010000000100000001000000000000000100000001000000000000000100000001000000010000000100000001000000000000000100000001000000000000000100000001000000010000000100000001000000000000000100000001000000000000000100000001000000010000000100000001000000000000000100000001000000000000000100000001000000010000000100000001000000010000000100000001000000000000000100000001000000010000000100000001000000010000000100000001000000000000000100000001000000
+  obstacles: 000000000000000000000000000000004b0000004b000000000000000000000000000000000000000000000000000000000000004b0000004b000000000000000000000000000000000000000000000000000000000000004b0000004b000000000000000000000000000000000000000000000000000000000000004b0000004b000000000000000000000000000000000000000000000000000000000000004b0000004b000000000000000000000000000000000000000000000000000000000000004b0000004b000000000000000000000000000000000000000000000000000000000000004b0000004b000000000000000000000000000000000000000000000000000000000000004b0000004b000000000000005000000050000000000000000000000000000000000000004b0000004b000000000000005000000050000000000000000000000000000000000000004b0000004b000000000000005000000050000000000000000000000000000000000000004b0000004b000000000000005000000050000000
+  obstacleOrigins: ffffffffffffffffffffffffffffffff0400000005000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffff0d0000000e000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffff1600000017000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffff1f00000020000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffff2800000029000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffff3100000032000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffff3a0000003b000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffff4300000044000000ffffffff4600000046000000ffffffffffffffffffffffffffffffff4c0000004d000000ffffffff4600000046000000ffffffffffffffffffffffffffffffff5500000056000000ffffffff5800000058000000ffffffffffffffffffffffffffffffff5e0000005f000000ffffffff5800000058000000
+  colorCrateInitialHits: []
+  tubes: []
+  magnets: []
+  waterChannels: []
+  safes: []
+  ancientSeals: []
+  stackedObstacles:
+  - originCellIndex: 81
+    obstacleId: 55
+    stackOrder: 5
+    initialRemainingHits: 0
+    wallPieceOriginPlusOne: 5
+    wallPieceId: 2
+  - originCellIndex: 90
+    obstacleId: 55
+    stackOrder: 6
+    initialRemainingHits: 0
+    wallPieceOriginPlusOne: 5
+    wallPieceId: 2
+  - originCellIndex: 91
+    obstacleId: 55
+    stackOrder: 7
+    initialRemainingHits: 0
+    wallPieceOriginPlusOne: 5
+    wallPieceId: 2
+  - originCellIndex: 92
+    obstacleId: 55
+    stackOrder: 8
+    initialRemainingHits: 0
+    wallPieceOriginPlusOne: 5
+    wallPieceId: 2
+  - originCellIndex: 82
+    obstacleId: 55
+    stackOrder: 9
+    initialRemainingHits: 0
+    wallPieceOriginPlusOne: 5
+    wallPieceId: 2
+  - originCellIndex: 83
+    obstacleId: 55
+    stackOrder: 10
+    initialRemainingHits: 0
+    wallPieceOriginPlusOne: 5
+    wallPieceId: 2
+  - originCellIndex: 84
+    obstacleId: 55
+    stackOrder: 11
+    initialRemainingHits: 0
+    wallPieceOriginPlusOne: 5
+    wallPieceId: 2
+  - originCellIndex: 93
+    obstacleId: 55
+    stackOrder: 12
+    initialRemainingHits: 0
+    wallPieceOriginPlusOne: 5
+    wallPieceId: 2
+  - originCellIndex: 94
+    obstacleId: 55
+    stackOrder: 13
+    initialRemainingHits: 0
+    wallPieceOriginPlusOne: 5
+    wallPieceId: 2
+  - originCellIndex: 95
+    obstacleId: 55
+    stackOrder: 14
+    initialRemainingHits: 0
+    wallPieceOriginPlusOne: 5
+    wallPieceId: 2
+  - originCellIndex: 86
+    obstacleId: 55
+    stackOrder: 15
+    initialRemainingHits: 0
+    wallPieceOriginPlusOne: 5
+    wallPieceId: 2
+  - originCellIndex: 85
+    obstacleId: 55
+    stackOrder: 16
+    initialRemainingHits: 0
+    wallPieceOriginPlusOne: 5
+    wallPieceId: 2
+  - originCellIndex: 76
+    obstacleId: 55
+    stackOrder: 17
+    initialRemainingHits: 0
+    wallPieceOriginPlusOne: 5
+    wallPieceId: 2
+  - originCellIndex: 77
+    obstacleId: 55
+    stackOrder: 18
+    initialRemainingHits: 0
+    wallPieceOriginPlusOne: 5
+    wallPieceId: 2
+  - originCellIndex: 68
+    obstacleId: 55
+    stackOrder: 19
+    initialRemainingHits: 0
+    wallPieceOriginPlusOne: 5
+    wallPieceId: 2
+  - originCellIndex: 67
+    obstacleId: 55
+    stackOrder: 20
+    initialRemainingHits: 0
+    wallPieceOriginPlusOne: 5
+    wallPieceId: 2
+  - originCellIndex: 58
+    obstacleId: 55
+    stackOrder: 21
+    initialRemainingHits: 0
+    wallPieceOriginPlusOne: 5
+    wallPieceId: 2
+  - originCellIndex: 59
+    obstacleId: 55
+    stackOrder: 22
+    initialRemainingHits: 0
+    wallPieceOriginPlusOne: 5
+    wallPieceId: 2
+  - originCellIndex: 49
+    obstacleId: 55
+    stackOrder: 23
+    initialRemainingHits: 0
+    wallPieceOriginPlusOne: 5
+    wallPieceId: 2
+  - originCellIndex: 50
+    obstacleId: 55
+    stackOrder: 24
+    initialRemainingHits: 0
+    wallPieceOriginPlusOne: 5
+    wallPieceId: 2
+  - originCellIndex: 40
+    obstacleId: 55
+    stackOrder: 25
+    initialRemainingHits: 0
+    wallPieceOriginPlusOne: 5
+    wallPieceId: 2
+  - originCellIndex: 41
+    obstacleId: 55
+    stackOrder: 26
+    initialRemainingHits: 0
+    wallPieceOriginPlusOne: 5
+    wallPieceId: 2
+  - originCellIndex: 31
+    obstacleId: 55
+    stackOrder: 27
+    initialRemainingHits: 0
+    wallPieceOriginPlusOne: 5
+    wallPieceId: 2
+  - originCellIndex: 32
+    obstacleId: 55
+    stackOrder: 28
+    initialRemainingHits: 0
+    wallPieceOriginPlusOne: 5
+    wallPieceId: 2
+  - originCellIndex: 22
+    obstacleId: 55
+    stackOrder: 29
+    initialRemainingHits: 0
+    wallPieceOriginPlusOne: 5
+    wallPieceId: 2
+  - originCellIndex: 23
+    obstacleId: 55
+    stackOrder: 30
+    initialRemainingHits: 0
+    wallPieceOriginPlusOne: 5
+    wallPieceId: 2
+  - originCellIndex: 24
+    obstacleId: 55
+    stackOrder: 31
+    initialRemainingHits: 0
+    wallPieceOriginPlusOne: 5
+    wallPieceId: 2
+  - originCellIndex: 25
+    obstacleId: 55
+    stackOrder: 32
+    initialRemainingHits: 0
+    wallPieceOriginPlusOne: 5
+    wallPieceId: 2
+  - originCellIndex: 26
+    obstacleId: 55
+    stackOrder: 33
+    initialRemainingHits: 0
+    wallPieceOriginPlusOne: 5
+    wallPieceId: 2
+  - originCellIndex: 33
+    obstacleId: 55
+    stackOrder: 34
+    initialRemainingHits: 0
+    wallPieceOriginPlusOne: 5
+    wallPieceId: 2
+  - originCellIndex: 34
+    obstacleId: 55
+    stackOrder: 35
+    initialRemainingHits: 0
+    wallPieceOriginPlusOne: 5
+    wallPieceId: 2
+  - originCellIndex: 35
+    obstacleId: 55
+    stackOrder: 36
+    initialRemainingHits: 0
+    wallPieceOriginPlusOne: 5
+    wallPieceId: 2
+  - originCellIndex: 43
+    obstacleId: 55
+    stackOrder: 37
+    initialRemainingHits: 0
+    wallPieceOriginPlusOne: 5
+    wallPieceId: 2
+  - originCellIndex: 44
+    obstacleId: 55
+    stackOrder: 38
+    initialRemainingHits: 0
+    wallPieceOriginPlusOne: 5
+    wallPieceId: 2
+  - originCellIndex: 53
+    obstacleId: 55
+    stackOrder: 39
+    initialRemainingHits: 0
+    wallPieceOriginPlusOne: 5
+    wallPieceId: 2
+  - originCellIndex: 52
+    obstacleId: 55
+    stackOrder: 40
+    initialRemainingHits: 0
+    wallPieceOriginPlusOne: 5
+    wallPieceId: 2
+  - originCellIndex: 61
+    obstacleId: 55
+    stackOrder: 41
+    initialRemainingHits: 0
+    wallPieceOriginPlusOne: 5
+    wallPieceId: 2
+  - originCellIndex: 62
+    obstacleId: 55
+    stackOrder: 42
+    initialRemainingHits: 0
+    wallPieceOriginPlusOne: 5
+    wallPieceId: 2
+  - originCellIndex: 4
+    obstacleId: 55
+    stackOrder: 43
+    initialRemainingHits: 0
+    wallPieceOriginPlusOne: 5
+    wallPieceId: 2
+  - originCellIndex: 5
+    obstacleId: 55
+    stackOrder: 44
+    initialRemainingHits: 0
+    wallPieceOriginPlusOne: 5
+    wallPieceId: 2
+  - originCellIndex: 13
+    obstacleId: 55
+    stackOrder: 45
+    initialRemainingHits: 0
+    wallPieceOriginPlusOne: 5
+    wallPieceId: 2
+  - originCellIndex: 14
+    obstacleId: 55
+    stackOrder: 46
+    initialRemainingHits: 0
+    wallPieceOriginPlusOne: 5
+    wallPieceId: 2
+  wallPieceIds: 000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+  lampColorByCell: 000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+  lampStripSettings: []
+  hamsterSatietyOverride: 0
+  hamsterSatietyByCell: 000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+  paintCanBoxColors: []
+  dimerdals: []
+  tarpStatues: []
+  pinnedTileTypes: 000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+  pinnedSpecialTypes: 000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+  movableSpawnColumns: 000000000101000000
+  movableSpawnFallbackMoves: 0
+  movableSpawnFillColumns: 1

@@ -58,13 +58,41 @@ public sealed class FirebaseTeamService : ITeamService, IDisposable
         };
 
         ChatModeration.OnBlockedChanged += HandleBlockedChanged;
+        // Dinleyiciler burada AÇILMAZ: yalnız takım ekranı açıkken (SetScreenActive) — arka planda okuma yok.
+    }
+
+    private bool screenActive;
+
+    public void SetScreenActive(bool active)
+    {
+        if (disposed || screenActive == active) return;
+        screenActive = active;
+        if (!active)
+        {
+            FirebaseAuthService.OnReady -= Connect;
+            StopListeners();   // son veriler bellekte kalır; ekran tekrar açılınca dinleyiciler yeniden bağlanır
+            return;
+        }
         if (FirebaseAuthService.IsReady) Connect();
-        else FirebaseAuthService.OnReady += Connect;
+        else { FirebaseAuthService.OnReady -= Connect; FirebaseAuthService.OnReady += Connect; }
+    }
+
+    private void StopListeners()
+    {
+        teamListener?.Stop();
+        teamListener = null;
+        membersListener?.Stop();
+        membersListener = null;
+        chatListener?.Stop();
+        chatListener = null;
+        lifeListener?.Stop();
+        lifeListener = null;
     }
 
     private void Connect()
     {
-        if (disposed || string.IsNullOrEmpty(teamId)) return;
+        FirebaseAuthService.OnReady -= Connect;
+        if (disposed || !screenActive || string.IsNullOrEmpty(teamId) || teamListener != null) return;
 
         // Takım dokümanı: üye sayısı + bot harman tohumu.
         teamListener = FirebaseTeamCloud.TeamDoc(teamId).Listen(snap =>
@@ -268,14 +296,7 @@ public sealed class FirebaseTeamService : ITeamService, IDisposable
     {
         disposed = true;
         ChatModeration.OnBlockedChanged -= HandleBlockedChanged;
-        teamListener?.Stop();
-        teamListener = null;
-        membersListener?.Stop();
-        membersListener = null;
-        chatListener?.Stop();
-        chatListener = null;
-        lifeListener?.Stop();
-        lifeListener = null;
+        StopListeners();
         FirebaseAuthService.OnReady -= Connect;
     }
 }

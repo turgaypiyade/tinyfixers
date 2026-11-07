@@ -43,6 +43,11 @@ public class TileIconLibrary : ScriptableObject
     [Tooltip("Yıldız ödülü.")]
     public Sprite star;
 
+    [Header("Goal Icons")]
+    [Tooltip("'Engel kır' görev hedefi ikonu (tahta engeli, ör. tahta sandık). Joker/booster görseli KULLANMA: " +
+             "hedef ikonu ödül ikonuyla karışır (çekiç hedefi → çekiç ödülü görünür).")]
+    public Sprite obstacleGoal;
+
     // ─────────────────────────────────────────────────────────────────
     // Global erişim: event/reward/menü UI'ları serialize ref olmadan ikon çözebilsin.
     // Asset Resources kökünde (TileIconLibrary_Main) → her sahnede güvenilir yüklenir.

@@ -87,6 +87,7 @@ public sealed class RuntimeSimulationSession : MonoBehaviour
         public int gamesPerLevel = 20;
         public int seed = 42;
         public RuntimeBotPolicy policy = RuntimeBotPolicy.GoalAware;
+        public int startingBoosters; // 0, or the three pre-level slots: LineH / PulseCore / SystemOverride.
         public float timeScale = 1f;
         public float stepTimeoutSeconds = 120f;
         public string outputPath;
@@ -105,6 +106,8 @@ public sealed class RuntimeSimulationSession : MonoBehaviour
         public string levelPath;
         public string bot;   // Acemi / Usta / diğer politika adı
         public int sample, seed, movesUsed, movesLeft, rejectedInputs;
+        public int startingBoostersPlaced;
+        public List<string> startingBoosterPlacements = new();
         public string outcome; // Won, Lost, NoMoves, Timeout, Error, Cancelled. Only Won/Lost enter win%.
         public string detail;
         public float elapsedSeconds;
@@ -229,6 +232,8 @@ public sealed class RuntimeSimulationSession : MonoBehaviour
             foreach (int level in config.levelNumbers)
                 if (level < 1) return "Level numbers must be positive.";
         if (config.gamesPerLevel < 1) return "gamesPerLevel must be positive.";
+        if (config.startingBoosters != 0 && config.startingBoosters != 3)
+            return "startingBoosters must be 0 or 3.";
         if (float.IsNaN(config.timeScale) || float.IsInfinity(config.timeScale) || config.timeScale <= 0f
             || float.IsNaN(config.stepTimeoutSeconds) || float.IsInfinity(config.stepTimeoutSeconds) || config.stepTimeoutSeconds <= 0f)
             return "Speed and step timeout must be finite and positive.";
@@ -404,6 +409,11 @@ public sealed class RuntimeSimulationSession : MonoBehaviour
         board.OnLevelFailRequested += OnForcedFail;
         try
         {
+            if (_config.startingBoosters == 3)
+            {
+                yield return PlaceStartingBoosters(result, board);
+                if (Cancelled || !string.IsNullOrEmpty(result.outcome)) yield break;
+            }
             // Auto: seviye ≤50 Acemi (GoalAware), 51+ Usta (Expert). Seviye no yoksa (editör asset yolu) Acemi.
             var policy = _config.policy == RuntimeBotPolicy.Auto
                 ? (CurrentLevelNumber > 50 ? RuntimeBotPolicy.Expert : RuntimeBotPolicy.GoalAware)
@@ -494,6 +504,58 @@ public sealed class RuntimeSimulationSession : MonoBehaviour
             }
         }
         finally { if (board != null) board.OnLevelFailRequested -= OnForcedFail; }
+    }
+
+    private IEnumerator PlaceStartingBoosters(GameResult result, BoardController board)
+    {
+        float started = Time.realtimeSinceStartup;
+        PreLevelSpecialRuntimeInjector injector = null;
+        bool finished = false;
+        try
+        {
+            while (IsBoardWorking(board, out _))
+            {
+                if (Cancelled) yield break;
+                if (_runtimeError != null || Time.realtimeSinceStartup - started > _config.stepTimeoutSeconds)
+                {
+                    result.outcome = _runtimeError == null ? "Timeout" : "Error";
+                    result.detail = _runtimeError ?? "Board did not settle before starting booster delivery.";
+                    yield break;
+                }
+                yield return null;
+            }
+            // Dedicated delivery uses the shipped candidate/reveal rules, without
+            // selecting/spending inventory or clearing the user's saved selection.
+            injector = PreLevelSpecialRuntimeInjector.CreateDedicated(new[]
+                { TileSpecial.LineH, TileSpecial.PulseCore, TileSpecial.SystemOverride });
+            injector.OnSpecialPlaced = (tile, special) =>
+            {
+                result.startingBoostersPlaced++;
+                result.startingBoosterPlacements.Add($"{special}@({tile.X},{tile.Y})");
+            };
+            injector.OnPlacementFinished = () => finished = result.startingBoostersPlaced == 3;
+            while (!finished)
+            {
+                if (Cancelled) yield break;
+                if (_runtimeError != null || injector == null
+                    || Time.realtimeSinceStartup - started > _config.stepTimeoutSeconds)
+                {
+                    result.outcome = _runtimeError == null ? "Timeout" : "Error";
+                    result.detail = _runtimeError ?? $"Starting booster delivery incomplete: {result.startingBoostersPlaced}/3.";
+                    yield break;
+                }
+                yield return null;
+            }
+        }
+        finally
+        {
+            if (injector != null)
+            {
+                injector.OnSpecialPlaced = null;
+                injector.OnPlacementFinished = null;
+                Destroy(injector.gameObject);
+            }
+        }
     }
 
     private static bool IsBoardWorking(BoardController board, out string reason)

@@ -221,3 +221,12 @@ Tek satırlık hâli (Console'a yapıştır):
 4 sezon × 5 hedef, 72 saatte bir sırayla döner (Haftalık Görevler → Engel Avı → Special Şenliği → Usta Turu → başa).
 Basamak: %15 büyüme, en fazla 3 tur. Elle düzenleme: sezon eklemek için `seasons` listesine yeni blok, değiştirdiğin sezonun
 `id`'sini değiştirirsen o sezonun ilerlemesi sıfırlanır. Ödül adına `Booster_PaintBucket` da geçerlidir (tabloda eksikti).
+
+## Hedef = ödül yasağı — 2026-11-07
+
+Kullanıcı kuralı: bir hedef kendisiyle aynı şeyi ödül vermez (PulseCore hedefinde PulseCore, roket hedefinde roket).
+`ProgressEventService.BuildGoals` → `SeparateGoalsFromSameRewards` hem yerel asset hem Firestore sezonuna uygulanır:
+çakışan ödül (LineH/LineV/LineAny ↔ Joker_LineH/Joker_Line; SpecialCreated ↔ Joker_PulseCore) çakışmayan başka bir
+hedefin ödülüyle yer değiştirir (adet/süre/dalga birlikte taşınır, sezon toplamı aynı). Takas yoksa aynı adette başka
+special joker verilir. Asset değiştirilmez. Yine de Console'a yazarken çakışan eşleşme girmemek en temizi.
+"Engel kır" hedefinin ikonu artık tahta sandık (`TileIconLibrary.obstacleGoal`), çekiç joker görseli değil.

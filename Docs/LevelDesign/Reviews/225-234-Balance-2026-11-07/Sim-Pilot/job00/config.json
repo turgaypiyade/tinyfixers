@@ -1,0 +1,22 @@
+{
+ "levelPaths": [],
+ "levelNumbers": [
+  225,
+  227,
+  229,
+  231,
+  233
+ ],
+ "scenePath": "Assets/_Project/Scenes/01_Game.unity",
+ "gamesPerLevel": 3,
+ "seed": 42,
+ "policy": 4,
+ "timeScale": 10.0,
+ "stepTimeoutSeconds": 90.0,
+ "outputPath": "/Users/turgayp/Development Projects/Unity/tinyfixers/Docs/LevelDesign/Reviews/225-234-Balance-2026-11-07/Sim-Pilot/job00/report.json",
+ "recordDir": "",
+ "ffmpegPath": "",
+ "recordFps": 30,
+ "thinkSeconds": 0,
+ "tailSeconds": 0
+}

@@ -1,5 +1,7 @@
 # 233 — Kutup Kilidi / Polar Lock
 
+**2026-11-07 güncel hamle: 21.** Bu tur yalnız hamle ayarı yapıldı (27→21); aşağıdaki önceki tasarım notu ve eski görseller tarihsel değerler içerebilir. [Güncel denge incelemesi](Reviews/225-234-Balance-2026-11-07/Review.md).
+
 Aktif ProLevels V1; `LevelCL_0233`, chapter10. 8×11,82aktif hücre,4renk,**27hamle Normal**. Hamle sayısı ilk tasarım ayarıdır; oynanmış denge ölçümü değildir. Çim42/GrassFlower58/GrassWaterLily69 yok.
 
 | Hedef | Miktar | Açılıştaki karşılığı |

@@ -1,5 +1,7 @@
 # 230 · Büyük Işık Düellosu / Grand Light Duel
 
+**2026-11-07 güncel hamle: 30.** Bu tur yalnız hamle ayarı yapıldı (30→30); aşağıdaki önceki tasarım notu ve eski görseller tarihsel değerler içerebilir. [Güncel denge incelemesi](Reviews/225-234-Balance-2026-11-07/Review.md).
+
 2026-11-06 · Agent taslağı; kullanıcı henüz oynamadı/onaylamadı.
 
 9×10, 90 aktif hücre; **30 hamle · Boss Duel**. Katalog: `LevelCL_0230`, bölüm10. Asset: [LevelV1_00002300.asset](../../Assets/_Project/Settings/ProLevels/LevelV1_00002300.asset).

@@ -37,6 +37,7 @@ public class MainMenuLevelButtonController : MonoBehaviour, IPointerDownHandler,
 
     // Basılı tut → seviye seçici/ilerleme sıfırlama yalnız editör ve Development Build'de (mağaza sürümünde sahne değeri ne
     // olursa olsun kapalı — kapalı testte oyuncu seviye atlayabiliyordu, 2026-11-04).
+    // Editör + Development Build (test cihazı). Mağaza build'inde (Development Build KAPALI) hiç açılmaz.
     private bool DebugSelectorEnabled => enableDebugLevelSelector && (Application.isEditor || Debug.isDebugBuild);
 
     private int currentLevel;

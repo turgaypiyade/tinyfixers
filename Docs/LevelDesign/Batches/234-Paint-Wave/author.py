@@ -50,6 +50,7 @@ def make():
 
 
 def write():
+    assert not (HERE/'active-revision.json').exists(), 'A later234revision is active;use its scoped author.'
     baseline=json.loads((HERE/'protected-before.json').read_text())
     ownedpath=HERE/'owned-hashes.json'
     owned=json.loads(ownedpath.read_text())if ownedpath.exists()else{}

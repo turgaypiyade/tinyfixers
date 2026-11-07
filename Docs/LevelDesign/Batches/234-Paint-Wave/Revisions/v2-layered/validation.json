@@ -1,0 +1,116 @@
+{
+  "result": "PASS",
+  "revision": "v2-layered",
+  "sameGrid": true,
+  "activeCells": 74,
+  "movesUnchanged": 24,
+  "goals": {
+    "21": 2,
+    "63": 2,
+    "28": 16,
+    "40": 16,
+    "25": 16
+  },
+  "threeLayerCells": 16,
+  "secondWorkFace": [
+    30,
+    31,
+    38,
+    39
+  ],
+  "normalOpeningSlots": 50,
+  "automaticOpeningTiles": 49,
+  "shadowPins": {
+    "32": 1
+  },
+  "phases": [
+    {
+      "removed": [],
+      "normalSlots": 50,
+      "naturallyFed": 49,
+      "shadowPins": [
+        32
+      ]
+    },
+    {
+      "removed": [
+        21
+      ],
+      "normalSlots": 50,
+      "naturallyFed": 49,
+      "shadowPins": [
+        32
+      ]
+    },
+    {
+      "removed": [
+        28
+      ],
+      "normalSlots": 50,
+      "naturallyFed": 49,
+      "shadowPins": [
+        32
+      ]
+    },
+    {
+      "removed": [
+        21,
+        28
+      ],
+      "normalSlots": 50,
+      "naturallyFed": 49,
+      "shadowPins": [
+        32
+      ]
+    },
+    {
+      "removed": [
+        21,
+        28,
+        40
+      ],
+      "normalSlots": 66,
+      "naturallyFed": 65,
+      "shadowPins": [
+        32
+      ]
+    },
+    {
+      "removed": [
+        21,
+        63,
+        28
+      ],
+      "normalSlots": 58,
+      "naturallyFed": 58,
+      "shadowPins": []
+    },
+    {
+      "removed": [
+        21,
+        63,
+        28,
+        40
+      ],
+      "normalSlots": 74,
+      "naturallyFed": 74,
+      "shadowPins": []
+    },
+    {
+      "removed": [
+        21,
+        63,
+        28,
+        40,
+        25
+      ],
+      "normalSlots": 74,
+      "naturallyFed": 74,
+      "shadowPins": []
+    }
+  ],
+  "previousAssetsPreserved": 6109,
+  "appleSpriteChangePreserved": true,
+  "playOrBuildOrSimulation": false,
+  "measuredBalance": false
+}

@@ -118,4 +118,9 @@ def comparisons():
     im.convert('RGB').save(HERE/'Comparison.png')
 
 
-if __name__=='__main__':verify();comparisons()
+if __name__=='__main__':
+    if (HERE/'active-revision.json').exists():
+        import review_v2
+        review_v2.verify()
+    else:
+        verify();comparisons()

@@ -1,0 +1,156 @@
+[
+  {
+    "level": 225,
+    "normalSlots": 48,
+    "naturalReach": 46,
+    "shadowCells": [
+      67,
+      68
+    ],
+    "ordinaryShadowPins": [],
+    "sourceInitialShadowSeeds": [],
+    "unfilledShadowCells": [
+      67,
+      68
+    ],
+    "allRemovedSlots": 88,
+    "allRemovedReach": 88,
+    "limits": "Static reachability. Movable occupancy stays authored; no gravity or cascade prediction. Flower/lily have implicit grass stages. All-removed is a geometry diagnostic, not a legal play state for permanent sources."
+  },
+  {
+    "level": 226,
+    "normalSlots": 31,
+    "naturalReach": 31,
+    "shadowCells": [],
+    "ordinaryShadowPins": [],
+    "sourceInitialShadowSeeds": [],
+    "unfilledShadowCells": [],
+    "allRemovedSlots": 81,
+    "allRemovedReach": 81,
+    "limits": "Static reachability. Movable occupancy stays authored; no gravity or cascade prediction. Flower/lily have implicit grass stages. All-removed is a geometry diagnostic, not a legal play state for permanent sources."
+  },
+  {
+    "level": 227,
+    "normalSlots": 44,
+    "naturalReach": 40,
+    "shadowCells": [
+      42,
+      65,
+      83,
+      88
+    ],
+    "ordinaryShadowPins": [],
+    "sourceInitialShadowSeeds": [],
+    "unfilledShadowCells": [
+      42,
+      65,
+      83,
+      88
+    ],
+    "allRemovedSlots": 88,
+    "allRemovedReach": 88,
+    "limits": "Static reachability. Movable occupancy stays authored; no gravity or cascade prediction. Flower/lily have implicit grass stages. All-removed is a geometry diagnostic, not a legal play state for permanent sources."
+  },
+  {
+    "level": 228,
+    "normalSlots": 66,
+    "naturalReach": 66,
+    "shadowCells": [],
+    "ordinaryShadowPins": [],
+    "sourceInitialShadowSeeds": [],
+    "unfilledShadowCells": [],
+    "allRemovedSlots": 90,
+    "allRemovedReach": 90,
+    "limits": "Static reachability. Movable occupancy stays authored; no gravity or cascade prediction. Flower/lily have implicit grass stages. All-removed is a geometry diagnostic, not a legal play state for permanent sources."
+  },
+  {
+    "level": 229,
+    "normalSlots": 59,
+    "naturalReach": 59,
+    "shadowCells": [],
+    "ordinaryShadowPins": [],
+    "sourceInitialShadowSeeds": [],
+    "unfilledShadowCells": [],
+    "allRemovedSlots": 99,
+    "allRemovedReach": 99,
+    "limits": "Static reachability. Movable occupancy stays authored; no gravity or cascade prediction. Flower/lily have implicit grass stages. All-removed is a geometry diagnostic, not a legal play state for permanent sources."
+  },
+  {
+    "level": 230,
+    "normalSlots": 58,
+    "naturalReach": 56,
+    "shadowCells": [
+      54,
+      62
+    ],
+    "ordinaryShadowPins": [],
+    "sourceInitialShadowSeeds": [
+      54,
+      62
+    ],
+    "unfilledShadowCells": [],
+    "allRemovedSlots": 90,
+    "allRemovedReach": 90,
+    "limits": "Static reachability. Movable occupancy stays authored; no gravity or cascade prediction. Flower/lily have implicit grass stages. All-removed is a geometry diagnostic, not a legal play state for permanent sources."
+  },
+  {
+    "level": 231,
+    "normalSlots": 54,
+    "naturalReach": 51,
+    "shadowCells": [
+      79,
+      80,
+      89
+    ],
+    "ordinaryShadowPins": [],
+    "sourceInitialShadowSeeds": [],
+    "unfilledShadowCells": [
+      79,
+      80,
+      89
+    ],
+    "allRemovedSlots": 66,
+    "allRemovedReach": 66,
+    "limits": "Static reachability. Movable occupancy stays authored; no gravity or cascade prediction. Flower/lily have implicit grass stages. All-removed is a geometry diagnostic, not a legal play state for permanent sources."
+  },
+  {
+    "level": 232,
+    "normalSlots": 45,
+    "naturalReach": 45,
+    "shadowCells": [],
+    "ordinaryShadowPins": [],
+    "sourceInitialShadowSeeds": [],
+    "unfilledShadowCells": [],
+    "allRemovedSlots": 73,
+    "allRemovedReach": 73,
+    "limits": "Static reachability. Movable occupancy stays authored; no gravity or cascade prediction. Flower/lily have implicit grass stages. All-removed is a geometry diagnostic, not a legal play state for permanent sources."
+  },
+  {
+    "level": 233,
+    "normalSlots": 42,
+    "naturalReach": 42,
+    "shadowCells": [],
+    "ordinaryShadowPins": [],
+    "sourceInitialShadowSeeds": [],
+    "unfilledShadowCells": [],
+    "allRemovedSlots": 82,
+    "allRemovedReach": 82,
+    "limits": "Static reachability. Movable occupancy stays authored; no gravity or cascade prediction. Flower/lily have implicit grass stages. All-removed is a geometry diagnostic, not a legal play state for permanent sources."
+  },
+  {
+    "level": 234,
+    "normalSlots": 50,
+    "naturalReach": 49,
+    "shadowCells": [
+      32
+    ],
+    "ordinaryShadowPins": [
+      32
+    ],
+    "sourceInitialShadowSeeds": [],
+    "unfilledShadowCells": [],
+    "allRemovedSlots": 74,
+    "allRemovedReach": 74,
+    "limits": "Static reachability. Movable occupancy stays authored; no gravity or cascade prediction. Flower/lily have implicit grass stages. All-removed is a geometry diagnostic, not a legal play state for permanent sources."
+  }
+]

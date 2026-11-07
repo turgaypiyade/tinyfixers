@@ -1,5 +1,7 @@
 # 228 · Kristal Ünlem / Crystal Exclamation
 
+**2026-11-07 güncel hamle: 29.** Bu tur yalnız hamle ayarı yapıldı (26→29); aşağıdaki önceki tasarım notu ve eski görseller tarihsel değerler içerebilir. [Güncel denge incelemesi](Reviews/225-234-Balance-2026-11-07/Review.md).
+
 2026-11-06 · Agent taslağı; kullanıcı henüz oynamadı/onaylamadı.
 
 9×10, 90 aktif hücre; **26 hamle · Normal**. Katalog: `LevelCL_0228`, bölüm10. Asset: [LevelV1_00002280.asset](../../Assets/_Project/Settings/ProLevels/LevelV1_00002280.asset).

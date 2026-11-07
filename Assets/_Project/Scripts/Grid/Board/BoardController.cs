@@ -2333,11 +2333,17 @@ public class BoardController : MonoBehaviour
     // O sırada uçuştaki bir dash hücre temizlerse shuffle'ın haritası bayatlar → commit'te
     // hücre boş / çift referanslı kalır (ekranda boş hücre, veride dolu board).
     // Bu yüzden toptan yeniden yazan iş, NON-BLOCKING işlerin de bitmesini bekler.
+    // Taşlara dokunmayan işler hariç: boss vuruş kuyruğu (BossStrikeDrain, boss düellosunda uzun süre açık
+    // kalabilir) ve HUD'a uçan hedef topları. Bunları beklemek "hamle yok" karıştırmasını sonsuza dek erteliyor,
+    // tahta meşgul kalıyor, ipucu ve jokerler kilitleniyordu (240, 2026-11-07).
+    internal int TileAffectingBackgroundJobs =>
+        Mathf.Max(0, ActiveBackgroundJobs - DrainingBossStrikes - FlyingGoalOrbs);
+
     internal IEnumerator WaitForExclusiveBoardAccess(float timeoutSeconds = 2f)
     {
         float elapsed = 0f;
 
-        while (ActiveBackgroundJobs > 0
+        while (TileAffectingBackgroundJobs > 0
                || IsActionSequencePlaying
                || DetachedSequencerActions > 0
                || IsSpecialVisualInFlight)
@@ -4489,6 +4495,7 @@ public class BoardController : MonoBehaviour
 
         int safety = 0;
         const int MaxResolveLoops = 250;
+        int deadlockShuffleFailures = 0;
         float backgroundJobWaitTime = 0f;
         bool backgroundJobWarningLogged = false;
         // safety GERÇEK pass sayar. Job bekleme turu (aşağıda) her KARE bir iterasyon; onu da saymak
@@ -4826,6 +4833,16 @@ public class BoardController : MonoBehaviour
                     continue;   // bekleme sırasında board oynanabilir hâle geldi
 
                 yield return boosterService.SafeShuffleBoardRoutine(boardInitService);
+
+                // Karıştırma yapılamadıysa (tahta meşgul/plan yok) resolve döngüsünü sonsuza dek döndürme:
+                // iki başarısız denemeden sonra çık → tahta boşa düşer, oyuncu jokerleri kullanabilir;
+                // sonraki resolve (hamle/joker) yeniden dener.
+                if (!boosterService.LastShuffleCommitted && ++deadlockShuffleFailures >= 2)
+                {
+                    if (GameDiagnostics.CriticalErrors)
+                        Debug.LogWarning("[Resolve] deadlock shuffle başarısız; tahta oyuncuya bırakıldı (jokerler açık).");
+                    break;
+                }
 
                 // Shuffle sonrası board değiştiği için tekrar resolve et
                 RefreshAllSortingOrders();

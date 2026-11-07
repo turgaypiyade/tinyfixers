@@ -1,0 +1,13 @@
+﻿Level,Name,Games,Win%,AvgMovesLeftOnWin,AvgGoalsLeftOnLoss,Errors/Timeouts,GoalsLeftOnLoss (ort. kalan / başlangıç)
+L235,L235 L235_Override_Runtime,20,50.0,4.5,7.4,0,TarpStatue 1.8/2; Mud 6.3/16; SculptingStone 1.3/16
+L236,L236 L236_Override_Runtime,20,55.0,4.1,4.4,0,LampStrip 1.9/4; Mud 2.9/12; HelmetPorcelain 2.0/12
+L237,L237 L237_Override_Runtime,20,50.0,4.0,6.9,0,WaterChannel 2.5/4; SculptingStone 3.5/16; Mud 2.3/12
+L240,L240 L240_Override_Runtime,20,90.0,12.8,122.0,0,Collect_BossDamage 103.0/900; WaterTank 2.0/2; SculptingStone 4.0/8; Mud 6.5/8; WaterPuddle 15.0/16
+L241,L241 L241_Override_Runtime,20,50.0,3.3,3.9,0,Mud 3.3/12; SculptingStone 1.5/12; Collect_EnergyOrb 3.0/8
+L242,L242 L242_Override_Runtime,20,65.0,5.0,4.4,0,BatteryBox 3.8/12; Collect_EnergyOrb 3.0/10; Mud 1.7/10
+L243,L243 L243_Override_Runtime,20,60.0,4.9,9.9,0,Tile_Key 5.7/16; Mud 3.7/8; PlasticTwoStage 3.8/12; SculptingStone 2.0/12
+L244,L244 L244_Override_Runtime,20,70.0,5.6,8.5,0,Cargo 3.5/6; SculptingStone 2.5/12; Mud 6.5/12
+L245,L245 L245_Override_Runtime,20,45.0,8.6,3.6,0,Oil 2.7/16; RhodesStatue 1.0/2; SculptingStone 3.0/16
+L246,L246 L246_Override_Runtime,20,45.0,2.9,3.3,0,Mud 2.8/16; OmegaModul 1.7/16
+L247,L247 L247_Override_Runtime,20,90.0,8.2,6.0,0,WaterPuddle 5.5/16; SculptingStone 1.0/8
+L248,L248 L248_Override_Runtime,20,75.0,4.5,1.6,0,Mud 1.0/12; LampStrip 1.7/4; PaintCanBox 1.0/2

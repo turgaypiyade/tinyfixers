@@ -592,8 +592,20 @@ public class SpecialResolver
     {
         if (tile == null || !tile) return null;
 
-        var sp = tile.GetSpecial();
+        // Jel bulaşması (kaynak kuralı): bu yol ApplySpecialActivation'dan geçmez → NoteGelSpreadOrigin
+        // çalışmaz. Zincirde yakalanan special jel üstündeyse/bulaşıksa yalnız KENDİ vurduğu taşlar jel
+        // bırakır (Pulse/Line runner'daki kuralın aynısı; tüm hamle kapsamı açılmaz). PatchBot'un
+        // varış vuruşunu PatchBotSpecial kendisi işaretler (hedef uçuşta seçilir).
+        bool carriesGel = board.IsGelSpreadSourceTile(tile);
         var scoped = new ResolutionContext();
+        var actions = ResolveOtherSpecialInlineCore(tile, scoped);
+        if (carriesGel) board.MarkGelContaminated(scoped.Affected);
+        return actions;
+    }
+
+    private List<BoardAction> ResolveOtherSpecialInlineCore(TileView tile, ResolutionContext scoped)
+    {
+        var sp = tile.GetSpecial();
         scoped.Affected.Add(tile);
         SpecialCellUtils.MarkAffectedCell(scoped, tile, board);
 

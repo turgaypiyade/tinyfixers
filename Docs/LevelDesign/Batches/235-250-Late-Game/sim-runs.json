@@ -1,0 +1,83 @@
+{
+  "runs": [
+    {
+      "folder": "Sim-244-22-Validation",
+      "games": 30
+    },
+    {
+      "folder": "Sim-244-24-Validation",
+      "games": 20
+    },
+    {
+      "folder": "Sim-244-25",
+      "games": 20
+    },
+    {
+      "folder": "Sim-249-22-Validation",
+      "games": 20
+    },
+    {
+      "folder": "Sim-Balance",
+      "games": 320
+    },
+    {
+      "folder": "Sim-Final-Trial",
+      "games": 140
+    },
+    {
+      "folder": "Sim-Last-Hard",
+      "games": 40
+    },
+    {
+      "folder": "Sim-Retune",
+      "games": 240
+    },
+    {
+      "folder": "Sim-Smoke",
+      "games": 32
+    }
+  ],
+  "totalGames": 862,
+  "errors": [
+    {
+      "folder": "Sim-244-22-Validation",
+      "level": "L244",
+      "sample": 8,
+      "seed": 116773,
+      "outcome": "Error",
+      "detail": "Board integrity: Orphan active LineV view at (2,8)."
+    },
+    {
+      "folder": "Sim-Balance",
+      "level": "L239",
+      "sample": 4,
+      "seed": 460105,
+      "outcome": "Error",
+      "detail": "Cannot set the parent of the GameObject 'PatchbotImpactSpark' while activating or deactivating the parent GameObject 'VFXRoot'.\n"
+    },
+    {
+      "folder": "Sim-Balance",
+      "level": "L239",
+      "sample": 8,
+      "seed": 491781,
+      "outcome": "Error",
+      "detail": "Cannot set the parent of the GameObject 'PatchbotImpactSpark' while activating or deactivating the parent GameObject 'VFXRoot'.\n"
+    },
+    {
+      "folder": "Sim-Balance",
+      "level": "L245",
+      "sample": 3,
+      "seed": 452186,
+      "outcome": "Error",
+      "detail": "Cannot set the parent of the GameObject 'PatchbotImpactSpark' while activating or deactivating the parent GameObject 'VFXRoot'.\n"
+    },
+    {
+      "folder": "Sim-Balance",
+      "level": "L245",
+      "sample": 7,
+      "seed": 483862,
+      "outcome": "Error",
+      "detail": "Board integrity: (1,8) is hidden after settling; special=SystemOverride."
+    }
+  ]
+}

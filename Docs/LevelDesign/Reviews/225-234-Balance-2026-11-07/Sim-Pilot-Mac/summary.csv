@@ -1,0 +1,11 @@
+﻿Level,Name,Games,Win%,AvgMovesLeftOnWin,AvgGoalsLeftOnLoss,Errors/Timeouts,GoalsLeftOnLoss (ort. kalan / başlangıç)
+L225,L225 LevelV1_00002250_Runtime,3,0.0,,17.3,0,Collect_Diamond 16.0/16; SculptingSpecial 4.0/16
+L226,L226 LevelV1_00002260_Runtime,3,0.0,,22.0,0,Lantern 6.0/22; Flour 16.0/16
+L227,L227 LevelV1_00002270_Runtime,3,33.3,9.0,6.0,0,LampStrip 1.5/5; SculptingStone 1.0/12; PlasticTwoStage 3.5/17
+L228,L228 LevelV1_00002280_Runtime,3,0.0,,7.0,0,Collect_Diamond 7.0/12
+L229,L229 LevelV1_00002290_Runtime,3,33.3,1.0,9.0,0,GrassWaterLily 6.5/12; Wardrobe 3.0/4; SculptingStone 2.0/12
+L230,L230 LevelV1_00002300_Runtime,3,0.0,,198.7,0,Collect_BossDamage 185.0/660; Collect_Diamond 7.7/12; Flour 9.0/16
+L231,L231 LevelV1_00002310_Runtime,3,0.0,,1.3,0,FlyFruit 1.3/4
+L232,L232 LevelV1_00002320_Runtime,3,0.0,,10.0,0,Collect_Diamond 9.7/15; Hamster 1.0/4
+L233,L233 LevelV1_00002330_Runtime,3,66.7,8.5,1.0,0,Magnet 1.0/1
+L234,L234 LevelV1_00002340_Runtime,3,0.0,,30.0,0,ColorChest 1.0/2; PaintCanBox 2.0/2; SculptingStone 6.0/16; PlasticTwoStage 9.3/16; Mud 12.7/16

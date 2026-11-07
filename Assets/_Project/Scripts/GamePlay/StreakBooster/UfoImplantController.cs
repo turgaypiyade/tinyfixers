@@ -46,6 +46,9 @@ public sealed class UfoImplantController : MonoBehaviour
     private IEnumerator Start()
     {
         if (ufo != null) ufo.gameObject.SetActive(false);
+        // Simulation owns its explicitly configured starting boosters. Saved streak
+        // rewards must not silently change either control or boosted samples.
+        if (RuntimeSimulationSession.IsActive) yield break;
         if (uiSpace == null && ufo != null) uiSpace = ufo.parent as RectTransform;
 
         // Level numarası merkezi kaynaktan (catalog gerekmez). Ödül yoksa board'u beklemeden çık.

@@ -1,0 +1,21 @@
+{
+ "levelPaths": [],
+ "levelNumbers": [
+  242,
+  248
+ ],
+ "scenePath": "Assets/_Project/Scenes/01_Game.unity",
+ "gamesPerLevel": 20,
+ "seed": 528432,
+ "policy": 4,
+ "timeScale": 10.0,
+ "stepTimeoutSeconds": 90.0,
+ "startingBoosters": 0,
+ "levelOverrideDir": "/Users/turgayp/Development Projects/Unity/tinyfixers/Docs/LevelDesign/Batches/235-250-Late-Game/Retune-Inputs",
+ "outputPath": "/Users/turgayp/Development Projects/Unity/tinyfixers/Docs/LevelDesign/Batches/235-250-Late-Game/Sim-Retune/job05/report.json",
+ "recordDir": "",
+ "ffmpegPath": "",
+ "recordFps": 30,
+ "thinkSeconds": 0,
+ "tailSeconds": 0
+}

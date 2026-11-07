@@ -1,5 +1,7 @@
 # 229 · Rüzgâr Burgusu / Crystal Whirl
 
+**2026-11-07 güncel hamle: 32.** Bu tur yalnız hamle ayarı yapıldı (28→32); aşağıdaki önceki tasarım notu ve eski görseller tarihsel değerler içerebilir. [Güncel denge incelemesi](Reviews/225-234-Balance-2026-11-07/Review.md).
+
 2026-11-06 · v4 agent taslağı; kullanıcı henüz oynamadı/onaylamadı.
 
 9×11/99 aktif; **28 hamle Super Hard**,4 renk. Aktif V1 katalog `LevelCL_0229`; isim/GUID/katalog korunur. [Asset](../../Assets/_Project/Settings/ProLevels/LevelV1_00002290.asset).

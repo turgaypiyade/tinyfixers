@@ -657,12 +657,79 @@ public class ProgressEventService : MonoBehaviour, IProgressEventService
             ? Mathf.Pow(1f + remoteSeason.GrowthPercent / 100f, ladderRound)
             : 1f;
 
+        var defs = new List<ProgressGoalDefinition>(config.goals.Count);
         foreach (var def in config.goals)
+            if (def != null) defs.Add(Mathf.Approximately(scale, 1f) ? def : Scaled(def, scale));
+        SeparateGoalsFromSameRewards(defs);
+        foreach (var def in defs)
+            goals.Add(new ProgressGoalRuntime(def));
+    }
+
+    // KURAL (kullanıcı 2026-11-07): bir hedef, kendisiyle AYNI şeyi ödül vermez ("PulseCore hedefinde
+    // PulseCore", "roket hedefinde roket" saçma). Yerel asset ve Firestore aynı yoldan geçer. Çakışan
+    // ödül, çakışmayan başka bir hedefin ödülüyle yer değiştirir → sezonun toplam ödülü aynı kalır.
+    // Takas mümkün değilse aynı değerde başka bir special jokere çevrilir. Asset nesnesi değiştirilmez
+    // (kopya). Sıralama deterministik → kayıtlı ilerleme/claim indeksleri oturumlar arası tutarlı.
+    internal static bool RewardMatchesGoal(ProgressGoalType goal, DailySlotRewardType reward) => goal switch
+    {
+        ProgressGoalType.LineH or ProgressGoalType.LineV or ProgressGoalType.LineAny
+            => reward == DailySlotRewardType.Joker_LineH || reward == DailySlotRewardType.Joker_Line,
+        ProgressGoalType.SpecialCreated => reward == DailySlotRewardType.Joker_PulseCore,
+        _ => false,
+    };
+
+    internal static void SeparateGoalsFromSameRewards(List<ProgressGoalDefinition> defs)
+    {
+        for (int i = 0; i < defs.Count; i++)
         {
-            if (def == null) continue;
-            goals.Add(new ProgressGoalRuntime(Mathf.Approximately(scale, 1f) ? def : Scaled(def, scale)));
+            var a = defs[i];
+            if (a.reward == null || !RewardMatchesGoal(a.goalType, a.reward.type)) continue;
+
+            int partner = -1;
+            for (int j = 0; j < defs.Count && partner < 0; j++)
+            {
+                var b = defs[j];
+                if (j != i && b.reward != null
+                    && !RewardMatchesGoal(a.goalType, b.reward.type)
+                    && !RewardMatchesGoal(b.goalType, a.reward.type))
+                    partner = j;
+            }
+
+            if (partner >= 0)
+            {
+                var b = Copy(defs[partner]);
+                a = Copy(a);
+                (a.reward, b.reward) = (b.reward, a.reward);
+                (a.rewardDurationMinutes, b.rewardDurationMinutes) = (b.rewardDurationMinutes, a.rewardDurationMinutes);
+                (a.rewardWaveSprite, b.rewardWaveSprite) = (b.rewardWaveSprite, a.rewardWaveSprite);
+                defs[i] = a;
+                defs[partner] = b;
+                continue;
+            }
+
+            // Takas yok (ör. tek hedefli sezon): aynı kademede farklı bir special joker. İkon kütüphaneden çözülür.
+            a = Copy(a);
+            a.reward = new DailySlotReward
+            {
+                type = a.reward.type == DailySlotRewardType.Joker_PulseCore
+                    ? DailySlotRewardType.Joker_Line : DailySlotRewardType.Joker_PulseCore,
+                amount = a.reward.amount,
+                durationMinutes = a.reward.durationMinutes,
+            };
+            defs[i] = a;
         }
     }
+
+    private static ProgressGoalDefinition Copy(ProgressGoalDefinition def) => new()
+    {
+        goalType = def.goalType,
+        targetCount = def.targetCount,
+        reward = def.reward,
+        rewardDurationMinutes = def.rewardDurationMinutes,
+        rewardWaveSprite = def.rewardWaveSprite,
+        fallbackDescription = def.fallbackDescription,
+        goalIcon = def.goalIcon,
+    };
 
     private static ProgressGoalDefinition Scaled(ProgressGoalDefinition def, float scale) => new()
     {

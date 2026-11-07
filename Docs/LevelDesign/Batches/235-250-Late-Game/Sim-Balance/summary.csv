@@ -1,0 +1,17 @@
+﻿Level,Name,Games,Win%,AvgMovesLeftOnWin,AvgGoalsLeftOnLoss,Errors/Timeouts,GoalsLeftOnLoss (ort. kalan / başlangıç)
+L235,L235 L235_Override_Runtime,20,100.0,8.3,,0,
+L236,L236 L236_Override_Runtime,20,100.0,10.4,,0,
+L237,L237 L237_Override_Runtime,20,75.0,7.1,2.8,0,WaterChannel 2.5/4; Mud 1.0/12; SculptingStone 2.0/16
+L238,L238 L238_Override_Runtime,20,50.0,5.9,8.2,0,Collect_Bird 8.2/20
+L239,L239 L239_Override_Runtime,20,0.0,,13.7,2,Collect_Diamond 12.0/12; Mud 2.6/16; SculptingStone 1.0/16
+L240,L240 L240_Override_Runtime,20,95.0,15.5,46.0,0,Collect_BossDamage 29.0/620; WaterTank 2.0/2; SculptingStone 7.0/8; Mud 8.0/8
+L241,L241 L241_Override_Runtime,20,70.0,8.0,2.8,0,Mud 2.7/12; Collect_EnergyOrb 1.0/8
+L242,L242 L242_Override_Runtime,20,100.0,12.2,,0,
+L243,L243 L243_Override_Runtime,20,65.0,3.8,5.1,0,Tile_Key 3.4/16; PlasticTwoStage 2.0/12; Mud 3.0/8
+L244,L244 L244_Override_Runtime,20,80.0,7.0,8.8,0,Cargo 3.5/6; SculptingStone 3.0/12; Mud 5.5/12
+L245,L245 L245_Override_Runtime,20,83.3,8.9,3.7,2,SculptingStone 1.0/16; Oil 3.3/16
+L246,L246 L246_Override_Runtime,20,70.0,4.9,3.7,0,Mud 2.8/16; OmegaModul 2.5/16
+L247,L247 L247_Override_Runtime,20,100.0,12.6,,0,
+L248,L248 L248_Override_Runtime,20,100.0,12.3,,0,
+L249,L249 L249_Override_Runtime,20,80.0,9.1,2.0,0,Magnet 1.0/1; Mud 4.0/12
+L250,L250 L250_Override_Runtime,20,20.0,1.8,22.1,0,Collect_Diamond 8.0/10; FlyFruit 1.3/2; Lantern 4.8/16; Collect_BossDamage 192.0/680; SculptingStone 3.0/12

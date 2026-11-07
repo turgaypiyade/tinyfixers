@@ -1,0 +1,50 @@
+{
+  "result": "PASS",
+  "changedAssetFields": [
+    "cells",
+    "goals",
+    "moves",
+    "obstacleOrigins",
+    "obstacles",
+    "stackedObstacles",
+    "tarpStatues"
+  ],
+  "protectedAssets": 6985,
+  "flow": [
+    {
+      "removed": [],
+      "normalSlots": 58,
+      "fed": 58
+    },
+    {
+      "removed": [
+        28
+      ],
+      "normalSlots": 77,
+      "fed": 77
+    },
+    {
+      "removed": [
+        68
+      ],
+      "normalSlots": 66,
+      "fed": 66
+    },
+    {
+      "removed": [
+        28,
+        68
+      ],
+      "normalSlots": 85,
+      "fed": 85
+    }
+  ],
+  "obstaclePlinthConnected": true,
+  "goals": {
+    "25": 27,
+    "28": 19,
+    "68": 2
+  },
+  "simulation": false,
+  "limits": "Static feed graph, not runtime cascade or human balance measurement."
+}

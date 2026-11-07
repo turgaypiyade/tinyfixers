@@ -85,6 +85,7 @@ public sealed class TeamScreenController : MonoBehaviour
         if (service != null) service.OnChanged -= OnServiceChanged;
         service = BackendServices.Team;
         service.OnChanged += OnServiceChanged;   // gerçek sohbette canlı mesaj akışı
+        service.SetScreenActive(true);           // canlı dinleyiciler yalnız ekran açıkken
         Refresh(snapToBottom: true);
     }
 
@@ -95,7 +96,11 @@ public sealed class TeamScreenController : MonoBehaviour
     {
         CloseQuickMenu(instant: true);
         LivesManager.OnLivesChanged -= RefreshLifeControls;
-        if (service != null) service.OnChanged -= OnServiceChanged;
+        if (service != null)
+        {
+            service.OnChanged -= OnServiceChanged;
+            service.SetScreenActive(false);      // ekrandan çıkınca Firestore okuması durur
+        }
     }
 
     // Browser'dan katılma/kurma bitti sinyali (mockup kurulumunda bağlanır).

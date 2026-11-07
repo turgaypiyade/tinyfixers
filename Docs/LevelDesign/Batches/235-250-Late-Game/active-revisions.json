@@ -1,0 +1,8 @@
+{
+  "235": {
+    "revision": "v2-solid-arch",
+    "model": "../235-Copper-Arch-v2/design.json",
+    "verify": "../235-Copper-Arch-v2/revise.py --verify",
+    "oldSimulationApplies": false
+  }
+}

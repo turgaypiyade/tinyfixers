@@ -202,11 +202,33 @@ public static class WonderProgress
     /// <summary>Ana menü arka planındaki harikanın indeksi (-1 = default arka plan).</summary>
     public static int BackgroundIndex(WonderCatalog cat)
     {
+#if UNITY_EDITOR
+        // Editör önizlemesi (TinyFixers/Wonders/Arka Plan Önizleme): ilerlemeye dokunmadan arka planı zorlar.
+        int preview = PlayerPrefs.GetInt(KeyEditorPreviewBackground, EditorPreviewOff);
+        if (preview >= -1 && (cat == null || preview < cat.Count)) return preview;
+#endif
         int selected = PlayerPrefs.GetInt(KeySelectedBackground, -1);
         if (selected >= 0 && cat != null && IsEventComplete(cat, selected))
             return selected;
         return LastCompletedIndex;
     }
+
+#if UNITY_EDITOR
+    const string KeyEditorPreviewBackground = "wonder_editor_preview_background";
+    public const int EditorPreviewOff = -100;
+
+    /// <summary>Yalnız editör: -1 = default arka plan, 0..N-1 = harika, EditorPreviewOff = kapalı.
+    /// Kayıtlı ilerlemeyi değiştirmez; Play'de anında uygulanır (OnBackgroundChanged).</summary>
+    public static int EditorPreviewBackground => PlayerPrefs.GetInt(KeyEditorPreviewBackground, EditorPreviewOff);
+
+    public static void SetEditorPreviewBackground(int index)
+    {
+        if (index == EditorPreviewOff) PlayerPrefs.DeleteKey(KeyEditorPreviewBackground);
+        else PlayerPrefs.SetInt(KeyEditorPreviewBackground, index);
+        PlayerPrefs.Save();
+        OnBackgroundChanged?.Invoke();
+    }
+#endif
 
     /// <summary>Journey "Kullan": tamamlanmış bir harikayı ana menü arka planı yapar.</summary>
     public static bool SelectBackground(WonderCatalog cat, int index)

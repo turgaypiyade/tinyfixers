@@ -63,5 +63,6 @@ def make(name,bgpath,W,H,head,sub,chars,focus=(0.5,0.45),lang="TR"):
 for (W,H) in [(1200,1200),(1200,1500),(1200,628)]:
     make("A_Ayasofya","Art/UI/Missions/ND_M001/1/Ayasofya.png",W,H,"Harikaları Onar!","ÜCRETSİZ OYNA",[],focus=(0.5,0.30))
     make("A_Eyfel","Art/UI/Missions/ND_M001/1/EyfelV1.png",W,H,"Harikaları Onar!","ÜCRETSİZ OYNA",[],focus=(0.5,0.30))
-    make("B_Ustalar","Art/UI/Missions/ND_M001/1/MIS_DEFAULT.png",W,H,"Eşleştir, Patlat, Onar!","ÜCRETSİZ OYNA",["pig","rabbit","bear","monkey"],focus=(0.5,0.25))
+    # Tinko (domuz) dini yapı sahnesinde kullanılmaz → ekip görseli Golden Gate önünde.
+    make("B_Ustalar","Art/UI/Missions/ND_M001/1/GoldenGateV1.png",W,H,"Eşleştir, Patlat, Onar!","ÜCRETSİZ OYNA",["pig","rabbit","bear","monkey"],focus=(0.5,0.25))
 print("ok")

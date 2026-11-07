@@ -22,10 +22,10 @@
     "ooooooo.",
     "oooooooo"
   ],
-  "idea": "Sağ kenarı dalga gibi içeri girip yeniden açılan tek tahta; sol kıyıda renkli kapaklar ve altta mavi/kırmızı hareketli bantlar.",
-  "firstDecision": "Sol renkli sandıkları açıp boya işini mi başlatacaksın,yoksa mavi/kırmızı kenarı indirerek alt çalışma alanını mı genişleteceksin?",
-  "change": "İki renkli sandığın her biri altında dokuz kovalı bir boya kasası saklar. Kapak kırılması boyayı bitirmez;aynı kenarda ikinci iş başlar.",
-  "remaining": "İki ColorChest,iki PaintCanBox vealtışar mavi/kırmızı plastik tamamlanır. Normal vuruşlar renk seçer;specialiki boya kovası düşürür.",
+  "idea": "Aynı dalga maskesinde iki ayrı çalışma yüzü: solda renkli kapak→boya;alt sol kenar ve sağ omuzda oyma→iki-hit plastik→çamur.",
+  "firstDecision": "Üst soldaki renkli kapakları açıp boya işini mi başlatacaksın,yoksa sağ omuz/alt kenarın üç katmanını mı ilerleteceksin?",
+  "change": "16oyma hücresi kalkınca henüz tamamlanmamış16iki-aşamalı plastik açılır;onlar gidince16iki-hit çamur yuvası görünür. Açılış kombosu işi tek katmanda bitirmez.",
+  "remaining": "İki ColorChest veiki PaintCanBox dışında16oyma,16iki-aşamalı plastik,16çamur zorunludur. Üç katman aynı anda açık sayılmaz.",
   "data": {
     "cells": [
       1,
@@ -148,58 +148,58 @@
       0,
       0,
       0,
+      25,
+      25,
       0,
       0,
       0,
       0,
       0,
       0,
-      0,
-      0,
-      0,
-      0,
-      11,
-      12,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      11,
-      12,
+      25,
+      25,
+      25,
+      25,
       0,
       0,
       0,
       0,
       0,
       0,
-      11,
-      12,
+      25,
+      25,
       0,
       0,
       0,
       0,
       0,
       0,
-      11,
-      12,
+      25,
+      25,
       0,
       0,
       0,
       0,
       0,
       0,
-      11,
-      12,
+      25,
+      25,
       0,
       0,
       0,
       0,
       0,
       0,
-      11,
-      12,
+      25,
+      25,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      25,
+      25,
       0,
       0,
       0,
@@ -238,16 +238,16 @@
       -1,
       -1,
       -1,
+      30,
+      31,
       -1,
       -1,
       -1,
       -1,
       -1,
       -1,
-      -1,
-      -1,
-      -1,
-      -1,
+      38,
+      39,
       40,
       41,
       -1,
@@ -761,6 +761,198 @@
         "obstacleId": 21,
         "stackOrder": 1,
         "initialRemainingHits": 0
+      },
+      {
+        "originCellIndex": 40,
+        "obstacleId": 40,
+        "stackOrder": 1,
+        "initialRemainingHits": 0
+      },
+      {
+        "originCellIndex": 40,
+        "obstacleId": 28,
+        "stackOrder": 2,
+        "initialRemainingHits": 0
+      },
+      {
+        "originCellIndex": 41,
+        "obstacleId": 40,
+        "stackOrder": 1,
+        "initialRemainingHits": 0
+      },
+      {
+        "originCellIndex": 41,
+        "obstacleId": 28,
+        "stackOrder": 2,
+        "initialRemainingHits": 0
+      },
+      {
+        "originCellIndex": 48,
+        "obstacleId": 40,
+        "stackOrder": 1,
+        "initialRemainingHits": 0
+      },
+      {
+        "originCellIndex": 48,
+        "obstacleId": 28,
+        "stackOrder": 2,
+        "initialRemainingHits": 0
+      },
+      {
+        "originCellIndex": 49,
+        "obstacleId": 40,
+        "stackOrder": 1,
+        "initialRemainingHits": 0
+      },
+      {
+        "originCellIndex": 49,
+        "obstacleId": 28,
+        "stackOrder": 2,
+        "initialRemainingHits": 0
+      },
+      {
+        "originCellIndex": 56,
+        "obstacleId": 40,
+        "stackOrder": 1,
+        "initialRemainingHits": 0
+      },
+      {
+        "originCellIndex": 56,
+        "obstacleId": 28,
+        "stackOrder": 2,
+        "initialRemainingHits": 0
+      },
+      {
+        "originCellIndex": 57,
+        "obstacleId": 40,
+        "stackOrder": 1,
+        "initialRemainingHits": 0
+      },
+      {
+        "originCellIndex": 57,
+        "obstacleId": 28,
+        "stackOrder": 2,
+        "initialRemainingHits": 0
+      },
+      {
+        "originCellIndex": 64,
+        "obstacleId": 40,
+        "stackOrder": 1,
+        "initialRemainingHits": 0
+      },
+      {
+        "originCellIndex": 64,
+        "obstacleId": 28,
+        "stackOrder": 2,
+        "initialRemainingHits": 0
+      },
+      {
+        "originCellIndex": 65,
+        "obstacleId": 40,
+        "stackOrder": 1,
+        "initialRemainingHits": 0
+      },
+      {
+        "originCellIndex": 65,
+        "obstacleId": 28,
+        "stackOrder": 2,
+        "initialRemainingHits": 0
+      },
+      {
+        "originCellIndex": 72,
+        "obstacleId": 40,
+        "stackOrder": 1,
+        "initialRemainingHits": 0
+      },
+      {
+        "originCellIndex": 72,
+        "obstacleId": 28,
+        "stackOrder": 2,
+        "initialRemainingHits": 0
+      },
+      {
+        "originCellIndex": 73,
+        "obstacleId": 40,
+        "stackOrder": 1,
+        "initialRemainingHits": 0
+      },
+      {
+        "originCellIndex": 73,
+        "obstacleId": 28,
+        "stackOrder": 2,
+        "initialRemainingHits": 0
+      },
+      {
+        "originCellIndex": 80,
+        "obstacleId": 40,
+        "stackOrder": 1,
+        "initialRemainingHits": 0
+      },
+      {
+        "originCellIndex": 80,
+        "obstacleId": 28,
+        "stackOrder": 2,
+        "initialRemainingHits": 0
+      },
+      {
+        "originCellIndex": 81,
+        "obstacleId": 40,
+        "stackOrder": 1,
+        "initialRemainingHits": 0
+      },
+      {
+        "originCellIndex": 81,
+        "obstacleId": 28,
+        "stackOrder": 2,
+        "initialRemainingHits": 0
+      },
+      {
+        "originCellIndex": 30,
+        "obstacleId": 40,
+        "stackOrder": 1,
+        "initialRemainingHits": 0
+      },
+      {
+        "originCellIndex": 30,
+        "obstacleId": 28,
+        "stackOrder": 2,
+        "initialRemainingHits": 0
+      },
+      {
+        "originCellIndex": 31,
+        "obstacleId": 40,
+        "stackOrder": 1,
+        "initialRemainingHits": 0
+      },
+      {
+        "originCellIndex": 31,
+        "obstacleId": 28,
+        "stackOrder": 2,
+        "initialRemainingHits": 0
+      },
+      {
+        "originCellIndex": 38,
+        "obstacleId": 40,
+        "stackOrder": 1,
+        "initialRemainingHits": 0
+      },
+      {
+        "originCellIndex": 38,
+        "obstacleId": 28,
+        "stackOrder": 2,
+        "initialRemainingHits": 0
+      },
+      {
+        "originCellIndex": 39,
+        "obstacleId": 40,
+        "stackOrder": 1,
+        "initialRemainingHits": 0
+      },
+      {
+        "originCellIndex": 39,
+        "obstacleId": 28,
+        "stackOrder": 2,
+        "initialRemainingHits": 0
       }
     ],
     "tubes": [],
@@ -794,53 +986,83 @@
     {
       "targetType": 1,
       "tileType": 0,
-      "obstacleId": 11,
+      "obstacleId": 28,
       "collectibleId": 0,
-      "iconOverride": "{fileID: 21300000, guid: 734f56ae5125c4b9ab06f1f804184eb4, type: 3}",
-      "amount": 6
+      "iconOverride": "{fileID: -208678888245249099, guid: ef8c216bfe75e4a949d7dc56a98d8d62, type: 3}",
+      "amount": 16
     },
     {
       "targetType": 1,
       "tileType": 0,
-      "obstacleId": 12,
+      "obstacleId": 40,
       "collectibleId": 0,
-      "iconOverride": "{fileID: 21300000, guid: b1e1d5bcd6cbb46e39b66e1fb1f63e07, type: 3}",
-      "amount": 6
+      "iconOverride": "{fileID: 21300000, guid: d7401d43cad5d4227bec8df46bceda83, type: 3}",
+      "amount": 16
+    },
+    {
+      "targetType": 1,
+      "tileType": 0,
+      "obstacleId": 25,
+      "collectibleId": 0,
+      "iconOverride": "{fileID: 21300000, guid: 6afb2696172134567a9f1137c975528f, type: 3}",
+      "amount": 16
     }
   ],
   "previewRemoved": [
-    21
+    21,
+    28
   ],
   "openedDimerdals": false,
   "chapter": 10,
   "walls": [],
   "movableColumns": [],
   "refill": [],
-  "previewStage": "RENKLİ KAPAKLAR KALKINCA",
-  "pinReason": "Yalnız açılışta doğal dolum ulaşmayan(0,4)normal yuvasına Gear taşı. Altındaki kesintisiz mavi plastik sütunu başlangıç desteğidir;diğer53normal yuva otomatik dolar.",
+  "previewStage": "İLK ÖRTÜLER KALKINCA",
+  "pinReason": "Yalnız(0,4)normal yuvası doğal açılış gölgesidir. Altında(0,5)oyma kapağı vealt katmanlar başlangıç desteğidir. Başka taş/special pinlenmez.",
   "difficulty": "Normal",
   "refillSpecialGuard": -1,
   "mechanics": [
     "ColorChest → PaintCanBox",
-    "Plastic_Blue / Plastic_Red"
+    "SculptingStone → PlasticTwoStage → Mud"
   ],
   "openingGeometry": {
     "activeCells": 74,
-    "normalSlots": 54,
-    "naturallyFed": 53,
+    "normalSlots": 50,
+    "naturallyFed": 49,
     "shadowPins": [
       32
     ],
     "specialPins": 0,
     "intentionallyEmpty": []
   },
-  "budget": "234 Normal yükseliş:24hamle ilkayar;iki kapağın5er hitinden sonra2×9kova ayrı iş. Mavi/kırmızı sütunlar12tek-hitmovable;normalmatchkendi rengini ister. Geniş çalışma alanı multi-hit special kurmayı destekler;dengeölçülmedi.",
+  "budget": "24hamle korundu;hamle kısarak zorlaştırılmadı. 16×(3oyma+2plastik+2çamur)ve2×(5renkli kapak+9kova)ham hücre-isabet yüküdür;aynı special birden çok hücreyi ilerletebilir,bunlar oyuncu hamlesi sayısı değildir. Yeni ayar henüz oynanmadı.",
   "alternatives": [
     "176daki V/çanak veya233teki altU: yaklaşım korunur ama kompozisyon tekrarlanırdı.",
     "Bir Dimerdal/elma adası daha:231–232nin kaynak-ürün/ayrıada kararını yinelerdi.",
     "Tam yatay üst çatı:birçok alt yuvayı kalıcı dolumdan koparırdı. Kapaklar yalnız iki kenar sütunuyla sınırlandı.",
-    "Tüm taşları elle döşemek:son açık kullanıcı kuralı yalnız doğal dolum ulaşmayan açılış hücreleri içindir."
+    "Tüm taşları elle döşemek:son açık kullanıcı kuralı yalnız doğal dolum ulaşmayan açılış hücreleri içindir.",
+    "Yalnız sol sütuna daha çok HP:tek dikey combo aynı işi sürdürürdü. Sağ omuz da ayrı bir üç-katman yüzü oldu.",
+    "Altı hedef:iki renkli tek-hit plastikler dinlendirilip orta katmanda tekID40kullanıldı;hedef listesi beşte kaldı."
   ],
   "illustration": "Gerçek proje sprite’ları;serbest normal renkler temsili. Altın nokta tek gerçek başlangıç pinidir. Sağ kesit yalnız üstkatmanı kaldırır;düşmüş plastik veya oynanmış an değildir.",
-  "guid": "e7b513229e084a509eff2117a7899542"
+  "guid": "e7b513229e084a509eff2117a7899542",
+  "layeredCells": [
+    40,
+    41,
+    48,
+    49,
+    56,
+    57,
+    64,
+    65,
+    72,
+    73,
+    80,
+    81,
+    30,
+    31,
+    38,
+    39
+  ],
+  "revision": "v2-layered"
 }

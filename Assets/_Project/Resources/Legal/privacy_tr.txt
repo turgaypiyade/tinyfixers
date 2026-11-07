@@ -1,6 +1,6 @@
 <size=150%><b>Gizlilik Politikası</b></size>
 
-<i>Son güncelleme: 17 Ekim 2026</i>
+<i>Son güncelleme: 7 Kasım 2026</i>
 
 Bu politika, <b>Wonder Fixers</b> ("Oyun") uygulamasının hangi bilgileri, neden topladığını ve hangi seçeneklere sahip olduğunuzu açıklar. Oyun, <b>Julvera Teknoloji A.Ş.</b>'nin oyun stüdyosu <b>Wondi Games</b> tarafından geliştirilmiştir ("biz"). Burada anlatılan kişisel verilerin veri sorumlusu Julvera Teknoloji A.Ş.'dir. Bu metin, 6698 sayılı Kişisel Verilerin Korunması Kanunu ("KVKK") kapsamındaki aydınlatma yükümlülüğümüzü de karşılar.
 
@@ -96,7 +96,7 @@ Hizmet sağlayıcılarımız verileri Türkiye dışında, Avrupa Birliği ve Am
 
 • Hesap, profil ve ilerleme verileri: hesabınız etkin olduğu sürece. Hesabınızın silinmesini isterseniz, kanunen saklamamız gereken kayıtlar (örneğin satın alma kayıtları) dışında 30 gün içinde sileriz.
 
-• Takım sohbeti mesajları: takım ya da hesabınız silinene kadar.
+• Takım sohbeti mesajları: gönderildikten 3 gün sonra otomatik olarak silinir (takım ya da hesabınız daha önce silinirse onunla birlikte).
 
 • Analiz verileri: en fazla 14 ay.
 

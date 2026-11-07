@@ -1381,6 +1381,102 @@
       "levelKey": "LevelCL_0234",
       "name": "Boya Dalgası",
       "nameEn": "Paint Wave"
+    },
+    {
+      "level": 235,
+      "levelKey": "LevelCL_0235",
+      "name": "Bakır Kemer",
+      "nameEn": "Copper Arch"
+    },
+    {
+      "level": 236,
+      "levelKey": "LevelCL_0236",
+      "name": "Cam Ray",
+      "nameEn": "Glass Rails"
+    },
+    {
+      "level": 237,
+      "levelKey": "LevelCL_0237",
+      "name": "Dört Vana",
+      "nameEn": "Four Valves"
+    },
+    {
+      "level": 238,
+      "levelKey": "LevelCL_0238",
+      "name": "Kuşlu Tribün",
+      "nameEn": "Songbird Terrace"
+    },
+    {
+      "level": 239,
+      "levelKey": "LevelCL_0239",
+      "name": "Baklava Kilidi",
+      "nameEn": "Diamond Lock"
+    },
+    {
+      "level": 240,
+      "levelKey": "LevelCL_0240",
+      "name": "Gökkuşağı",
+      "nameEn": "Rainbow"
+    },
+    {
+      "level": 241,
+      "levelKey": "LevelCL_0241",
+      "name": "Lale Tarlası",
+      "nameEn": "Tulip Field"
+    },
+    {
+      "level": 242,
+      "levelKey": "LevelCL_0242",
+      "name": "Elma Ağacı",
+      "nameEn": "Apple Tree"
+    },
+    {
+      "level": 243,
+      "levelKey": "LevelCL_0243",
+      "name": "Yusufçuk",
+      "nameEn": "Dragonfly"
+    },
+    {
+      "level": 244,
+      "levelKey": "LevelCL_0244",
+      "name": "Dağ Deresi",
+      "nameEn": "Mountain Brook"
+    },
+    {
+      "level": 245,
+      "levelKey": "LevelCL_0245",
+      "name": "Mantar Ormanı",
+      "nameEn": "Mushroom Grove"
+    },
+    {
+      "level": 246,
+      "levelKey": "LevelCL_0246",
+      "name": "Kuş Yuvası",
+      "nameEn": "Bird Nest"
+    },
+    {
+      "level": 247,
+      "levelKey": "LevelCL_0247",
+      "name": "Şelale",
+      "nameEn": "Waterfall"
+    },
+    {
+      "level": 248,
+      "levelKey": "LevelCL_0248",
+      "name": "Ayçiçeği",
+      "nameEn": "Sunflower"
+    },
+    {
+      "level": 249,
+      "levelKey": "LevelCL_0249",
+      "name": "Meyve Bahçesi",
+      "nameEn": "Orchard"
+    },
+    {
+      "level": 250,
+      "levelKey": "LevelCL_0250",
+      "name": "Hasat Bayramı",
+      "nameEn": "Harvest Festival"
     }
   ],
   "catalog": "LevelCatalogProV1"

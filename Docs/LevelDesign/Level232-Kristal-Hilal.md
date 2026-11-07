@@ -1,5 +1,7 @@
 # 232 · Kristal Hilal / Crystal Crescent
 
+**2026-11-07 güncel hamle: 35.** Bu tur yalnız hamle ayarı yapıldı (32→35); aşağıdaki önceki tasarım notu ve eski görseller tarihsel değerler içerebilir. [Güncel denge incelemesi](Reviews/225-234-Balance-2026-11-07/Review.md).
+
 **28 hamle · Normal · 9×11 · 73 aktif hücre · dört renk.** Hamle sayısı ilk ayardır; kullanıcı henüz oynamadı.
 
 İlk bakışta sola yaslanan kalın bir hilal, dış kenarında mavi–yeşil–kırmızı kristal kutuları ve açıklığında ayrı duran tek bir 2×2 elma görülür. Hilalin alt kolundaki ikinci 2×2 elma, yumurta kutusuna bitişik bir bitiş bölgesi kurar. Kutuların altında oynanacak ve beslenemeyecek hücre bırakılmadı.

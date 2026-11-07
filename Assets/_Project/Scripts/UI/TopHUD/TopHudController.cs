@@ -172,7 +172,8 @@ public class TopHudController : MonoBehaviour
             if (goal.targetType == LevelGoalTargetType.Obstacle && IsSplatGoalId(goal.obstacleId))
             {
                 int computed = CountObstacleCells(levelData, goal.obstacleId)
-                             + CountStampedBeneathCells(goal.obstacleId);
+                             + CountStampedBeneathCells(goal.obstacleId)
+                             + InitialSourceBacklog(levelData, goal.obstacleId);
                 if (computed > 0)
                     initialRemaining = computed;
             }
@@ -309,6 +310,14 @@ public class TopHudController : MonoBehaviour
             return;
 
         int remaining = svc.CountAllLiveOrigins(splatId) + PendingSplatSpreads(splatId);
+        // Henüz kırılmamış kaynakların dökeceği miktar da kalan sayılır (un ile aynı kural). Yoksa depo/fıçı
+        // patlamadan tahtada birikinti/çamur 0 → hedef baştan "tamam" sayılıp level erken kazanılıyordu (240).
+        if (splatId == ObstacleId.WaterPuddle)
+            remaining += (svc.CountAllLiveOrigins(ObstacleId.WaterTank) + svc.CountAllLiveOrigins(ObstacleId.WaterTankSmall))
+                         * PuddlesPerTank;
+        else if (splatId == ObstacleId.Mud)
+            remaining += (svc.CountAllLiveOrigins(ObstacleId.Barrel) + svc.CountAllLiveOrigins(ObstacleId.Barrell_v2))
+                         * MudPerBarrel;
         // Un: henüz düşmemiş un da sayılır (ayakta değirmen + tahtadaki çuval × çuval başına dökülecek un). Çuval tam
         // o kadar döktüğü için sayaç baştan toplamı gösterir ve yalnız temizledikçe azalır (kullanıcı: "düşmemişse bile
         // kullanıcı düşeceğini bilmeli"). Tahtada yer kalmazsa dökülebildiği kadar → sayaç o kadar iner.
@@ -690,6 +699,32 @@ public class TopHudController : MonoBehaviour
                 splatId = ObstacleId.None;
                 return false;
         }
+    }
+
+    private static int PuddlesPerTank
+    {
+        get { var cfg = WaterTankConfig.Load(); return cfg != null ? Mathf.Max(0, cfg.puddleCount) : 8; }
+    }
+    private const int MudPerBarrel = 16;   // BarrelMudSpreadService: 4×4 pencere (dökülebildiği kadar; sonra gerçek sayıya iner)
+
+    private static int CountSourceOrigins(LevelData level, ObstacleId id)
+    {
+        int n = 0;
+        if (level.obstacles != null && level.obstacleOrigins != null)
+            for (int i = 0; i < level.obstacles.Length && i < level.obstacleOrigins.Length; i++)
+                if (level.obstacles[i] == (int)id && level.obstacleOrigins[i] == i) n++;
+        if (level.stackedObstacles != null)
+            foreach (var e in level.stackedObstacles) if (e.obstacleId == id) n++;
+        return n;
+    }
+
+    private static int InitialSourceBacklog(LevelData level, ObstacleId splatId)
+    {
+        if (splatId == ObstacleId.WaterPuddle)
+            return (CountSourceOrigins(level, ObstacleId.WaterTank) + CountSourceOrigins(level, ObstacleId.WaterTankSmall)) * PuddlesPerTank;
+        if (splatId == ObstacleId.Mud)
+            return (CountSourceOrigins(level, ObstacleId.Barrel) + CountSourceOrigins(level, ObstacleId.Barrell_v2)) * MudPerBarrel;
+        return 0;
     }
 
     private static bool IsSplatGoalId(ObstacleId id)

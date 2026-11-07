@@ -91,6 +91,10 @@ def main(argv=None):
     ap.add_argument("--speed", type=float, default=10.0, help="Time.timeScale")
     ap.add_argument("--jobs", type=int, default=max(1, (os.cpu_count() or 4) // 2))
     ap.add_argument("--policy", default="GoalAware", choices=POLICIES.keys())
+    ap.add_argument("--boosters", type=int, choices=(0, 3), default=0,
+                    help="0: boostersız; 3: her oyunda LineH + PulseCore + SystemOverride (güncel sim build gerekir)")
+    ap.add_argument("--level-overrides", default=None,
+                    help="L0225.json gibi güncel level dışa aktarımlarının klasörü; level assetlerini değiştirmez")
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--timeout", type=float, default=120.0, help="adım başına gerçek-zaman sınırı (sn)")
     ap.add_argument("--out", default=None)
@@ -106,6 +110,11 @@ def main(argv=None):
         ap.error("--speed ve --timeout pozitif, sonlu sayı olmalı.")
     if not -(2**31) <= a.seed < 2**31:
         ap.error("--seed 32-bit işaretli sayı aralığında olmalı.")
+    override_dir = os.path.abspath(os.path.expanduser(a.level_overrides)) if a.level_overrides else ""
+    if override_dir:
+        missing = [n for n in levels if not os.path.isfile(os.path.join(override_dir, f"L{n:04d}.json"))]
+        if missing:
+            ap.error(f"Level dışa aktarımı bulunamadı: {missing}")
     binary = find_binary()
     stamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S_%f")
     out = os.path.abspath(os.path.expanduser(a.out or os.path.join("~", "Desktop", "Sim", stamp)))
@@ -132,6 +141,8 @@ def main(argv=None):
                 "levelPaths": [], "levelNumbers": chunk, "scenePath": "Assets/_Project/Scenes/01_Game.unity",
                 "gamesPerLevel": a.games, "seed": (a.seed + i * 100003 + 2**31) % 2**32 - 2**31,
                 "policy": POLICIES[a.policy], "timeScale": a.speed, "stepTimeoutSeconds": a.timeout,
+                "startingBoosters": a.boosters,
+                "levelOverrideDir": override_dir,
                 "outputPath": os.path.join(jd, "report.json"),
                 "recordDir": "", "ffmpegPath": "", "recordFps": 30, "thinkSeconds": 0, "tailSeconds": 0,
             }
@@ -189,6 +200,15 @@ def summarize(out, job_dirs):
             cfg = report.get("config") or {}
             if not isinstance(cfg, dict):
                 raise ValueError("Rapor config nesnesi içermeli.")
+            with open(os.path.join(jd, "config.json"), encoding="utf-8") as f:
+                requested_cfg = json.load(f)
+                requested_boosters = requested_cfg.get("startingBoosters", 0)
+            if cfg.get("levelOverrideDir", "") != requested_cfg.get("levelOverrideDir", ""):
+                print(f"Level override ayarı sim build tarafından uygulanmadı: {jd}; sim build'i yenile.")
+                valid = False
+            if cfg.get("startingBoosters", 0) != requested_boosters:
+                print(f"Booster ayarı sim build tarafından uygulanmadı: {jd}; sim build'i yenile.")
+                valid = False
             requested = len(cfg.get("levelPaths") or cfg.get("levelNumbers") or []) * cfg.get("gamesPerLevel", 0)
             if report.get("completed") is not True or requested <= 0 or len(report["games"]) != requested:
                 print(f"Eksik/kısmi rapor: {jd} ({len(report['games'])}/{requested})")
@@ -205,6 +225,9 @@ def summarize(out, job_dirs):
             r = rows.setdefault(key, {"name": g.get("level"), "won": 0, "lost": 0, "other": 0, "moves_left": [], "goals_left": [],
                                       "per_goal": {}, "start": g.get("goalsStart") or ""})
             o = g.get("outcome")
+            if requested_boosters == 3 and g.get("startingBoostersPlaced", 0) != 3:
+                print(f"Eksik booster teslimatı: {jd}, {key}, sample={g.get('sample')}")
+                o = "BoosterDeliveryError"
             if o == "Won":
                 r["won"] += 1
                 r["moves_left"].append(g.get("movesLeft", 0))

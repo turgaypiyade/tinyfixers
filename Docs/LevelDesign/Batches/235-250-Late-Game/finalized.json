@@ -1,0 +1,244 @@
+[
+  {
+    "level": 235,
+    "beforeMoves": 32,
+    "moves": 18,
+    "bossHp": null,
+    "result": {
+      "folder": "Sim-Final-Trial",
+      "games": 20,
+      "won": 7,
+      "lost": 13,
+      "errors": 0,
+      "winPercent": 35.0
+    },
+    "sha256": "58bfeebaab79f58217523e8086bca23ab7b6e5d0cd0e6a4f5220a37a26293c39"
+  },
+  {
+    "level": 236,
+    "beforeMoves": 26,
+    "moves": 16,
+    "bossHp": null,
+    "result": {
+      "folder": "Sim-Retune",
+      "games": 20,
+      "won": 11,
+      "lost": 9,
+      "errors": 0,
+      "winPercent": 55.0
+    },
+    "sha256": "6773141823989b5ef6864e9f1b5400b0b20dd2581ccc59383a88900b4e290fe6"
+  },
+  {
+    "level": 237,
+    "beforeMoves": 32,
+    "moves": 26,
+    "bossHp": null,
+    "result": {
+      "folder": "Sim-Retune",
+      "games": 20,
+      "won": 10,
+      "lost": 10,
+      "errors": 0,
+      "winPercent": 50.0
+    },
+    "sha256": "ee0a42f7dc2ad920751d4f8ff63aae4548f7db341c892f148fc8b2a11d8f662c"
+  },
+  {
+    "level": 238,
+    "beforeMoves": 30,
+    "moves": 30,
+    "bossHp": null,
+    "result": {
+      "folder": "Sim-Balance",
+      "games": 20,
+      "won": 10,
+      "lost": 10,
+      "errors": 0,
+      "winPercent": 50.0
+    },
+    "sha256": "ee235ff13eab7b722801b8d0b8c6eff0e4ca2ccfec9ff5f98390f5c28d8d0fd6"
+  },
+  {
+    "level": 239,
+    "beforeMoves": 33,
+    "moves": 33,
+    "bossHp": null,
+    "result": {
+      "folder": "Sim-Balance",
+      "games": 20,
+      "won": 0,
+      "lost": 18,
+      "errors": 2,
+      "winPercent": 0.0,
+      "limit": "Bot Dimerdal üretimine doğrudan öncelik vermiyor; insan oranı için güvenilir ölçü değil."
+    },
+    "sha256": "46de2718e620ad7b0c28650a8d5e46031e9fb5c7e1346cc89447b941e5c6aa8e"
+  },
+  {
+    "level": 240,
+    "beforeMoves": 34,
+    "moves": 24,
+    "bossHp": 900,
+    "result": {
+      "folder": "Sim-Last-Hard",
+      "games": 20,
+      "won": 14,
+      "lost": 6,
+      "errors": 0,
+      "winPercent": 70.0
+    },
+    "sha256": "569ffdc66001ca7925673a7eedd730609e5289228683d7b1e55399c85b24e75e"
+  },
+  {
+    "level": 241,
+    "beforeMoves": 28,
+    "moves": 24,
+    "bossHp": null,
+    "result": {
+      "folder": "Sim-Retune",
+      "games": 20,
+      "won": 10,
+      "lost": 10,
+      "errors": 0,
+      "winPercent": 50.0
+    },
+    "sha256": "198ab8d6d75bfaa0a62212413cda0fd9668af2008dba607b742366de80ac8505"
+  },
+  {
+    "level": 242,
+    "beforeMoves": 32,
+    "moves": 21,
+    "bossHp": null,
+    "result": {
+      "folder": "Sim-Retune",
+      "games": 20,
+      "won": 13,
+      "lost": 7,
+      "errors": 0,
+      "winPercent": 65.0
+    },
+    "sha256": "4403a53dd2d9b73a87b9db701b70cd2251447d6037c122bf82319bfe13944f7a"
+  },
+  {
+    "level": 243,
+    "beforeMoves": 32,
+    "moves": 30,
+    "bossHp": null,
+    "result": {
+      "folder": "Sim-Retune",
+      "games": 20,
+      "won": 12,
+      "lost": 8,
+      "errors": 0,
+      "winPercent": 60.0
+    },
+    "sha256": "09803bc0e4abcfe459a616e4df2dc937d233ab51c1609a7b1bb4733e5f53972d"
+  },
+  {
+    "level": 244,
+    "beforeMoves": 30,
+    "moves": 24,
+    "bossHp": null,
+    "result": {
+      "folder": "Sim-244-24-Validation",
+      "games": 20,
+      "won": 8,
+      "lost": 12,
+      "errors": 0,
+      "winPercent": 40.0
+    },
+    "sha256": "1c7826d5fec40d4c20ddab12f62112b5157c9cb26417d2c5308703bdf8ffc4ca"
+  },
+  {
+    "level": 245,
+    "beforeMoves": 33,
+    "moves": 24,
+    "bossHp": null,
+    "result": {
+      "folder": "Sim-Last-Hard",
+      "games": 20,
+      "won": 8,
+      "lost": 12,
+      "errors": 0,
+      "winPercent": 40.0
+    },
+    "sha256": "08c99604967cba848895026ea8174ed320024d3e2542360e9e0bdb58bd3a1613"
+  },
+  {
+    "level": 246,
+    "beforeMoves": 28,
+    "moves": 25,
+    "bossHp": null,
+    "result": {
+      "folder": "Sim-Retune",
+      "games": 20,
+      "won": 9,
+      "lost": 11,
+      "errors": 0,
+      "winPercent": 45.0
+    },
+    "sha256": "a42a9f72af7d06ffc815cf8232159564925511d1336ef3e53932a70225755697"
+  },
+  {
+    "level": 247,
+    "beforeMoves": 30,
+    "moves": 16,
+    "bossHp": null,
+    "result": {
+      "folder": "Sim-Final-Trial",
+      "games": 20,
+      "won": 9,
+      "lost": 11,
+      "errors": 0,
+      "winPercent": 45.0
+    },
+    "sha256": "a8180e9c7f7aaf7a40cb4fa930e83ede98175b5e3345f71a81bc177ed9eaab55"
+  },
+  {
+    "level": 248,
+    "beforeMoves": 30,
+    "moves": 17,
+    "bossHp": null,
+    "result": {
+      "folder": "Sim-Final-Trial",
+      "games": 20,
+      "won": 11,
+      "lost": 9,
+      "errors": 0,
+      "winPercent": 55.0
+    },
+    "sha256": "068a81fccb5d0f6702bac94fc7b3c4e197c43519b071be5c7d90b3ae270629f7"
+  },
+  {
+    "level": 249,
+    "beforeMoves": 32,
+    "moves": 22,
+    "bossHp": null,
+    "result": {
+      "folder": "Sim-249-22-Validation",
+      "games": 20,
+      "won": 6,
+      "lost": 14,
+      "errors": 0,
+      "winPercent": 30.0
+    },
+    "sha256": "81265aeb274b9f7ee6b1a875b868041df92db2051f65da294cbe0f47cf10279f"
+  },
+  {
+    "level": 250,
+    "beforeMoves": 36,
+    "moves": 36,
+    "bossHp": 680,
+    "result": {
+      "folder": "Sim-Balance",
+      "games": 20,
+      "won": 4,
+      "lost": 16,
+      "errors": 0,
+      "winPercent": 20.0,
+      "limit": "Bot Dimerdal üretimine doğrudan öncelik vermiyor; insan oranı için güvenilir ölçü değil."
+    },
+    "sha256": "870f1c64a954a1840287027db92b7e8145e3fb331442eb236ce38022d35f813d"
+  }
+]

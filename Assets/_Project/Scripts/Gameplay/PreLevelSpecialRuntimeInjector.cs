@@ -21,6 +21,19 @@ public sealed class PreLevelSpecialRuntimeInjector : MonoBehaviour
     private readonly List<TileView> candidates = new();
     private readonly List<TileSpecial> pendingSelection = new();
     private bool initialized;
+    private BoardController readyEventBoard;
+    private System.Action readyEventHandler;
+
+    private void ReleaseReadySubscription()
+    {
+        if (readyEventBoard != null && readyEventHandler != null)
+            readyEventBoard.OnBecameIdle -= readyEventHandler;
+        readyEventBoard = null;
+        readyEventHandler = null;
+    }
+
+    private void OnDisable() => ReleaseReadySubscription();
+    private void OnDestroy() => ReleaseReadySubscription();
 
     // ── Harici teslimat hook'ları (ör. UFO streak event) ──────────────────────
     // Board hazır olduktan SONRA, ilk yerleşimden ÖNCE beklenir (UFO uçup gelsin diye).
@@ -243,19 +256,23 @@ public sealed class PreLevelSpecialRuntimeInjector : MonoBehaviour
 
         bool becameIdle = false;
         System.Action onIdle = () => becameIdle = true;
-        board.OnBecameIdle += onIdle;
+        ReleaseReadySubscription();
+        readyEventBoard = board;
+        readyEventHandler = onIdle;
+        readyEventBoard.OnBecameIdle += readyEventHandler;
 
         // EVENT gelene (veya state busy'den çıkana) kadar bekle. Zaman poll'u YOK; yalnızca
         // event hiç gelmezse sistemi kilitlememek için cömert bir güvenlik tavanı var.
-        float safety = 0f;
-        while (board != null && board.IsBusy && !becameIdle && safety < boardReadySafetyCap)
+        try
         {
-            safety += Time.unscaledDeltaTime;
-            yield return null;
+            float safety = 0f;
+            while (board != null && board.IsBusy && !becameIdle && safety < boardReadySafetyCap)
+            {
+                safety += Time.unscaledDeltaTime;
+                yield return null;
+            }
         }
-
-        if (board != null)
-            board.OnBecameIdle -= onIdle;
+        finally { ReleaseReadySubscription(); }
 
         // Idle olduktan sonra veri (gridData/candidate) aynı kare stabilize olsun diye 1 kare ver.
         yield return null;

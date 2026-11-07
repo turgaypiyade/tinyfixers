@@ -1,5 +1,39 @@
 # Tasarım geri bildirimi
 
+## 235 — yeniden düşünme ve katmanlı yapı isteği · kullanıcı · 2026-11-07
+
+**Kaynak:** “şimdi 235 üzerinde çok düşünerek değerlendir. katmanlı yapı kullanabilirsin”. Bu tur yalnız235 ele alındı; BatteryBox/Omega geçici kullanım dışı tercihi sürer.
+
+**Agent değerlendirmesi:** Eski ince sütunlar ve geniş dikdörtgen belirgin tek kompozisyon kurmuyordu. İlk kalın U taslağı176/182altçerçevelerine yaklaştı. Son fikir, alt kenardan yükselen tek kemer kütlesi ve iki heykel ayağıdır;234’ün plastikli üçlü katmanı tekrarlanmadı. Bu nedenler kullanıcıya mal edilmez.
+
+**Uygulama / henüz kullanıcı onayı değil:**9×11/85 aktif,28hamleilkayarHard;2heykel/19oyma/27çamur.19oyma altında çamur,ikiheykel altında8çamur daha. Heykeller14mavi/14yeşil→kişibaşı3specialister.58normalyuvadoğalbeslenir,pinyok. Statik ve gerçekPNG kontrolü görsel kabul/ölçülmüşdenge değildir. Eski18hamle/%35bot bu sürüme ait değildir. Kayıt `Batches/235-Copper-Arch-v2/README.md`.
+
+## 235–250 — görseller beğenilmedi; BatteryBox ve Omega geçici kullanım dışı · kullanıcı · 2026-11-07
+
+**Kaynak:** “sen çok kötü levellar tasarlamışsın”; Battery Box ve Omega Module için “kütüphanede var ama o çirkin bir görüntü olduğu için kullanmıyorum”, “kullanılmayacak olarak işaretleyebilirsin şimdilik doğru imaj bulursam belki kullanırım”; ayrıca “levelların görselleri pek güzel değil”. Kapsam açıklamaları: **“235 ve sonrası için söylüyorum”**, **“dün ve bugün yaptıkların için”**.
+
+**Durum/kapsam:** Mevcut 235–250 grubunun görsel tasarımı kullanıcı tarafından beğenilmedi. Önceki levellar bu eleştirinin kapsamı değildir. Bu, tek tek her levelin oynanış dengesi hakkında yeni ölçüm/ret değildir; görsel eleştiriyi bot oranıyla geçersiz kılma. Ayrıntılı kompozisyon nedenleri henüz verilmedi; agent değerlendirmesi ayrıca etiketlenir.
+
+**Engel seçimi:** **BatteryBox23 ve OmegaModul24 şimdilik kullanılmayacak.** Neden mevcut görsellerdir; mekaniklerin kalıcı reddi değildir. Kullanıcı uygun imaj bulursa tekrar kullanmayı değerlendirebilir. Kütüphanede olmaları tasarımda seçilmeleri için yeterli değildir. EnergyContainer22 ve ayrı OverrideBatteryBox43 hakkında bu mesajda yasak yoktur. Mevcut grupta 242 BatteryBox, 246 Omega içerir.
+
+**Ders/işlem:** Görsel uygunluk, kütüphane mevcudiyetinden ve mekanik çeşitlilik kotasından önce kontrol edilir. Önce fikir/tarz seçme ve kompozisyonu gerçek sprite'larla değerlendirme ilkesi sürer. Bu tur yalnız kayıtlar güncellendi; mevcut level assetleri korunur. Mesajdan otomatik toplu yeniden tasarım veya önceki onaylı levelları değiştirme yetkisi çıkarılmaz.
+
+## 225–250 kapsamı vegeçiş hedefi · kullanıcı · 2026-11-07
+
+**Kaynak:**“225tenitibarenlevelları ...kurallarımıza göre%40–50 ...5.9levellarfarklıolabilir ...macsim”;ardından“3boosterverilmişşekilde”;“elde ettiğin sonuçlara göre hamle sayılarını ayarla sabah bakarım”;son hedefdüzeltmesi“1–4arası%50–60normal5ve9lulevellarda%30bilenormal”.Sonrasında diğer işler bitince250’ye kadar level tasarımı istedi.
+
+**Kabul/kapsam:**225–234içinhamleayarıyetkili,yerleşimlerikorunur;235–250yenitasarımyetkili.1–4hedefi%50–60,5/9yaklaşık%30kabuledilebilir.6–8için%40–50agent’ınöncekitalebe dayanan çalışma varsayımıdır;kullanıcınınyeni doğrudan6–8ifadesideğil.3boosterLineH/PulseCore/SystemOverrideolarakelealındı.Botoranınıinsangeçişoranıdiyeetiketleme,bilgisayaraçıkbırakmakUI/build/yayıniçingenelizindeğil.Buboostersimseçeneğiiçinbuildizniayrıcaasyncteksorusoruldu,yanıtbekliyor.Bugeribildirim235–250’yiöncedenonaylı/ölçülmüşdengelisaydırmaz.
+
+## 234 — grid beğenildi, v1 oynanışta kolay bulundu · kullanıcı · 2026-11-07
+
+**Kaynak:** “bu level bu seviyede yakışmadı grid güzel ama çok rahat geçilir artık kullanıcı öğrendi bunlar onun için çerez katmanlı yapı kullanman lazım”;sonra “gerçi bir oynayayım sonra karar verelim”;oyundan sonra **“evet düşündüğüm gibi bu seviyede kolay bir level olmuş”**.
+
+**Durum/kapsam:** V1’in gridigörsel olarak beğenildi,zorluğukullanıcıtestinde yetersiz bulundu. Yalnız234’ün oyun yükü/katmanlarını değiştir;maskeyi koru. Bu,bütün normalleri Hard’a çevirmek veya yalnız hamle kısmak değildir.176için ayrıca “senin176ile artık işin yok onu ben halletim” denildi;176kapanmıştır vehiçbiryeni revizyonu yetkili değildir.
+
+**Ders:** Geç dönem oyuncusuna birkaç bilinen tek-hit kenar objesi veiki sınırlı kapak,geniş serbest alanda yeterli zorunlu iş bırakmayabilir. Üstkatman açıldıktan sonra kalan iş vedayanıklı/çok aşamalı içerik,ilk karar veöteki çalışma yüzüyle birlikte değerlendirilir. İlk gerçek oynanış geri bildirimi,önceki statikPASS veyaagenttahmininden önceliklidir.
+
+**Agent v2 / henüz onay değil:**74hücre/24hamle aynı;16hücreye oyma→iki-aşamalı plastik→çamur kuruldu,4’ü sağomuzdaikinciyüz oldu. İkiColorChest→ikiPaintCanBoxişi korunur.5goalve49otomatik+1gerçekbaşlangıçtaşı. Yeni grid/katman kesitleri incelendi;v2manueloyun sonucu henüz yok. Kaynakv1veoyunreddi revizyonBeforeklasöründe tutulur.
+
 ## Önce fikir/tarz seçimi — kullanıcı · 2026-11-06
 
 **Kaynak:** “bu tarzını seviyorum önce bir fikir belirlemen önemli bunu kaydet önce tarzımı seçiyoruz”.

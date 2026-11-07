@@ -1,0 +1,2 @@
+Level,Policy,Speed,Attempts,Completed,Wins,Win%,Low95%,High95%,AvgMovesOnWin,Unresolved
+"L240 L240_Override_Runtime",Auto,10.0,20,20,15,75.0,53.1,88.8,20.4,0

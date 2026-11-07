@@ -1,4 +1,4 @@
-# Level isimleri — LevelCatalogProV1 (1–233)
+# Level isimleri — LevelCatalogProV1 (1–250)
 
 2026-10-28: Oyun `Settings/ProLevels/LevelCatalogProV1`'e geçti; numaralar YENİ sıradır. Boş seviyeler (4, 8, 106) henüz tasarlanmadığı için isimsizdir. Eski numaralı liste ve eşleşme: Masaüstü Wondi Paylaşım/LevelCatalogProV1_Plan.xlsx.
 
@@ -237,3 +237,20 @@ Yeni level tasarlarken aynı JSON'a TR + EN isim ekle, bu tabloyu ve ilgili not/
 | 230 | Büyük Işık Düellosu |
 | 232 | Kristal Hilal |
 | 233 | Kutup Kilidi |
+| 234 | Boya Dalgası |
+| 235 | Bakır Kemer |
+| 236 | Cam Ray |
+| 237 | Dört Vana |
+| 238 | Kuşlu Tribün |
+| 239 | Baklava Kilidi |
+| 240 | Gökkuşağı |
+| 241 | Lale Tarlası |
+| 242 | Elma Ağacı |
+| 243 | Yusufçuk |
+| 244 | Dağ Deresi |
+| 245 | Mantar Ormanı |
+| 246 | Kuş Yuvası |
+| 247 | Şelale |
+| 248 | Ayçiçeği |
+| 249 | Meyve Bahçesi |
+| 250 | Hasat Bayramı |

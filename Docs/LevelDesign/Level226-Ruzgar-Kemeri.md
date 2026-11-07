@@ -1,5 +1,7 @@
 # 226 · Rüzgâr Kemeri / Windlit Arch — v2
 
+**2026-11-07 güncel hamle: 23.** Bu tur yalnız hamle ayarı yapıldı (20→23); aşağıdaki önceki tasarım notu ve eski görseller tarihsel değerler içerebilir. [Güncel denge incelemesi](Reviews/225-234-Balance-2026-11-07/Review.md).
+
 2026-11-06 · V1 kullanıcı tarafından reddedildi. Bu revizyon henüz oynanmadı/onaylanmadı.
 
 **9×11,68 aktif hücre;28 hamle Normal. Hedef:1 duvar parçası,24 fener,16 un.** Katalog `LevelCL_0226`,bölüm10;isim/GUID/katalog/hamle korundu. Asset [LevelV1_00002260.asset](../../Assets/_Project/Settings/ProLevels/LevelV1_00002260.asset).

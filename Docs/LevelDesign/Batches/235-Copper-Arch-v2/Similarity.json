@@ -1,0 +1,309 @@
+{
+  "geometry": [
+    {
+      "level": 50,
+      "name": "Tamirci Arenası",
+      "blockerOverlap": 0.6154,
+      "maskOverlap": 0.8586,
+      "orientation": "aynı yön",
+      "sameDirectionOverlap": 0.6154,
+      "croppedShapeOverlap": 0.7727,
+      "croppedShapeOrientation": "yatay ayna",
+      "sharedFamilies": [],
+      "familyOverlap": 0.0
+    },
+    {
+      "level": 68,
+      "name": "Porselen Bahçesi",
+      "blockerOverlap": 0.6154,
+      "maskOverlap": 0.8586,
+      "orientation": "dikey ayna",
+      "sameDirectionOverlap": 0.0,
+      "croppedShapeOverlap": 0.7727,
+      "croppedShapeOrientation": "yatay ayna",
+      "sharedFamilies": [],
+      "familyOverlap": 0.0
+    },
+    {
+      "level": 126,
+      "name": "Çiçekli Surlar",
+      "blockerOverlap": 0.6154,
+      "maskOverlap": 0.8586,
+      "orientation": "aynı yön",
+      "sameDirectionOverlap": 0.6154,
+      "croppedShapeOverlap": 0.7727,
+      "croppedShapeOrientation": "yatay ayna",
+      "sharedFamilies": [],
+      "familyOverlap": 0.0
+    },
+    {
+      "level": 83,
+      "name": "Çim Avlusu",
+      "blockerOverlap": 0.6071,
+      "maskOverlap": 0.7363,
+      "orientation": "aynı yön",
+      "sameDirectionOverlap": 0.6071,
+      "croppedShapeOverlap": 0.3709,
+      "croppedShapeOrientation": "yatay ayna",
+      "sharedFamilies": [],
+      "familyOverlap": 0.0
+    },
+    {
+      "level": 1,
+      "name": "İlk Tamir",
+      "blockerOverlap": 0.6,
+      "maskOverlap": 0.8586,
+      "orientation": "aynı yön",
+      "sameDirectionOverlap": 0.6,
+      "croppedShapeOverlap": 0.7727,
+      "croppedShapeOrientation": "yatay ayna",
+      "sharedFamilies": [],
+      "familyOverlap": 0.0
+    },
+    {
+      "level": 130,
+      "name": "Çiçekli Kemer",
+      "blockerOverlap": 0.5473,
+      "maskOverlap": 0.8586,
+      "orientation": "aynı yön",
+      "sameDirectionOverlap": 0.5473,
+      "croppedShapeOverlap": 0.5556,
+      "croppedShapeOrientation": "yatay ayna",
+      "sharedFamilies": [],
+      "familyOverlap": 0.0
+    },
+    {
+      "level": 85,
+      "name": "Taş Kasası",
+      "blockerOverlap": 0.5429,
+      "maskOverlap": 0.697,
+      "orientation": "aynı yön",
+      "sameDirectionOverlap": 0.5429,
+      "croppedShapeOverlap": 0.7727,
+      "croppedShapeOrientation": "yatay ayna",
+      "sharedFamilies": [
+        28
+      ],
+      "familyOverlap": 0.1667
+    },
+    {
+      "level": 153,
+      "name": "Piramit Mührü",
+      "blockerOverlap": 0.5429,
+      "maskOverlap": 0.8495,
+      "orientation": "aynı yön",
+      "sameDirectionOverlap": 0.5429,
+      "croppedShapeOverlap": 0.7727,
+      "croppedShapeOrientation": "yatay ayna",
+      "sharedFamilies": [],
+      "familyOverlap": 0.0
+    },
+    {
+      "level": 170,
+      "name": "Kum Saati",
+      "blockerOverlap": 0.5373,
+      "maskOverlap": 0.6616,
+      "orientation": "aynı yön",
+      "sameDirectionOverlap": 0.5373,
+      "croppedShapeOverlap": 0.6682,
+      "croppedShapeOrientation": "yatay ayna",
+      "sharedFamilies": [
+        25,
+        28
+      ],
+      "familyOverlap": 0.4
+    },
+    {
+      "level": 140,
+      "name": "Porsuğun Tacı",
+      "blockerOverlap": 0.5253,
+      "maskOverlap": 0.8871,
+      "orientation": "aynı yön",
+      "sameDirectionOverlap": 0.5253,
+      "croppedShapeOverlap": 0.7065,
+      "croppedShapeOrientation": "yatay ayna",
+      "sharedFamilies": [],
+      "familyOverlap": 0.0
+    },
+    {
+      "level": 229,
+      "name": "Rüzgâr Burgusu",
+      "blockerOverlap": 0.5227,
+      "maskOverlap": 0.8586,
+      "orientation": "aynı yön",
+      "sameDirectionOverlap": 0.5227,
+      "croppedShapeOverlap": 0.4703,
+      "croppedShapeOrientation": "yatay ayna",
+      "sharedFamilies": [
+        28
+      ],
+      "familyOverlap": 0.1667
+    },
+    {
+      "level": 142,
+      "name": "Kilitli Alet Çantası",
+      "blockerOverlap": 0.5135,
+      "maskOverlap": 0.8161,
+      "orientation": "aynı yön",
+      "sameDirectionOverlap": 0.5135,
+      "croppedShapeOverlap": 0.4236,
+      "croppedShapeOrientation": "yatay ayna",
+      "sharedFamilies": [
+        25
+      ],
+      "familyOverlap": 0.1667
+    }
+  ],
+  "cropped": [
+    {
+      "level": 101,
+      "name": "Mor İzler",
+      "blockerOverlap": 0.3846,
+      "maskOverlap": 0.9284,
+      "orientation": "aynı yön",
+      "sameDirectionOverlap": 0.3846,
+      "croppedShapeOverlap": 0.8621,
+      "croppedShapeOrientation": "yatay ayna",
+      "sharedFamilies": [
+        28
+      ],
+      "familyOverlap": 0.1667
+    },
+    {
+      "level": 216,
+      "name": "Sulu Lale",
+      "blockerOverlap": 0.3448,
+      "maskOverlap": 0.5914,
+      "orientation": "aynı yön",
+      "sameDirectionOverlap": 0.3448,
+      "croppedShapeOverlap": 0.8433,
+      "croppedShapeOrientation": "yatay ayna",
+      "sharedFamilies": [],
+      "familyOverlap": 0.0
+    },
+    {
+      "level": 48,
+      "name": "Porselen Vitrin",
+      "blockerOverlap": 0.3313,
+      "maskOverlap": 0.8992,
+      "orientation": "aynı yön",
+      "sameDirectionOverlap": 0.3313,
+      "croppedShapeOverlap": 0.8372,
+      "croppedShapeOrientation": "yatay ayna",
+      "sharedFamilies": [],
+      "familyOverlap": 0.0
+    },
+    {
+      "level": 67,
+      "name": "Turuncu Avlular",
+      "blockerOverlap": 0.3094,
+      "maskOverlap": 0.907,
+      "orientation": "aynı yön",
+      "sameDirectionOverlap": 0.3094,
+      "croppedShapeOverlap": 0.82,
+      "croppedShapeOrientation": "dikey ayna",
+      "sharedFamilies": [],
+      "familyOverlap": 0.0
+    },
+    {
+      "level": 59,
+      "name": "Gizli Eşya Odası",
+      "blockerOverlap": 0.3194,
+      "maskOverlap": 0.827,
+      "orientation": "aynı yön",
+      "sameDirectionOverlap": 0.3194,
+      "croppedShapeOverlap": 0.8025,
+      "croppedShapeOrientation": "yatay ayna",
+      "sharedFamilies": [],
+      "familyOverlap": 0.0
+    },
+    {
+      "level": 64,
+      "name": "Üç Renkli Cephe",
+      "blockerOverlap": 0.3074,
+      "maskOverlap": 0.8671,
+      "orientation": "aynı yön",
+      "sameDirectionOverlap": 0.3074,
+      "croppedShapeOverlap": 0.7888,
+      "croppedShapeOrientation": "yatay ayna",
+      "sharedFamilies": [],
+      "familyOverlap": 0.0
+    },
+    {
+      "level": 165,
+      "name": "Mor Tesisat",
+      "blockerOverlap": 0.3575,
+      "maskOverlap": 0.7057,
+      "orientation": "dikey ayna",
+      "sameDirectionOverlap": 0.1854,
+      "croppedShapeOverlap": 0.7888,
+      "croppedShapeOrientation": "dikey ayna",
+      "sharedFamilies": [
+        68
+      ],
+      "familyOverlap": 0.1667
+    },
+    {
+      "level": 56,
+      "name": "Pusula Meydanı",
+      "blockerOverlap": 0.2903,
+      "maskOverlap": 0.8586,
+      "orientation": "aynı yön",
+      "sameDirectionOverlap": 0.2903,
+      "croppedShapeOverlap": 0.7842,
+      "croppedShapeOrientation": "yatay ayna",
+      "sharedFamilies": [],
+      "familyOverlap": 0.0
+    },
+    {
+      "level": 1,
+      "name": "İlk Tamir",
+      "blockerOverlap": 0.6,
+      "maskOverlap": 0.8586,
+      "orientation": "aynı yön",
+      "sameDirectionOverlap": 0.6,
+      "croppedShapeOverlap": 0.7727,
+      "croppedShapeOrientation": "yatay ayna",
+      "sharedFamilies": [],
+      "familyOverlap": 0.0
+    },
+    {
+      "level": 8,
+      "name": "",
+      "blockerOverlap": 0.1111,
+      "maskOverlap": 0.8586,
+      "orientation": "aynı yön",
+      "sameDirectionOverlap": 0.1111,
+      "croppedShapeOverlap": 0.7727,
+      "croppedShapeOrientation": "yatay ayna",
+      "sharedFamilies": [
+        25
+      ],
+      "familyOverlap": 0.1667
+    },
+    {
+      "level": 17,
+      "name": "Mavi Sandıklar",
+      "blockerOverlap": 0.1833,
+      "maskOverlap": 0.8586,
+      "orientation": "aynı yön",
+      "sameDirectionOverlap": 0.1833,
+      "croppedShapeOverlap": 0.7727,
+      "croppedShapeOrientation": "yatay ayna",
+      "sharedFamilies": [],
+      "familyOverlap": 0.0
+    },
+    {
+      "level": 27,
+      "name": "Dört Renkli Depo",
+      "blockerOverlap": 0.3529,
+      "maskOverlap": 0.8586,
+      "orientation": "aynı yön",
+      "sameDirectionOverlap": 0.3529,
+      "croppedShapeOverlap": 0.7727,
+      "croppedShapeOrientation": "yatay ayna",
+      "sharedFamilies": [],
+      "familyOverlap": 0.0
+    }
+  ]
+}

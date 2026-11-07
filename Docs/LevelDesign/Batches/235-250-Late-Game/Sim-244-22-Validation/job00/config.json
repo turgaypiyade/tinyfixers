@@ -1,0 +1,20 @@
+{
+ "levelPaths": [],
+ "levelNumbers": [
+  244
+ ],
+ "scenePath": "Assets/_Project/Scenes/01_Game.unity",
+ "gamesPerLevel": 30,
+ "seed": 53421,
+ "policy": 4,
+ "timeScale": 10.0,
+ "stepTimeoutSeconds": 90.0,
+ "startingBoosters": 0,
+ "levelOverrideDir": "/Users/turgayp/Development Projects/Unity/tinyfixers/Docs/LevelDesign/Batches/235-250-Late-Game/244-Validation-Inputs",
+ "outputPath": "/Users/turgayp/Development Projects/Unity/tinyfixers/Docs/LevelDesign/Batches/235-250-Late-Game/Sim-244-22-Validation/job00/report.json",
+ "recordDir": "",
+ "ffmpegPath": "",
+ "recordFps": 30,
+ "thinkSeconds": 0,
+ "tailSeconds": 0
+}

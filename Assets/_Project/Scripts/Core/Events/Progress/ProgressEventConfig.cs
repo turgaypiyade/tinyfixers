@@ -62,7 +62,7 @@ public class ProgressGoalDefinition
             ProgressGoalType.LineH => lib.lineH,
             ProgressGoalType.LineV => lib.lineV,
             ProgressGoalType.LineAny => lib.lineH,
-            ProgressGoalType.ObstacleCleared => lib.boosterHammer,
+            ProgressGoalType.ObstacleCleared => lib.obstacleGoal, // never a booster sprite (reads as the reward)
             ProgressGoalType.SpecialCreated => lib.pulseCore,
             ProgressGoalType.LevelWon => lib.star,
             ProgressGoalType.FirstTryWin => lib.star,

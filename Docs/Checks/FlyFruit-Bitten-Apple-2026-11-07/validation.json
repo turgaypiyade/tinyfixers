@@ -1,0 +1,17 @@
+{
+  "result": "PASS",
+  "changedAsset": "Assets/_Project/Resources/FlyFruit/AppleHalf.png",
+  "sourceSHA256": "662543351f61e5f302cb570ee0a4facc8b45b4ba40262c134a1d94c788c0306e",
+  "outputSHA256": "662543351f61e5f302cb570ee0a4facc8b45b4ba40262c134a1d94c788c0306e",
+  "sourceSize": [
+    1254,
+    1254
+  ],
+  "alphaPreserved": true,
+  "guidPreserved": "12e9756b758758baa4722910f6feb45e",
+  "linkedFromObstacle": 102,
+  "runtimeThreshold": "Remaining<=3;after3of6bites",
+  "otherAssetsPreserved": 6109,
+  "runtimeOrLevelChanges": false,
+  "playOrBuild": false
+}

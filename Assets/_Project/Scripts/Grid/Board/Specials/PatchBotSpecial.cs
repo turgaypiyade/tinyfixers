@@ -189,6 +189,12 @@ public sealed class PatchBotSpecial
         }
 
         var cachedPartnerSpecial = rt.Partner != null ? rt.Partner.GetSpecial() : TileSpecial.None;
+        // Jel kaynağı kalkışta okunur (origin henüz kendi hücresinde). Zincirde tetiklenen bot
+        // (ör. Override+Override dalgası → ResolveOtherSpecialInline) ApplySpecialActivation'dan
+        // geçmediği için hamle kapsamı açılmıyordu → indiği yere jel taşımıyordu. Kural aynı:
+        // kaynağı bulaşıksa yalnız KENDİ vurduğu taşlar jel bırakır (tüm hamle kapsamı açılmaz).
+        bool carriesGel = rt.Board.IsGelSpreadSourceTile(rt.Origin)
+            || (rt.Partner != null && rt.Board.IsGelSpreadSourceTile(rt.Partner));
         var originTile = rt.Origin;
         var originCell = new Vector2Int(originTile.X, originTile.Y);
         var originSourceType = originTile.GetTileType();
@@ -288,6 +294,9 @@ public sealed class PatchBotSpecial
 
                         if (arrivalRt.Context.OverrideRadialClearDelays != null && arrivalRt.Context.OverrideRadialClearDelays.Count > 0)
                             arrivalRt.FireOverrideOverrideSpecialVisuals?.Invoke(arrivalRt.Context.Affected, arrivalRt.Context.OverrideRadialClearDelays);
+
+                        if (carriesGel)
+                            arrivalRt.Board.MarkGelContaminated(arrivalRt.Context.Affected);
 
                         var clearAction = BuildClearAction(arrivalRt);
                         if (clearAction != null)

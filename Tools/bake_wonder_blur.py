@@ -195,7 +195,7 @@ def main():
                           sourceSha256=hashlib.sha256(source.read_bytes()).hexdigest(), width=w, height=h,
                           pngBytes=path.stat().st_size, rgba32Bytes=w*h*4,
                           astc6x6Bytes=math.ceil(w/6)*math.ceil(h/6)*16))
-    assert len(items) == 8
+    assert len(items) == 10
     if not args.check:
         write_if_changed(REVIEW / "Manifest.json", json.dumps(items, indent=2, ensure_ascii=False) + "\n")
         if args.preview:

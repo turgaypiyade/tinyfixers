@@ -1,5 +1,17 @@
 # Üretim level tasarım ilkeleri
 
+## Görsel uygunluk ve geçici kullanım dışı engeller · kullanıcı · 2026-11-07
+
+**BatteryBox (23) ve OmegaModul (24) şimdilik kullanılmayacak.** Kullanıcı mevcut görsellerini beğenmediği için bunları kullanmıyor; uygun imaj bulunursa ileride yeniden değerlendirebilir. Kütüphanede mevcut olmak veya yeni mekanik tanıtım kotası, bu tercihi geçersiz kılmaz. EnergyContainer22 ve OverrideBatteryBox43 ayrı ailelerdir; bu karara kendiliğinden dahil edilmez.
+
+Kullanıcı dün/bugün hazırlanan **235–250** grubunun görsellerini beğenmedi. Teknik doğruluk ve bot dengesi görsel kalite/onay yerine geçmez. Eleştiri önceki levellara genellenmez; ayrıntılı nedenler kullanıcıdan gelmeden belirli bir şekil/kompozisyon kusuru kullanıcı görüşü diye yazılmaz. Yeni yerleşimde önce fikir/tarz ve şekil, ardından görsel olarak uygun engel seçimi yapılır.
+
+## 225 sonrası güncel geçiş yönü · kullanıcı · 2026-11-07
+
+Sonu **1–4 olan geç dönem levellarda oyuncu hedefi%50–60**;sonu **5/9’da%30 normal**.6–8 için önceki%40–50 yönü çalışma varsayımı olarak sürdürülür;bu son cümle kullanıcıdan yeni6–8 yüzdesi değildir. Boss ayrıca değerlendirilir. Bu hedefler başlangıç12–15 gibi eski başlangıç eğrisine topluca uygulanmaz.
+
+Mac simülasyonuna bu görev için açık izin verildi;bu, varsayılan build/UI/yayın izinlerini değiştirmez. Her koşunun canlı asset/JSON girdisi sabit tutulur;revizyonlar farklı klasörlerden çalışır. Botun üretici önceliği eksikse oranı zorla tutturmak için hamle şişirilmez. Küçük bot örnekleri insan geçiş oranının ölçümü/onayı değildir. Manuel test sonucu ayrı kaydedilir.
+
 **Fikir önce gelir — kullanıcı, 2026-11-06:** “önce bir fikir belirlemen önemli ... önce tarzımı seçiyoruz”. İş sırası: seviyenin ana fikrini/tarzını, okunacak şekli ve ilk oyuncu kararını seçip paylaş; sonra bu fikri taşıyan engel ve katmanları yerleştir. Engel dizerek sonradan tema uydurma. Önceki seviyede beğenilen yaklaşım, sonraki seviyeye aynı şekli kopyalamak değildir.
 
 **176 yaklaşımı onaylandı; 234 farklı tasarlanır — kullanıcı, 2026-11-06:** “çok iyi oldu ... biraz değiştirdim ama mantığını sevdim”. Beğenilen, belirli bir V şeklinin her levele kopyalanması değildir: yok olan engeller kenarlarda anlamlı kontur/bant oluşturur, maskeyle birlikte güzel görünür ve açıldıkça gerçek oyun alanı kazandırır. Bu, gereksiz engel tavanlarını ve altlarındaki boş cepleri de azaltır. Sonraki seviyenin silueti, ana mekaniği ve ilk kararı ayrıca seçilir. Kullanıcının elle ayarladığı176 korunur; agent’ın eski hamle/hedef modeline döndürülmez.

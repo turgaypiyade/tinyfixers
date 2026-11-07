@@ -1,0 +1,2 @@
+Level,Policy,Speed,Attempts,Completed,Wins,Win%,Low95%,High95%,AvgMovesOnWin,Unresolved
+"L242 L242_Override_Runtime",Auto,10.0,20,20,8,40.0,21.9,61.3,17.0,0

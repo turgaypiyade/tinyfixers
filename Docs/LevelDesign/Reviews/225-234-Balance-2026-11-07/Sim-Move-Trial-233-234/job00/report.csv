@@ -1,0 +1,2 @@
+Level,Policy,Speed,Attempts,Completed,Wins,Win%,Low95%,High95%,AvgMovesOnWin,Unresolved
+"L233 L233_Override_Runtime",Auto,10.0,30,30,18,60.0,42.3,75.4,15.6,0

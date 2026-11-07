@@ -2826,7 +2826,7 @@
         },
         {
           "key": "wonder_mis3_task_7",
-          "value": "Flamaları Yenile"
+          "value": "Çeşmeyi Onar"
         },
         {
           "key": "wonder_mis3_task_8",
@@ -3023,6 +3023,78 @@
         {
           "key": "wonder_mis8_task_8",
           "value": "Meşaleyi Yak"
+        },
+        {
+          "key": "wonder_mis9_name",
+          "value": "Big Ben"
+        },
+        {
+          "key": "wonder_mis9_task_1",
+          "value": "Meydanı Temizle"
+        },
+        {
+          "key": "wonder_mis9_task_2",
+          "value": "Temeli Sağlamlaştır"
+        },
+        {
+          "key": "wonder_mis9_task_3",
+          "value": "İskeleyi Kur"
+        },
+        {
+          "key": "wonder_mis9_task_4",
+          "value": "Kule Gövdesini Onar"
+        },
+        {
+          "key": "wonder_mis9_task_5",
+          "value": "Saat Kolunu Tak"
+        },
+        {
+          "key": "wonder_mis9_task_6",
+          "value": "Çanı ve Çatıyı Onar"
+        },
+        {
+          "key": "wonder_mis9_task_7",
+          "value": "Otobüsü Yıka"
+        },
+        {
+          "key": "wonder_mis9_task_8",
+          "value": "Fenerleri Yak"
+        },
+        {
+          "key": "wonder_mis10_name",
+          "value": "Sidney Opera Binası"
+        },
+        {
+          "key": "wonder_mis10_task_1",
+          "value": "Rıhtımı Temizle"
+        },
+        {
+          "key": "wonder_mis10_task_2",
+          "value": "Limanı Temizle"
+        },
+        {
+          "key": "wonder_mis10_task_3",
+          "value": "Temeli Onar"
+        },
+        {
+          "key": "wonder_mis10_task_4",
+          "value": "İskeleyi Kur"
+        },
+        {
+          "key": "wonder_mis10_task_5",
+          "value": "İpi Bağla"
+        },
+        {
+          "key": "wonder_mis10_task_6",
+          "value": "Kabukları Kaynakla"
+        },
+        {
+          "key": "wonder_mis10_task_7",
+          "value": "Fayansları Döşe"
+        },
+        {
+          "key": "wonder_mis10_task_8",
+          "value": "Camları Parlat"
         },
         {
           "key": "purchase_celebration_title",
@@ -3487,6 +3559,14 @@
         {
           "key": "hint_obstacle_dimerdal",
           "value": "Aynı renkteki komşu eşleşmeler veya özel güçlerle dört kepenk dilimini aç. Açık kutunun yanındaki aynı renk eşleşmesi tahtada bir elmas oluşturur. Elmasları normal taşlar gibi hareket ettir; aynı renkteki elmasları eşleştirerek veya özel güçlerle topla. Tüm elmas renkleri aynı hedefe sayılır."
+        },
+        {
+          "key": "hint_obstacle_flyfruit_name",
+          "value": "Sinekler ve Elma"
+        },
+        {
+          "key": "hint_obstacle_flyfruit",
+          "value": "Sinek kutusunu özel güçlerle vur: her vuruşta bir yumurta tahtaya düşer. Yumurtayı eşleşme veya özel güçle patlat; çıkan üç sinek elmaya uçup ısırır. Her elma altı ısırıkta biter!"
         }
       ]
     },
@@ -6315,7 +6395,7 @@
         },
         {
           "key": "wonder_mis3_task_7",
-          "value": "Restore the Banners"
+          "value": "Repair the Fountain"
         },
         {
           "key": "wonder_mis3_task_8",
@@ -6512,6 +6592,78 @@
         {
           "key": "wonder_mis8_task_8",
           "value": "Light the Torch"
+        },
+        {
+          "key": "wonder_mis9_name",
+          "value": "Big Ben"
+        },
+        {
+          "key": "wonder_mis9_task_1",
+          "value": "Clean the Square"
+        },
+        {
+          "key": "wonder_mis9_task_2",
+          "value": "Reinforce the Base"
+        },
+        {
+          "key": "wonder_mis9_task_3",
+          "value": "Build the Scaffold"
+        },
+        {
+          "key": "wonder_mis9_task_4",
+          "value": "Repair the Tower"
+        },
+        {
+          "key": "wonder_mis9_task_5",
+          "value": "Fit the Clock Hand"
+        },
+        {
+          "key": "wonder_mis9_task_6",
+          "value": "Fix the Bell and Roof"
+        },
+        {
+          "key": "wonder_mis9_task_7",
+          "value": "Wash the Bus"
+        },
+        {
+          "key": "wonder_mis9_task_8",
+          "value": "Light the Lamps"
+        },
+        {
+          "key": "wonder_mis10_name",
+          "value": "Sydney Opera House"
+        },
+        {
+          "key": "wonder_mis10_task_1",
+          "value": "Clean the Promenade"
+        },
+        {
+          "key": "wonder_mis10_task_2",
+          "value": "Clean the Harbor"
+        },
+        {
+          "key": "wonder_mis10_task_3",
+          "value": "Repair the Base"
+        },
+        {
+          "key": "wonder_mis10_task_4",
+          "value": "Build the Scaffold"
+        },
+        {
+          "key": "wonder_mis10_task_5",
+          "value": "Tie the Rope"
+        },
+        {
+          "key": "wonder_mis10_task_6",
+          "value": "Weld the Shells"
+        },
+        {
+          "key": "wonder_mis10_task_7",
+          "value": "Lay the Tiles"
+        },
+        {
+          "key": "wonder_mis10_task_8",
+          "value": "Polish the Glass"
         },
         {
           "key": "purchase_celebration_title",
@@ -6976,6 +7128,14 @@
         {
           "key": "hint_obstacle_dimerdal",
           "value": "Open the four shutter slats with adjacent matching colors or specials. Each matching-color group beside the open box creates one diamond on the board. Move diamonds like normal tiles; match diamonds of the same color or use specials to collect them. Every diamond color counts toward the same goal."
+        },
+        {
+          "key": "hint_obstacle_flyfruit_name",
+          "value": "Flies and Fruit"
+        },
+        {
+          "key": "hint_obstacle_flyfruit",
+          "value": "Hit the fly box with specials: each hit drops an egg onto the board. Pop the egg with a match or a special; three flies fly out and bite the fruit. Each fruit is gone after six bites!"
         }
       ]
     }

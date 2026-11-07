@@ -1,0 +1,71 @@
+{
+    "engine": "Live BoardController / gameplay scene",
+    "unityVersion": "6000.3.9f1",
+    "buildGuid": "929489f4052b46b9b6c41b0ea4ea8a11",
+    "note": "Bot performance, not a calibrated human win rate. Unity seed is diagnostic; frame timing can affect replay.",
+    "config": {
+        "levelPaths": [],
+        "levelNumbers": [
+            234
+        ],
+        "levelOverrideDir": "",
+        "scenePath": "Assets/_Project/Scenes/01_Game.unity",
+        "gamesPerLevel": 1,
+        "seed": 419083,
+        "policy": 4,
+        "timeScale": 1.0,
+        "stepTimeoutSeconds": 90.0,
+        "outputPath": "/Users/turgayp/Development Projects/Unity/tinyfixers/Docs/LevelDesign/Reviews/225-234-Balance-2026-11-07/Sim-234-1x/job00/report.json",
+        "recordDir": "",
+        "ffmpegPath": "",
+        "recordFps": 30,
+        "thinkSeconds": 0.0,
+        "tailSeconds": 0.0
+    },
+    "games": [
+        {
+            "level": "L234 LevelV1_00002340_Runtime",
+            "levelPath": "L234",
+            "bot": "Usta",
+            "sample": 0,
+            "seed": 419083,
+            "movesUsed": 24,
+            "movesLeft": 0,
+            "rejectedInputs": 0,
+            "outcome": "Lost",
+            "detail": "",
+            "elapsedSeconds": 35.761898040771487,
+            "remainingGoalUnits": 32,
+            "goalsLeft": "PaintCanBox=2;SculptingStone=5;PlasticTwoStage=12;Mud=13",
+            "goalsStart": "ColorChest=2;PaintCanBox=2;SculptingStone=16;PlasticTwoStage=16;Mud=16",
+            "emptyCellsAtEnd": "(0,4, blockedAbove=PaintCanBox)",
+            "trace": [
+                "moves=24; board=9958DC77; emptySlots=none; swap(4,5)->(4,6)",
+                "moves=23; board=FF8B3C22; emptySlots=none; swap(3,3)->(4,3)",
+                "moves=22; board=3AEC931F; emptySlots=none; swap(1,4)->(2,4)",
+                "moves=21; board=A4914B66; emptySlots=(0,4, blockedAbove=ColorChest); swap(3,5)->(4,5)",
+                "moves=20; board=7C72BFFD; emptySlots=(0,4, blockedAbove=ColorChest); swap(2,5)->(3,5)",
+                "moves=19; board=214C7961; emptySlots=(0,4, blockedAbove=ColorChest); tap(2,7)",
+                "moves=18; board=9D5ED766; emptySlots=(0,4, blockedAbove=ColorChest); swap(2,3)->(3,3)",
+                "moves=17; board=2CDC9D95; emptySlots=(0,4, blockedAbove=PaintCanBox); swap(2,4)->(2,5)",
+                "moves=16; board=1BD2E90C; emptySlots=(0,4, blockedAbove=PaintCanBox); swap(4,9)->(5,9)",
+                "moves=15; board=554E47A7; emptySlots=(0,4, blockedAbove=PaintCanBox); swap(4,1)->(4,2)",
+                "moves=14; board=19FC855D; emptySlots=(0,4, blockedAbove=PaintCanBox); swap(5,9)->(5,10)",
+                "moves=13; board=88A599DE; emptySlots=(0,4, blockedAbove=PaintCanBox); swap(5,2)->(6,2)",
+                "moves=12; board=DBE1DADA; emptySlots=(0,4, blockedAbove=PaintCanBox); swap(5,4)->(6,4)",
+                "moves=11; board=C16CD71D; emptySlots=(0,4, blockedAbove=PaintCanBox); swap(2,6)->(3,6)",
+                "moves=10; board=B681F112; emptySlots=(0,4, blockedAbove=PaintCanBox); swap(5,9)->(6,9)",
+                "moves=9; board=0DDD5158; emptySlots=(0,4, blockedAbove=PaintCanBox); swap(3,1)->(3,2)",
+                "moves=8; board=A4A08B7D; emptySlots=(0,4, blockedAbove=PaintCanBox); swap(3,8)->(3,9)",
+                "moves=7; board=A5F9FCF9; emptySlots=(0,4, blockedAbove=PaintCanBox); swap(4,9)->(4,10)",
+                "moves=6; board=098CE0B3; emptySlots=(0,4, blockedAbove=PaintCanBox); swap(2,3)->(3,3)",
+                "moves=5; board=9472A4F0; emptySlots=(0,4, blockedAbove=PaintCanBox); swap(2,4)->(2,5)",
+                "moves=4; board=7CD45082; emptySlots=(0,4, blockedAbove=PaintCanBox); swap(5,2)->(6,2)",
+                "moves=3; board=7394AECB; emptySlots=(0,4, blockedAbove=PaintCanBox); swap(5,4)->(5,5)",
+                "moves=2; board=D2C91170; emptySlots=(0,4, blockedAbove=PaintCanBox); swap(4,4)->(4,5)",
+                "moves=1; board=A1E42703; emptySlots=(0,4, blockedAbove=PaintCanBox); swap(4,2)->(5,2)"
+            ]
+        }
+    ],
+    "completed": true
+}

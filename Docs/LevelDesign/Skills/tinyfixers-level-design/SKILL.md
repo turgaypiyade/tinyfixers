@@ -25,6 +25,8 @@ Keep every level's Turkish name (`name`) and English name (`nameEn`) in `Assets/
 
 Form a clear visual composition and player decision before authoring: what shape is visible, which region opens first, and what that unlocks. Consider a few distinct concepts internally and choose without requiring approval for routine design choices. Check repetition across the existing catalog, then inspect the closest historical boards as well as nearby levels. A long gap since an obstacle's last use does not establish novelty.
 
+Share the chosen idea/style, shape and first player decision before writing the layout. The user values this order: idea first, obstacle placement second. For disappearing obstacles, consider coherent edges/contours that complete the mask and open useful play space, while varying the composition and mechanic across levels. Praise for one approach does not make its exact V, frame or gate the next level's template.
+
 Check the strongest plausible early helper/chain against the remaining mandatory work. A spread goal and an area-clearing helper can accelerate the same task; do not count them as independent difficulty. Static validity and a readable PNG do not establish the intended difficulty. Record the user’s rejection and change the interaction, rather than only reducing moves.
 
 Early-game simplicity still needs a visible idea and a meaningful opening beat. Do not substitute
@@ -47,7 +49,9 @@ Theme: repair animals restoring World Wonders. New obstacles are considered alon
 
 Follow the project design principles for liquid bases, layers, helper goals, introductions, and Boss Duel dimensions. After 170 normal levels should also challenge; endings 5 are Hard and endings 9 Super Hard. A 40–50% pass-rate direction is a target until measured, not an established result.
 
-Check arrays, masks, origins/footprints, goals/layers, colors, refill and special access, catalog references, and preservation of earlier levels. Starting pins are a deliberate design tool; do not disguise an unreachable refill route. Check the actual special implementation if it must cross holes. Do not run Unity builds, bot/cascade simulation, or unrequested project builds.
+Check arrays, masks, origins/footprints, goals/layers, colors, refill and special access, catalog references, and preservation of earlier levels. Prefer automatic initial fill. The user explicitly allows ordinary starting tiles only in normal cells that natural fill cannot reach at opening, so the screen does not start unnecessarily empty; do not pin the whole workspace or force specials. Check pin support/settled position separately from later refill access, and do not disguise a permanently unreachable refill route. Check the actual special implementation if it must cross holes. Do not run Unity builds, bot/cascade simulation, or unrequested project builds.
+
+When the user explicitly authorizes simulation, freeze the live catalog assets and input JSON for each run. Keep those inputs immutable while workers run; export revisions into a new directory. Verify the actual starting goals, move budget, build identity and requested booster delivery in the reports. Count only Won/Lost in win rates, retain errors separately, and distinguish measured bot performance from player targets. A small sample or a bot that does not prioritize a goal's producer cannot establish a human pass rate; do not inflate moves solely to compensate for that blind spot.
 
 Use existing tile/effect pools. Review churn, allocations, repeated scans, cancellation and teardown for chosen mechanics. State existing costs and unmeasured limits without claiming measured performance gains. Normal level authoring should not require new runtime/VFX code.
 

@@ -28,7 +28,7 @@ public static class PlayerPrefs {public static Dictionary<string,string> values=
 public static class GameLocalization {public static string GetFormat(string k,params object[] a)=>k+""|""+a[0];}
 public class TileIconLibrary {
  public static TileIconLibrary Shared=new TileIconLibrary();
- public Sprite gear=new Sprite(),core=new Sprite(),bolt=new Sprite(),plate=new Sprite(),lineH=new Sprite(),lineV=new Sprite(),boosterHammer=new Sprite(),pulseCore=new Sprite(),star=new Sprite();
+ public Sprite gear=new Sprite(),core=new Sprite(),bolt=new Sprite(),plate=new Sprite(),lineH=new Sprite(),lineV=new Sprite(),boosterHammer=new Sprite(),obstacleGoal=new Sprite(),pulseCore=new Sprite(),star=new Sprite();
 }
 public class DailySlotReward {public DailySlotRewardType type;public int amount=1;public Sprite icon;}
 public static class DailySlotRewardService {public static DailySlotReward last;public static int grants;public static void Grant(DailySlotReward r){last=r;grants++;}}

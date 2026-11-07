@@ -16,6 +16,28 @@ MonoBehaviour:
   secondWonderTotalStars: 75
   lastWonderTotalStars: 110
   defaultBackground: {fileID: 21300000, guid: 7590a0dcb9c8240b5b719823ce570a5e, type: 3}
+  defaultCharacters:
+  - name: DefaultSkyBird
+    active: 1
+    facingMode: 1
+    birdProfile: {fileID: 11400000, guid: d485cd392d5c4583ac65214fc4eb90f8, type: 2}
+    frontFrames: []
+    backFrames: []
+    walkFrames: []
+    walkFps: 5
+    mirrorBySide: 1
+    speed: 135
+    bobAmplitude: 20
+    bobFrequency: 3
+    visualSize: 150
+    pingPong: 1
+    pauseAtPoint: 0.4
+    path:
+    - {x: 650, y: 500}
+    - {x: 300, y: 440}
+    - {x: 0, y: 480}
+    - {x: -320, y: 440}
+    - {x: -680, y: 500}
   wonders:
   - {fileID: 11400000, guid: 7ff1a68e5900443989eec0d4fd4175b8, type: 2}
   - {fileID: 11400000, guid: c1d9cec3030b642d19cc484df36f45a3, type: 2}
@@ -25,6 +47,8 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 1f73b518581643c7bd3d3442466dbc08, type: 2}
   - {fileID: 11400000, guid: 68f5f8ac6c2e49448c18fee915393c7b, type: 2}
   - {fileID: 11400000, guid: 393c42757ddd4b9c951aa52d5607ceeb, type: 2}
+  - {fileID: 11400000, guid: a2dc83c917e14618827faf23cdd9e5aa, type: 2}
+  - {fileID: 11400000, guid: 238e648e3cf344378c84edd5cfd0e500, type: 2}
   chestTiers:
   - rewards:
     - type: 0

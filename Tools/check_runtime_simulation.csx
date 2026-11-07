@@ -14,20 +14,28 @@ foreach(var symbols in new[]{new string[0],new[]{"UNITY_EDITOR"},new[]{"TF_SIM_B
 }
 var root=CSharpSyntaxTree.ParseText(File.ReadAllText(file),CSharpParseOptions.Default.WithPreprocessorSymbols("TF_SIM_BUILD")).GetRoot();
 string nested=string.Join("\n",root.DescendantNodes().OfType<ClassDeclarationSyntax>().Where(c=>new[]{"Config","GameResult","Report"}.Contains(c.Identifier.ValueText)).Select(c=>c.ToString()));
-string methods=string.Join("\n",root.DescendantNodes().OfType<MethodDeclarationSyntax>().Where(m=>new[]{"ConfigError","BoardIntegrityError","Finish","SilenceAudio","RestoreAudio","IsBoardWorking"}.Contains(m.Identifier.ValueText)).Select(m=>m.ToFullString()))
+string methods=string.Join("\n",root.DescendantNodes().OfType<MethodDeclarationSyntax>().Where(m=>new[]{"ConfigError","BoardIntegrityError","Finish","SilenceAudio","RestoreAudio","IsBoardWorking","PlaceStartingBoosters"}.Contains(m.Identifier.ValueText)).Select(m=>m.ToFullString()))
  .Replace("private static string ConfigError","public static string ConfigError").Replace("private string BoardIntegrityError","public string BoardIntegrityError").Replace("private void Finish","public void Finish")
- .Replace("private void SilenceAudio","public void SilenceAudio").Replace("private void RestoreAudio","public void RestoreAudio").Replace("private static bool IsBoardWorking","public static bool IsBoardWorking");
+ .Replace("private void SilenceAudio","public void SilenceAudio").Replace("private void RestoreAudio","public void RestoreAudio").Replace("private static bool IsBoardWorking","public static bool IsBoardWorking").Replace("private IEnumerator PlaceStartingBoosters","public IEnumerator PlaceStartingBoosters");
 string resolve=CSharpSyntaxTree.ParseText(File.ReadAllText("Assets/_Project/Scripts/Grid/GridSpawner.cs")).GetRoot().DescendantNodes()
  .OfType<MethodDeclarationSyntax>().Single(m=>m.Identifier.ValueText=="ResolveLevelData").ToString().Replace("private LevelData ResolveLevelData","public LevelData ResolveLevelData");
 var source=@"
-using System;using System.IO;using System.Collections.Generic;using System.Globalization;using System.Linq;using System.Text;
+using System;using System.IO;using System.Collections;using System.Collections.Generic;using System.Globalization;using System.Linq;using System.Text;
 public enum RuntimeBotPolicy {Random,GoalAware,Greedy}
-public enum TileSpecial {None,PulseCore}
+public enum TileSpecial {None,PulseCore,LineH,SystemOverride}
+public static class Time {public static float realtimeSinceStartup;}
+public sealed class PreLevelSpecialRuntimeInjector {
+ public static PreLevelSpecialRuntimeInjector Last;public TileSpecial[] requested;public GameObject gameObject=new GameObject();
+ public Action<TileView,TileSpecial> OnSpecialPlaced;public Action OnPlacementFinished;
+ public static PreLevelSpecialRuntimeInjector CreateDedicated(IReadOnlyList<TileSpecial> selected)=>Last=new PreLevelSpecialRuntimeInjector{requested=selected.ToArray()};
+ public void Deliver(int count){for(int i=0;i<count;i++)OnSpecialPlaced?.Invoke(new TileView{X=i},requested[i]);OnPlacementFinished?.Invoke();}
+}
 public enum TileType {Red,Blue}
 public enum TileRuntimeState {Idle,Falling,Clearing}
 public struct Vector2 {public float x,y;public Vector2(float x,float y){this.x=x;this.y=y;}public override string ToString()=>x+"",""+y;}
 public class RectTransform {public Vector2 anchoredPosition;}
 public static class AudioListener {public static bool pause;public static float volume;}
+public static class Haptics {public enum Strength {Medium} public static void Play(Strength s){}}
 public static class PlayerPrefs {
  public static Dictionary<string,int> values=new Dictionary<string,int>();public static int writes;
  public static int GetInt(string key,int fallback)=>values.TryGetValue(key,out var value)?value:fallback;
@@ -57,9 +65,10 @@ public class BoardController {
  public bool IsTileReadyForContinuousMatch(TileView tile)=>tile.settled;
 }
 public static class Application {public static int exit;public static void Quit(int code){exit=code;}}
-public class LevelData {public int moves=20;}
+public class LevelData {public int moves=20;public string name;}
 public class Selector {public LevelData ResolveLevelData()=>null;}
-public static class CurrentLevel {public static int Global=1;}
+public static class CurrentLevel {public static int Global=1;public static int Played=1;}
+public static class MasterLeague {public static bool IsPlaying;public static int Lap;public static int MovesFor(int moves,int lap)=>moves;}
 public static class LevelRemoteTuning {public static int MovesFor(int level,int moves)=>moves;}
 public class GridSpawner {
  public Selector levelRuntimeSelector;public LevelData level=new LevelData();bool ownsResolvedLevelInstance;
@@ -68,8 +77,11 @@ public class GridSpawner {
 }
 public class RuntimeSimulationSession {
  public static bool IsActive;public static LevelData CurrentLevel;public static int CurrentLevelNumber;
+ public static bool ApplyLevelOverride(LevelData data,int level)=>false;
  public Report _report=new Report();public bool saved=true,_finished;readonly List<TileView> _sceneTiles=new List<TileView>();
  bool _oldAudioPause;float _oldAudioVolume;
+ public Config _config=new Config();public bool Cancelled;public string _runtimeError;public int destroyed;
+ void Destroy(GameObject go){destroyed++;}
  bool SaveReport()=>saved;void SetStatus(string s){}
  /* NESTED */
  /* METHODS */
@@ -84,6 +96,21 @@ public static class Checks {
  static BoardController Board(){var b=new BoardController();var t=new TileView{Board=b};b.tiles[0,0]=t;b.GridData[0,0]=new TileData();b.Parent.children.Add(t);return b;}
  public static void Run(){
   Check(RuntimeSimulationSession.ConfigError(Config())==null,""headless config valid"");
+  var boosted=Config();boosted.startingBoosters=3;Check(RuntimeSimulationSession.ConfigError(boosted)==null,""three boosters supported"");
+  boosted.startingBoosters=2;Check(RuntimeSimulationSession.ConfigError(boosted)!=null,""ambiguous booster count rejected"");
+  Time.realtimeSinceStartup=0;
+  var delivery=new RuntimeSimulationSession();var delivered=new RuntimeSimulationSession.GameResult();
+  var routine=delivery.PlaceStartingBoosters(delivered,Board());Check(routine.MoveNext(),""wait for real injector"");
+  var injector=PreLevelSpecialRuntimeInjector.Last;
+  Check(injector.requested.SequenceEqual(new[]{TileSpecial.LineH,TileSpecial.PulseCore,TileSpecial.SystemOverride}),""exact three pre-level slots"");
+  injector.Deliver(3);Check(!routine.MoveNext()&&delivered.startingBoostersPlaced==3&&delivered.startingBoosterPlacements.Count==3,""all three delivered before bot"");
+  Check(delivery.destroyed==1&&injector.OnSpecialPlaced==null&&injector.OnPlacementFinished==null,""delivery callbacks and host cleaned up"");
+  delivery=new RuntimeSimulationSession();delivered=new RuntimeSimulationSession.GameResult();routine=delivery.PlaceStartingBoosters(delivered,Board());routine.MoveNext();
+  injector=PreLevelSpecialRuntimeInjector.Last;injector.Deliver(1);Check(routine.MoveNext(),""partial placement does not start bot"");
+  delivery.Cancelled=true;Check(!routine.MoveNext()&&delivery.destroyed==1,""cancel during partial delivery cleans up"");
+  delivery=new RuntimeSimulationSession();delivery._config.stepTimeoutSeconds=1;delivered=new RuntimeSimulationSession.GameResult();routine=delivery.PlaceStartingBoosters(delivered,Board());routine.MoveNext();Time.realtimeSinceStartup=2;
+  Check(!routine.MoveNext()&&delivered.outcome==""Timeout""&&delivery.destroyed==1,""delivery timeout remains an error, no fake win"");
+  Time.realtimeSinceStartup=0;
   Check(RuntimeSimulationSession.ConfigError(null)!=null,""missing config rejected"");
   var c=Config();c.levelNumbers=new int[0];Check(RuntimeSimulationSession.ConfigError(c)!=null,""empty run rejected"");
   c=Config();c.levelNumbers=new[]{0};Check(RuntimeSimulationSession.ConfigError(c)!=null,""invalid level rejected"");

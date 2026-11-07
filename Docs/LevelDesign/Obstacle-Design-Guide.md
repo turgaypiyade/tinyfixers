@@ -1,6 +1,26 @@
 # Engel tasarım rehberi
 
+## Güncel seçim durumu — BatteryBox23 / OmegaModul24 KULLANILMAYACAK · 2026-11-07
+
+Kullanıcı mevcut Battery Box ve Omega Module görsellerini beğenmediği için bu iki engeli şimdilik kullanmadığını açıkça belirtti. **Yeni tasarımlarda BatteryBox (23) ve OmegaModul (24) seçilmez.** Uygun imaj bulunursa kullanıcı ileride yeniden değerlendirebilir. Bu geçici görsel tercih, kütüphane/runtime/editor desteğini kaldırma talebi değildir. EnergyContainer22 ve OverrideBatteryBox43 bu karara dahil değildir.
+
+Aşağıdaki 242/246 tanıtım kayıtları mevcut assetlerin teknik geçmişidir; kullanım onayı değildir. Kullanıcı 235–250 grubunun görsellerini beğenmedi; bu tur 242/246 assetleri otomatik değiştirilmedi. Yeni mekanik kotasını doldurmak için kullanım dışı bu engeller seçilmez.
+
+## V1 241–246 · enerji kabı, pil kutusu ve Omega · 2026-11-07
+
+241’de **EnergyContainer22** V1’e girer. Dört kaynak2×2 bağlı bir rıhtımdır; collectibleEnergyOrb hedefi ortak üretim kotasıdır. Kaplar bu kota dolunca tükenir; kırma hedefi yazılmaz. `energyPerContainer` fallback alanı ile collectible hedefi birlikte ayarlanır. Goals/PreLevel ikonu burada gerçek `EnergyBall.png`’dir; eski HatLauncher31’in çekiç ikonu bu kaynağa taşınmaz. Kalıcı kaplar tabana dayanır; altında kalıcı beslemesiz normal cep bırakılmaz.
+
+242’de **BatteryBox23** V1’e girer. Bir2×2 kutu dört renk pil tutar; mevcutlibrary’de renk başına3 vuruş vardır. **Hedef kutu sayısı değil, kabul edilen toplam pil vuruşudur: bir kutu=12.** `TopHudController.HandleBatteryHit` her kabul edilen vuruşta1 düşer; kutu yıkılınca tekrar düşmez. LevelEditor hedef önerisi de `count×hits×4` hesaplar. Goal ikonu mevcut dolu pil atlas sprite’ıdır; runtime kutuda dört pil birlikte çizilir.
+
+246’da **OmegaModul24** ilk V1 yerleşimini alır. Mevcut iki vuruşlu hareketli engel davranışını kullanır; yeni bağımsız mekanik diye sayılmaz. Omega→çamur ve pusula kapağı→Omega→çamur, hücre başına en fazla bir movable katmanla kurulur.241–250’de böylece iki yeni mekanik (22/23) vardır; görsel/stage varyantı ayrı tutulur.
+
+Bu ek mevcut library/runtime/editor servislerini kullanır; yeni obstacle kodu veya yeni ses kaynağı eklemez. Tarihsel aşağıdaki ilk-seviye tablosu eski üretim akışına aittir; aktif V1 tanıtım numaraları burada belirtilenlerdir. Kaynaklar: `EnergyContainerService.cs`, `ObstacleStateService.cs`, `LevelDataEditor.CountGoalObstacles`, `TopHudController.HandleBatteryHit`, `BatteryBoxView.cs`. Kullanıcı manuel onayı henüz yoktur.
+
 ## Sinek kutusu / yumurta / elma — ID100–102 · V1 ilk kullanım 231 (kullanıcı)
+
+**Kural — kullanıcı 2026-11-07: “fly egg box kutusu 4 yumurta taşıyor … iki yumurta bir elmayı ancak bitiriyor. bir kutu koyduysam iki elma olmalı, iki kutu koyduysam 4 elma olmalı.”** Elma sayısı = FlyEggBox sayısı × 2 (tam eşit; fazla elma bitirilemez, eksik elma yumurtayı boşa harcar). `Batches/240-250-Nature/author.py` bunu assert eder.
+
+**Kullanıcı 2026-11-07: elmalar düşmez ve normal taşla kırılmaz → “boardda izole adacıklar yaparak oraya koyabiliriz, böyle bir avantajımız var.”** FlyFruit tercihen oyun alanının dışında, maskeye bağlı ya da ayrı küçük adacıklara (ağaçtan sarkan elma gibi) konur; oyun alanını işgal etmez. Sinekler için yalnız elmanın açıkta (örtüsüz) olması yeter. Elma allowDiagonal=1 olduğundan komşu sütunun beslemesini kesmez; yine de altında dolmayan cep bırakma.
 
 Kullanıcı2026-11-06: FlyEggBox1002×2,4görünür yumurta;yalnız special vuruşu1yumurta atar,dördü de başarıyla yerleşince kalkar. FlyEgg1011×1movable,normal eşleşme/special ile1hit;gelecekte2hit isteği ayrıca değerlendirilir. Her yumurtadan3sinek çıkar;FlyFruit1026lokma(iki sürü) ister,3lokmada yenmiş görsel gösterir. Meyve doğrudan match/special/booster ile kırılmaz;çevreye hasar yok. Bir kutu2elmayı tamamlar. Goals/PreLevelyalnızmeyve adedi;bu ailede kutu/yumurta hedefsiz kaynaklar açık kullanıcı istisnasıdır.1×1/2×2ve diğerboyutlar aynıID;LevelData.fruits origin,width,height ve GetObstacleFootprint kullanılır. Yeterli iniş hücresi bırak;sabit kutu/meyve altında beslemesiz cep kurma. Kaynaklara erişim ve düşen yumurtaları kırma işi ayrı değerlendirilir. Kullanıcı 231’i bu aileyle hazırladı: iki kutu ve ayrı bölgede dört 1×1 elma. 232 için aileyi yeniden kullanma açıkça istendi; bu, sonraki levelları kendiliğinden üretme yetkisi değildir. [Teknik kayıt](../Checks/FlyFruit-2026-11-06/README.md).
 

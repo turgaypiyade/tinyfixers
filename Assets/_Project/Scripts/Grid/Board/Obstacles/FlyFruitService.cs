@@ -15,6 +15,7 @@ public sealed class FlyFruitService : MonoBehaviour
         public readonly FlyEggBoxProgress progress = new();
         public float hitAge = -1;
         public Vector3 homeScale;
+        public bool retired;
     }
     private sealed class Fruit
     {
@@ -55,7 +56,7 @@ public sealed class FlyFruitService : MonoBehaviour
     private IDisposable broodJob;
     private IDisposable buzzLoop;
     private float size, retry;
-    private bool bound;
+    private bool bound, stalled;
     private int generation;
     private bool Alive => bound && board != null && board.isActiveAndEnabled && board.ActiveLevelData == level;
 
@@ -168,8 +169,8 @@ public sealed class FlyFruitService : MonoBehaviour
     {
         if (!Alive) return;
         pending.Enqueue(cell);
-        if (broodJob == null) broodJob = board.BeginJob(BoardController.BoardJobKind.EggBirdFlight);
-        retry = 0;
+        broodJob ??= board.BeginJob(BoardController.BoardJobKind.EggBirdFlight);
+        retry = 0; stalled = false;
     }
 
     private bool Exposed(Fruit fruit) => !fruit.cleared && fruit.progress.Remaining > 0
@@ -189,8 +190,13 @@ public sealed class FlyFruitService : MonoBehaviour
             if (chosen == null)
             {
                 if (!anyRemaining) pending.Clear(); // Surplus eggs cannot hold level-end after the last fruit.
+                // No exposed/reservable fruit: waiting eggs must not hold the board gate (level-end, booster
+                // shuffle, hints). They keep retrying and re-acquire the job when a fruit opens.
+                stalled = true;
                 break;
             }
+            stalled = false;
+            broodJob ??= board.BeginJob(BoardController.BoardJobKind.EggBirdFlight);
             var brood = spare.Pop(); brood.target = chosen; brood.age = 0; brood.arrived = 0;
             int source = pending.Dequeue(); brood.from = Point(source);
             brood.apex = brood.from + new Vector2(UnityEngine.Random.Range(-.3f, .3f), UnityEngine.Random.Range(1.45f, 1.9f)) * size;
@@ -234,7 +240,7 @@ public sealed class FlyFruitService : MonoBehaviour
     }
     private void UpdateFruit(Fruit fruit)
     {
-        if (fruit.image == null) return;
+        if (fruit.image == null || fruitDef == null) return;
         fruit.image.sprite = fruit.progress.Remaining <= 3 && fruitDef.auxiliarySprites.Count > 0
             ? fruitDef.auxiliarySprites[0] : fruitDef.GetPreviewSprite();
     }
@@ -290,7 +296,7 @@ public sealed class FlyFruitService : MonoBehaviour
         if (version != generation || !Alive) return;
         foreach (var box in boxes.Values)
         {
-            if (box.image == null) continue;
+            if (box.image == null || box.retired) continue;
             if (box.hitAge >= 0)
             {
                 box.hitAge += Time.deltaTime;
@@ -300,7 +306,15 @@ public sealed class FlyFruitService : MonoBehaviour
             if (box.progress.Complete)
             {
                 var owner = board; var def = level.obstacleLibrary.Get(ObstacleId.FlyEggBox);
-                if (state.TryCompleteFlyFruitObstacle(box.origin, ObstacleId.FlyEggBox)) owner.Audio?.PlayOneShotClip(def.breakSound, def.breakSoundVolume);
+                // Retire before clearing: the clear may reveal/register another layer during this loop.
+                box.retired = true;
+                if (!state.TryCompleteFlyFruitObstacle(box.origin, ObstacleId.FlyEggBox)) box.retired = false; // Covered: retry next frame.
+                else
+                {
+                    owner.Audio?.PlayOneShotClip(def.breakSound, def.breakSoundVolume);
+                    if (version != generation || !Alive) return;
+                    break; // The clear may have changed the dictionary; continue next frame.
+                }
             }
             if (version != generation || !Alive) return;
         }
@@ -311,6 +325,8 @@ public sealed class FlyFruitService : MonoBehaviour
             if (version != generation || !Alive) return;
             if (!done) continue;
             active.RemoveAt(i); brood.target = null; spare.Push(brood);
+            // Re-check waiting eggs this frame so the job never drops between two broods.
+            stalled = false; retry = 0;
             if (version != generation || !Alive) return;
         }
         retry -= Time.deltaTime;
@@ -327,7 +343,7 @@ public sealed class FlyFruitService : MonoBehaviour
                 fruit.image.rectTransform.localScale = new Vector3(1 + bounce, 1 - bounce, 1);
                 if (fruit.biteAge >= .20f) { fruit.image.rectTransform.localScale = Vector3.one; fruit.biteAge = -1; }
             }
-        if (pending.Count == 0 && active.Count == 0 && broodJob != null)
+        if (active.Count == 0 && broodJob != null && (pending.Count == 0 || stalled))
         {
             var job = broodJob; broodJob = null; job.Dispose(); board.RequestResolveAfterActionSequence();
         }

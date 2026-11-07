@@ -1,0 +1,29 @@
+Mono path[0] = '/Users/turgayp/Development Projects/Unity/tinyfixers/Builds/Sim/TinyFixersSim.app/Contents/Resources/Data/Managed'
+Mono config path = '/Users/turgayp/Development Projects/Unity/tinyfixers/Builds/Sim/TinyFixersSim.app/Contents/MonoBleedingEdge/etc'
+Input System module state changed to: Initialized.
+Obtained 25 stack frames.
+#0  0x0000019c375650 in __pthread_kill
+#1  0x0000019c2b4458 in abort
+#2  0x000001a39d8b80 in ___RegisterApplication_block_invoke
+#3  0x0000019c20a5a0 in _dispatch_client_callout
+#4  0x0000019c1f3624 in _dispatch_once_callout
+#5  0x000001a39a9994 in _RegisterApplication
+#6  0x000001a39a97b0 in GetCurrentProcess
+#7  0x000001a170a2fc in -[NSMenuBarPresentationInstance _getAggregateUIMode:withOptions:]
+#8  0x000001a170db10 in +[NSMenuBarPresentationInstance _getAggregateUIMode:withOptionsPtr:]
+#9  0x000001a1980e44 in __swift_memcpy240_8
+#10 0x000001a19800a8 in __swift_closure_destructor.14
+#11 0x000001a1b228e0 in __swift_closure_destructor.7
+#12 0x000001a1b227c8 in __swift_closure_destructor.7
+#13 0x0000019c20a5a0 in _dispatch_client_callout
+#14 0x0000019c1f3624 in _dispatch_once_callout
+#15 0x000001a19eaed8 in __swift_memcpy34_4
+#16 0x0000010572719c in unity_operator_delete_dealloc
+#17 0x00000104c3552c in (Unknown)
+#18 0x000001057179f4 in unity_operator_delete_dealloc
+#19 0x00000104843a7c in (Unknown)
+#20 0x000001049c5b30 in (Unknown)
+#21 0x000001049ef230 in (Unknown)
+#22 0x000001057128ec in (Unknown)
+#23 0x0000010571383c in PlayerMain(int, char const**)
+#24 0x0000019bfdbe80 in start

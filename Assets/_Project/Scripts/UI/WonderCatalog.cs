@@ -10,6 +10,10 @@ public class WonderCatalog : ScriptableObject
     [Tooltip("Hiç harika tamamlanmadan ana menüde duracak varsayılan arka plan")]
     public Sprite defaultBackground;
 
+    [Tooltip("Varsayılan arka planda uçan/yürüyen karakterler (ör. ambient kuş). Yol, arka plan resminin " +
+             "merkezine göre anchoredPosition; harika karakterleriyle aynı veri.")]
+    public WonderCharacter[] defaultCharacters;
+
     [Tooltip("Sırayla açılacak harikalar")]
     public WonderDefinition[] wonders;
 

@@ -11,26 +11,37 @@
     "astc6x6Bytes": 75680
   },
   {
+    "id": "mis10",
+    "source": "Assets/_Project/Art/UI/Missions/ND_M001/1/SydneyOpera.png",
+    "texture": "Assets/_Project/Art/UI/Missions/BlurredPreviews/mis10-blur.png",
+    "sourceSha256": "cb2d937364111a90f9861e4f0b1147f34e8a1f6238fce8ee9956bda83c43e377",
+    "width": 325,
+    "height": 512,
+    "pngBytes": 52296,
+    "rgba32Bytes": 665600,
+    "astc6x6Bytes": 75680
+  },
+  {
     "id": "mis2",
     "source": "Assets/_Project/Art/UI/Missions/ND_M001/1/GoldenGateV1.png",
     "texture": "Assets/_Project/Art/UI/Missions/BlurredPreviews/mis2-blur.png",
-    "sourceSha256": "c6e714d1c208c0ea4ccbab0f3247e34b11da2623cb962819a32e690c8a68eefb",
-    "width": 326,
+    "sourceSha256": "3a95cd5ca37a80b599dcd9e0defc238e29707c9e316563d5c4ee581170ceb2c8",
+    "width": 236,
     "height": 512,
-    "pngBytes": 78104,
-    "rgba32Bytes": 667648,
-    "astc6x6Bytes": 75680
+    "pngBytes": 59022,
+    "rgba32Bytes": 483328,
+    "astc6x6Bytes": 55040
   },
   {
     "id": "mis3",
     "source": "Assets/_Project/Art/UI/Missions/ND_M001/1/EyfelV1.png",
     "texture": "Assets/_Project/Art/UI/Missions/BlurredPreviews/mis3-blur.png",
-    "sourceSha256": "62c395610162b1cf6c9667cd26a78a79c900e5670161d2ba6f9996dbd3ab48ef",
-    "width": 326,
+    "sourceSha256": "a237d27ddae4c6ded5930ddb301e0ff5bf254cc72fe81c62660be115ce7eed05",
+    "width": 236,
     "height": 512,
-    "pngBytes": 78234,
-    "rgba32Bytes": 667648,
-    "astc6x6Bytes": 75680
+    "pngBytes": 53108,
+    "rgba32Bytes": 483328,
+    "astc6x6Bytes": 55040
   },
   {
     "id": "mis4",
@@ -85,6 +96,17 @@
     "height": 512,
     "pngBytes": 77870,
     "rgba32Bytes": 667648,
+    "astc6x6Bytes": 75680
+  },
+  {
+    "id": "mis9",
+    "source": "Assets/_Project/Art/UI/Missions/ND_M001/1/BigBen.png",
+    "texture": "Assets/_Project/Art/UI/Missions/BlurredPreviews/mis9-blur.png",
+    "sourceSha256": "54824cb4bfc0de2b4261c7ed744bd2994eaa30a9bf26a09db22996301c8ada94",
+    "width": 325,
+    "height": 512,
+    "pngBytes": 53426,
+    "rgba32Bytes": 665600,
     "astc6x6Bytes": 75680
   }
 ]

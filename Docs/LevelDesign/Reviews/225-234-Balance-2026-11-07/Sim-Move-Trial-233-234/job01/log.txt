@@ -1,0 +1,323 @@
+Mono path[0] = '/Users/turgayp/Development Projects/Unity/tinyfixers/Builds/Sim/TinyFixersSim.app/Contents/Resources/Data/Managed'
+Mono config path = '/Users/turgayp/Development Projects/Unity/tinyfixers/Builds/Sim/TinyFixersSim.app/Contents/MonoBleedingEdge/etc'
+Input System module state changed to: Initialized.
+[Physics::Module] Initialized fallback backend.
+[Physics::Module] Id: 0xdecafbad
+Initialize engine version: 6000.3.9f1 (7a9955a4f2fa)
+[Subsystems] Discovering subsystems at path /Users/turgayp/Development Projects/Unity/tinyfixers/Builds/Sim/TinyFixersSim.app/Contents/Resources/Data/UnitySubsystems
+Forcing GfxDevice: Null
+GfxDevice: creating device client; kGfxThreadingModeNonThreaded
+NullGfxDevice:
+    Version:  NULL 1.0 [1.0]
+    Renderer: Null Device
+    Vendor:   Unity Technologies
+Begin MonoManager ReloadAssembly
+- Loaded All Assemblies, in  0.189 seconds
+- Finished resetting the current domain, in  0.001 seconds
+[Physics::Module] Selected backend.
+[Physics::Module] Name: PhysX
+[Physics::Module] Id: 0xf2b8ea05
+[Physics::Module] SDK Version: 4.1.2
+[Physics::Module] Integration Version: 1.0.0
+[Physics::Module] Threading Mode: Multi-Threaded
+The referenced script (SlowMoDebug) on this Behaviour is missing!
+The referenced script on this Behaviour (Game Object 'BoardContent') is missing!
+A scripted object (probably SlowMoDebug?) has a different serialization layout when loading. (Read 32 bytes but expected 40 bytes)
+Did you #if UNITY_EDITOR a section of your serialized properties in any of your scripts?
+UnloadTime: 0.618666 ms
+The referenced script (SlowMoDebug) on this Behaviour is missing!
+The referenced script on this Behaviour (Game Object 'BoardContent') is missing!
+A scripted object (probably SlowMoDebug?) has a different serialization layout when loading. (Read 32 bytes but expected 40 bytes)
+Did you #if UNITY_EDITOR a section of your serialized properties in any of your scripts?
+Unloading 5 Unused Serialized files (Serialized files now loaded: 0)
+UnloadTime: 13.556375 ms
+Unloading 101 unused Assets to reduce memory usage. Loaded Objects now: 16699.
+Total: 4.019959 ms (FindLiveObjects: 0.441625 ms CreateObjectMapping: 0.185750 ms MarkObjects: 3.297916 ms  DeleteObjects: 0.094584 ms)
+
+The referenced script (SlowMoDebug) on this Behaviour is missing!
+The referenced script on this Behaviour (Game Object 'BoardContent') is missing!
+A scripted object (probably SlowMoDebug?) has a different serialization layout when loading. (Read 32 bytes but expected 40 bytes)
+Did you #if UNITY_EDITOR a section of your serialized properties in any of your scripts?
+Unloading 3 Unused Serialized files (Serialized files now loaded: 0)
+UnloadTime: 7.948500 ms
+Unloading 92 unused Assets to reduce memory usage. Loaded Objects now: 16664.
+Total: 6.556041 ms (FindLiveObjects: 0.537875 ms CreateObjectMapping: 0.279208 ms MarkObjects: 5.662875 ms  DeleteObjects: 0.076000 ms)
+
+The referenced script (SlowMoDebug) on this Behaviour is missing!
+The referenced script on this Behaviour (Game Object 'BoardContent') is missing!
+A scripted object (probably SlowMoDebug?) has a different serialization layout when loading. (Read 32 bytes but expected 40 bytes)
+Did you #if UNITY_EDITOR a section of your serialized properties in any of your scripts?
+Unloading 4 Unused Serialized files (Serialized files now loaded: 0)
+UnloadTime: 17.874250 ms
+Unloading 89 unused Assets to reduce memory usage. Loaded Objects now: 16817.
+Total: 7.232917 ms (FindLiveObjects: 0.509875 ms CreateObjectMapping: 0.206583 ms MarkObjects: 6.434167 ms  DeleteObjects: 0.082250 ms)
+
+The referenced script (SlowMoDebug) on this Behaviour is missing!
+The referenced script on this Behaviour (Game Object 'BoardContent') is missing!
+A scripted object (probably SlowMoDebug?) has a different serialization layout when loading. (Read 32 bytes but expected 40 bytes)
+Did you #if UNITY_EDITOR a section of your serialized properties in any of your scripts?
+Unloading 4 Unused Serialized files (Serialized files now loaded: 0)
+UnloadTime: 10.413875 ms
+Unloading 93 unused Assets to reduce memory usage. Loaded Objects now: 18184.
+Total: 10.034208 ms (FindLiveObjects: 0.714166 ms CreateObjectMapping: 0.396500 ms MarkObjects: 8.701709 ms  DeleteObjects: 0.221584 ms)
+
+The referenced script (SlowMoDebug) on this Behaviour is missing!
+The referenced script on this Behaviour (Game Object 'BoardContent') is missing!
+A scripted object (probably SlowMoDebug?) has a different serialization layout when loading. (Read 32 bytes but expected 40 bytes)
+Did you #if UNITY_EDITOR a section of your serialized properties in any of your scripts?
+Unloading 4 Unused Serialized files (Serialized files now loaded: 0)
+UnloadTime: 17.023584 ms
+Unloading 67 unused Assets to reduce memory usage. Loaded Objects now: 18069.
+Total: 7.763959 ms (FindLiveObjects: 0.495250 ms CreateObjectMapping: 0.176209 ms MarkObjects: 7.031958 ms  DeleteObjects: 0.060500 ms)
+
+The referenced script (SlowMoDebug) on this Behaviour is missing!
+The referenced script on this Behaviour (Game Object 'BoardContent') is missing!
+A scripted object (probably SlowMoDebug?) has a different serialization layout when loading. (Read 32 bytes but expected 40 bytes)
+Did you #if UNITY_EDITOR a section of your serialized properties in any of your scripts?
+Unloading 4 Unused Serialized files (Serialized files now loaded: 0)
+UnloadTime: 6.919666 ms
+Unloading 71 unused Assets to reduce memory usage. Loaded Objects now: 18066.
+Total: 8.955958 ms (FindLiveObjects: 0.442458 ms CreateObjectMapping: 0.180666 ms MarkObjects: 8.266000 ms  DeleteObjects: 0.066750 ms)
+
+The referenced script (SlowMoDebug) on this Behaviour is missing!
+The referenced script on this Behaviour (Game Object 'BoardContent') is missing!
+A scripted object (probably SlowMoDebug?) has a different serialization layout when loading. (Read 32 bytes but expected 40 bytes)
+Did you #if UNITY_EDITOR a section of your serialized properties in any of your scripts?
+Unloading 4 Unused Serialized files (Serialized files now loaded: 0)
+Cannot set the parent of the GameObject 'PatchbotImpactSpark' while activating or deactivating the parent GameObject 'VFXRoot'.
+Cannot set the parent of the GameObject 'PatchbotImpactSpark' while activating or deactivating the parent GameObject 'VFXRoot'.
+Cannot set the parent of the GameObject 'PatchbotImpactSpark' while activating or deactivating the parent GameObject 'VFXRoot'.
+Cannot set the parent of the GameObject 'PatchbotImpactSpark' while activating or deactivating the parent GameObject 'VFXRoot'.
+Cannot set the parent of the GameObject 'PatchbotImpactSpark' while activating or deactivating the parent GameObject 'VFXRoot'.
+Cannot set the parent of the GameObject 'PatchbotImpactSpark' while activating or deactivating the parent GameObject 'VFXRoot'.
+Cannot set the parent of the GameObject 'PatchbotImpactSpark' while activating or deactivating the parent GameObject 'VFXRoot'.
+UnloadTime: 10.617958 ms
+Unloading 98 unused Assets to reduce memory usage. Loaded Objects now: 17951.
+Total: 12.162916 ms (FindLiveObjects: 0.677125 ms CreateObjectMapping: 0.269083 ms MarkObjects: 11.110166 ms  DeleteObjects: 0.106334 ms)
+
+The referenced script (SlowMoDebug) on this Behaviour is missing!
+The referenced script on this Behaviour (Game Object 'BoardContent') is missing!
+A scripted object (probably SlowMoDebug?) has a different serialization layout when loading. (Read 32 bytes but expected 40 bytes)
+Did you #if UNITY_EDITOR a section of your serialized properties in any of your scripts?
+Unloading 4 Unused Serialized files (Serialized files now loaded: 0)
+UnloadTime: 6.280417 ms
+Unloading 14 unused Assets to reduce memory usage. Loaded Objects now: 17951.
+Total: 14.719209 ms (FindLiveObjects: 0.598709 ms CreateObjectMapping: 0.234666 ms MarkObjects: 13.847125 ms  DeleteObjects: 0.038667 ms)
+
+The referenced script (SlowMoDebug) on this Behaviour is missing!
+The referenced script on this Behaviour (Game Object 'BoardContent') is missing!
+A scripted object (probably SlowMoDebug?) has a different serialization layout when loading. (Read 32 bytes but expected 40 bytes)
+Did you #if UNITY_EDITOR a section of your serialized properties in any of your scripts?
+Unloading 4 Unused Serialized files (Serialized files now loaded: 0)
+UnloadTime: 13.943583 ms
+Unloading 98 unused Assets to reduce memory usage. Loaded Objects now: 17480.
+Total: 13.005292 ms (FindLiveObjects: 0.623833 ms CreateObjectMapping: 0.325291 ms MarkObjects: 11.949833 ms  DeleteObjects: 0.106167 ms)
+
+The referenced script (SlowMoDebug) on this Behaviour is missing!
+The referenced script on this Behaviour (Game Object 'BoardContent') is missing!
+A scripted object (probably SlowMoDebug?) has a different serialization layout when loading. (Read 32 bytes but expected 40 bytes)
+Did you #if UNITY_EDITOR a section of your serialized properties in any of your scripts?
+Unloading 4 Unused Serialized files (Serialized files now loaded: 0)
+Cannot set the parent of the GameObject 'PatchbotImpactSpark' while activating or deactivating the parent GameObject 'VFXRoot'.
+Cannot set the parent of the GameObject 'PatchbotImpactSpark' while activating or deactivating the parent GameObject 'VFXRoot'.
+Cannot set the parent of the GameObject 'PatchbotImpactSpark' while activating or deactivating the parent GameObject 'VFXRoot'.
+Cannot set the parent of the GameObject 'PatchbotImpactSpark' while activating or deactivating the parent GameObject 'VFXRoot'.
+Cannot set the parent of the GameObject 'PatchbotImpactSpark' while activating or deactivating the parent GameObject 'VFXRoot'.
+Cannot set the parent of the GameObject 'PatchbotImpactSpark' while activating or deactivating the parent GameObject 'VFXRoot'.
+Cannot set the parent of the GameObject 'PatchbotImpactSpark' while activating or deactivating the parent GameObject 'VFXRoot'.
+Cannot set the parent of the GameObject 'PatchbotImpactSpark' while activating or deactivating the parent GameObject 'VFXRoot'.
+Cannot set the parent of the GameObject 'PatchbotImpactSpark' while activating or deactivating the parent GameObject 'VFXRoot'.
+Cannot set the parent of the GameObject 'PatchbotImpactSpark' while activating or deactivating the parent GameObject 'VFXRoot'.
+Cannot set the parent of the GameObject 'PatchbotImpactSpark' while activating or deactivating the parent GameObject 'VFXRoot'.
+Cannot set the parent of the GameObject 'PatchbotImpactSpark' while activating or deactivating the parent GameObject 'VFXRoot'.
+Cannot set the parent of the GameObject 'PatchbotImpactSpark' while activating or deactivating the parent GameObject 'VFXRoot'.
+Cannot set the parent of the GameObject 'PatchbotImpactSpark' while activating or deactivating the parent GameObject 'VFXRoot'.
+Cannot set the parent of the GameObject 'PatchbotImpactSpark' while activating or deactivating the parent GameObject 'VFXRoot'.
+Cannot set the parent of the GameObject 'PatchbotImpactSpark' while activating or deactivating the parent GameObject 'VFXRoot'.
+Cannot set the parent of the GameObject 'PatchbotImpactSpark' while activating or deactivating the parent GameObject 'VFXRoot'.
+UnloadTime: 8.005292 ms
+Unloading 97 unused Assets to reduce memory usage. Loaded Objects now: 17423.
+Total: 12.813833 ms (FindLiveObjects: 0.606125 ms CreateObjectMapping: 0.290459 ms MarkObjects: 11.827708 ms  DeleteObjects: 0.089458 ms)
+
+The referenced script (SlowMoDebug) on this Behaviour is missing!
+The referenced script on this Behaviour (Game Object 'BoardContent') is missing!
+A scripted object (probably SlowMoDebug?) has a different serialization layout when loading. (Read 32 bytes but expected 40 bytes)
+Did you #if UNITY_EDITOR a section of your serialized properties in any of your scripts?
+Unloading 4 Unused Serialized files (Serialized files now loaded: 0)
+UnloadTime: 4.942542 ms
+Unloading 14 unused Assets to reduce memory usage. Loaded Objects now: 17423.
+Total: 11.498500 ms (FindLiveObjects: 0.471208 ms CreateObjectMapping: 0.178667 ms MarkObjects: 10.814250 ms  DeleteObjects: 0.034375 ms)
+
+The referenced script (SlowMoDebug) on this Behaviour is missing!
+The referenced script on this Behaviour (Game Object 'BoardContent') is missing!
+A scripted object (probably SlowMoDebug?) has a different serialization layout when loading. (Read 32 bytes but expected 40 bytes)
+Did you #if UNITY_EDITOR a section of your serialized properties in any of your scripts?
+Unloading 4 Unused Serialized files (Serialized files now loaded: 0)
+UnloadTime: 6.099042 ms
+Unloading 89 unused Assets to reduce memory usage. Loaded Objects now: 17520.
+Total: 12.926791 ms (FindLiveObjects: 0.441334 ms CreateObjectMapping: 0.188834 ms MarkObjects: 12.199459 ms  DeleteObjects: 0.096958 ms)
+
+The referenced script (SlowMoDebug) on this Behaviour is missing!
+The referenced script on this Behaviour (Game Object 'BoardContent') is missing!
+A scripted object (probably SlowMoDebug?) has a different serialization layout when loading. (Read 32 bytes but expected 40 bytes)
+Did you #if UNITY_EDITOR a section of your serialized properties in any of your scripts?
+Unloading 4 Unused Serialized files (Serialized files now loaded: 0)
+UnloadTime: 6.625750 ms
+Unloading 83 unused Assets to reduce memory usage. Loaded Objects now: 17333.
+Total: 13.202250 ms (FindLiveObjects: 0.426500 ms CreateObjectMapping: 0.170041 ms MarkObjects: 12.523709 ms  DeleteObjects: 0.081917 ms)
+
+The referenced script (SlowMoDebug) on this Behaviour is missing!
+The referenced script on this Behaviour (Game Object 'BoardContent') is missing!
+A scripted object (probably SlowMoDebug?) has a different serialization layout when loading. (Read 32 bytes but expected 40 bytes)
+Did you #if UNITY_EDITOR a section of your serialized properties in any of your scripts?
+Unloading 4 Unused Serialized files (Serialized files now loaded: 0)
+UnloadTime: 6.112667 ms
+Unloading 97 unused Assets to reduce memory usage. Loaded Objects now: 17234.
+Total: 14.705916 ms (FindLiveObjects: 0.408334 ms CreateObjectMapping: 0.166166 ms MarkObjects: 14.045167 ms  DeleteObjects: 0.086166 ms)
+
+The referenced script (SlowMoDebug) on this Behaviour is missing!
+The referenced script on this Behaviour (Game Object 'BoardContent') is missing!
+A scripted object (probably SlowMoDebug?) has a different serialization layout when loading. (Read 32 bytes but expected 40 bytes)
+Did you #if UNITY_EDITOR a section of your serialized properties in any of your scripts?
+Unloading 4 Unused Serialized files (Serialized files now loaded: 0)
+UnloadTime: 5.533375 ms
+Unloading 78 unused Assets to reduce memory usage. Loaded Objects now: 17231.
+Total: 15.101209 ms (FindLiveObjects: 0.402125 ms CreateObjectMapping: 0.163792 ms MarkObjects: 14.457083 ms  DeleteObjects: 0.078167 ms)
+
+The referenced script (SlowMoDebug) on this Behaviour is missing!
+The referenced script on this Behaviour (Game Object 'BoardContent') is missing!
+A scripted object (probably SlowMoDebug?) has a different serialization layout when loading. (Read 32 bytes but expected 40 bytes)
+Did you #if UNITY_EDITOR a section of your serialized properties in any of your scripts?
+Unloading 4 Unused Serialized files (Serialized files now loaded: 0)
+UnloadTime: 5.897625 ms
+Unloading 78 unused Assets to reduce memory usage. Loaded Objects now: 17192.
+Total: 16.091333 ms (FindLiveObjects: 0.406833 ms CreateObjectMapping: 0.172667 ms MarkObjects: 15.439750 ms  DeleteObjects: 0.072000 ms)
+
+The referenced script (SlowMoDebug) on this Behaviour is missing!
+The referenced script on this Behaviour (Game Object 'BoardContent') is missing!
+A scripted object (probably SlowMoDebug?) has a different serialization layout when loading. (Read 32 bytes but expected 40 bytes)
+Did you #if UNITY_EDITOR a section of your serialized properties in any of your scripts?
+Unloading 4 Unused Serialized files (Serialized files now loaded: 0)
+UnloadTime: 6.584292 ms
+Unloading 96 unused Assets to reduce memory usage. Loaded Objects now: 17253.
+Total: 17.046833 ms (FindLiveObjects: 0.432125 ms CreateObjectMapping: 0.175083 ms MarkObjects: 16.355750 ms  DeleteObjects: 0.083834 ms)
+
+The referenced script (SlowMoDebug) on this Behaviour is missing!
+The referenced script on this Behaviour (Game Object 'BoardContent') is missing!
+A scripted object (probably SlowMoDebug?) has a different serialization layout when loading. (Read 32 bytes but expected 40 bytes)
+Did you #if UNITY_EDITOR a section of your serialized properties in any of your scripts?
+Unloading 4 Unused Serialized files (Serialized files now loaded: 0)
+UnloadTime: 7.617334 ms
+Unloading 79 unused Assets to reduce memory usage. Loaded Objects now: 19230.
+Total: 17.086750 ms (FindLiveObjects: 0.429542 ms CreateObjectMapping: 0.190542 ms MarkObjects: 16.391584 ms  DeleteObjects: 0.074917 ms)
+
+The referenced script (SlowMoDebug) on this Behaviour is missing!
+The referenced script on this Behaviour (Game Object 'BoardContent') is missing!
+A scripted object (probably SlowMoDebug?) has a different serialization layout when loading. (Read 32 bytes but expected 40 bytes)
+Did you #if UNITY_EDITOR a section of your serialized properties in any of your scripts?
+Unloading 4 Unused Serialized files (Serialized files now loaded: 0)
+UnloadTime: 6.579875 ms
+Unloading 95 unused Assets to reduce memory usage. Loaded Objects now: 18947.
+Total: 19.167166 ms (FindLiveObjects: 0.428875 ms CreateObjectMapping: 0.170666 ms MarkObjects: 18.474709 ms  DeleteObjects: 0.092750 ms)
+
+The referenced script (SlowMoDebug) on this Behaviour is missing!
+The referenced script on this Behaviour (Game Object 'BoardContent') is missing!
+A scripted object (probably SlowMoDebug?) has a different serialization layout when loading. (Read 32 bytes but expected 40 bytes)
+Did you #if UNITY_EDITOR a section of your serialized properties in any of your scripts?
+Unloading 4 Unused Serialized files (Serialized files now loaded: 0)
+UnloadTime: 6.918500 ms
+Unloading 87 unused Assets to reduce memory usage. Loaded Objects now: 18864.
+Total: 19.804875 ms (FindLiveObjects: 0.421500 ms CreateObjectMapping: 0.173500 ms MarkObjects: 19.110834 ms  DeleteObjects: 0.098917 ms)
+
+The referenced script (SlowMoDebug) on this Behaviour is missing!
+The referenced script on this Behaviour (Game Object 'BoardContent') is missing!
+A scripted object (probably SlowMoDebug?) has a different serialization layout when loading. (Read 32 bytes but expected 40 bytes)
+Did you #if UNITY_EDITOR a section of your serialized properties in any of your scripts?
+Unloading 4 Unused Serialized files (Serialized files now loaded: 0)
+UnloadTime: 13.344666 ms
+Unloading 82 unused Assets to reduce memory usage. Loaded Objects now: 18677.
+Total: 22.468833 ms (FindLiveObjects: 0.484708 ms CreateObjectMapping: 0.226833 ms MarkObjects: 21.675125 ms  DeleteObjects: 0.082042 ms)
+
+The referenced script (SlowMoDebug) on this Behaviour is missing!
+The referenced script on this Behaviour (Game Object 'BoardContent') is missing!
+A scripted object (probably SlowMoDebug?) has a different serialization layout when loading. (Read 32 bytes but expected 40 bytes)
+Did you #if UNITY_EDITOR a section of your serialized properties in any of your scripts?
+Unloading 4 Unused Serialized files (Serialized files now loaded: 0)
+UnloadTime: 5.840833 ms
+Unloading 55 unused Assets to reduce memory usage. Loaded Objects now: 18574.
+Total: 21.252084 ms (FindLiveObjects: 0.398333 ms CreateObjectMapping: 0.162125 ms MarkObjects: 20.621292 ms  DeleteObjects: 0.070084 ms)
+
+The referenced script (SlowMoDebug) on this Behaviour is missing!
+The referenced script on this Behaviour (Game Object 'BoardContent') is missing!
+A scripted object (probably SlowMoDebug?) has a different serialization layout when loading. (Read 32 bytes but expected 40 bytes)
+Did you #if UNITY_EDITOR a section of your serialized properties in any of your scripts?
+Unloading 4 Unused Serialized files (Serialized files now loaded: 0)
+UnloadTime: 5.337584 ms
+Unloading 66 unused Assets to reduce memory usage. Loaded Objects now: 18387.
+Total: 22.966875 ms (FindLiveObjects: 0.401333 ms CreateObjectMapping: 0.161792 ms MarkObjects: 22.327708 ms  DeleteObjects: 0.076042 ms)
+
+The referenced script (SlowMoDebug) on this Behaviour is missing!
+The referenced script on this Behaviour (Game Object 'BoardContent') is missing!
+A scripted object (probably SlowMoDebug?) has a different serialization layout when loading. (Read 32 bytes but expected 40 bytes)
+Did you #if UNITY_EDITOR a section of your serialized properties in any of your scripts?
+Unloading 4 Unused Serialized files (Serialized files now loaded: 0)
+UnloadTime: 7.630375 ms
+Unloading 95 unused Assets to reduce memory usage. Loaded Objects now: 19406.
+Total: 23.308833 ms (FindLiveObjects: 0.428083 ms CreateObjectMapping: 0.169042 ms MarkObjects: 22.627041 ms  DeleteObjects: 0.084625 ms)
+
+The referenced script (SlowMoDebug) on this Behaviour is missing!
+The referenced script on this Behaviour (Game Object 'BoardContent') is missing!
+A scripted object (probably SlowMoDebug?) has a different serialization layout when loading. (Read 32 bytes but expected 40 bytes)
+Did you #if UNITY_EDITOR a section of your serialized properties in any of your scripts?
+Unloading 4 Unused Serialized files (Serialized files now loaded: 0)
+UnloadTime: 5.859792 ms
+Unloading 83 unused Assets to reduce memory usage. Loaded Objects now: 19195.
+Total: 24.676625 ms (FindLiveObjects: 0.408417 ms CreateObjectMapping: 0.162042 ms MarkObjects: 24.021708 ms  DeleteObjects: 0.084208 ms)
+
+The referenced script (SlowMoDebug) on this Behaviour is missing!
+The referenced script on this Behaviour (Game Object 'BoardContent') is missing!
+A scripted object (probably SlowMoDebug?) has a different serialization layout when loading. (Read 32 bytes but expected 40 bytes)
+Did you #if UNITY_EDITOR a section of your serialized properties in any of your scripts?
+Unloading 4 Unused Serialized files (Serialized files now loaded: 0)
+UnloadTime: 8.168042 ms
+Unloading 96 unused Assets to reduce memory usage. Loaded Objects now: 19600.
+Total: 25.571750 ms (FindLiveObjects: 0.408542 ms CreateObjectMapping: 0.170542 ms MarkObjects: 24.903958 ms  DeleteObjects: 0.088416 ms)
+
+The referenced script (SlowMoDebug) on this Behaviour is missing!
+The referenced script on this Behaviour (Game Object 'BoardContent') is missing!
+A scripted object (probably SlowMoDebug?) has a different serialization layout when loading. (Read 32 bytes but expected 40 bytes)
+Did you #if UNITY_EDITOR a section of your serialized properties in any of your scripts?
+Unloading 4 Unused Serialized files (Serialized files now loaded: 0)
+UnloadTime: 5.897917 ms
+Unloading 97 unused Assets to reduce memory usage. Loaded Objects now: 19757.
+Total: 26.953916 ms (FindLiveObjects: 0.423125 ms CreateObjectMapping: 0.162000 ms MarkObjects: 26.282875 ms  DeleteObjects: 0.085833 ms)
+
+The referenced script (SlowMoDebug) on this Behaviour is missing!
+The referenced script on this Behaviour (Game Object 'BoardContent') is missing!
+A scripted object (probably SlowMoDebug?) has a different serialization layout when loading. (Read 32 bytes but expected 40 bytes)
+Did you #if UNITY_EDITOR a section of your serialized properties in any of your scripts?
+Unloading 4 Unused Serialized files (Serialized files now loaded: 0)
+UnloadTime: 6.274584 ms
+Unloading 94 unused Assets to reduce memory usage. Loaded Objects now: 19558.
+Total: 27.977125 ms (FindLiveObjects: 0.444875 ms CreateObjectMapping: 0.162333 ms MarkObjects: 27.282083 ms  DeleteObjects: 0.087750 ms)
+
+The referenced script (SlowMoDebug) on this Behaviour is missing!
+The referenced script on this Behaviour (Game Object 'BoardContent') is missing!
+A scripted object (probably SlowMoDebug?) has a different serialization layout when loading. (Read 32 bytes but expected 40 bytes)
+Did you #if UNITY_EDITOR a section of your serialized properties in any of your scripts?
+Unloading 4 Unused Serialized files (Serialized files now loaded: 0)
+UnloadTime: 8.196292 ms
+Unloading 98 unused Assets to reduce memory usage. Loaded Objects now: 19759.
+Total: 29.635417 ms (FindLiveObjects: 0.435250 ms CreateObjectMapping: 0.171792 ms MarkObjects: 28.934250 ms  DeleteObjects: 0.093958 ms)
+
+Thread 0x16d52f000 may have been prematurely finalized
+[Physics::Module] Cleanup current backend.
+[Physics::Module] Id: 0xf2b8ea05
+Input System module state changed to: ShutdownInProgress.
+Input System polling thread exited.
+Input System module state changed to: Shutdown.
+Thread 0x16c363000 may have been prematurely finalized
+Thread 0x16c3ef000 may have been prematurely finalized
+Thread 0x16c47b000 may have been prematurely finalized
+Thread 0x16c507000 may have been prematurely finalized
+GarbageCollector disposing of ComputeBuffer. Please use ComputeBuffer.Release() or .Dispose() to manually release the buffer.

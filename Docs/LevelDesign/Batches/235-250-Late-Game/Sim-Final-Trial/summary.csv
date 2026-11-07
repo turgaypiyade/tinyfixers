@@ -1,0 +1,8 @@
+﻿Level,Name,Games,Win%,AvgMovesLeftOnWin,AvgGoalsLeftOnLoss,Errors/Timeouts,GoalsLeftOnLoss (ort. kalan / başlangıç)
+L235,L235 L235_Override_Runtime,20,35.0,3.7,8.2,0,Mud 6.8/16; TarpStatue 1.5/2; SculptingStone 2.0/16
+L236,L236 L236_Override_Runtime,20,35.0,4.1,3.2,0,LampStrip 1.9/4; Mud 1.7/12
+L240,L240 L240_Override_Runtime,20,75.0,7.6,19.4,0,Mud 5.7/16; WaterPuddle 2.0/16; Collect_BossDamage 63.0/900; WaterTank 2.0/2; SculptingStone 9.0/16
+L242,L242 L242_Override_Runtime,20,40.0,3.0,4.2,0,BatteryBox 3.8/12; Mud 1.5/10; Collect_EnergyOrb 1.5/10
+L247,L247 L247_Override_Runtime,20,45.0,2.4,7.5,0,WaterTank 1.6/2; WaterPuddle 5.0/16; SculptingStone 2.6/8; Lantern 3.8/12; WaterChannel 1.0/2
+L248,L248 L248_Override_Runtime,20,55.0,3.6,3.3,0,LampStrip 1.6/4; PaintCanBox 1.3/2; Mud 1.5/12
+L249,L249 L249_Override_Runtime,20,55.0,4.9,1.2,0,Wardrobe 2.0/4; Magnet 1.0/1

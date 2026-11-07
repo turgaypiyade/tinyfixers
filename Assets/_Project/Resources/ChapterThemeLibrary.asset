@@ -24,5 +24,6 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 48dc5cb9e3c74b30985b745d1b59faba, type: 2}
   - {fileID: 11400000, guid: 9f21f5d0af044b039f1805b8af3d65a6, type: 2}
   - {fileID: 11400000, guid: a3060ef43fc0418997aec97dc4c9f0bd, type: 2}
+  - {fileID: 11400000, guid: 4433002ff7cd472888ff3d800f3e6a3d, type: 2}
   masterLeagueTheme: {fileID: 11400000, guid: 83117925ac1a4c5db07656a472bd5c11, type: 2}
   levelCatalog: {fileID: 11400000, guid: 6791aed5a9bc44f4af246ccebce32906, type: 2}

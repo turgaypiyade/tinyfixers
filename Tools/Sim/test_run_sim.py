@@ -31,6 +31,7 @@ class RunnerTests(unittest.TestCase):
         self.report_completed = True
         self.write_report = True
         self.exitcode = 0
+        self.delivered_boosters = None
 
     def worker(self, cmd, **kwargs):
         self.commands.append(cmd)
@@ -42,6 +43,8 @@ class RunnerTests(unittest.TestCase):
              "remainingGoalUnits": 3, "goalsStart": "Stone=10", "goalsLeft": "Stone=3"}
             for level in cfg["levelNumbers"] for sample in range(cfg["gamesPerLevel"])
         ]
+        for game in games:
+            game['startingBoostersPlaced'] = cfg.get('startingBoosters', 0) if self.delivered_boosters is None else self.delivered_boosters
         if self.write_report:
             Path(cfg["outputPath"]).write_text(json.dumps({"config": cfg, "completed": self.report_completed,
                                                          "games": games}), encoding="utf-8-sig")
@@ -80,6 +83,32 @@ class RunnerTests(unittest.TestCase):
             with self.subTest(args=args), self.assertRaises(SystemExit) as raised:
                 self.run_jobs(*args)
             self.assertEqual(raised.exception.code, 2)
+        self.assertEqual(self.commands, [])
+
+    def test_three_boosters_are_explicit_and_verified(self):
+        self.assertEqual(self.run_jobs('--boosters', '3'), 0)
+        cfg = json.loads((self.out/'job00/config.json').read_text())
+        self.assertEqual(cfg['startingBoosters'], 3)
+
+    def test_old_build_or_incomplete_boosters_cannot_claim_a_win(self):
+        self.delivered_boosters = 0
+        self.assertEqual(self.run_jobs('--boosters', '3'), 1)
+        with (self.out/'summary.csv').open(encoding='utf-8-sig', newline='') as f:
+            rows = list(csv.DictReader(f))
+        self.assertTrue(all(r['Win%'] == '' and r['Errors/Timeouts'] == '2' for r in rows))
+
+    def test_frozen_level_overrides_are_passed_to_runtime(self):
+        overrides = self.root/'level snapshots'
+        overrides.mkdir()
+        for n in range(1, 5):
+            (overrides/f'L{n:04d}.json').write_text('{}')
+        self.assertEqual(self.run_jobs('--level-overrides', str(overrides)), 0)
+        cfg = json.loads((self.out/'job00/config.json').read_text())
+        self.assertEqual(Path(cfg['levelOverrideDir']).resolve(), overrides.resolve())
+
+    def test_missing_override_is_rejected_before_launch(self):
+        with self.assertRaises(SystemExit):
+            self.run_jobs('--level-overrides', str(self.root/'missing'))
         self.assertEqual(self.commands, [])
 
     def test_mac_windows_use_identical_simulation_config(self):

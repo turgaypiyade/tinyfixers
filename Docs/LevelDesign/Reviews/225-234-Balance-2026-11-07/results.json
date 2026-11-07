@@ -1,0 +1,272 @@
+{
+  "225": {
+    "before": {
+      "games": 30,
+      "won": 0,
+      "lost": 30,
+      "errors": 0,
+      "winPercent": 0.0,
+      "bot95Wilson": [
+        -0.0,
+        11.4
+      ],
+      "avgMovesLeftOnWin": null
+    },
+    "after": {
+      "games": 30,
+      "won": 0,
+      "lost": 30,
+      "errors": 0,
+      "winPercent": 0.0,
+      "bot95Wilson": [
+        -0.0,
+        11.4
+      ],
+      "avgMovesLeftOnWin": null
+    },
+    "reason": "Elmas üreticisi botta doğrudan öncelik almıyor. İnsan hedefi için temkinli +2; %0 bot oranını kovalamadık."
+  },
+  "226": {
+    "before": {
+      "games": 30,
+      "won": 8,
+      "lost": 22,
+      "errors": 0,
+      "winPercent": 26.7,
+      "bot95Wilson": [
+        14.2,
+        44.4
+      ],
+      "avgMovesLeftOnWin": 1.8
+    },
+    "after": {
+      "games": 30,
+      "won": 14,
+      "lost": 16,
+      "errors": 0,
+      "winPercent": 46.7,
+      "bot95Wilson": [
+        30.2,
+        63.9
+      ],
+      "avgMovesLeftOnWin": 3
+    },
+    "reason": "23 hamle denemesi %46,7; tanıtım/rahatlama yönüne uygun."
+  },
+  "227": {
+    "before": {
+      "games": 30,
+      "won": 12,
+      "lost": 18,
+      "errors": 0,
+      "winPercent": 40.0,
+      "bot95Wilson": [
+        24.6,
+        57.7
+      ],
+      "avgMovesLeftOnWin": 4
+    },
+    "after": {
+      "games": 30,
+      "won": 12,
+      "lost": 18,
+      "errors": 0,
+      "winPercent": 40.0,
+      "bot95Wilson": [
+        24.6,
+        57.7
+      ],
+      "avgMovesLeftOnWin": 4
+    },
+    "reason": "26 hamlede %40; sayı korundu."
+  },
+  "228": {
+    "before": {
+      "games": 30,
+      "won": 5,
+      "lost": 25,
+      "errors": 0,
+      "winPercent": 16.7,
+      "bot95Wilson": [
+        7.3,
+        33.6
+      ],
+      "avgMovesLeftOnWin": 2.4
+    },
+    "after": {
+      "games": 30,
+      "won": 8,
+      "lost": 22,
+      "errors": 0,
+      "winPercent": 26.7,
+      "bot95Wilson": [
+        14.2,
+        44.4
+      ],
+      "avgMovesLeftOnWin": 3.8
+    },
+    "reason": "Üretici körlüğü var; +3 temkinli destek. İnsan %40–50 doğrulanmış değil."
+  },
+  "229": {
+    "before": {
+      "games": 30,
+      "won": 2,
+      "lost": 26,
+      "errors": 2,
+      "winPercent": 7.1,
+      "bot95Wilson": [
+        2.0,
+        22.6
+      ],
+      "avgMovesLeftOnWin": 4.5
+    },
+    "after": {
+      "games": 30,
+      "won": 11,
+      "lost": 19,
+      "errors": 0,
+      "winPercent": 36.7,
+      "bot95Wilson": [
+        21.9,
+        54.5
+      ],
+      "avgMovesLeftOnWin": 5.2
+    },
+    "reason": "32 hamlede %36,7; sonu9 için kabul edilen yaklaşık %30 yönünde."
+  },
+  "230": {
+    "before": {
+      "games": 30,
+      "won": 0,
+      "lost": 30,
+      "errors": 0,
+      "winPercent": 0.0,
+      "bot95Wilson": [
+        -0.0,
+        11.4
+      ],
+      "avgMovesLeftOnWin": null
+    },
+    "after": {
+      "games": 30,
+      "won": 0,
+      "lost": 30,
+      "errors": 0,
+      "winPercent": 0.0,
+      "bot95Wilson": [
+        -0.0,
+        11.4
+      ],
+      "avgMovesLeftOnWin": null
+    },
+    "reason": "34 hamle /10 oyun da sıfır galibiyet. Can bitimi hamle bitiminden önce geliyor; hamle şişirmek sorunu çözmedi.30 korundu; HP/karşı baskı ayrı inceleme ister."
+  },
+  "231": {
+    "before": {
+      "games": 30,
+      "won": 7,
+      "lost": 23,
+      "errors": 0,
+      "winPercent": 23.3,
+      "bot95Wilson": [
+        11.8,
+        40.9
+      ],
+      "avgMovesLeftOnWin": 4.7
+    },
+    "after": {
+      "games": 30,
+      "won": 14,
+      "lost": 16,
+      "errors": 0,
+      "winPercent": 46.7,
+      "bot95Wilson": [
+        30.2,
+        63.9
+      ],
+      "avgMovesLeftOnWin": 6.5
+    },
+    "reason": "28 hamlede %46,7 bot; elma üreticisini önceliklendiremeyen bot için düşük okuma. Tanıtımın insan testi gerekli."
+  },
+  "232": {
+    "before": {
+      "games": 30,
+      "won": 1,
+      "lost": 29,
+      "errors": 0,
+      "winPercent": 3.3,
+      "bot95Wilson": [
+        0.6,
+        16.7
+      ],
+      "avgMovesLeftOnWin": 6
+    },
+    "after": {
+      "games": 30,
+      "won": 3,
+      "lost": 26,
+      "errors": 1,
+      "winPercent": 10.3,
+      "bot95Wilson": [
+        3.6,
+        26.4
+      ],
+      "avgMovesLeftOnWin": 4.3
+    },
+    "reason": "Üretici körlüğü baskın;32→35 temkinli. Kullanıcının5/5/5 kotası ve tüm yerleşimi korundu; oran onayı yok."
+  },
+  "233": {
+    "before": {
+      "games": 30,
+      "won": 26,
+      "lost": 4,
+      "errors": 0,
+      "winPercent": 86.7,
+      "bot95Wilson": [
+        70.3,
+        94.7
+      ],
+      "avgMovesLeftOnWin": 6.7
+    },
+    "after": {
+      "games": 30,
+      "won": 18,
+      "lost": 12,
+      "errors": 0,
+      "winPercent": 60.0,
+      "bot95Wilson": [
+        42.3,
+        75.4
+      ],
+      "avgMovesLeftOnWin": 5.4
+    },
+    "reason": "27 hamlede %86,7 olan bot geçişi21 hamlede %60’a indi."
+  },
+  "234": {
+    "before": {
+      "games": 30,
+      "won": 0,
+      "lost": 29,
+      "errors": 1,
+      "winPercent": 0.0,
+      "bot95Wilson": [
+        0.0,
+        11.7
+      ],
+      "avgMovesLeftOnWin": null
+    },
+    "after": {
+      "games": 20,
+      "won": 11,
+      "lost": 9,
+      "errors": 0,
+      "winPercent": 55.0,
+      "bot95Wilson": [
+        34.2,
+        74.2
+      ],
+      "avgMovesLeftOnWin": 6.5
+    },
+    "reason": "Üç katmanlı son sürüm24 ve34 hamlede bitirilemedi.42 hamlede %30,46 hamlede11/20=%55.24→46 büyük farkı katman yükünün sonucu; manuel denemede özellikle kontrol edilmeli."
+  }
+}

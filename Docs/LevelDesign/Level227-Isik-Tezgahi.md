@@ -1,5 +1,7 @@
 # 227 · Işık Tezgâhı / Lightwork Bench
 
+**2026-11-07 güncel hamle: 26.** Bu tur yalnız hamle ayarı yapıldı (26→26); aşağıdaki önceki tasarım notu ve eski görseller tarihsel değerler içerebilir. [Güncel denge incelemesi](Reviews/225-234-Balance-2026-11-07/Review.md).
+
 2026-11-06 · Agent taslağı; kullanıcı henüz oynamadı/onaylamadı.
 
 9×10, 88 aktif hücre; **26 hamle · Normal**. Katalog: `LevelCL_0227`, bölüm10. Asset: [LevelV1_00002270.asset](../../Assets/_Project/Settings/ProLevels/LevelV1_00002270.asset).

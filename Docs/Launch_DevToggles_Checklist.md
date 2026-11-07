@@ -6,7 +6,7 @@ Test için açık tutulan, canlıdan (mağaza sürümü) önce kapatılacak/göz
 ## A. Cihazda ETKİLİ — kapatılmazsa oyuncu görür
 | # | Ayar | Nerede | Şu an | Canlıda |
 |---|---|---|---|---|
-| 1 | Seviye seçici 3 sn basılı tut hilesi (debug level paneli) | `MainMenu.unity` → MainMenuLevelButtonController `enableDebugLevelSelector` | 1 (sahne) — **2026-11-04 kodda korundu**: yalnız editör + Development Build'de çalışır | Tamam (mağaza sürümünde kendiliğinden kapalı) |
+| 1 | Seviye seçici 3 sn basılı tut hilesi (debug level paneli) | `MainMenu.unity` → MainMenuLevelButtonController `enableDebugLevelSelector` | editör + Development Build (test cihazında açık; mağaza build'inde Development Build KAPALI olduğu için kapalı) | Tamam |
 | 2 | Çekiçte ekran çatlağı ihtimali | `01_Game.unity` → BoardController `hammerScreenCrackChance` | **0.3 (%30)** — 2026-11-04 düzeltildi | Tamam |
 | 3 | Bostan Hasadı (kazı) event takvimi | `Resources/Events/HarvestConfig.asset` `activeDays` | 5/7 (2026-10-27 düzeltildi) | Tamam |
 | 4 | AdMob gerçek reklam kimlikleri | `Resources/MonetizationConfig.json` + `GoogleMobileAdsSettings.asset` | İki platformun gerçek ID’leri bağlandı; dev yalnız test reklamı kullanır | AdMob ödeme profili, mağaza bağlantısı ve UMP mesajları tamamlanmalı |
@@ -49,3 +49,9 @@ Spark: 20K yazma / 50K okuma günlük. Ölçüm: 3-4 test oyuncusuyla günde 9.6
 varken ≤60 sn, yalnız oyun süresi 5 dk, arka planda hemen. Bulut kaydı 15 → 60 sn (pause/satın almada anında). Liderlik
 yalnız ekrana girince okunur (periyodik yenileme yok; aynı ziyarette sekme/alt seçenek geçişi tekrar okumaz). Beklenen: açık uygulama başına saatte ~480 → ~100-150 yazma (ÖLÇÜLMEDİ — yeni build ile Usage'tan
 doğrula). 1.000-2.000 oyuncu için yine Spark yetmez → yayından önce Blaze + bütçe uyarısı.
+
+## G. Android canlı öncesi durum — 2026-11-07
+- **Satın alma:** Play Console'da lisans test kullanıcısı olarak ekli hesaplar "test satın alma" görür (para çekilmez) — bu beklenen. Gerçek oyuncu gerçek ödeme yapar. Tangle üretilmiş (`GooglePlayTangle.IsPopulated = true`).
+- **Reklam:** Kod: Development Build → Google test reklamı ("Test Ad" yazar); mağaza (Development Build KAPALI) → gerçek birim `ca-app-pub-2688020202720647/2181902554`. Yeni gerçek birimler ilk günlerde düşük/sıfır dolum verebilir; AdMob "Payment setup incomplete" ve uygulamanın Play'e bağlanması/incelemesi tamamlanmadan gerçek reklam gelmeyebilir.
+- **Release build:** Build Settings → Development Build KAPALI, Script Debugging kapalı. Aksi halde test reklamı, SlowMo vb. açılır.
+- **Firestore:** Spark 50K okuma/20K yazma/gün. Takımlı oyuncu oturum başı ~80 okuma (takım dokümanı + ≤50 üye + 24 saatlik can istekleri + son 30 mesaj; 4 canlı dinleyici oturum boyu açık). 1-2K oyuncu için Blaze + bütçe uyarısı şart.

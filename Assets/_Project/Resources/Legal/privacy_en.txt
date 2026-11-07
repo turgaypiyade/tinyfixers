@@ -1,6 +1,6 @@
 <size=150%><b>Privacy Policy</b></size>
 
-<i>Last updated: 17 October 2026</i>
+<i>Last updated: 7 November 2026</i>
 
 This policy explains what information <b>Wonder Fixers</b> (the "Game") collects, why, and what choices you have. The Game is developed by <b>Wondi Games</b>, the game studio of <b>Julvera Teknoloji A.Ş.</b> ("we", "us"). Julvera Teknoloji A.Ş. is the data controller for the personal data described here.
 
@@ -96,7 +96,7 @@ Our service providers may store and process data on servers outside Türkiye and
 
 • Account, profile and progress data: while your account is active. If you ask us to delete your account, we delete it within 30 days, except records we must keep by law (for example, purchase records).
 
-• Team chat messages: until the team or your account is deleted.
+• Team chat messages: automatically deleted 3 days after they are sent (or earlier, together with the team or your account).
 
 • Analytics data: up to 14 months.
 
