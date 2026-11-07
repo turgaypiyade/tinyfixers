@@ -10,6 +10,7 @@ from PIL import Image, ImageFilter
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 OUT = os.path.abspath(sys.argv[1] if len(sys.argv) > 1 else os.path.expanduser("~/Desktop/Wondi Paylaşım/Reklam_Video"))
+# Kullanım: make_video_ad.py <çıktı> [Kombo] [Boss] [IlkSeviyeler]  (varyasyon verilmezse hepsi)
 W, H, FPS = 1080, 1920, 30
 os.makedirs(OUT, exist_ok=True)
 
@@ -21,15 +22,33 @@ helpers = {}
 exec(compile(src, "make_ads_helpers", "exec"), helpers)
 logo, text, cta, cover, L = helpers["logo"], helpers["text"], helpers["cta"], helpers["cover"], helpers["L"]
 
-VIDEOS = sorted(glob.glob(os.path.join(ROOT, "Videos", "*.MP4")))
-# (video no, başlangıç sn, süre) — hareketli anlar elle seçildi (bildirim/popup yok).
-CLIPS = [(10, 49.2, 3.3), (2, 59.0, 3.6), (1, 115.4, 3.6)]
-TEXT = {
-    "TR": dict(captions=["Eşleştir!", "Patlat!", "Zincirle!"], wonder="Harikaları Onar!", sub="Görevleri tamamla",
-               cta="ÜCRETSİZ OYNA", note="İnternetsiz de oynanır!"),
-    "EN": dict(captions=["Match!", "Blast!", "Chain it!"], wonder="Restore the Wonders!", sub="Complete the missions",
-               cta="PLAY FREE", note="Play offline, anytime!"),
+OLD = sorted(glob.glob(os.path.join(ROOT, "Videos", "*.MP4")))
+NEW = sorted(glob.glob(os.path.expanduser("~/Desktop/Wondi Paylaşım/Reklam_Video/ScreenRecording*.MP4")))
+COMMON = {
+    "TR": dict(wonder="Harikaları Onar!", sub="Görevleri tamamla", cta="ÜCRETSİZ OYNA", note="İnternetsiz de oynanır!"),
+    "EN": dict(wonder="Restore the Wonders!", sub="Complete the missions", cta="PLAY FREE", note="Play offline, anytime!"),
 }
+# Varyasyon: (kaynak listesi, video no, başlangıç sn, süre, TR yazı, EN yazı). None yazı = üstüne yazı yok (VS girişi).
+# Hareketli anlar ölçülüp elle doğrulandı; bildirim/popup/test reklamı içeren bölümler seçilmez.
+# Ritim (kullanıcı “çok seri, nefes yok”): 3,5–4 sn sahneler, crossfade geçiş, büyük anda ağır çekim (speed).
+# Klip: (kaynak, video no, başlangıç sn, KAYNAK süre, TR, EN, {isteğe bağlı: speed, zoom})
+VARIANTS = {
+    # Kombo: kuş yumurtası çatlıyor → kuşlar uçuyor (sesleriyle), ardından TNT zinciri.
+    "Kombo": dict(mission=True, clips=[
+        (NEW, 4, 14.2, 4.0, "Kuşları Kurtar!", "Free the Birds!"),
+        (NEW, 4, 20.8, 3.0, "Patlat!", "Blast!", dict(speed=0.7)),
+        (OLD, 1, 115.2, 3.6, "Zincirle!", "Chain it!")]),
+    # Boss: tek kesintisiz düello anı — hamle → eşleşme → güç dolar → vuruş → dalga (kullanıcı: süreç tam görünsün).
+    "Boss": dict(mission=False, clips=[
+        (NEW, 7, 2.9, 2.4, None, None),
+        (NEW, 7, 11.2, 7.6, "Eşleştir, Güç Topla, Vur!", "Match, Charge, Strike!"),
+        (NEW, 7, 31.6, 3.4, "Sinekler Elmaya!", "Flies Attack!")]),
+    "IlkSeviyeler": dict(mission=True, clips=[
+        (NEW, 8, 12.8, 4.0, "Eşleştir!", "Match!"), (NEW, 8, 63.2, 3.0, "Patlat!", "Blast!", dict(speed=0.75)),
+        (NEW, 8, 85.6, 4.4, "Kazan!", "Win!")]),
+}
+# 1320x2868 kayıtta arena (karakterler) ~y 450–950: 1000x1778 pencere → 1080x1920 (~1.3x yakınlaşma).
+ZOOMS = {"ARENA_ZOOM": (160, 300, 1000, 1778)}
 EYFEL = "Art/UI/Missions/ND_M001/1/EyfelV1.png"
 EYFEL_BLUR = "Art/UI/Missions/BlurredPreviews/mis3-blur.png"
 END_BG = "Art/UI/Missions/ND_M001/1/GoldenGateV1.png"
@@ -48,13 +67,20 @@ def overlay_png(path, caption=None, with_logo=False):
     im.save(path)
 
 
-def gameplay(i, video, start, dur, png, tmp):
+XFADE = 0.35   # sahneler arası yumuşak geçiş (sn)
+
+
+def gameplay(i, path, start, dur, png, tmp, zoom=None, speed=1.0):
     out = os.path.join(tmp, f"g{i}.mp4")
     # 1320x2868 → genişlik 1080 (yükseklik 2347); durum çubuğunu ve alttaki joker barını keserek 1920'lik pencere.
-    vf = (f"scale={W}:-2,crop={W}:{H}:0:90,fps={FPS},format=yuv420p[v];[v][1:v]overlay=0:0,"
-          f"fade=t=in:st=0:d=0.12,fade=t=out:st={dur-0.12}:d=0.12")
-    run("ffmpeg", "-v", "error", "-y", "-ss", str(start), "-t", str(dur), "-i", VIDEOS[video - 1], "-i", png,
-        "-filter_complex", vf, "-af", f"afade=t=in:d=0.1,afade=t=out:st={dur-0.15}:d=0.15,aresample=44100",
+    frame = f"scale={W}:-2,crop={W}:{H}:0:90"
+    if zoom:
+        x, y, w, h = ZOOMS[zoom]; frame = f"crop={w}:{h}:{x}:{y},scale={W}:{H}"
+    out_dur = dur / speed
+    vf = f"{frame},setpts=PTS/{speed},fps={FPS},format=yuv420p[v];[v][1:v]overlay=0:0"
+    af = (f"atempo={speed}," if speed != 1.0 else "") + f"aresample=44100,afade=t=out:st={out_dur-0.2:.3f}:d=0.2"
+    run("ffmpeg", "-v", "error", "-y", "-ss", str(start), "-t", str(dur), "-i", path, "-i", png,
+        "-filter_complex", vf, "-af", af,
         "-c:v", "libx264", "-preset", "medium", "-crf", "19", "-c:a", "aac", "-ac", "2", out)
     return out
 
@@ -103,22 +129,33 @@ def end_card(t, tmp):
     return frames_to_clip(d, n, "end.mp4", tmp)
 
 
-def build(lang):
-    t = TEXT[lang]
+def build(name, variant, lang):
+    t = COMMON[lang]
     with tempfile.TemporaryDirectory(dir=OUT) as tmp:
         parts = []
-        for i, (v, s, dur) in enumerate(CLIPS):
-            png = os.path.join(tmp, f"o{i}.png"); overlay_png(png, t["captions"][i], with_logo=(i == 0))
-            parts.append(gameplay(i, v, s, dur, png, tmp))
-        parts.append(mission(t, tmp))
+        for i, (src, v, s, dur, tr, en, *opt) in enumerate(variant["clips"]):
+            o = opt[0] if opt else {}
+            caption = tr if lang == "TR" else en
+            png = os.path.join(tmp, f"o{i}.png"); overlay_png(png, caption, with_logo=(i == 0 and caption is not None))
+            parts.append(gameplay(i, src[v - 1], s, dur, png, tmp, o.get("zoom"), o.get("speed", 1.0)))
+        if variant["mission"]:
+            parts.append(mission(t, tmp))
         parts.append(end_card(t, tmp))
-        listf = os.path.join(tmp, "list.txt")
-        with open(listf, "w") as f:
-            for p in parts: f.write(f"file '{p}'\n")
-        out = os.path.join(OUT, f"WonderFixers_Ad_{lang}_1080x1920.mp4")
-        run("ffmpeg", "-v", "error", "-y", "-f", "concat", "-safe", "0", "-i", listf,
-            "-c:v", "libx264", "-preset", "medium", "-crf", "20", "-pix_fmt", "yuv420p", "-r", str(FPS),
-            "-c:a", "aac", "-b:a", "160k", "-movflags", "+faststart", out)
+        out = os.path.join(OUT, f"WonderFixers_Ad_{name}_{lang}_1080x1920.mp4")
+        durs = [float(subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", p],
+                                     capture_output=True, text=True).stdout) for p in parts]
+        args = ["ffmpeg", "-v", "error", "-y"]
+        for p in parts: args += ["-i", p]
+        fc, v, a_, tt = [], "[0:v]", "[0:a]", durs[0]
+        for k in range(1, len(parts)):
+            off = tt - XFADE
+            fc.append(f"{v}[{k}:v]xfade=transition=fade:duration={XFADE}:offset={off:.3f}[v{k}]")
+            fc.append(f"{a_}[{k}:a]acrossfade=d={XFADE}[a{k}]")
+            v, a_, tt = f"[v{k}]", f"[a{k}]", tt + durs[k] - XFADE
+        args += ["-filter_complex", ";".join(fc), "-map", v, "-map", a_,
+                 "-c:v", "libx264", "-preset", "medium", "-crf", "20", "-pix_fmt", "yuv420p", "-r", str(FPS),
+                 "-c:a", "aac", "-b:a", "160k", "-movflags", "+faststart", out]
+        run(*args)
         # Kapak / thumbnail: harika + logo + slogan
         cov = cover(L(EYFEL), W, H, (0.5, 0.35)).convert("RGBA")
         lg = logo(int(W * 0.62)); cov.alpha_composite(lg, ((W - lg.width) // 2, int(H * 0.05)))
@@ -128,5 +165,7 @@ def build(lang):
         print("ok", out)
 
 
-for lang in ("TR", "EN"):
-    build(lang)
+only = sys.argv[2:] or list(VARIANTS)
+for name in only:
+    for lang in ("TR", "EN"):
+        build(name, VARIANTS[name], lang)
