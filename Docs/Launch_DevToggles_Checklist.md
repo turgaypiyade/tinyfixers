@@ -52,6 +52,6 @@ doğrula). 1.000-2.000 oyuncu için yine Spark yetmez → yayından önce Blaze 
 
 ## G. Android canlı öncesi durum — 2026-11-07
 - **Satın alma:** Play Console'da lisans test kullanıcısı olarak ekli hesaplar "test satın alma" görür (para çekilmez) — bu beklenen. Gerçek oyuncu gerçek ödeme yapar. Tangle üretilmiş (`GooglePlayTangle.IsPopulated = true`).
-- **Reklam:** Kod: Development Build → Google test reklamı ("Test Ad" yazar); mağaza (Development Build KAPALI) → gerçek birim `ca-app-pub-2688020202720647/2181902554`. Yeni gerçek birimler ilk günlerde düşük/sıfır dolum verebilir; AdMob "Payment setup incomplete" ve uygulamanın Play'e bağlanması/incelemesi tamamlanmadan gerçek reklam gelmeyebilir.
+- **Reklam:** Kod: Development Build → Google test reklamı ("Test Ad" yazar); mağaza (Development Build KAPALI) → gerçek Android birimi `ca-app-pub-4556545520045571/1502738526` (Julvera AdMob hesabı). Yeni gerçek birimler ilk günlerde düşük/sıfır dolum verebilir; AdMob "Payment setup incomplete" ve uygulamanın Play'e bağlanması/incelemesi tamamlanmadan gerçek reklam gelmeyebilir.
 - **Release build:** Build Settings → Development Build KAPALI, Script Debugging kapalı. Aksi halde test reklamı, SlowMo vb. açılır.
 - **Firestore:** Spark 50K okuma/20K yazma/gün. Takımlı oyuncu oturum başı ~80 okuma (takım dokümanı + ≤50 üye + 24 saatlik can istekleri + son 30 mesaj; 4 canlı dinleyici oturum boyu açık). 1-2K oyuncu için Blaze + bütçe uyarısı şart.

@@ -47,9 +47,10 @@ Makine tarafından okunabilir içerik dökümü: `Store-Products.json` (mağazay
 
 | Platform | App ID | Rewarded ad unit ID |
 |---|---|---|
-| Android | `ca-app-pub-2688020202720647~6458516927` | `ca-app-pub-2688020202720647/2181902554` |
+| Android | `ca-app-pub-4556545520045571~2818680466` | `ca-app-pub-4556545520045571/1502738526` |
 | iOS | `ca-app-pub-2688020202720647~6116037462` | `ca-app-pub-2688020202720647/9086523571` |
 
+Android Julvera AdMob hesabında (`pub-4556545520045571`, julveradigital@gmail.com). iOS hâlâ eski `pub-2688020202720647` hesabında; Julvera'ya taşınacak.
 App ID: `Assets/GoogleMobileAds/Resources/GoogleMobileAdsSettings.asset` / Assets → Google Mobile Ads → Settings.
 Reklam birimi ID: `Assets/_Project/Resources/MonetizationConfig.json`. Bunlar public istemci kimlikleridir; yönetim anahtarı değildir.
 Development build her zaman Google test reklam birimlerini kullanır. SDK eksik cihaz sürümü reklam izlenmiş gibi ödül vermez; mağaza bağlantısı başarısız cihaz sürümü satın alma simüle etmez.
