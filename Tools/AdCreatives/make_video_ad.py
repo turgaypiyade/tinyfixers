@@ -43,7 +43,7 @@ VARIANTS = {
         (NEW, 7, 2.9, 2.4, None, None),
         (NEW, 7, 11.2, 7.6, "Eşleştir, Güç Topla, Vur!", "Match, Charge, Strike!"),
         (NEW, 7, 31.6, 3.4, "Sinekler Elmaya!", "Flies Attack!")]),
-    "IlkSeviyeler": dict(mission=True, cover="PissaV1.png", clips=[
+    "IlkSeviyeler": dict(mission=True, cover="PissaV2.png", clips=[
         (NEW, 8, 12.8, 4.0, "Eşleştir!", "Match!"), (NEW, 8, 63.2, 3.0, "Patlat!", "Blast!", dict(speed=0.75)),
         (NEW, 8, 85.6, 4.4, "Kazan!", "Win!")]),
 }

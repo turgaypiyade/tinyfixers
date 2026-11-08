@@ -1,13 +1,13 @@
 [
   {
     "id": "mis1",
-    "source": "Assets/_Project/Art/UI/Missions/ND_M001/1/PissaV1.png",
+    "source": "Assets/_Project/Art/UI/Missions/ND_M001/1/PissaV2.png",
     "texture": "Assets/_Project/Art/UI/Missions/BlurredPreviews/mis1-blur.png",
-    "sourceSha256": "ee90efb7f0ba2dc54f3943d0a4e974f35a125689f8bc7a6550bb44b126808006",
-    "width": 326,
+    "sourceSha256": "4f3b485e0418aa1102fafd30be1c5ab5ba71841f85d6031968c1c88bdae517cd",
+    "width": 325,
     "height": 512,
-    "pngBytes": 76638,
-    "rgba32Bytes": 667648,
+    "pngBytes": 79002,
+    "rgba32Bytes": 665600,
     "astc6x6Bytes": 75680
   },
   {
@@ -67,23 +67,23 @@
   },
   {
     "id": "mis6",
-    "source": "Assets/_Project/Art/UI/Missions/ND_M001/1/GrandKanyonV1.png",
+    "source": "Assets/_Project/Art/UI/Missions/ND_M001/1/GrandKanyonV2.png",
     "texture": "Assets/_Project/Art/UI/Missions/BlurredPreviews/mis6-blur.png",
-    "sourceSha256": "f4812b95ef72b31e7ee2811d98f3c21ab84829b45478e24857c5967b9b2f78f7",
-    "width": 326,
+    "sourceSha256": "93a8aed46c346f47a80ef52e147221f6587b112b11eb3578fdde1bda32f50e51",
+    "width": 325,
     "height": 512,
-    "pngBytes": 69520,
-    "rgba32Bytes": 667648,
+    "pngBytes": 74739,
+    "rgba32Bytes": 665600,
     "astc6x6Bytes": 75680
   },
   {
     "id": "mis7",
-    "source": "Assets/_Project/Art/UI/Missions/ND_M001/1/Ayasofya.png",
+    "source": "Assets/_Project/Art/UI/Missions/ND_M001/1/AyasofyaV2.png",
     "texture": "Assets/_Project/Art/UI/Missions/BlurredPreviews/mis7-blur.png",
-    "sourceSha256": "102c781efa7bec91a05c0ffdc5bd3a7a63e1bff276ca67aa1f7ec3472166537f",
+    "sourceSha256": "35b47e3b66bff2a38e648974f59c61174f45e8b13d4e12fd4c3e363ce26f4b80",
     "width": 307,
     "height": 512,
-    "pngBytes": 66410,
+    "pngBytes": 74207,
     "rgba32Bytes": 628736,
     "astc6x6Bytes": 71552
   },

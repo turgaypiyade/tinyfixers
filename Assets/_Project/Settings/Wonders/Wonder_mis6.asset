@@ -15,7 +15,7 @@ MonoBehaviour:
   wonderId: mis6
   displayName: "Kuyruk Kanyonu"
   taskIcon: {fileID: 0}
-  backgroundSprite: {fileID: 21300000, guid: 994fa905be9ae44c482ec00470c997c8, type: 3}
+  backgroundSprite: {fileID: 21300000, guid: 06e32a2005f441eab75a96b577587c79, type: 3}
   unrestoredTexture: {fileID: 2800000, guid: f27a79866fed51ac98840105e9298064, type: 3}
   totalStages: 8
   tasks:
@@ -25,30 +25,30 @@ MonoBehaviour:
     action: 4
     regions:
     - serializedVersion: 2
-      x: 0.0
-      y: 0.0
-      width: 1.0
-      height: 0.2
+      x: 0
+      y: 0
+      width: 1
+      height: 0.21
   - name: "Basamakları Sağlamlaştır"
     icon: {fileID: 21300000, guid: 164c417e2cf5453ab447915656e66848, type: 3}
     starCost: 0
     action: 0
     regions:
     - serializedVersion: 2
-      x: 0.15
-      y: 0.33
-      width: 0.3
-      height: 0.07
+      x: 0.24
+      y: 0.22
+      width: 0.2
+      height: 0.09
   - name: "Seyir Alan\u0131n\u0131 Temizle"
     icon: {fileID: 21300000, guid: ad205e8cea27452285ac767f010c8d44, type: 3}
     starCost: 0
     action: 4
     regions:
     - serializedVersion: 2
-      x: 0.0
-      y: 0.25
-      width: 0.45
-      height: 0.08
+      x: 0.2
+      y: 0.31
+      width: 0.26
+      height: 0.06
   - name: "Ahşap Direkleri Sabitle"
     icon: {fileID: 21300000, guid: 861895ed49f64747b1b994c9efd78928, type: 3}
     starCost: 0
@@ -56,18 +56,18 @@ MonoBehaviour:
     regions:
     - serializedVersion: 2
       x: 0.03
-      y: 0.37
+      y: 0.36
       width: 0.16
-      height: 0.18
+      height: 0.19
   - name: "Korkulukları Onar"
     icon: {fileID: 21300000, guid: 94bb05b98c6f41c7a455018760fe4087, type: 3}
     starCost: 0
     action: 0
     regions:
     - serializedVersion: 2
-      x: 0.38
+      x: 0.39
       y: 0.25
-      width: 0.35
+      width: 0.33
       height: 0.17
   - name: "Yön Tabelasını Yerleştir"
     icon: {fileID: 21300000, guid: 365a7eb126eb4ce5af2c91c86f6ad07d, type: 3}
@@ -76,9 +76,9 @@ MonoBehaviour:
     regions:
     - serializedVersion: 2
       x: 0.74
-      y: 0.25
+      y: 0.22
       width: 0.22
-      height: 0.24
+      height: 0.27
   - name: "Alet Kutusunu Parlat"
     icon: {fileID: 21300000, guid: ad205e8cea27452285ac767f010c8d44, type: 3}
     starCost: 0
@@ -88,7 +88,7 @@ MonoBehaviour:
       x: 0.06
       y: 0.31
       width: 0.16
-      height: 0.06
+      height: 0.08
   - name: "Kanyon Manzaras\u0131n\u0131 Canland\u0131r"
     icon: {fileID: 21300000, guid: ad205e8cea27452285ac767f010c8d44, type: 3}
     starCost: 0
