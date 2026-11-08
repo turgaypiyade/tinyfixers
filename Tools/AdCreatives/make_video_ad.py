@@ -34,16 +34,16 @@ COMMON = {
 # Klip: (kaynak, video no, başlangıç sn, KAYNAK süre, TR, EN, {isteğe bağlı: speed, zoom})
 VARIANTS = {
     # Kombo: kuş yumurtası çatlıyor → kuşlar uçuyor (sesleriyle), ardından TNT zinciri.
-    "Kombo": dict(mission=True, clips=[
+    "Kombo": dict(mission=True, cover="EyfelV1.png", clips=[
         (NEW, 4, 14.2, 4.0, "Kuşları Kurtar!", "Free the Birds!"),
         (NEW, 4, 20.8, 3.0, "Patlat!", "Blast!", dict(speed=0.7)),
         (OLD, 1, 115.2, 3.6, "Zincirle!", "Chain it!")]),
     # Boss: tek kesintisiz düello anı — hamle → eşleşme → güç dolar → vuruş → dalga (kullanıcı: süreç tam görünsün).
-    "Boss": dict(mission=False, clips=[
+    "Boss": dict(mission=False, cover="GoldenGateV1.png", clips=[
         (NEW, 7, 2.9, 2.4, None, None),
         (NEW, 7, 11.2, 7.6, "Eşleştir, Güç Topla, Vur!", "Match, Charge, Strike!"),
         (NEW, 7, 31.6, 3.4, "Sinekler Elmaya!", "Flies Attack!")]),
-    "IlkSeviyeler": dict(mission=True, clips=[
+    "IlkSeviyeler": dict(mission=True, cover="PissaV1.png", clips=[
         (NEW, 8, 12.8, 4.0, "Eşleştir!", "Match!"), (NEW, 8, 63.2, 3.0, "Patlat!", "Blast!", dict(speed=0.75)),
         (NEW, 8, 85.6, 4.4, "Kazan!", "Win!")]),
 }
@@ -68,6 +68,8 @@ def overlay_png(path, caption=None, with_logo=False):
 
 
 XFADE = 0.35   # sahneler arası yumuşak geçiş (sn)
+MUSIC = os.path.join(ROOT, "Assets/_Project/Audio/Music/Harbor Adventure.wav")
+MUSIC_VOL = 0.6   # oyun seslerinin altında fon müziği
 
 
 def gameplay(i, path, start, dur, png, tmp, zoom=None, speed=1.0):
@@ -152,16 +154,22 @@ def build(name, variant, lang):
             fc.append(f"{v}[{k}:v]xfade=transition=fade:duration={XFADE}:offset={off:.3f}[v{k}]")
             fc.append(f"{a_}[{k}:a]acrossfade=d={XFADE}[a{k}]")
             v, a_, tt = f"[v{k}]", f"[a{k}]", tt + durs[k] - XFADE
+        # Fon müziği: oyun seslerinin altında, başta kısa giriş, sonda yumuşak bitiş.
+        args += ["-i", MUSIC]
+        fc.append(f"[{len(parts)}:a]aresample=44100,atrim=0:{tt:.3f},afade=t=in:d=0.3,"
+                  f"afade=t=out:st={tt - 1.2:.3f}:d=1.2,volume={MUSIC_VOL}[mus]")
+        fc.append(f"{a_}[mus]amix=inputs=2:normalize=0:duration=first,alimiter=limit=0.95[aout]")
+        a_ = "[aout]"
         args += ["-filter_complex", ";".join(fc), "-map", v, "-map", a_,
                  "-c:v", "libx264", "-preset", "medium", "-crf", "20", "-pix_fmt", "yuv420p", "-r", str(FPS),
                  "-c:a", "aac", "-b:a", "160k", "-movflags", "+faststart", out]
         run(*args)
-        # Kapak / thumbnail: harika + logo + slogan
-        cov = cover(L(EYFEL), W, H, (0.5, 0.35)).convert("RGBA")
+        # Kapak / thumbnail: varyasyona göre farklı harika + logo + slogan (hepsi aynı görünmesin)
+        cov = cover(L("Art/UI/Missions/ND_M001/1/" + variant["cover"]), W, H, (0.5, 0.35)).convert("RGBA")
         lg = logo(int(W * 0.62)); cov.alpha_composite(lg, ((W - lg.width) // 2, int(H * 0.05)))
         text(cov, (W // 2, int(H * 0.80)), t["wonder"], int(W * 0.10), maxw=int(W * 0.92))
         cta(cov, W // 2, int(H * 0.89), int(W * 0.60), t["cta"])
-        cov.convert("RGB").save(os.path.join(OUT, f"WonderFixers_Cover_{lang}_1080x1920.jpg"), quality=92)
+        cov.convert("RGB").save(os.path.join(OUT, f"WonderFixers_Cover_{name}_{lang}_1080x1920.jpg"), quality=92)
         print("ok", out)
 
 
