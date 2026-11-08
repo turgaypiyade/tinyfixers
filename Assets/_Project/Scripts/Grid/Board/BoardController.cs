@@ -1798,9 +1798,11 @@ public class BoardController : MonoBehaviour
         EggBirdFlight = 7,   // async: hatch/split/dive; gravity and match/fall overlap continue
         DetachedFall = 8,    // overlap tail: refill continues, level-end still waits
         FlowClear = 9,       // BoardFlowPump group clear: runs beside other work, level-end waits
-        // async: duvar kontrollü yıkım görseli (~1-1.5 sn). Veri anında temizlenir, parça hücreleri
-        // HoldCells ile HÜCRE bazında tutulur (taş girmez) → girdi kapıları bunu SAYMAZ; yalnız
-        // level-end bekler. (ObstacleSpread kullanılıyordu → yıkım boyunca TÜM tahtada hamle reddediliyordu.)
+        // async: verisi önceden yazılmış ya da kendi hücrelerini HoldCells ile tutan engel görseli
+        // (duvar yıkımı, hamster zıplaması, jel fırlatıcı, değirmen çuvalı, varil/depo saçılması).
+        // Girdi kapıları bunu SAYMAZ; yalnız level-end ve tahta-genel işler (karıştırma) bekler.
+        // (ObstacleSpread kullanılıyordu → görsel boyunca TÜM tahtada hamle sessizce reddediliyordu;
+        // 2026-11-08 cihaz: "taş tık sesi var ama oynamıyor, başka yere dokununca çalışıyor".)
         ObstacleCollapse = 10,
         // Oil commits its target cell before flight. Only level-end waits for this visual;
         // ObstacleSpread's legacy global input gate must not include it.
@@ -5406,10 +5408,10 @@ public class BoardController : MonoBehaviour
     // BarrelSpreadAction.ExecuteVisuals sequencer kullanmaz, null geçmek güvenli.
     private IEnumerator CoSpreadBarrelMudImmediate(BarrelSpreadAction.BarrelSource barrel)
     {
-        // ObstacleSpread (async): mud verisi BarrelSpreadAction'da up-front commit edildiği için
-        // resolve'u parklamaya gerek yok — splatter oynarken board akar, yalnız level-end bekler
+        // ObstacleCollapse (async, girdi kapısı DEĞİL): mud verisi BarrelSpreadAction'da up-front commit
+        // edildiği için splatter yalnız görsel — board ve hamleler akar, yalnız level-end bekler
         // (ActiveBackgroundJobs'ta kalır). RaiseSplatSpreadResolved placeholder'ı erken-WIN'i önler.
-        var spreadJob = BeginJob(BoardJobKind.ObstacleSpread);
+        var spreadJob = BeginJob(BoardJobKind.ObstacleCollapse);
         try
         {
             var action = new BarrelSpreadAction(this, new List<BarrelSpreadAction.BarrelSource> { barrel });
@@ -5427,7 +5429,7 @@ public class BoardController : MonoBehaviour
     // kalsa bile WaterPuddle goal'ü sonsuza dek açık kalmaz.
     private IEnumerator CoSpreadWaterTankImmediate(Vector2Int origin, ObstacleId tankId)
     {
-        var spreadJob = BeginJob(BoardJobKind.ObstacleSpread);
+        var spreadJob = BeginJob(BoardJobKind.ObstacleCollapse);   // su birikintisi zemin katmanı: hamleyi kapatmaz
         try
         {
             yield return new WaterTankSpreadAction(this, origin, tankId).ExecuteVisuals(null);

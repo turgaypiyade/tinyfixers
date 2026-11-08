@@ -47,7 +47,8 @@ public sealed class GelLauncherFireAction : BoardAction
             yield break;
 
         var level = board.LevelData;
-        var job = board.BeginJob(BoardController.BoardJobKind.ObstacleSpread);
+        // Gövde + yol hücreleri HoldForFlow ile tutulur → tahta-genel girdi kapısı gerekmez (ObstacleCollapse).
+        var job = board.BeginJob(BoardController.BoardJobKind.ObstacleCollapse);
         RectTransform cap = null;
         RectTransform body = null;
         GelLauncherPressView press = null;

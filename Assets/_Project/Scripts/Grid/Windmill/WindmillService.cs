@@ -411,7 +411,7 @@ public sealed class WindmillService : MonoBehaviour
         flights.Add(new Flight
         {
             image = img, shadow = shadow, from = a, to = b, time = 0f, originX = ox, originY = oy,
-            job = board.BeginJob(BoardController.BoardJobKind.ObstacleSpread),
+            job = board.BeginJob(BoardController.BoardJobKind.ObstacleCollapse),   // veri önceden yazılı: yalnız görsel
         });
         enabled = true;
     }

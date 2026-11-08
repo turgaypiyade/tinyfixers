@@ -196,7 +196,9 @@ public sealed class HamsterObstacleService : MonoBehaviour
     {
         h.jumping = true;
         if (h.biteRoutine != null) { StopCoroutine(h.biteRoutine); h.biteRoutine = null; }
-        using var job = board.BeginJob(BoardController.BoardJobKind.ObstacleSpread);
+        // Tahta-genel girdi kapısı DEĞİL (ObstacleCollapse): hamsterın hücresi baştan, iniş hücresi uçuşta tutulur.
+        using var job = board.BeginJob(BoardController.BoardJobKind.ObstacleCollapse);
+        using var startHold = tile != null ? board.HoldCells(new[] { new Vector2Int(tile.X, tile.Y) }) : null;
 
         var icon = Icon(tile);
         SetFrame(tile, "Eat2");   // doydu: yanaklar dolu
@@ -506,7 +508,7 @@ public sealed class HamsterObstacleService : MonoBehaviour
 
     private IEnumerator CoLeave(Image img)
     {
-        using var job = board.BeginJob(BoardController.BoardJobKind.ObstacleSpread);
+        using var job = board.BeginJob(BoardController.BoardJobKind.ObstacleCollapse);   // yalnız hayalet görsel
         var rt = img.rectTransform;
         Vector2 home = rt.anchoredPosition;
         float cell = board.TileSize;
