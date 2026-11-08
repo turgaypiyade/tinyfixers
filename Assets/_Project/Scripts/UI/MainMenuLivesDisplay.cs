@@ -48,7 +48,6 @@ public class MainMenuLivesDisplay : MonoBehaviour
 
     // ─────────────────────────────────────────────────────────────────────────
 
-    private bool _adInProgress;
     private Sprite _normalHeartSprite;
     private bool _infiniteActive;
     private Coroutine _heartSwapRoutine;
@@ -153,8 +152,6 @@ public class MainMenuLivesDisplay : MonoBehaviour
 
     public void OnAreaClicked()
     {
-        if (_adInProgress) return;
-
         // Sonsuz can aktifken (timed reward) satın almaya gerek yok.
         if (TimedRewardService.IsLivesFree()) return;
 
@@ -165,10 +162,8 @@ public class MainMenuLivesDisplay : MonoBehaviour
             return;
         }
 
-        if (LivesManager.Current >= LivesManager.MaxLives) return;
-        // Can reklamı günlük sınırlı (RewardedAdCaps.Life) — seviye hakkından ayrı.
-        if (!RewardedAdCaps.CanOffer(AdPlacement.Life)) return;
-        StartAd();
+        // Kullanıcı kuralı (2026-11-08): can reklamı YALNIZ can 0 iken, "Canın Bitti" teklifiyle. Can varken kalbe/kutuya
+        // dokunmak reklam AÇMAZ (eskiden MaxLives altındaysa doğrudan reklam başlıyordu; kalpte 5 görünürken açılıyordu).
     }
 
     // Can 0: ortak "Canın Bitti" teklifi (paket / reklam / market) — level öncesi popup'la aynı yol.
@@ -179,25 +174,6 @@ public class MainMenuLivesDisplay : MonoBehaviour
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-
-    private void StartAd()
-    {
-        // Editörde AdMob kapalıyken AdService kendisi simüle eder (1 sn); sınır/analitik aynı yoldan geçer.
-        if (AdService.IsShowing) return;
-        _adInProgress = true;
-        // Hak yalnız reklam gerçekten izlenince harcanır.
-        RewardedAdCaps.Show(AdPlacement.Life, () =>
-        {
-            if (this != null) OnAdRewarded();
-        }, _ => _adInProgress = false);
-    }
-
-    public void OnAdRewarded()
-    {
-        _adInProgress = false;
-        if (LivesManager.Current < LivesManager.MaxLives)
-            LivesManager.AddLives(1);
-    }
 
     // ─────────────────────────────────────────────────────────────────────────
 
