@@ -253,6 +253,7 @@ public sealed class BossDuelController : MonoBehaviour
 
     private int enemyHp, enemyMaxHp;
     private int playerHp, playerMaxHp;
+    private BossDuelDangerVignette dangerVignette;   // can azalınca kenarda kırmızı nabız + kalp/alarm sesi
     private int movesSinceOil;
     private int pressureVolleyIndex;
     private RectTransform pressureEffectsRoot;
@@ -405,11 +406,13 @@ public sealed class BossDuelController : MonoBehaviour
         toolThreat?.Clear();
         StopWaitingGoalsForVictory();
         if (ownsIntro && intro != null) Destroy(intro.gameObject);
+        if (dangerVignette != null) Destroy(dangerVignette.gameObject);
     }
 
     private void OnDisable()
     {
         bossModeActive = false;
+        if (dangerVignette != null) dangerVignette.SetLevel(0, instant: true);   // ?. Unity fake-null'da patlar
         ReleaseOpening();
         StopWaitingGoalsForVictory();
         StopAllCoroutines();
@@ -643,6 +646,7 @@ public sealed class BossDuelController : MonoBehaviour
 
         playerHp = playerMaxHp;
         playerHpBar?.Init(playerMaxHp);
+        RefreshDangerVignette();
 
         // A defeated final boss stays defeated while the player finishes other goals.
         if (enemyDefeated) return;
@@ -1243,6 +1247,7 @@ public sealed class BossDuelController : MonoBehaviour
         {
             enemyDefeated = true;
             bossModeActive = false;   // BattleLoop dursun (WIN goal tamamlanınca LevelEnd success açar)
+            RefreshDangerVignette();
             StartCoroutine(PlayDefeat(enemyRobot));
 
             // Level'da boss'tan başka hedef de varsa zafer, hepsi bitince kutlanır; o zamana
@@ -1327,6 +1332,7 @@ public sealed class BossDuelController : MonoBehaviour
         enemyMaxHp = Mathf.Max(1, w.hp);
         enemyHp = enemyMaxHp;
         enemyBaseDamage = w.attackDamageBase;
+        RefreshDangerVignette();   // yeni rakibin vuruşu ölümcül olabilir
         waveOilCount = w.oilCount;
         waveOilEveryMoves = w.oilEveryMoves;
         movesSinceOil = 0;
@@ -1686,6 +1692,23 @@ public sealed class BossDuelController : MonoBehaviour
         yield return ApplyEnemyObstaclePressure();
     }
 
+    // Can uyarısı (kullanıcı 2026-11-08: "bitip bitmediğini anlamıyorum"): %30 altı yavaş nabız; %15 altı ya da
+    // rakibin sıradaki vuruşu bitirebilecekse hızlı. Kalkan emişi hesaba katılmaz (uyarı temkinli taraf).
+    private void RefreshDangerVignette()
+    {
+        int danger = 0;
+        if (bossModeActive && !IsOver() && playerMaxHp > 0)
+        {
+            float ratio = (float)playerHp / playerMaxHp;
+            bool lethalNext = enemyBaseDamage > 0 && playerHp <= enemyBaseDamage;
+            if (ratio <= 0.15f || lethalNext) danger = 2;
+            else if (ratio <= 0.30f) danger = 1;
+        }
+        if (danger > 0 && dangerVignette == null)
+            dangerVignette = BossDuelDangerVignette.Create(board != null ? board.Audio : null);
+        if (dangerVignette != null) dangerVignette.SetLevel(danger);
+    }
+
     private void ApplyPlayerDamage(int dmg)
     {
         if (dmg <= 0 || IsOver()) return;
@@ -1696,6 +1719,7 @@ public sealed class BossDuelController : MonoBehaviour
         playerHp = Mathf.Max(0, playerHp - dmg);
         NoteEndEvalProgress();
         playerHpBar?.Set(playerHp);
+        RefreshDangerVignette();
         PlayRobotHitFeedback(playerRobot, -1f);   // oyuncu sola itilir
 
         if (playerHp <= 0 && !playerDefeated)
