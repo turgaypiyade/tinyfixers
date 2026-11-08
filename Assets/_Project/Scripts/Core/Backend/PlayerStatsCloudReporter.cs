@@ -151,6 +151,7 @@ public static class PlayerStatsCloudReporter
             // Firestore kotası (2026-11-04): her gönderim 1 işlem = 3 okuma + 2-3 yazma. Önceden 15 sn'de bir gidiyordu
             // (açık uygulama başına saatte ~480 yazma, Spark günlük 20K sınırını birkaç oyuncu dolduruyordu). Şimdi: seviye
             // sonucu bekliyorsa en geç 60 sn'de, yalnız oyun süresi varsa 5 dk'da bir; arka plana alınınca hemen.
+            // 2026-11-08: "sonuç" = bitmiş deneme; süren seviye artık dakikada bir gönderim tetiklemez.
             if (sinceSend < (LevelTelemetryStore.HasLevelResultPending ? LevelResultSendSeconds : PlayTimeSendSeconds)) return;
             sinceSend = 0f;
             FlushPending();

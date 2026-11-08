@@ -12,8 +12,11 @@ public static class LevelTelemetryStore
     private static LevelTelemetryState State => state ??= Load();
     public static string StreamId => State.streamId;
 
-    /// Gönderilmeyi bekleyen bir seviye sonucu var mı (oyun süresi dışında) — gönderim sıklığı buna göre seçilir.
-    public static bool HasLevelResultPending => State.pending.Exists(p => p != null && p.level > 0);
+    /// Gönderilmeyi bekleyen BİTMİŞ bir deneme var mı (kazanma/vazgeçme/yarıda kalma) — gönderim sıklığı buna göre seçilir.
+    /// Süren denemenin 15 sn'lik süre birikimi sonuç sayılmaz (2026-11-08: seviye boyunca dakikada ~5 Firestore yazması
+    /// yapıyordu); o veri 5 dk'lık düzenli gönderimle ve uygulama arka plana alınınca anında gider.
+    public static bool HasLevelResultPending => State.pending.Exists(p => p != null && p.level > 0
+        && p.wins + p.giveUps + p.interruptedAttempts > 0);
     public static string OwnerId => State.ownerId;
     internal static LevelTelemetryAttempt CurrentAttempt => State.active;
 
