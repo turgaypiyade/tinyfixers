@@ -40,13 +40,6 @@ public class MainMenuLivesDisplay : MonoBehaviour
     [SerializeField] private Vector2 extraBadgeOffset = new Vector2(150f, 36f);
     [SerializeField, Min(8f)] private float extraBadgeSize = 46f;
 
-    [Header("Reklam")]
-    // Yalnız editörde ve AdMob kapalıyken okunur (StartAd); TF_ADMOB açıkken derleyici "kullanılmıyor" uyarısı verir.
-#pragma warning disable CS0414
-    [SerializeField] private bool simulateAdInEditor = true;
-#pragma warning restore CS0414
-    [SerializeField, Min(0f)] private float simulatedAdDuration = 2f;
-
     [Header("Can 0 iken satın alma")]
     [Tooltip("Can 0 iken kalbe tıklayınca teklif edilen can paketi adedi.")]
     [SerializeField, Min(1)] private int buyLivesPackAmount = 5;
@@ -66,6 +59,7 @@ public class MainMenuLivesDisplay : MonoBehaviour
         LivesTimerService.EnsureExists();
         if (heartImage != null)
             _normalHeartSprite = heartImage.sprite;
+        MakeHeartClickable();
         if (layoutAroundHeart)
             LayoutAroundHeart();
     }
@@ -139,6 +133,22 @@ public class MainMenuLivesDisplay : MonoBehaviour
         SyncInfiniteHeartState();
     }
 
+    // Sahnede kalp (TopBar/HeartImage) can kutusunun KARDEŞİ: dokunuşu kalp alıyor, kutunun butonuna gitmiyordu
+    // (kullanıcı 2026-11-08: "kalbe tıklayınca çalışmıyor"). Kalbe aynı tıklama bağlanır; kalp kutunun içindeyse gerek yok.
+    private void MakeHeartClickable()
+    {
+        if (heartImage == null || heartImage.transform.IsChildOf(transform)) return;
+        heartImage.raycastTarget = true;
+        if (!heartImage.TryGetComponent(out Button heartButton))
+        {
+            heartButton = heartImage.gameObject.AddComponent<Button>();
+            heartButton.transition = Selectable.Transition.None;
+            heartButton.targetGraphic = heartImage;
+            heartImage.canvasRenderer.SetColor(Color.white);   // None'da "disabled" tint kalıcı soluk bırakmasın
+        }
+        heartButton.onClick.AddListener(OnAreaClicked);
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
 
     public void OnAreaClicked()
@@ -156,8 +166,8 @@ public class MainMenuLivesDisplay : MonoBehaviour
         }
 
         if (LivesManager.Current >= LivesManager.MaxLives) return;
-        // Level başına tek reklam hakkı (LevelAdRight) burada da geçerli.
-        if (LevelAdRight.IsUsed) return;
+        // Can reklamı günlük sınırlı (RewardedAdCaps.Life) — seviye hakkından ayrı.
+        if (!RewardedAdCaps.CanOffer(AdPlacement.Life)) return;
         StartAd();
     }
 
@@ -172,23 +182,14 @@ public class MainMenuLivesDisplay : MonoBehaviour
 
     private void StartAd()
     {
-#if UNITY_EDITOR && !TF_ADMOB
-        if (simulateAdInEditor)
-        {
-            if (!LevelAdRight.TryConsume()) return;
-            StartCoroutine(SimulateAd());
-            return;
-        }
-#endif
+        // Editörde AdMob kapalıyken AdService kendisi simüle eder (1 sn); sınır/analitik aynı yoldan geçer.
         if (AdService.IsShowing) return;
         _adInProgress = true;
         // Hak yalnız reklam gerçekten izlenince harcanır.
-        AdService.ShowRewarded(earned =>
+        RewardedAdCaps.Show(AdPlacement.Life, () =>
         {
-            _adInProgress = false;
-            if (!earned || this == null || !LevelAdRight.TryConsume()) return;
-            OnAdRewarded();
-        });
+            if (this != null) OnAdRewarded();
+        }, _ => _adInProgress = false);
     }
 
     public void OnAdRewarded()
@@ -316,12 +317,4 @@ public class MainMenuLivesDisplay : MonoBehaviour
         return TimeFormat.Countdown(span);
     }
 
-#if UNITY_EDITOR
-    private IEnumerator SimulateAd()
-    {
-        _adInProgress = true;
-        yield return new WaitForSecondsRealtime(simulatedAdDuration);
-        OnAdRewarded();
-    }
-#endif
 }

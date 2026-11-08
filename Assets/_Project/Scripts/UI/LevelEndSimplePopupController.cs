@@ -76,6 +76,8 @@ public class LevelEndSimplePopupController : MonoBehaviour
     [SerializeField] private TMP_FontAsset extraMovesAmountFont;
     [SerializeField] private Material extraMovesAmountMaterial;
     [SerializeField, Min(1f)] private float extraMovesAmountFontSize = 112f;
+    [Tooltip("Hamle teklifi dairesi (+5/+10) ölçeği — içindeki yazı da birlikte büyür (kullanıcı 2026-11-08: %10).")]
+    [SerializeField, Min(0.5f)] private float extraMovesIconScale = 1.1f;
     [SerializeField, Min(0.05f)] private float extraMovesFlyDuration = 0.55f;
     [SerializeField] private Vector2 extraMovesFlyStartOffset = new Vector2(0f, 760f);
 
@@ -235,6 +237,13 @@ public class LevelEndSimplePopupController : MonoBehaviour
     private int _movesAtWin;
     private int currentOfferAmount;
     private int currentCost;
+    // Ödüllü reklamla devam (karar 2026-11-08, "B"): ana devam butonunun yanında yuvarlak ▶ + ÜCRETSİZ kurdelesi.
+    // Ana buton tek, iki anlam: altın yetiyorsa "Devam Et ⦿900", yetmiyorsa "Altın Al" (oyun içi market).
+    private AdRewardButton failAdButton;
+    private RectTransform failContinueGroup;
+    private Vector2 failContinueGroupHome;
+    private string failContinueAffordableText;
+    private bool failAdOfferNoted;
     private bool endCheckQueued;
     private bool failSettleWaitRunning;
     private bool failConfirmRunning;
@@ -1340,6 +1349,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
         _abandonWarning = true;
         failPopupShown = true;     // gerçek fail değerlendirmesi araya girmesin
         successPopupShown = false;
+        SetFailAdButtonVisible(false);
 
         if (board != null)
             board.SetInputLocked(true);
@@ -1521,11 +1531,23 @@ public class LevelEndSimplePopupController : MonoBehaviour
         }
     }
 
-    // Abandon uyarısında büyütülen hamle-ikonunu (kırık kalp) orijinal ölçeğine döndür.
+    // Abandon uyarısında büyütülen hamle-ikonunu (kırık kalp) teklif ölçeğine döndür.
     private void RestoreExtraMovesIconScale()
     {
         if (_extraMovesIconScaleCaptured && extraMovesIcon != null)
-            extraMovesIcon.transform.localScale = _extraMovesIconOriginalScale;
+            extraMovesIcon.transform.localScale = _extraMovesIconOriginalScale * extraMovesIconScale;
+    }
+
+    // Hamle teklifi dairesi: sahnedeki ölçek × extraMovesIconScale (orijinal bir kez yakalanır, birikmez).
+    private void ApplyExtraMovesIconScale()
+    {
+        if (extraMovesIcon == null) return;
+        if (!_extraMovesIconScaleCaptured)
+        {
+            _extraMovesIconOriginalScale = extraMovesIcon.transform.localScale;
+            _extraMovesIconScaleCaptured = true;
+        }
+        extraMovesIcon.transform.localScale = _extraMovesIconOriginalScale * extraMovesIconScale;
     }
 
     private void ShowFailPopup()
@@ -1535,6 +1557,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
         failPopupShown = true;
         successPopupShown = false;
+        failAdOfferNoted = false;
 
         // Abandon (Oyundan Çık) modundan çık — gerçek fail için ikon ölçeği + buton rengi sıfırla
         // (sprite/mesaj zaten RefreshFailOfferVisuals ile geri yazılır).
@@ -1919,21 +1942,8 @@ public class LevelEndSimplePopupController : MonoBehaviour
         if (TryPayAndContinue())
             return;
 
-        // Yeterli coin yok → reklam izle (bedava devam, level başına TEK hak) ya da satın al (market).
-        // Alttaki "Kapat": hiçbir şey yapmadan vazgeçer — hak biter, level kaybedilmiş sayılır.
-        RuntimeChoicePopup.ShowOffer(
-            GameLocalization.Get("level_end_no_gold_title"),
-            GameLocalization.GetFormat("level_end_no_gold_body", currentCost, PlayerWallet.Coins),
-            new[]
-            {
-                new RuntimeChoicePopup.OfferButton(GameLocalization.Get("common_watch_ad"),
-                    GameLocalization.Get(adContinueUsedThisLevel ? "level_end_ad_used" : "level_end_ad_free_continue"),
-                    WatchAdThenContinue, interactable: !adContinueUsedThisLevel),
-                new RuntimeChoicePopup.OfferButton(GameLocalization.Get("common_buy"), GameLocalization.Get("common_buy_gold_sub"), GoToMarketFromFail),
-            },
-            GameLocalization.Get("common_close"),
-            GiveUpLevel);
-        RuntimeChoicePopup.SetTitleArc(15f);   // kullanıcı ayarı (2026-10-27): "Yetersiz Altın" başlığı 15°
+        // Yeterli coin yok → buton zaten "Altın Al" yazıyor: oyun içi market (reklam seçeneği yandaki ▶ butonunda).
+        GoToMarketFromFail();
     }
 
     // Cüzdan güncel devam bedelini karşılıyorsa düş ve oyunu kaldığı yerden sürdür. Fail'de altının
@@ -1983,18 +1993,74 @@ public class LevelEndSimplePopupController : MonoBehaviour
         board.ForceFullBoardSync();
     }
 
-    // Reklamla bedava devam: level'ın TEK reklam hakkını harcar (LevelAdRight — can reklamıyla ortak).
-    private static bool adContinueUsedThisLevel => LevelAdRight.IsUsed;
-
+    // Reklamla bedava devam: level'ın TEK reklam hakkı (RewardedAdCaps.Continue = LevelAdRight).
+    // Hak yalnız reklam gerçekten izlenince harcanır (yüklenemediyse ya da yarıda kapandıysa hak kalır).
     private void WatchAdThenContinue()
     {
-        if (LevelAdRight.IsUsed || AdService.IsShowing) return;
-        // Hak yalnız reklam gerçekten izlenince harcanır (yüklenemediyse ya da yarıda kapandıysa hak kalır).
-        AdService.ShowRewarded(earned =>
+        if (_abandonWarning || board == null || !RewardedAdCaps.CanOffer(AdPlacement.Continue) || AdService.IsShowing) return;
+        RewardedAdCaps.Show(AdPlacement.Continue, () =>
         {
-            if (!earned || this == null || !LevelAdRight.TryConsume()) return;
+            if (this == null || board == null) return;
             PerformContinue(rewardedAd: true);
         });
+    }
+
+    private void SetFailContinueLabel(string affordableText)
+    {
+        failContinueAffordableText = affordableText;
+        UpdateFailContinueLabel();
+    }
+
+    // Altın yetiyorsa bedelli devam metni, yetmiyorsa "Altın Al". Terk uyarısındaki "Çık"a dokunmaz.
+    private void UpdateFailContinueLabel()
+    {
+        if (failContinueText == null || _abandonWarning || failContinueAffordableText == null) return;
+        failContinueText.text = PlayerWallet.HasEnoughCoins(currentCost)
+            ? failContinueAffordableText
+            : LocalizedText("level_end_fail_get_gold", "Altın Al");
+    }
+
+    private void RefreshFailAdButton()
+    {
+        bool show = !_abandonWarning && RewardedAdCaps.CanOffer(AdPlacement.Continue);
+        if (show) EnsureFailAdButton();
+        SetFailAdButtonVisible(show);
+    }
+
+    private void EnsureFailAdButton()
+    {
+        if (failAdButton != null || buyMovesButton == null) return;
+        var button = (RectTransform)buyMovesButton.transform;
+        // Görsel grup: sahnedeki ButtonFrame (butonun çerçevesi) varsa onunla birlikte kayar.
+        failContinueGroup = button.parent is RectTransform frame && frame.name == "ButtonFrame" ? frame : button;
+        failContinueGroupHome = failContinueGroup.anchoredPosition;
+        float height = failContinueGroup.rect.height > 1f ? failContinueGroup.rect.height : failContinueGroup.sizeDelta.y;
+        // Devam butonundan küçük: kurdele aşağı sarktığı için tam boyda popup'ın alt şeridine taşıyordu (cihaz görüntüsü).
+        failAdButton = AdRewardButton.Create(failContinueGroup.parent, height * 0.78f, "FailAdContinue");
+        var rt = (RectTransform)failAdButton.transform;
+        rt.anchorMin = failContinueGroup.anchorMin;
+        rt.anchorMax = failContinueGroup.anchorMax;
+        failAdButton.Clicked += WatchAdThenContinue;
+    }
+
+    // Göründüğünde grup (devam butonu + ▶) ortalanır: devam sola kayar, ▶ sağında. Gizliyken devam eski yerinde.
+    private void SetFailAdButtonVisible(bool show)
+    {
+        if (failAdButton == null || failContinueGroup == null) return;
+        var rt = (RectTransform)failAdButton.transform;
+        float width = failContinueGroup.rect.width > 1f ? failContinueGroup.rect.width : failContinueGroup.sizeDelta.x;
+        float size = rt.sizeDelta.x;
+        float gap = size * 0.10f;
+        failContinueGroup.anchoredPosition = failContinueGroupHome - new Vector2(show ? (size + gap) * 0.5f : 0f, 0f);
+        // Hafif yukarı: kurdelenin alt ucu devam butonunun alt hizasında biter.
+        rt.anchoredPosition = failContinueGroupHome + new Vector2(width * 0.5f + gap * 0.5f, size * 0.08f);
+        rt.SetAsLastSibling();
+        failAdButton.SetVisible(show);
+        if (show && !failAdOfferNoted)
+        {
+            failAdOfferNoted = true;
+            RewardedAdCaps.NoteOffer(AdPlacement.Continue);
+        }
     }
 
     [Header("Oyun içi market (fail'de altın alıp kaldığı yerden devam)")]
@@ -2079,7 +2145,8 @@ public class LevelEndSimplePopupController : MonoBehaviour
         {
             if (GameDiagnostics.CriticalErrors)
                 Debug.LogError("[LevelEnd] inGameShop referansları eksik — oyun içi market açılamadı.");
-            HandleBuyMovesClicked();
+            RuntimeChoicePopup.Show(GameLocalization.Get("level_end_no_gold_title"),
+                GameLocalization.GetFormat("level_end_no_gold_body", currentCost, PlayerWallet.Coins));
             return;
         }
 
@@ -2109,7 +2176,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
         if (TryPayAndContinue()) return;
 
-        HandleBuyMovesClicked();
+        UpdateFailContinueLabel();   // fail ekranında kalır: "Altın Al" + ▶ reklam seçeneği
     }
 
     private void RefreshPopupCopy()
@@ -2201,8 +2268,8 @@ public class LevelEndSimplePopupController : MonoBehaviour
         if (failDescriptionText != null && failDescriptionText != failMessageText)
             failDescriptionText.text = message;
 
-        if (failContinueText != null)
-            failContinueText.text = LocalizedFormat("level_end_fail_continue_cost", "Devam Et {0}", currentCost);
+        SetFailContinueLabel(LocalizedFormat("level_end_fail_continue_cost", "Devam Et {0}", currentCost));
+        RefreshFailAdButton();
 
         if (extraMovesIcon != null)
         {
@@ -2216,6 +2283,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
                 SetExtraMovesBadgeTextVisible(false);
                 return;
             }
+            ApplyExtraMovesIconScale();
         }
 
         RefreshExtraMovesAmountVisual(animateIncrease);
@@ -2233,8 +2301,8 @@ public class LevelEndSimplePopupController : MonoBehaviour
         if (failDescriptionText != null && failDescriptionText != failMessageText)
             failDescriptionText.text = message;
 
-        if (failContinueText != null)
-            failContinueText.text = LocalizedFormat("level_end_billiard_rescue_cost", "Topu Taşı {0}", currentCost);
+        SetFailContinueLabel(LocalizedFormat("level_end_billiard_rescue_cost", "Topu Taşı {0}", currentCost));
+        RefreshFailAdButton();
 
         if (extraMovesIcon != null)
         {
@@ -2425,7 +2493,31 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
         if (extraMovesAmountMaterial != null)
             text.fontSharedMaterial = extraMovesAmountMaterial;
+
+        // Kullanıcı 2026-11-08: +5/+10 TinyFixers Pop ile, yüz KREM (sarı gradyan ekranı fazla boyuyordu);
+        // kontur/gölge bordo popup zemininin koyusu. Pop zaten eğik → ek dijit eğimi kapalı. Pop yoksa eski görünüm.
+        if (CommonPopupSkin.Shared.titleFont != null)
+        {
+            TextSurfaceStyle.Apply(text, TextSurface.Maroon);
+            text.fontSize = extraMovesAmountFontSize;
+            text.fontSizeMax = extraMovesAmountFontSize;
+            text.fontSizeMin = Mathf.Max(36f, extraMovesAmountFontSize * 0.58f);
+            text.color = ExtraMovesCream;
+            text.OnPreRenderText -= ApplyExtraMovesDigitSlant;
+        }
+
+        // Kullanıcı 2026-11-08 ("+5'i sevmedim, + küçülsün, ortalansın, +10 sığar mı"): satır kutusu yerine
+        // harflerin GERÇEK sınırı ortalanır (Geometry hizası) → elle top marjı gerekmez. Genişlik dairenin iç
+        // diskine sınırlanır; +10 otomatik küçülerek sığar.
+        text.alignment = TextAlignmentOptions.MidlineGeoAligned;
+        float rectWidth = text.rectTransform.rect.width;
+        float discWidth = text.transform.parent is RectTransform disc && disc.rect.width > 1f
+            ? disc.rect.width * 0.62f : rectWidth;
+        float side = Mathf.Max(0f, (rectWidth - discWidth) * 0.5f);
+        text.margin = new Vector4(side, 0f, side, 0f);
     }
+
+    private static readonly Color ExtraMovesCream = new Color(1f, 0.94f, 0.78f, 1f);
 
     private void SetExtraMovesAmountText(TMP_Text text, int amount)
     {
@@ -2433,7 +2525,8 @@ public class LevelEndSimplePopupController : MonoBehaviour
             return;
 
         ConfigureExtraMovesAmountText(text);
-        text.text = $"<size=88%>+</size><size=128%>{Mathf.Max(0, amount)}</size>";
+        // "+" küçük ve rakamın ortasına kaldırılmış (voffset, taban punto em'i); rakam baskın.
+        text.text = $"<voffset=0.2em><size=60%>+</size></voffset><size=115%>{Mathf.Max(0, amount)}</size>";
     }
 
     private void ApplyExtraMovesDigitSlant(TMP_TextInfo textInfo)
@@ -2500,6 +2593,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
     private void HandleWalletCoinsChanged(int amount)
     {
         RefreshFailWalletBalance(amount);
+        if (failPopupShown) UpdateFailContinueLabel();
     }
 
     private void RefreshFailWalletBalance(int amount)

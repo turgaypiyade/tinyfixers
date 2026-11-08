@@ -3567,6 +3567,22 @@
         {
           "key": "hint_obstacle_flyfruit",
           "value": "Sinek kutusunu özel güçlerle vur: her vuruşta bir yumurta tahtaya düşer. Yumurtayı eşleşme veya özel güçle patlat; çıkan üç sinek elmaya uçup ısırır. Her elma altı ısırıkta biter!"
+        },
+        {
+          "key": "ad_free_ribbon",
+          "value": "ÜCRETSİZ"
+        },
+        {
+          "key": "level_end_fail_get_gold",
+          "value": "Altın Al"
+        },
+        {
+          "key": "lives_offer_ad_left",
+          "value": "1 can kazan · bugün {0} hak"
+        },
+        {
+          "key": "ad_daily_limit_reached",
+          "value": "Bugünlük hak bitti"
         }
       ]
     },
@@ -7136,6 +7152,22 @@
         {
           "key": "hint_obstacle_flyfruit",
           "value": "Hit the fly box with specials: each hit drops an egg onto the board. Pop the egg with a match or a special; three flies fly out and bite the fruit. Each fruit is gone after six bites!"
+        },
+        {
+          "key": "ad_free_ribbon",
+          "value": "FREE"
+        },
+        {
+          "key": "level_end_fail_get_gold",
+          "value": "Get Gold"
+        },
+        {
+          "key": "lives_offer_ad_left",
+          "value": "Get 1 life · {0} left today"
+        },
+        {
+          "key": "ad_daily_limit_reached",
+          "value": "No more today"
         }
       ]
     }

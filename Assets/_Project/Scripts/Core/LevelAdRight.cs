@@ -1,8 +1,8 @@
 using UnityEngine;
 
 /// <summary>
-/// Reklam hakkı LEVEL başına TEK (kullanıcı kuralı): oynanan level için bir reklam izlenebilir —
-/// fail'de bedava devam ya da can bitince +1 can, hangisi önce. Çıkıp girince, ana menüye dönünce
+/// Fail'de reklamla bedava devam hakkı LEVEL başına TEK (kullanıcı kuralı). Can reklamı 2026-11-08'den beri
+/// AYRI ve günlük sınırlı (RewardedAdCaps.Life); bu sınıfa yalnız RewardedAdCaps.Continue erişir. Çıkıp girince, ana menüye dönünce
 /// de geri gelmez; level geçilince (CurrentLevel değişir) yeni level'da hak yeniden açılır.
 /// Kullanılan level numarası kalıcı tutulur.
 /// </summary>

@@ -17,7 +17,9 @@ public static class LivesRefillOffer
         int packAmount = DefaultPackAmount, int packCost = DefaultPackCost, string closeLabel = null)
     {
         bool canAfford = PlayerWallet.Coins >= packCost;
-        bool adUsed = LevelAdRight.IsUsed;
+        // Can reklamı seviye hakkından AYRI: günde RewardedAdCaps.DailyLimit(Life) (plan 2026-11-08).
+        bool adAvailable = RewardedAdCaps.CanOffer(AdPlacement.Life);
+        if (adAvailable) RewardedAdCaps.NoteOffer(AdPlacement.Life);
 
         RuntimeChoicePopup.ShowOffer(
             GameLocalization.Get("lives_offer_title"),
@@ -26,11 +28,12 @@ public static class LivesRefillOffer
             {
                 new RuntimeChoicePopup.OfferButton(GameLocalization.GetFormat("lives_offer_buy_pack", packAmount), GameLocalization.GetFormat("common_gold_amount", packCost),
                     () => BuyPack(packAmount, packCost, onLivesAdded), interactable: canAfford),
-                // Reklam hakkı level başına TEK (fail devam reklamıyla ortak): kaybedilen level'ı
-                // reklamla sonsuz tekrar oynamak olmasın.
+                // Günlük sınırlı; kalan hak alt yazıda.
                 new RuntimeChoicePopup.OfferButton(GameLocalization.Get("common_watch_ad"),
-                    GameLocalization.Get(adUsed ? "level_end_ad_used" : "lives_offer_ad_sub"),
-                    () => WatchAd(host, onLivesAdded), interactable: host != null && !adUsed),
+                    adAvailable
+                        ? GameLocalization.GetFormat("lives_offer_ad_left", RewardedAdCaps.RemainingToday(AdPlacement.Life))
+                        : GameLocalization.Get("ad_daily_limit_reached"),
+                    () => WatchAd(host, onLivesAdded), interactable: host != null && adAvailable),
                 new RuntimeChoicePopup.OfferButton(GameLocalization.Get("common_buy"), GameLocalization.Get("common_buy_gold_sub"), MarketNavigator.OpenMarket),
             },
             closeLabel ?? GameLocalization.Get("common_close"),
@@ -54,11 +57,10 @@ public static class LivesRefillOffer
 
     private static void WatchAd(MonoBehaviour host, Action onLivesAdded)
     {
-        if (host == null || LevelAdRight.IsUsed || AdService.IsShowing) return;
+        if (host == null || AdService.IsShowing) return;
         // Hak yalnız reklam gerçekten izlenince harcanır.
-        AdService.ShowRewarded(earned =>
+        RewardedAdCaps.Show(AdPlacement.Life, () =>
         {
-            if (!earned || !LevelAdRight.TryConsume()) return;
             LivesManager.AddLives(1);
             onLivesAdded?.Invoke();
         });

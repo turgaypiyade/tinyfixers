@@ -107,6 +107,11 @@ public class FortuneWheelController : MonoBehaviour
     private bool isSpinning;
     private bool rewardClaimed;
     private bool isFreeSpin;
+    // Reklamla ek çevirme (günde RewardedAdCaps.DailyLimit(WheelSpin), plan 2026-11-08): bedava hak bitince çevir
+    // butonunun yanında ▶; ödül havuzu bedava çevirmeninki, bekleme süresine DOKUNMAZ.
+    private AdRewardButton adSpinButton;
+    private Vector2 spinButtonHome;
+    private bool adSpinPending;
     private Coroutine glowRoutine;
     private Coroutine spinButtonPulse;
     private Coroutine countdownRoutine;
@@ -218,7 +223,10 @@ public class FortuneWheelController : MonoBehaviour
         }
 
         if (spinButtonText != null)
+        {
             spinButtonText.text = GameLocalization.Get(canFree ? freeSpinLabelKey : paidSpinLabelKey);
+            CenterSpinLabel(canFree);
+        }
 
         bool showPaidExtras = !canFree;
 
@@ -238,6 +246,76 @@ public class FortuneWheelController : MonoBehaviour
 
         if (noSpinAvailableLabel != null) noSpinAvailableLabel.SetActive(!canFree);
         if (insufficientCoinsLabel != null) insufficientCoinsLabel.SetActive(!canFree && !canAfford);
+        RefreshAdSpinButton(!canFree && !isSpinning && RewardedAdCaps.CanOffer(AdPlacement.WheelSpin));
+    }
+
+    // Yazı alanı ücretli düzen için solda (sağında altın ikonu + bedel). Bedava modda ikon/bedel gizli →
+    // yazı tüm butona yayılıp ortalanır; ücretli moda dönünce sahnedeki yerleşim aynen geri gelir.
+    private bool spinLabelLayoutCaptured;
+    private Vector2 spinLabelAnchorMin, spinLabelAnchorMax, spinLabelOffsetMin, spinLabelOffsetMax;
+    private TextAlignmentOptions spinLabelAlignment;
+
+    private void CenterSpinLabel(bool center)
+    {
+        var rt = spinButtonText.rectTransform;
+        if (!spinLabelLayoutCaptured)
+        {
+            spinLabelLayoutCaptured = true;
+            spinLabelAnchorMin = rt.anchorMin; spinLabelAnchorMax = rt.anchorMax;
+            spinLabelOffsetMin = rt.offsetMin; spinLabelOffsetMax = rt.offsetMax;
+            spinLabelAlignment = spinButtonText.alignment;
+        }
+        if (center)
+        {
+            rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
+            rt.offsetMin = rt.offsetMax = Vector2.zero;
+            spinButtonText.alignment = TextAlignmentOptions.Center;
+        }
+        else
+        {
+            rt.anchorMin = spinLabelAnchorMin; rt.anchorMax = spinLabelAnchorMax;
+            rt.offsetMin = spinLabelOffsetMin; rt.offsetMax = spinLabelOffsetMax;
+            spinButtonText.alignment = spinLabelAlignment;
+        }
+    }
+
+    private void RefreshAdSpinButton(bool show)
+    {
+        if (spinButton == null) return;
+        var spinRt = (RectTransform)spinButton.transform;
+        if (adSpinButton == null)
+        {
+            if (!show) return;
+            spinButtonHome = spinRt.anchoredPosition;
+            float size = (spinRt.rect.height > 1f ? spinRt.rect.height : spinRt.sizeDelta.y) * 1.1f;
+            adSpinButton = AdRewardButton.Create(spinRt.parent, size, "WheelAdSpin");
+            var created = (RectTransform)adSpinButton.transform;
+            created.anchorMin = spinRt.anchorMin;
+            created.anchorMax = spinRt.anchorMax;
+            adSpinButton.Clicked += OnAdSpinClicked;
+        }
+        // Görünürken çevir butonu sola kayar, ▶ sağında; grup ortalı kalır.
+        var rt = (RectTransform)adSpinButton.transform;
+        float width = spinRt.rect.width > 1f ? spinRt.rect.width : spinRt.sizeDelta.x;
+        float adSize = rt.sizeDelta.x, gap = adSize * 0.10f;
+        spinRt.anchoredPosition = spinButtonHome - new Vector2(show ? (adSize + gap) * 0.5f : 0f, 0f);
+        rt.anchoredPosition = spinButtonHome + new Vector2(width * 0.5f + gap * 0.5f, 0f);
+        rt.SetAsLastSibling();
+        bool wasVisible = adSpinButton.gameObject.activeSelf;
+        adSpinButton.SetVisible(show);
+        if (show && !wasVisible) RewardedAdCaps.NoteOffer(AdPlacement.WheelSpin);
+    }
+
+    private void OnAdSpinClicked()
+    {
+        if (isSpinning || AdService.IsShowing) return;
+        RewardedAdCaps.Show(AdPlacement.WheelSpin, () =>
+        {
+            if (this == null || isSpinning || panelRoot == null || !panelRoot.activeInHierarchy) return;
+            adSpinPending = true;
+            OnSpinClicked();
+            adSpinPending = false;
+        });
     }
 
     // ── Icon Placement ───────────────────────────────────────────────────────
@@ -354,7 +432,7 @@ public class FortuneWheelController : MonoBehaviour
     {
         if (isSpinning) return;
 
-        isFreeSpin = HasAvailableSpin();
+        isFreeSpin = adSpinPending || HasAvailableSpin();
         DailySlotRewardConfig config = isFreeSpin
             ? (ResolveConfig(freeSpinConfig, freeSpinDirectConfig)
                 ?? ResolveConfig(paidSpinConfig, paidSpinDirectConfig))
@@ -372,8 +450,11 @@ public class FortuneWheelController : MonoBehaviour
         if (isFreeSpin)
         {
             activeSpinConfig = config;
-            PlayerPrefs.SetString(KeyLastSpinTime, DateTime.UtcNow.Ticks.ToString());
-            PlayerPrefs.Save();
+            if (!adSpinPending)   // reklamlı çevirme günlük bedava hakkın bekleme süresini sıfırlamaz
+            {
+                PlayerPrefs.SetString(KeyLastSpinTime, DateTime.UtcNow.Ticks.ToString());
+                PlayerPrefs.Save();
+            }
         }
         else
         {
@@ -413,6 +494,7 @@ public class FortuneWheelController : MonoBehaviour
     private IEnumerator SpinRoutine()
     {
         isSpinning = true;
+        RefreshAdSpinButton(false);   // ▶ gizlenir VE çevir butonu ortaya döner
         if (spinButtonPulse != null) { StopCoroutine(spinButtonPulse); spinButtonPulse = null; }
         if (spinButton    != null) spinButton.interactable = false;
         if (rewardNameText != null) rewardNameText.text   = "";
