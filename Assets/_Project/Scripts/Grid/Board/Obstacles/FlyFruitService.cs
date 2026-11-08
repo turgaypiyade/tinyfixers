@@ -30,7 +30,10 @@ public sealed class FlyFruitService : MonoBehaviour
         public Fruit target;
         public Vector2 from, apex;
         public float age;
-        public int arrived;
+        public int arrived, source;
+        // Sıradaki sinek meyveye vardı ama meyve kapalı/kilitli: havada bekliyor. Bekleyen sürü tahta işini
+        // TUTMAZ (2026-11-08 L231: sonsuz bekleme seviye sonunu kilitliyor, taşlar oynamıyordu).
+        public bool waiting;
         public readonly FlyFruitFlyView[] flies = new FlyFruitFlyView[3];
         public readonly FlightRoute[] routes = new FlightRoute[3];
     }
@@ -198,7 +201,7 @@ public sealed class FlyFruitService : MonoBehaviour
             stalled = false;
             broodJob ??= board.BeginJob(BoardController.BoardJobKind.EggBirdFlight);
             var brood = spare.Pop(); brood.target = chosen; brood.age = 0; brood.arrived = 0;
-            int source = pending.Dequeue(); brood.from = Point(source);
+            int source = pending.Dequeue(); brood.source = source; brood.waiting = false; brood.from = Point(source);
             brood.apex = brood.from + new Vector2(UnityEngine.Random.Range(-.3f, .3f), UnityEngine.Random.Range(1.45f, 1.9f)) * size;
             Vector2 topLeft = Point(0), topRight = Point(board.Width - 1);
             float margin = Mathf.Min(size * 1.3f, Mathf.Abs(topRight.x - topLeft.x) * .5f);
@@ -248,6 +251,7 @@ public sealed class FlyFruitService : MonoBehaviour
     private bool Advance(Brood brood, float dt)
     {
         brood.age += dt;
+        brood.waiting = false;
         const float rise = .70f, split = .25f, peakScale = 2.1f;
         Vector2 fruitCenter = FruitPoint(brood.target);
         for (int i = brood.arrived; i < 3; i++)
@@ -269,7 +273,11 @@ public sealed class FlyFruitService : MonoBehaviour
                 Vector2 control = (formation + end) * .5f + route.curveOffset;
                 pos = u * u * formation + 2 * u * t * control + t * t * end;
                 direction = 2 * u * (control - formation) + 2 * t * (end - control);
-                if (t >= 1 && !Exposed(brood.target)) pos += Vector2.up * (Mathf.Sin(brood.age * 8 + route.phase) * size * .08f);
+                if (t >= 1 && !Exposed(brood.target))
+                {
+                    pos += Vector2.up * (Mathf.Sin(brood.age * 8 + route.phase) * size * .08f);
+                    if (i == brood.arrived) brood.waiting = true;
+                }
             }
             // Match EggBird's readable rise: grow to2.1times at the apex, then
             // settle to formation size and return to normal size at the fruit.
@@ -321,6 +329,16 @@ public sealed class FlyFruitService : MonoBehaviour
         for (int i = active.Count - 1; i >= 0; i--)
         {
             var brood = active[i];
+            // Hedef meyve tamamen gittiyse (temizlendi/başka yolla bitti) sürü dağılır, yumurta sıraya döner.
+            if (brood.target.cleared)
+            {
+                brood.target.progress.Cancel(3 - brood.arrived);
+                for (int f = 0; f < 3; f++) { brood.flies[f]?.Return(); brood.flies[f] = null; }
+                pending.Enqueue(brood.source);
+                active.RemoveAt(i); brood.target = null; spare.Push(brood);
+                stalled = false; retry = 0;
+                continue;
+            }
             bool done = Advance(brood, Time.deltaTime);
             if (version != generation || !Alive) return;
             if (!done) continue;
@@ -331,9 +349,12 @@ public sealed class FlyFruitService : MonoBehaviour
         }
         retry -= Time.deltaTime;
         if (pending.Count > 0 && retry <= 0) { retry = .1f; StartBroods(); }
-        if (active.Count > 0 && buzzLoop == null && eggDef != null)
+        bool anyFlying = false;
+        for (int i = 0; i < active.Count; i++) if (!active[i].waiting) { anyFlying = true; break; }
+        if (anyFlying) broodJob ??= board.BeginJob(BoardController.BoardJobKind.EggBirdFlight);   // bekleyen sürü yeniden uçtu
+        if (anyFlying && buzzLoop == null && eggDef != null)
             buzzLoop = board.Audio?.StartLoopClip(eggDef.flightLoopSound, eggDef.flightLoopSoundVolume);
-        else if (active.Count == 0 && buzzLoop != null)
+        else if (!anyFlying && buzzLoop != null)
         { var loop = buzzLoop; buzzLoop = null; loop.Dispose(); }
         foreach (var fruit in fruitList)
             if (fruit.image != null && fruit.biteAge >= 0)
@@ -343,7 +364,7 @@ public sealed class FlyFruitService : MonoBehaviour
                 fruit.image.rectTransform.localScale = new Vector3(1 + bounce, 1 - bounce, 1);
                 if (fruit.biteAge >= .20f) { fruit.image.rectTransform.localScale = Vector3.one; fruit.biteAge = -1; }
             }
-        if (active.Count == 0 && broodJob != null && (pending.Count == 0 || stalled))
+        if (!anyFlying && broodJob != null && (pending.Count == 0 || stalled))
         {
             var job = broodJob; broodJob = null; job.Dispose(); board.RequestResolveAfterActionSequence();
         }
