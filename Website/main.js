@@ -32,8 +32,8 @@
   const MORE = { tr: "+4 görev daha", en: "+4 more tasks" };
 
   const TR = {
-    launch_cta: "Çıkışta haber ver", launch_eyebrow: "Ekibe katıl", launch_title: "Sıradaki maceran hazırlanıyor.",
-    launch_text: "E-postanı bırak, Wonder Fixers çıktığında haber verelim. Yalnızca bir çıkış duyurusu; haber bülteni yok.",
+    play_cta: "Google Play'den indir", launch_eyebrow: "iPhone sürümü", launch_title: "iPhone'da mı oynuyorsun? İlk sana haber verelim.",
+    launch_text: "Wonder Fixers Google Play'de yayında. E-postanı bırak, App Store sürümü çıkınca tek bir haber gönderelim. Haber bülteni yok.",
     launch_email: "E-posta adresin", launch_submit: "Beni de ekle",
     launch_consent: "Bir çıkış e-postası almayı kabul ediyorum. hello@wondigames.com adresine yazarak vazgeçebilirim.",
     launch_nojs: "Katılmak için JavaScript’i açabilir veya hello@wondigames.com adresine yazabilirsin.",
@@ -49,7 +49,7 @@
     hero_eyebrow: '<span lang="en">Wonder Fixers</span> · Eşleştirme bulmacası',
     hero_title: "Küçük eşleşmeler.<br>Büyük <em>harikalar.</em>",
     hero_lede: "Küçük bir bulmaca, büyük bir macera. Sevimli tamirci ekibine katıl, dünyanın harikalarına yeniden hayat ver.",
-    stores_soon: "Yakında", hero_caption: "Ekip iskelede, tamirin ortasında.", stamp: "Tamirde",
+    stores_ios_soon: "iOS yakında", hero_caption: "Ekip iskelede, tamirin ortasında.", stamp: "Tamirde",
     hero_alt: "Ayı, domuz ve koç merdivene tırmanıp eski bir taş duvarı onarıyor",
     team_alt: "Wonder Fixers ekibi bir arada: ayı Brumo, koç Bram, tavşan Pemi, domuz Tinko, maymun Fiko ve kuş Pilo; yanlarında rakipleri porsuk Rumbo ve sırtlan Zarko",
     play_eyebrow: "Nasıl oynanır", play_title: "Geçtiğin her seviye gerçek bir şeyi onarır",

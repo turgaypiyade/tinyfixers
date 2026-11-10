@@ -160,7 +160,7 @@ public sealed class GiftFestivalController : MonoBehaviour
             || RuntimeChoicePopup.IsShowing || RewardChestRevealOverlay.IsShowing
             || ShopPurchaseCelebration.IsShowing || MarketNavigator.IsMenuMarketOpen()) return true;
         if (FindFirstObjectByType<TutorialOverlayController>() != null
-            || (!WorkshopRepairButtonTutorial.IsSeen() && FindFirstObjectByType<WorkshopRepairButtonTutorial>() != null)
+            || WorkshopRepairButtonTutorial.BlocksOpeningPopups()
             || FindFirstObjectByType<EventScreenIris>() != null
             || FindFirstObjectByType<RisingIntroOverlay>() != null) return true;
         // Reuse the buffer, and scan only once a second while an invitation is pending.

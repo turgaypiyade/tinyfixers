@@ -1203,6 +1203,17 @@ public class BoardController : MonoBehaviour
 
     internal bool IsCellHeld(int x, int y) => IsPendingTriggeredSpecialCell(x, y);
 
+    // Hücredeki special'ı başka bir zincir/efekt mi sahipleniyor? Çağıranın KENDİ tuttuğu hücre (ownHold) sayılmaz:
+    // yolunu HoldForFlow ile tutan efekt (Balon uçuşu, GelLauncher) kendi yolundaki special'ı "başkasının" sanıp
+    // atlamasın (dinamik swap'taki ownHold kuralıyla aynı).
+    internal bool IsSpecialOwnedElsewhere(int x, int y, CellHold ownHold)
+    {
+        var cell = new Vector2Int(x, y);
+        if (pendingTriggeredSpecialOwners.ContainsKey(cell)) return true;
+        int own = ownHold != null && ownHold.Contains(cell, cellHoldEpoch) ? 1 : 0;
+        return cellHolds.TryGetValue(cell, out int holds) && holds > own;
+    }
+
     internal CellHold HoldCells(IEnumerable<Vector2Int> cells, bool releaseWhenCleared = false)
     {
         var set = new HashSet<Vector2Int>();
@@ -5746,6 +5757,10 @@ public class BoardController : MonoBehaviour
         // Su deposu (2x2 / 1x1): aynı model — kırılır kırılmaz rastgele hücrelere su + ekrana damla.
         if (IsWaterTank(obstacleId))
             StartCoroutine(CoSpreadWaterTankImmediate(new Vector2Int(ox, oy), obstacleId));
+
+        // Sıcak hava balonu: tam şişer, dolabı ikiye yarar, yükselir; üstündeki iki sütunu savurarak açar.
+        if (obstacleId == ObstacleId.HotAirBalloon)
+            StartCoroutine(new HotAirBalloonFlight(this, new Vector2Int(ox, oy)).Run());
 
         // Jel fırlatıcı: kapak ağızdan fırlar, yolunu kırarak açar; jel arkasından boyar.
         if (IsGelLauncher(obstacleId))

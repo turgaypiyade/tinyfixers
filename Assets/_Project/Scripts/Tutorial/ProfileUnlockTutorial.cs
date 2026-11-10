@@ -144,9 +144,14 @@ public sealed class ProfileUnlockTutorial : MonoBehaviour
     }
 
     private static bool IsMenuBusy() =>
+        IsMenuBusyExceptMissions()
+        || WorkshopRepairButtonTutorial.BlocksOpeningPopups();   // görev öğreticisi (level 10 sonrası) sırada
+
+    /// Ana menüde yönlendirme başlatmaya engel bir an var mı (yükleme, onay, seçim/sandık/satın alma penceresi,
+    /// reklam, ödül uçuşu)? Görev öğreticisi de kendi başlangıcında bunu kullanır (kendini beklemesin diye ayrı).
+    internal static bool IsMenuBusyExceptMissions() =>
         LoadingScreenManager.IsVisible || CustomIntroLoadingManager.IsVisible
         || LegalConsent.NeedsAcceptance || LegalConsent.IsShowing
-        || (!WorkshopRepairButtonTutorial.IsSeen() && FindAnyObjectByType<WorkshopRepairButtonTutorial>() != null)   // ilk açılış öğreticisi sürüyor
         || RuntimeChoicePopup.IsShowing || RewardChestRevealOverlay.IsShowing || ShopPurchaseCelebration.IsShowing
         || AdService.IsShowing || FindAnyObjectByType<MainMenuRewardCollectFx>() != null;
 
@@ -169,7 +174,10 @@ public sealed class ProfileUnlockTutorial : MonoBehaviour
     }
 
     // Hedefin ortasına dokunulsa ilk ona mı gider? (popup, başka overlay ya da sekme değişimi örtmüş olabilir)
-    private bool TargetIsTopmost(RectTransform t)
+    private bool TargetIsTopmost(RectTransform t) => IsTopmost(t, transform, hits, ref probe);
+
+    /// <paramref name="t"/>'nin ortasına dokunulsa ilk ona mı gider? <paramref name="ignore"/> altı (kendi karartması) sayılmaz.
+    internal static bool IsTopmost(RectTransform t, Transform ignore, List<RaycastResult> hits, ref PointerEventData probe)
     {
         var es = EventSystem.current;
         if (es == null || t == null || !t.gameObject.activeInHierarchy) return false;
@@ -179,7 +187,7 @@ public sealed class ProfileUnlockTutorial : MonoBehaviour
         es.RaycastAll(probe, hits);
         foreach (var hit in hits)
         {
-            if (hit.gameObject.transform.IsChildOf(transform)) continue;   // kendi karartmamız
+            if (ignore != null && hit.gameObject.transform.IsChildOf(ignore)) continue;
             return hit.gameObject.transform.IsChildOf(t);
         }
         return false;

@@ -1477,6 +1477,12 @@
       "levelKey": "LevelCL_0250",
       "name": "Hasat Bayramı",
       "nameEn": "Harvest Festival"
+    },
+    {
+      "level": 251,
+      "levelKey": "LevelCL_0251",
+      "name": "Kapadokya Sabahı",
+      "nameEn": "Cappadocia Morning"
     }
   ],
   "catalog": "LevelCatalogProV1"

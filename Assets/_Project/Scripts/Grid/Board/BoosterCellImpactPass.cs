@@ -16,13 +16,20 @@ public sealed class BoosterCellImpactPass
     private readonly HashSet<int> hitObstacleOrigins = new();
     private readonly Dictionary<TileType, int> clearedByType = new();
     private readonly bool clearObstaclesFully;
+    // İsteğe bağlı taş kırılma görseli (Sıcak Hava Balonu: taşı yana savurur); null → ortak PlayTileBreak.
+    private readonly Action<TileView> tileBreakVisual;
+    // Çağıranın yol tutması (HoldForFlow): bu hücrelerdeki special'lar "başka sahipli" sayılmaz, tetiklenir.
+    private readonly CellHold ownHold;
     private const int MaxHitsPerCell = 12;   // en uzun yığın + en çok aşamalı engel için güvenli üst sınır
 
-    public BoosterCellImpactPass(BoardController board, Func<TileView, bool> reserveSpecial = null,
-        Action<TileView> launchSpecial = null, bool clearObstaclesFully = false)
+    internal BoosterCellImpactPass(BoardController board, Func<TileView, bool> reserveSpecial = null,
+        Action<TileView> launchSpecial = null, bool clearObstaclesFully = false, Action<TileView> tileBreakVisual = null,
+        CellHold ownHold = null)
     {
         this.board = board;
         this.clearObstaclesFully = clearObstaclesFully;
+        this.tileBreakVisual = tileBreakVisual;
+        this.ownHold = ownHold;
         this.reserveSpecial = reserveSpecial;
         this.launchSpecial = launchSpecial ?? board.TriggerSpecialTileFromBoardEffect;
     }
@@ -51,14 +58,15 @@ public sealed class BoosterCellImpactPass
             if (tile.GetSpecial() != TileSpecial.None)
             {
                 if (reserveSpecial != null ? reserveSpecial(tile)
-                    : !board.IsPendingTriggeredSpecialCell(x, y))
+                    : !board.IsSpecialOwnedElsewhere(x, y, ownHold))
                 {
                     chainedSpecial = tile;
                 }
             }
             else
             {
-                board.BreakFx?.PlayTileBreak(tile);
+                if (tileBreakVisual != null) tileBreakVisual(tile);
+                else board.BreakFx?.PlayTileBreak(tile);
                 board.ClearAndDestroyTile(tile, clearedByType);
                 foreach (var pair in clearedByType)
                     board.NotifyTilesCleared(pair.Key, pair.Value);

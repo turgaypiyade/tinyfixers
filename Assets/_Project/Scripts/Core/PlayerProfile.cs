@@ -13,7 +13,7 @@ public static class PlayerProfile
 
     public const int    DefaultAvatarId = 0;
     public const string DefaultName     = "Oyuncu";
-    public const int    UnlockLevel     = 10;
+    public const int    UnlockLevel     = 12;   // level 11 bitince (kullanıcı 2026-11-10: level 10 bitene kadar öğretici yok; görevler 11'de)
 
     public static event Action OnChanged;
 

@@ -968,6 +968,7 @@ public class LevelDataEditor : Editor
             case ObstacleId.FlyFruit: return "Elma";
             case ObstacleId.FlyEgg: return "Sinek Yumurtası";
             case ObstacleId.FlyEggBox: return "Sinek Kutusu";
+            case ObstacleId.HotAirBalloon: return "Sıcak Hava Balonu";
             default: return ObjectNames.NicifyVariableName(id.ToString());
         }
     }
@@ -1068,8 +1069,10 @@ public class LevelDataEditor : Editor
         EditorGUILayout.Space(4);
         if (selectedObstacle == ObstacleId.GrassWaterLily)
             EditorGUILayout.HelpBox("GrassWaterLily tek parça yerleştirilir: çim + nilüfer birlikte gelir. Ayrı Grass ekleme.", MessageType.Info);
+        if (selectedObstacle == ObstacleId.HotAirBalloon)
+            EditorGUILayout.HelpBox("HotAirBalloon: tek seçimle 2×2 yerleşir. Yalnız special ve joker şişirir (normal eşleşme etkilemez); balon dolabın içinde şişer, üçüncü vuruşta dolabı ikiye yarar ve üstündeki iki sütunu açarak uçar. Üstünde en az bir sıra boşluk bırakmak uçuşu görünür kılar.", MessageType.Info);
         if (selectedObstacle == ObstacleId.RhodesStatue)
-            EditorGUILayout.HelpBox("RhodesStatue: tek seçimle 2×2 yerleşir. Yalnız special hasarı alır; dört vuruşta tamamen kalkar.", MessageType.Info);
+            EditorGUILayout.HelpBox("RhodesStatue: tek seçimle 2×2 yerleşir. Special ve joker hasarı alır (normal eşleşme almaz); dört vuruşta tamamen kalkar.", MessageType.Info);
         if (selectedObstacle == ObstacleId.TarpStatue)
             DrawTarpStatuePalette(level);
         if (selectedObstacle == ObstacleId.Hamster)

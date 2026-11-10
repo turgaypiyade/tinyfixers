@@ -356,8 +356,7 @@ public sealed class BridgeRepairController : MonoBehaviour
     private static bool IsTutorialBlocking()
     {
         if (FindFirstObjectByType<TutorialOverlayController>() != null) return true;
-        if (!WorkshopRepairButtonTutorial.IsSeen() &&
-            FindFirstObjectByType<WorkshopRepairButtonTutorial>() != null) return true;
+        if (WorkshopRepairButtonTutorial.BlocksOpeningPopups()) return true;
         return false;
     }
 }

@@ -26,8 +26,9 @@ public static class FirebaseTeamCloud
 {
     public const int Capacity = 50;
 
-    /// Takım sohbeti en fazla bu kadar gün tutulur (kullanıcı 2026-11-02). Her mesaj expireAt taşır; Firebase Console'da
-    /// Firestore ▸ TTL politikası: koleksiyon grubu "chat", alan "expireAt" → süresi dolanı sunucu kendisi siler.
+    /// Takım sohbeti en fazla bu kadar gün tutulur (kullanıcı 2026-11-02). Sunucu TTL politikası (2026-11-09, Cloud Console ▸
+    /// Firestore ▸ TTL): koleksiyon grubu "chat", alan "sentAt" + 3 gün ofset → expireAt'i olmayan eski mesajlar da silinir.
+    /// expireAt alanı yazılmaya devam eder (zararsız; politika değişirse yedek).
     public const int ChatRetentionDays = 3;
 
     private static FirebaseFirestore Db => FirebaseFirestore.DefaultInstance;

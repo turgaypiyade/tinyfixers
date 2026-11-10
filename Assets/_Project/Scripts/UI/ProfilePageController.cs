@@ -7,7 +7,7 @@ using UnityEngine.UI;
 /// Profil sayfası. Büyük avatar dairesine tıklanınca ALTTAKİ avatar şeridi açılır (popup yok);
 /// bir avatara dokununca büyük daire ANINDA güncellenir ve PlayerProfile'a kaydedilir
 /// (AvatarView'lar OnChanged ile otomatik yenilenir). İsim inline düzenlenir, focus çıkınca kaydedilir.
-/// Avatar/isim düzenleme 10. level sonrası açılır (PlayerProfile.CustomizationUnlocked).
+/// Avatar/isim düzenleme 11. level sonrası açılır (PlayerProfile.CustomizationUnlocked).
 ///
 /// Dairenin Button'ı → ToggleAvatarStrip(); sayfayı popup gibi açıyorsan Open()/Close() kullan.
 /// </summary>

@@ -46,10 +46,8 @@ public sealed class ObstacleResolutionService
 
         if (!result.didHit && request.context == ObstacleHitContext.Booster)
         {
-            // This statue is explicitly special-only, including direct tool hits. Keep the
-            // existing booster fallback for other obstacle families.
-            if (obstacleStateService.GetObstacleIdAt(request.cell.x, request.cell.y) == ObstacleId.RhodesStatue)
-                return result;
+            // Jokerler HER engele bir vuruş indirir — yalnız-special engeller dahil (Rodos Heykeli, Sıcak Hava Balonu…).
+            // Kullanıcı kuralı 2026-11-09: Rodos'un eski joker istisnası kaldırıldı.
             result = TryFallback(ObstacleHitContext.SpecialActivation);
             if (!result.didHit) result = TryFallback(ObstacleHitContext.NormalMatch);
         }

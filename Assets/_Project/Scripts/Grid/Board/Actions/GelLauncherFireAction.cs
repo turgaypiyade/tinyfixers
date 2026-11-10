@@ -64,7 +64,7 @@ public sealed class GelLauncherFireAction : BoardAction
 
             pathHold = board.HoldForFlow(path);
             // Lift'ten farkı: kapağın önündeki engeller tek vuruş değil, TAMAMEN yok edilir (kullanıcı kuralı).
-            var impacts = new BoosterCellImpactPass(board, clearObstaclesFully: true);
+            var impacts = new BoosterCellImpactPass(board, clearObstaclesFully: true, ownHold: pathHold);
             var deferred = new List<Vector2Int>();
             bool gelStarted = false, gelDone = false;
 

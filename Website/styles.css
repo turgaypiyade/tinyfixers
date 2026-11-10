@@ -74,6 +74,9 @@ section { padding-block: 96px; }
 .stores { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; margin-top: 30px; }
 .store { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12px; font-weight: 800; }
 .store svg { width: 16px; height: 16px; fill: currentColor; }
+.store.live { color: var(--ink, #14213d); text-decoration: none; padding: 6px 10px; border-radius: 8px; background: #e8efff; }
+.store.live:hover { background: #d6e2ff; }
+.button.primary svg { width: 18px; height: 18px; fill: currentColor; }
 .soon { color: #775315; background: #ffefc8; padding: 4px 9px; border-radius: 5px; font-size: 11px; font-weight: 800; }
 .hero-scene { position: relative; min-width: 0; height: 550px; display: grid; place-items: center; }
 .hero-orbit { position: absolute; width: 104%; aspect-ratio: 1; max-width: 560px; border-radius: 50%; background: #e4ecfd; border: 1px solid #d9e4fc; }

@@ -5908,3 +5908,73 @@ MonoBehaviour:
     legacyStageDamageRules:
     legacyBlocksCells: 1
     legacyBehavior: 1
+  - id: 103
+    stages:
+    - sprite: {fileID: 21300000, guid: dddc1a05e07d4ea787495a0bc8d18d0c, type: 3}
+      damageRule: 1
+      blocksCells: 1
+      behavior: 1
+      allowDiagonal: 1
+      locksInteraction: 0
+      holdsTile: 0
+      suppressHitParticles: 1
+      hitParticleSprites: []
+      hitSound: {fileID: 0}
+      hitSoundVolume: 1
+    - sprite: {fileID: 21300000, guid: 77b04d8a19ec43d98657f7e87b3ef3d7, type: 3}
+      damageRule: 1
+      blocksCells: 1
+      behavior: 1
+      allowDiagonal: 1
+      locksInteraction: 0
+      holdsTile: 0
+      suppressHitParticles: 1
+      hitParticleSprites: []
+      hitSound: {fileID: 0}
+      hitSoundVolume: 1
+    - sprite: {fileID: 21300000, guid: 06a0b0209ac04e3abf999895c9bf54f3, type: 3}
+      damageRule: 1
+      blocksCells: 1
+      behavior: 1
+      allowDiagonal: 1
+      locksInteraction: 0
+      holdsTile: 0
+      suppressHitParticles: 1
+      hitParticleSprites: []
+      hitSound: {fileID: 0}
+      hitSoundVolume: 1
+    auxiliarySprites:
+    - {fileID: 21300000, guid: eb2fb1ab0afa48049b5e4633ec03506d, type: 3}
+    allowCrossContextFallback: 0
+    restrictNormalMatchTileType: 0
+    requiredNormalMatchTileType: 0
+    size: {x: 2, y: 2}
+    hits: 3
+    fullCellSprite: 0
+    exitAtBottom: 0
+    fillsShadowBeneath: 0
+    goalIconSprite: {fileID: 21300000, guid: eb2fb1ab0afa48049b5e4633ec03506d, type: 3}
+    coversCellFully: 0
+    suppressHitParticles: 1
+    hitParticleSprites: []
+    breakParticleSprites: []
+    wardrobeItemSprites: []
+    hamsterSatiety: 7
+    hitSound: {fileID: 8300000, guid: b37f53966b3b44ee99be4e4f613e6e06, type: 3}
+    hitSoundVolume: 0.8
+    breakSound: {fileID: 8300000, guid: 9672257fd9bd5b4e966335f4a21d65ca, type: 3}
+    breakSoundVolume: 0.9
+    followUpBreakSound: {fileID: 0}
+    followUpBreakSoundVolume: 1
+    coverRemovedSound: {fileID: 0}
+    coverRemovedSoundVolume: 1
+    flightLoopSound: {fileID: 8300000, guid: da83a6f4167a4a89a61023cecb73e7e0, type: 3}
+    flightLoopSoundVolume: 0.85
+    impactSound: {fileID: 0}
+    impactSoundVolume: 1
+    drawUnderTiles: 0
+    legacySprite: {fileID: 21300000, guid: dddc1a05e07d4ea787495a0bc8d18d0c, type: 3}
+    legacyStageSprites: []
+    legacyStageDamageRules:
+    legacyBlocksCells: 1
+    legacyBehavior: 1

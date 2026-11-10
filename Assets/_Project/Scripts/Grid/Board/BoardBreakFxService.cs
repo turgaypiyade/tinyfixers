@@ -194,6 +194,7 @@ public class BoardBreakFxService
             || change.obstacleId == ObstacleId.FlourSackV
             || change.obstacleId == ObstacleId.Hamster
             || change.obstacleId == ObstacleId.RhodesStatue // staged chunks and the final body shatter own all debris
+            || change.obstacleId == ObstacleId.HotAirBalloon // şişme pop'u + kalkış HotAirBalloonView/Flight'ta
             || change.obstacleId == ObstacleId.TarpStatue;   // taş parçaları + parçalanma TarpStatueView'da
     }
 

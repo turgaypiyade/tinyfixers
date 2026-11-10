@@ -559,3 +559,9 @@ MonoBehaviour:
     fallbackTitle: Flies and Fruit
     locKey: hint_obstacle_flyfruit
     fallbackText: Hit the fly box with specials to drop eggs. Pop an egg and three flies bite the fruit. Each fruit is gone after six bites.
+  - id: 103
+    iconOverride: {fileID: 21300000, guid: eb2fb1ab0afa48049b5e4633ec03506d, type: 3}
+    titleLocKey: hint_obstacle_hot_air_balloon_name
+    fallbackTitle: Hot Air Balloon
+    locKey: hint_obstacle_hot_air_balloon
+    fallbackText: Only specials and jokers inflate the balloon. After three hits its ropes snap and it flies up, clearing the two columns above it.

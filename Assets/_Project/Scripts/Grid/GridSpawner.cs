@@ -2913,6 +2913,21 @@ public class GridSpawner : MonoBehaviour
             return;
         }
 
+        // Sıcak hava balonu: görseli SİLME — HotAirBalloonFlight devralıp tam şişirir, ipi koparır, uçurur.
+        if (obstacleId == ObstacleId.HotAirBalloon && IsTrackedObstacleViewFor(originIndex, obstacleId))
+        {
+            if (obstacleViewsByOrigin.TryGetValue(originIndex, out var balloonImage) && balloonImage != null)
+            {
+                StopObstacleHitShake(originIndex, balloonImage.rectTransform);
+                HotAirBalloonView.HandOver(originIndex, balloonImage);
+                StartCoroutine(DestroyBalloonIfUnclaimed(originIndex, balloonImage));
+            }
+            obstacleViewsByOrigin.Remove(originIndex);
+            obstacleDefsByOrigin.Remove(originIndex);
+            ApplyUnderTileCellBgTint();
+            return;
+        }
+
         // State destruction is emitted BEFORE TriggerObstacleVisualChange. Capture the two
         // final halves here, while the tracked source still exists. The later visual event
         // finds no tracked view and cannot double-play (or silently lose) the finale.
@@ -4192,6 +4207,15 @@ public class GridSpawner : MonoBehaviour
             RhodesStatueView.Ensure(img, ResolveObstacleViewRemainingHits(def, x, y));
         }
 
+        // Sıcak hava balonu: taban saydam; dolap + balon HotAirBalloonView child'ları (tam 2x2, taşma yok).
+        if (def.id == ObstacleId.HotAirBalloon && board != null)
+        {
+            var balloonRt = img.rectTransform;
+            balloonRt.anchoredPosition = new Vector2(x * tileSize, -y * tileSize);
+            balloonRt.sizeDelta = new Vector2(def.size.x * tileSize, def.size.y * tileSize);
+            HotAirBalloonView.Ensure(img, ResolveObstacleViewRemainingHits(def, x, y));
+        }
+
         if (BoardController.IsGelLauncher(def.id) && board != null)
         {
             // The assembled press occupies exactly its two cells; generic edge overhang is omitted.
@@ -4392,6 +4416,16 @@ public class GridSpawner : MonoBehaviour
         }
     }
 
+    private IEnumerator DestroyBalloonIfUnclaimed(int originIndex, Image image)
+    {
+        yield return new WaitForSeconds(2f);
+        if (image != null && HotAirBalloonView.IsPending(originIndex, image))
+        {
+            HotAirBalloonView.Take(originIndex);
+            Destroy(image.gameObject);
+        }
+    }
+
     private IEnumerator DestroyGelBodyIfUnclaimed(int originIndex, Image image)
     {
         yield return new WaitForSeconds(2f);
@@ -4503,6 +4537,12 @@ public class GridSpawner : MonoBehaviour
             {
                 // The same ownership handoff also supports a visual-first caller.
             }
+            else if (change.obstacleId == ObstacleId.HotAirBalloon)
+            {
+                // Kalkış gerçek görselde oynar (HotAirBalloonFlight devralır) — olay sırası hangisi önce gelirse.
+                HotAirBalloonView.HandOver(change.originIndex, image);
+                StartCoroutine(DestroyBalloonIfUnclaimed(change.originIndex, image));
+            }
             else if (BoardController.IsGelLauncher(change.obstacleId))
             {
                 // Ateşleme animasyonu gerçek görselde oynar (GelLauncherFireAction devralır).
@@ -4541,6 +4581,14 @@ public class GridSpawner : MonoBehaviour
         if (change.obstacleId == ObstacleId.PaintCanBox)
         {
             UpdatePaintCanBoxView(image, change.remainingHits);
+            return;
+        }
+
+        // Sıcak hava balonu: dolabın içinde yalnız balon görseli bir kademe değişir (sarsıntı yok).
+        if (change.obstacleId == ObstacleId.HotAirBalloon && image.TryGetComponent<HotAirBalloonView>(out var balloonView))
+        {
+            obstacleDefsByOrigin.TryGetValue(change.originIndex, out var balloonDef);
+            balloonView.OnHit(change.remainingHits, board, balloonDef);
             return;
         }
 

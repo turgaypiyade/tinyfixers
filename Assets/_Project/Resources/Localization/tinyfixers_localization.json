@@ -2462,7 +2462,7 @@
         },
         {
           "key": "profile_edit_lock",
-          "value": "10. Seviye sonrası düzenleme yapabilirsin."
+          "value": "11. Seviye sonrası düzenleme yapabilirsin."
         },
         {
           "key": "profile_level",
@@ -3583,6 +3583,14 @@
         {
           "key": "ad_daily_limit_reached",
           "value": "Bugünlük hak bitti"
+        },
+        {
+          "key": "hint_obstacle_hot_air_balloon_name",
+          "value": "Sıcak Hava Balonu"
+        },
+        {
+          "key": "hint_obstacle_hot_air_balloon",
+          "value": "Balonu yalnız special'lar ve jokerler şişirir. Üçüncü vuruşta dolabını yarar ve uçar; üstündeki iki sütunu açar, yolundaki special'ları patlatır."
         }
       ]
     },
@@ -6047,7 +6055,7 @@
         },
         {
           "key": "profile_edit_lock",
-          "value": "You can edit after Level 10."
+          "value": "You can edit after Level 11."
         },
         {
           "key": "profile_level",
@@ -7168,6 +7176,14 @@
         {
           "key": "ad_daily_limit_reached",
           "value": "No more today"
+        },
+        {
+          "key": "hint_obstacle_hot_air_balloon_name",
+          "value": "Hot Air Balloon"
+        },
+        {
+          "key": "hint_obstacle_hot_air_balloon",
+          "value": "Only specials and jokers inflate the balloon. On the third hit it bursts out of its cabinet and flies up, clearing the two columns above and setting off any specials in its way."
         }
       ]
     }

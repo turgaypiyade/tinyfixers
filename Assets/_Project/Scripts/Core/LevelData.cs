@@ -385,6 +385,7 @@ public enum ObstacleId : int
     FlyEggBox = 100, // Four special-only releases; one movable egg per special.
     FlyEgg = 101,    // Movable1x1; a normal match/special hatches three fruit-eating flies.
     FlyFruit = 102,  // Per-origin width/height; six fly bites, one fruit goal.
+    HotAirBalloon = 103, // 2x2; 3 special/joker hits inflate it, then it flies up clearing its two columns.
 }
 
 /// Lamba şeridi hücre rengi (LevelData.lampColorByCell). Renkler taş türleriyle eşleşir (renkli sandık sırası).

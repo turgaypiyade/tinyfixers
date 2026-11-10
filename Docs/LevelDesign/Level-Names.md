@@ -254,3 +254,4 @@ Yeni level tasarlarken aynı JSON'a TR + EN isim ekle, bu tabloyu ve ilgili not/
 | 248 | Ayçiçeği |
 | 249 | Meyve Bahçesi |
 | 250 | Hasat Bayramı |
+| 251 | Kapadokya Sabahı |

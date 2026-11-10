@@ -28,18 +28,21 @@ MonoBehaviour:
   rank1Rewards:
   - type: 0
     amount: 1000
+    durationMinutes: 0
     icon: {fileID: 0}
     nameLocalizationKey: 
     fallbackName: "1000 Alt\u0131n"
     weight: 10
   - type: 20
     amount: 1
+    durationMinutes: 0
     icon: {fileID: 0}
     nameLocalizationKey: 
     fallbackName: "\xC7eki\xE7"
     weight: 10
   - type: 23
     amount: 1
+    durationMinutes: 0
     icon: {fileID: 0}
     nameLocalizationKey: 
     fallbackName: "Kar\u0131\u015Ft\u0131r"
@@ -47,12 +50,14 @@ MonoBehaviour:
   rank2Rewards:
   - type: 0
     amount: 500
+    durationMinutes: 0
     icon: {fileID: 0}
     nameLocalizationKey: 
     fallbackName: "500 Alt\u0131n"
     weight: 10
   - type: 20
     amount: 1
+    durationMinutes: 0
     icon: {fileID: 0}
     nameLocalizationKey: 
     fallbackName: "\xC7eki\xE7"
@@ -60,6 +65,7 @@ MonoBehaviour:
   rank3Rewards:
   - type: 0
     amount: 250
+    durationMinutes: 0
     icon: {fileID: 0}
     nameLocalizationKey: 
     fallbackName: "250 Alt\u0131n"
@@ -105,4 +111,4 @@ MonoBehaviour:
     - {fileID: 21300000, guid: 8b5a5dca4613a4b13814e8bb70a19fca, type: 3}
     - {fileID: 21300000, guid: 12bf5e8d5d5304d5c9aa7d92fb41fe9b, type: 3}
     - {fileID: 21300000, guid: b894ddd2e25f24c51b161384ca5efc0c, type: 3}
-  debugForceAvailable: 1
+  debugForceAvailable: 0

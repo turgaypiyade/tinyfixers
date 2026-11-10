@@ -68,7 +68,7 @@ public sealed class GearCupPreviewEventButton : MonoBehaviour
         if (screen.gameObject.activeInHierarchy || screen.IsInvitationVisible || RuntimeChoicePopup.IsShowing
             || RewardChestRevealOverlay.IsShowing || ShopPurchaseCelebration.IsShowing || MarketNavigator.IsMenuMarketOpen()) return;
         if (FindFirstObjectByType<TutorialOverlayController>() != null) return;
-        if (!WorkshopRepairButtonTutorial.IsSeen() && FindFirstObjectByType<WorkshopRepairButtonTutorial>() != null) return;
+        if (WorkshopRepairButtonTutorial.BlocksOpeningPopups()) return;
         var popups = FindObjectsByType<PopupEntranceAnimator>(FindObjectsSortMode.None);
         for (int i = 0; i < popups.Length; i++) if (popups[i].IsVisible) return;
         if (resultPending) { screen.TryShowPendingResult(); return; }

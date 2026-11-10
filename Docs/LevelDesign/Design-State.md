@@ -1,5 +1,15 @@
 # Level tasarım çalışma durumu
 
+## 251 Kapadokya Sabahı — Sıcak Hava Balonu tanıtımı · 2026-11-09 · kullanıcı denemesi bekliyor
+
+Kullanıcı: “level 251 i tasarlarmısın.. şekilli olsun ama sol ve sağ köşelerde balonlar olsun … alt tarafı `__XXXXXXXXX__` gibi konumlandırabilirsin”. Yorum (agent): tahta 9 geniş olduğundan `__` = alt köşelerde 2×2 balonlar, `X` = aradaki 5 hücrelik taban sırası. Yeni ekleme: `LevelV1_00002510.asset` / `LevelCL_0251` / GUID `d0d755ef8c224c99a96aee1c2f0b278b`, katalogda chapter 11 (tema yoksa son temaya düşer). 1–250 dokunulmadı. Batch: `Batches/251-Balloon/` (author.py, render.py, design-251.json, Level251.png, Before/).
+
+| Lv | Ad | Zorluk/hamle | Siluet + engeller | Hedefler |
+|---|---|---|---|---|
+| 251 | Kapadokya Sabahı / Cappadocia Morning | Normal 24 | üstte şapkalı 3 peri bacası (hole’lu boyun), alt köşelerde 2 HotAirBalloon103 (dolap içinde; yalnız special/joker, 3. vuruşta dolabı yarıp uçar, kendi 2 sütununu temizler), aralarında tabanda 5 SculptingStone28, baca şapkalarında 3 Lantern75 (düşer) | 2 balon, 5 oyma, 3 fener |
+
+Statik: 87 aktif, 71 normal yuva %100 doğal dolum, pin/hazır special yok; çim/BatteryBox/Omega yok. Balonun uçuşu sol/sağ kenar sütunlarını tepeye dek tarar (düşen fenerler yolda vurulur). Oynanmadı; Unity/build/sim yok; 24 hamle ilk tahmin.
+
 ## 240–250 doğa siluetleri — 241–249 yazıldı · 2026-11-07
 
 Kullanıcı: “240 ve sonrası … son engellerden (lamba, yel değirmeni, flyegg) … hole'larla güzel şekil, doğadan esinlen”; 241/242 için “süper olmuşlar, onları oynayayım, sen diğerlerine devam et”. Mevcut GUID/katalog/levelKey korunur; yalnız asset içeriği ve TR/EN ad değişti. Eski asset/not/PNG: `Batches/240-250-Nature/Before/<n>/`.

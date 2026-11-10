@@ -5,15 +5,26 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// İlk açılışta RepairButton'a dokunmayı öğreten tutorial.
-/// Görsel ipucu: el ikonu butonun üstünde pulse yapar + açıklama metni.
-/// Oyuncu butona tıklayınca tutorial kapanır, bir daha gösterilmez.
+/// Ana menü yönlendirmesi, iki aşama (kullanıcı kararı 2026-11-10: yeni oyuncu önce oynasın, görevler sonra):
+///  • Hiç level bitirmemiş oyuncu (current_level 1): karartma + yalnız LEVEL butonu açık + el (metin yok; kullanıcı
+///    2026-11-10 "zorla bastıralım"). Butona basınca kapanır; seen işaretlenmez (her açılışta level 1'deyse tekrar).
+///  • Level 10 (ilk boss) bitince (current_level ≥ MissionsUnlockLevel; kullanıcı 2026-11-10 "önce oyun oynasın")
+///    ilk ana menü ziyaretinde, kazanılan yıldızlar cüzdana uçtuktan sonra: RepairButton'a dokunmayı öğreten görev
+///    öğreticisi (el + metin + diğer butonlar kilitli).
+///  • İkisi de menü SAKİNKEN ve hedef gerçekten en üstteyken başlar (ProfileUnlockTutorial ile aynı denetim); sırasında
+///    pencere/sandık/ödül uçuşu araya girerse kilit kalkar, bitince döner (eski tam-ekran gecikme blokajı popup'la
+///    birleşince oyunu kilitliyordu — kaldırıldı).
+///    Oyuncu butona tıklayınca kapanır, bir daha gösterilmez.
 ///
-/// PlayerPrefs flag: "tutorial_seen_workshop_repair"
+/// PlayerPrefs flag: "tutorial_seen_workshop_repair" (yalnız görev aşaması işaretler).
 /// </summary>
 public class WorkshopRepairButtonTutorial : MonoBehaviour
 {
     private const string KeyTutorialSeen = "tutorial_seen_workshop_repair";
+    /// Görev öğreticisi bu current_level'den itibaren açılır (= level 5 kazanıldı).
+    public const int MissionsUnlockLevel = 11;
+    private const float StarFlyWaitSeconds = 5f;   // kazanılan yıldızların cüzdana uçuşunu bekleme sınırı
+    private const float IdleBeforeShow = 0.8f;     // menü bu kadar süre sakin + hedef en üstte kalınca başla
 
     [Header("References")]
     [SerializeField] private Button repairButton;
@@ -51,7 +62,12 @@ public class WorkshopRepairButtonTutorial : MonoBehaviour
     private Coroutine pulseRoutine;
     private bool dismissed;
     private readonly List<Button> blockedButtons = new();
-    private GameObject delayBlocker;   // gecikme boyunca HER girişi yutan tam-ekran bloklayıcı
+    private readonly List<UnityEngine.EventSystems.RaycastResult> hits = new();
+    private UnityEngine.EventSystems.PointerEventData probe;
+    private Button guidedButton;          // yönlendirilen buton (level ya da tamir)
+    private bool markSeenOnDismiss, showDescription;
+    private Canvas liftedButtonCanvas, liftedHandCanvas;
+    private GraphicRaycaster liftedRaycaster;
 
     // ── Lifecycle ────────────────────────────────────────────────────────────
 
@@ -75,79 +91,142 @@ public class WorkshopRepairButtonTutorial : MonoBehaviour
         while (LegalConsent.NeedsAcceptance || LegalConsent.IsShowing) yield return null;
         if (IsSeen()) yield break;
 
-        // ÖNEMLİ: input'u HEMEN kilitle (gecikme öncesi). Yoksa 0.6 sn içinde kullanıcı
-        // başka ekrana geçip RepairButton'ı kaybediyor ve tutorial tamamlanamıyor.
-        BlockBackgroundButtons();                        // butonları kapat (tutorial süresince)
-        delayBlocker = CreateFullscreenBlocker();        // gecikme boyunca HER şeyi engelle
-        if (repairButton != null) repairButton.onClick.AddListener(OnRepairButtonClicked);
+        if (CurrentLevel.Global < MissionsUnlockLevel)
+        {
+            if (CurrentLevel.Global > 1) yield break;
+            // Yeni oyuncu: LEVEL butonuna yönlendir (karartma + tek açık buton). Açılış penceresi önce kapansın;
+            // buton bulunamazsa hiçbir şey kilitlenmez.
+            var level = FindFirstObjectByType<MainMenuLevelButtonController>();
+            if (level == null || !level.TryGetComponent(out Button levelButton)) yield break;
+            yield return WaitUntilIdle(levelButton);
+            if (this == null || levelButton == null) yield break;
+            BeginGuide(levelButton, markSeen: false, showText: false);
+            ShowTutorial();
+            StartCoroutine(HideWhilePopupOpen());
+            yield break;
+        }
 
-        StartCoroutine(ShowTutorialDelayed());
+        // Level sonu yıldızları önce cüzdana uçsun: oyuncu "kazandım" anını görür, sonra harcamayı öğrenir.
+        for (float waited = 0f; waited < StarFlyWaitSeconds
+             && StarFlyToWalletAnimator.TryGetPendingReward(out _, out _, out _); waited += Time.unscaledDeltaTime)
+            yield return null;
+        if (IsSeen()) yield break;
+
+        // Menü sakin + tamir butonu en üstte olana dek bekle; sonra kilitle ve göster (arada başka ekrana geçilirse
+        // buton en üstte olmaz → beklemeye devam; eski "hemen kilitle" blokajı popup'la birleşince oyunu kilitliyordu).
+        if (repairButton == null) yield break;
+        yield return WaitUntilIdle(repairButton);
+        if (this == null || IsSeen()) yield break;
+        BeginGuide(repairButton, markSeen: true, showText: true);
+        ShowTutorial();
+        StartCoroutine(HideWhilePopupOpen());
     }
 
-    // Tam ekran görünmez raycast yakalayıcı — pointer-handler'lı objeleri (level butonu vb.)
-    // de durdurur. Kendi ScreenSpaceOverlay canvas'ında en üstte durur.
-    private GameObject CreateFullscreenBlocker()
+    // Menü IdleBeforeShow boyunca sakin (yükleme/onay/pencere/sandık/ödül uçuşu/market yok) ve hedef dokunulabilir en
+    // üst öğe kalana dek bekler. Sahne taramaları seyrek (0.25 sn).
+    private IEnumerator WaitUntilIdle(Button target)
     {
-        var go = new GameObject("TutorialDelayBlocker",
-            typeof(RectTransform), typeof(Canvas), typeof(GraphicRaycaster), typeof(Image));
-        var canvas = go.GetComponent<Canvas>();
-        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        canvas.sortingOrder = 30000;
-        var img = go.GetComponent<Image>();
-        img.color = new Color(0f, 0f, 0f, 0f);   // görünmez ama tıklamayı yutar
-        var rt = (RectTransform)go.transform;
-        rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
-        rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
-        return go;
+        yield return new WaitForSeconds(showDelay);   // sahne açılış animasyonları otursun
+        var wait = new WaitForSecondsRealtime(0.25f);
+        float calm = 0f;
+        while (calm < IdleBeforeShow)
+        {
+            yield return wait;
+            if (this == null || target == null) yield break;
+            bool idle = target.isActiveAndEnabled && !MenuInterrupted()
+                        && ProfileUnlockTutorial.IsTopmost((RectTransform)target.transform, transform, hits, ref probe);
+            calm = idle ? calm + 0.25f : 0f;
+        }
+    }
+
+    // Yönlendirmeyi bekletmesi/geri çekmesi gereken an: açık pencere, market ya da menü meşguliyeti.
+    private static bool MenuInterrupted()
+        => AnyPopupVisible() || MarketNavigator.IsMenuMarketOpen() || ProfileUnlockTutorial.IsMenuBusyExceptMissions();
+
+    /// Açılış pencerelerinin (etkinlik, profil, Gear Cup önizleme) beklemesi gereken görev öğreticisi bu sahnede
+    /// sırada mı? Level 1–10'da öğretici beklemediği için pencereleri susturmaz.
+    public static bool BlocksOpeningPopups()
+        => !IsSeen() && CurrentLevel.Global >= MissionsUnlockLevel
+           && FindFirstObjectByType<WorkshopRepairButtonTutorial>() != null;
+
+    // Yönlendirilen buton dışındaki her butonu kapatır, tıklamayı dinler.
+    private void BeginGuide(Button target, bool markSeen, bool showText)
+    {
+        guidedButton = target;
+        markSeenOnDismiss = markSeen;
+        showDescription = showText;
+        BlockBackgroundButtons();
+        if (guidedButton != null) guidedButton.onClick.AddListener(OnGuidedButtonClicked);
+    }
+
+    // Yönlendirme sırasında bir pencere/sandık/ödül uçuşu araya girerse (geç gelen bildirim izni vb.) tamamen çekilir:
+    // kilit kalkar (pencerenin butonları da kilitlenmiş olabilir → tuzak olmasın), karartma + el gizlenir.
+    // Pencere kapanınca kilit ve görünüm geri gelir.
+    private IEnumerator HideWhilePopupOpen()
+    {
+        var wait = new WaitForSecondsRealtime(0.4f);
+        bool hidden = false;
+        while (!dismissed && this != null)
+        {
+            bool popup = MenuInterrupted();
+            if (popup != hidden)
+            {
+                hidden = popup;
+                if (popup) { RestoreBackgroundButtons(); Unlift(immediate: true); }
+                else { BlockBackgroundButtons(); Lift(); }
+                if (overlayGroup != null) overlayGroup.alpha = popup ? 0f : 1f;
+            }
+            yield return wait;
+        }
+    }
+
+    private static bool AnyPopupVisible()
+    {
+        var popups = FindObjectsByType<PopupEntranceAnimator>(FindObjectsSortMode.None);
+        for (int i = 0; i < popups.Length; i++) if (popups[i].IsVisible) return true;
+        return false;
     }
 
     private void OnDestroy()
     {
-        if (repairButton != null) repairButton.onClick.RemoveListener(OnRepairButtonClicked);
+        if (guidedButton != null) guidedButton.onClick.RemoveListener(OnGuidedButtonClicked);
         RestoreBackgroundButtons();
-        if (delayBlocker != null) Destroy(delayBlocker);
+        Unlift(immediate: false);
     }
 
     // ── Show / Hide ──────────────────────────────────────────────────────────
 
-    private IEnumerator ShowTutorialDelayed()
-    {
-        yield return new WaitForSeconds(showDelay);
-        ShowTutorial();
-    }
-
     private void ShowTutorial()
     {
-
         if (dismissed) return;
-        if (repairButton == null)
+        if (guidedButton == null)
         {
             if (GameDiagnostics.CriticalErrors)
-                Debug.LogWarning("[Tutorial] repairButton atanmamış!");
+                Debug.LogWarning("[Tutorial] yönlendirilecek buton yok (repairButton atanmamış?)");
+            RestoreBackgroundButtons();
             return;
         }
-
-        // Gecikme bloklayıcısını kaldır → artık repair tıklanabilir (diğer butonlar hâlâ kapalı).
-        if (delayBlocker != null) { Destroy(delayBlocker); delayBlocker = null; }
 
         if (tutorialOverlay != null && !tutorialOverlay.activeSelf) tutorialOverlay.SetActive(true);
         if (overlayGroup != null) overlayGroup.blocksRaycasts = false;
 
-        // (BlockBackgroundButtons + repairButton aboneliği artık Start'ta yapılıyor.)
-
-        // Description text
+        // Description text (level yönlendirmesinde yok: el yeterli)
         if (descriptionText != null)
         {
-            string text = !string.IsNullOrEmpty(descriptionLocalizationKey)
-                ? GameLocalization.Get(descriptionLocalizationKey)
-                : descriptionFallback;
-            if (string.IsNullOrEmpty(text) || text == descriptionLocalizationKey)
-                text = descriptionFallback;
-            descriptionText.text = text;
+            descriptionText.gameObject.SetActive(showDescription);
+            if (showDescription)
+            {
+                string text = !string.IsNullOrEmpty(descriptionLocalizationKey)
+                    ? GameLocalization.Get(descriptionLocalizationKey)
+                    : descriptionFallback;
+                if (string.IsNullOrEmpty(text) || text == descriptionLocalizationKey)
+                    text = descriptionFallback;
+                descriptionText.text = text;
+            }
         }
 
-        // Position hand above button
-        PositionHandAboveButton();
+        PositionHand(guidedButton.GetComponent<RectTransform>());
+        Lift();
 
         // Start pulse + fade in
         if (pulseRoutine != null) StopCoroutine(pulseRoutine);
@@ -156,7 +235,7 @@ public class WorkshopRepairButtonTutorial : MonoBehaviour
         StartCoroutine(FadeOverlay(0f, 1f));
     }
 
-    private void OnRepairButtonClicked()
+    private void OnGuidedButtonClicked()
     {
         if (dismissed) return;
         DismissTutorial();
@@ -168,13 +247,13 @@ public class WorkshopRepairButtonTutorial : MonoBehaviour
         dismissed = true;
 
         if (pulseRoutine != null) StopCoroutine(pulseRoutine);
-        if (delayBlocker != null) { Destroy(delayBlocker); delayBlocker = null; }
 
-        if (repairButton != null) repairButton.onClick.RemoveListener(OnRepairButtonClicked);
+        if (guidedButton != null) guidedButton.onClick.RemoveListener(OnGuidedButtonClicked);
 
         RestoreBackgroundButtons();
+        Unlift(immediate: true);
         StartCoroutine(FadeOutAndHide());
-        MarkSeen();
+        if (markSeenOnDismiss) MarkSeen();
     }
 
     private IEnumerator FadeOutAndHide()
@@ -186,6 +265,42 @@ public class WorkshopRepairButtonTutorial : MonoBehaviour
             tutorialOverlay.SetActive(false);
     }
 
+    // ── Spot ışığı: karartma ana Canvas'ta butonlardan SONRA çizilir (hedef de kararıyordu). Hedef butona ve ele
+    // geçici override-sorting Canvas eklenir → karartmanın üstünde, tıklanabilir. Kapanınca kaldırılır. ──
+
+    private void Lift()
+    {
+        if (guidedButton == null) return;
+        var root = guidedButton.GetComponentInParent<Canvas>();
+        int baseOrder = root != null ? root.rootCanvas.sortingOrder : 0;
+        if (!guidedButton.TryGetComponent<Canvas>(out _))
+        {
+            liftedButtonCanvas = guidedButton.gameObject.AddComponent<Canvas>();
+            liftedButtonCanvas.overrideSorting = true;
+            liftedButtonCanvas.sortingOrder = baseOrder + 1;
+            liftedRaycaster = guidedButton.gameObject.AddComponent<GraphicRaycaster>();
+        }
+        if (handIcon != null && !handIcon.TryGetComponent<Canvas>(out _))
+        {
+            liftedHandCanvas = handIcon.gameObject.AddComponent<Canvas>();
+            liftedHandCanvas.overrideSorting = true;
+            liftedHandCanvas.sortingOrder = baseOrder + 2;
+        }
+    }
+
+    // GraphicRaycaster Canvas'a bağımlı: önce o kaldırılır.
+    private void Unlift(bool immediate)
+    {
+        void Kill(Component c)
+        {
+            if (c == null) return;
+            if (immediate) DestroyImmediate(c); else Destroy(c);
+        }
+        Kill(liftedRaycaster); liftedRaycaster = null;
+        Kill(liftedButtonCanvas); liftedButtonCanvas = null;
+        Kill(liftedHandCanvas); liftedHandCanvas = null;
+    }
+
     // ── Background blocking ──────────────────────────────────────────────────
 
     private void BlockBackgroundButtons()
@@ -194,7 +309,7 @@ public class WorkshopRepairButtonTutorial : MonoBehaviour
         var allButtons = Object.FindObjectsByType<Button>(FindObjectsSortMode.None);
         foreach (var btn in allButtons)
         {
-            if (btn == repairButton) continue;
+            if (btn == guidedButton) continue;
             if (!btn.interactable) continue;
             if (btn.GetComponentInParent<LegalConsent>(true) != null || btn.GetComponentInParent<LegalDocumentView>(true) != null)
                 continue;   // kabul / belge pencereleri her zaman kullanılabilir
@@ -215,11 +330,9 @@ public class WorkshopRepairButtonTutorial : MonoBehaviour
 
     // ── Position & Animation ────────────────────────────────────────────────
 
-    private void PositionHandAboveButton()
+    private void PositionHand(RectTransform btnRT)
     {
-        if (handIcon == null || repairButton == null) return;
-
-        var btnRT = repairButton.GetComponent<RectTransform>();
+        if (handIcon == null) return;
         var handParent = handIcon.parent as RectTransform;
         if (btnRT == null || handParent == null) return;
 
