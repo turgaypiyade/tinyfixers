@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using UnityEngine;
 using UnityEngine.Networking;
+using TMPro;
 using UnityEngine.UI;
 
 /// <summary>
@@ -10,8 +11,8 @@ using UnityEngine.UI;
 /// daha yeni bir sürüm bildirirse dört metin indirilip cihazda saklanır (persistentDataPath/legal) ve kabul yeniden
 /// istenir. İndirme tamamlanmadan gereken sürüm yükselmez (okuyamayacağı metni kabul ettirmeyiz).
 /// Kaynak tek: Website/legal/*_tr|en.html → build.py hem siteyi hem bu .txt'leri üretir (LEGAL_VERSION shell.py'de).
-///   • Kapatma (X) yok, karartma arka planı bloklar: kabul edilmeden oynanmaz. Şartlar/Gizlilik düğmeleri metni oyun
-///     içinde kaydırılabilir pencerede açar (LegalDocumentView), kabul penceresi açık kalır.
+///   • Kompakt kutu (Knock Out referansı): yükleme ekranı arkada görünür, kapatma (X) yok, kabul edilmeden oynanmaz.
+///     Metin içi Şartlar/Gizlilik linkleri belgeyi oyun içinde açar (LegalDocumentView, LegalLinkText); kutu açık kalır.
 ///   • BOOT sahnesinde gösterilir (BootLoader, bulut kayıt geri yüklendikten sonra, ana menü açılmadan önce):
 ///     ana menünün öğretici/etkinlik/geri bildirim pencereleri kabul edilene dek hiç başlamaz. Web sürümü geç
 ///     gelirse yeni sürüm bir sonraki açılışta sorulur (oyun ortasında çıkmaz).
@@ -162,6 +163,13 @@ public sealed class LegalConsent : MonoBehaviour
     public static string WebUrl(string slug) =>
         (slug == "privacy" ? privacyUrl : termsUrl) + (GameLocalization.CurrentLanguage == "tr" ? "#tr" : "#en");
 
+    // Kompakt kabul kutusu (kullanıcı 2026-11-10, Knock Out referansı): yükleme ekranı arkada görünür, ortada koyu yarı
+    // saydam kutu; metin içinde altı çizili Şartlar/Gizlilik linkleri (dokununca belge üstte açılır, kutu açık kalır),
+    // altta tek "Devam". Açık onay korunur (kabul edilmeden oyun açılmaz).
+    private const float CardWidth = 820f;
+    private static readonly Color CardColor = new Color(0.12f, 0.12f, 0.14f, 0.93f);
+    private static readonly Color ContinueColor = new Color(0.25f, 0.62f, 1f, 1f);
+
     private void BuildGate(bool isUpdate)
     {
         gate = new GameObject("LegalConsentGate");
@@ -175,42 +183,73 @@ public sealed class LegalConsent : MonoBehaviour
         scaler.matchWidthOrHeight = 0.5f;
         gate.AddComponent<GraphicRaycaster>();
 
-        var dim = new GameObject("Dim", typeof(RectTransform), typeof(Image));
-        var drt = (RectTransform)dim.transform;
-        drt.SetParent(gate.transform, false);
-        drt.anchorMin = Vector2.zero; drt.anchorMax = Vector2.one; drt.offsetMin = drt.offsetMax = Vector2.zero;
-        var dimImg = dim.GetComponent<Image>();
-        dimImg.color = new Color(0f, 0f, 0f, 0.78f);
+        // Hafif karartma: yükleme görseli seçilir kalır; dokunuşları yutar (kabul edilmeden arkaya geçilmez).
+        var dim = NewRect("Dim", gate.transform);
+        dim.anchorMin = Vector2.zero; dim.anchorMax = Vector2.one; dim.offsetMin = dim.offsetMax = Vector2.zero;
+        var dimImg = dim.gameObject.AddComponent<Image>();
+        dimImg.color = new Color(0f, 0f, 0f, 0.35f);
         dimImg.raycastTarget = true;
 
-        // "Can bitti" penceresiyle aynı kart düzeni: üstte açıklama, iki büyük belge kartı, altta tek yeşil "Kabul Ediyorum".
-        // Kartlar pencereyi kapatmaz (belge üstte açılır, kapanınca buraya dönülür); açılan belgenin alt yazısı "Göz attın" olur.
-        var view = CommonPopupView.Create(gate.transform, GameLocalization.Get("legal_title"), null,
-            CommonPopupSkin.Shared.saveProgressBackgroundMaterial);
-        string[] slugs = { "terms", "privacy" };
-        var options = new[]
-        {
-            new RuntimeChoicePopup.OfferButton(GameLocalization.Get("settings_terms_open_terms"),
-                GameLocalization.Get("legal_card_terms_sub"), null, keepOpen: true),
-            new RuntimeChoicePopup.OfferButton(GameLocalization.Get("settings_terms_open_privacy"),
-                GameLocalization.Get("legal_card_privacy_sub"), null, keepOpen: true),
-        };
-        Button[] cards = null;
-        int next = 0;   // handler kartlar sırasıyla çağrılır → indeks
-        cards = RuntimeChoicePopup.BuildOfferBody(view,
-            GameLocalization.Get(isUpdate ? "legal_body_update" : "legal_body"), options, _ =>
-            {
-                int i = next++;
-                return () =>
-                {
-                    LegalDocumentView.Show(slugs[i]);
-                    RuntimeChoicePopup.SetOfferSubtitle(cards[i], GameLocalization.Get("legal_card_viewed"), ViewedColor);
-                };
-            });
-        RuntimeChoicePopup.BuildOfferAction(view, GameLocalization.Get("legal_accept"), Accept);
+        var skin = CommonPopupSkin.Shared;
+        var card = NewRect("Card", gate.transform);
+        card.anchorMin = card.anchorMax = card.pivot = new Vector2(0.5f, 0.5f);
+        card.sizeDelta = new Vector2(CardWidth, 0f);
+        var bg = card.gameObject.AddComponent<Image>();
+        bg.sprite = Resources.Load<Sprite>("UIEffects/LegalPanel");
+        bg.type = Image.Type.Sliced;
+        bg.color = CardColor;
+        var layout = card.gameObject.AddComponent<VerticalLayoutGroup>();
+        layout.padding = new RectOffset(60, 60, 56, 0);
+        layout.spacing = 24f;
+        layout.childAlignment = TextAnchor.UpperCenter;
+        layout.childControlWidth = layout.childControlHeight = true;
+        layout.childForceExpandWidth = true;
+        layout.childForceExpandHeight = false;
+        card.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+        var font = skin != null ? skin.readableBodyFont : null;
+        var body = Label(card, GameLocalization.Get(isUpdate ? "legal_compact_body_update" : "legal_compact_body"),
+            44f, Color.white, font);
+        body.raycastTarget = true;   // metin içi linkler
+        body.gameObject.AddComponent<LegalLinkText>();
+        Label(card, GameLocalization.Get("legal_compact_hint"), 34f, new Color(1f, 1f, 1f, 0.7f), font);
+
+        var separator = NewRect("Separator", card);
+        separator.gameObject.AddComponent<Image>().color = new Color(1f, 1f, 1f, 0.16f);
+        separator.gameObject.AddComponent<LayoutElement>().preferredHeight = 2f;
+
+        var button = NewRect("Continue", card);
+        button.gameObject.AddComponent<LayoutElement>().preferredHeight = 124f;
+        var hit = button.gameObject.AddComponent<Image>();
+        hit.color = new Color(1f, 1f, 1f, 0f);   // görünmez dokunma alanı (tüm alt şerit)
+        var press = button.gameObject.AddComponent<Button>();
+        press.transition = Selectable.Transition.None;
+        press.onClick.AddListener(Accept);
+        var label = Label(button, GameLocalization.Get("legal_continue"), 48f, ContinueColor,
+            skin != null && skin.buttonFont != null ? skin.buttonFont : font);
+        var lrt = label.rectTransform;
+        lrt.anchorMin = Vector2.zero; lrt.anchorMax = Vector2.one; lrt.offsetMin = lrt.offsetMax = Vector2.zero;
     }
 
-    private static readonly Color ViewedColor = new Color(0.72f, 1f, 0.72f);
+    private static RectTransform NewRect(string name, Transform parent)
+    {
+        var rt = (RectTransform)new GameObject(name, typeof(RectTransform)).transform;
+        rt.SetParent(parent, false);
+        return rt;
+    }
+
+    private static TextMeshProUGUI Label(Transform parent, string value, float size, Color color, TMP_FontAsset font)
+    {
+        var text = NewRect("Text", parent).gameObject.AddComponent<TextMeshProUGUI>();
+        if (font != null) text.font = font;
+        text.text = value;
+        text.fontSize = size;
+        text.color = color;
+        text.alignment = TextAlignmentOptions.Center;
+        text.textWrappingMode = TextWrappingModes.Normal;
+        text.raycastTarget = false;
+        return text;
+    }
 
     // Uzun etiketler (Terms of Service) düğmeye sığsın: üst sınır + sığmazsa küçül.
     internal static void SetLabelSize(Button button, float size)

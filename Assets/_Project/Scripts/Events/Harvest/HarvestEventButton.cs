@@ -48,6 +48,9 @@ public sealed class HarvestEventButton : MonoBehaviour
         var cfg = HarvestConfig.Shared;
         DateTime now = DateTime.UtcNow;
         bool unlocked = HarvestState.IsUnlocked(cfg);
+        // Açılış seviyesine kadar gizlemek yerine kilitli göster (EventLockOverlay); açılınca kendi takvimi.
+        if (!unlocked && cfg != null && EventLockOverlay.Apply(visibilityRoot, cfg.minLevelGate, labelText)) return;
+        EventLockOverlay.Release(visibilityRoot);
         bool isLive = unlocked && HarvestState.IsLive(cfg, now);
         if (visibilityRoot != null && visibilityRoot.activeSelf != isLive)
         {

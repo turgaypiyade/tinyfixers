@@ -416,8 +416,32 @@ public class TutorialOverlayController : MonoBehaviour
         var font = skin != null && skin.celebrationFont != null ? skin.celebrationFont
                  : skin != null && skin.titleFont != null ? skin.titleFont : null;
         if (font != null) captionText.font = font;
-        if (skin != null && skin.celebrationFont != null && skin.celebrationMaterial != null)
-            captionText.fontSharedMaterial = skin.celebrationMaterial;
+        // Kontur: arkadaki karartma gibi yumuşak, hafif açık siyah (kullanıcı 2026-11-11: kutlama materyalinin renkli
+        // parlak konturu fazla parlıyordu). Kutlama materyali paylaşıldığı için kopyası alınır, bir kez.
+        if (font != null) captionText.fontSharedMaterial = CaptionMaterial(font);
+    }
+
+    private static Material captionMaterial;
+    private static readonly Color CaptionOutline = new Color(0.12f, 0.12f, 0.14f, 0.85f);
+
+    /// Öğretici yazısı materyali (yumuşak siyah kontur + hafif alt gölge); profil öğreticisi de kullanır.
+    internal static Material CaptionMaterial(TMP_FontAsset font)
+    {
+        if (captionMaterial != null && captionMaterial.mainTexture == font.material.mainTexture) return captionMaterial;
+        captionMaterial = new Material(font.material) { name = font.name + "_TutorialCaption" };
+        captionMaterial.SetColor(ShaderUtilities.ID_FaceColor, Color.white);
+        captionMaterial.SetColor(ShaderUtilities.ID_OutlineColor, CaptionOutline);
+        captionMaterial.SetFloat(ShaderUtilities.ID_OutlineWidth, 0.18f);
+        captionMaterial.SetFloat(ShaderUtilities.ID_OutlineSoftness, 0.1f);
+        captionMaterial.EnableKeyword(ShaderUtilities.Keyword_Underlay);
+        captionMaterial.SetColor(ShaderUtilities.ID_UnderlayColor, new Color(0f, 0f, 0f, 0.45f));
+        captionMaterial.SetFloat(ShaderUtilities.ID_UnderlayOffsetX, 0f);
+        captionMaterial.SetFloat(ShaderUtilities.ID_UnderlayOffsetY, -0.6f);
+        captionMaterial.SetFloat(ShaderUtilities.ID_UnderlayDilate, 0.15f);
+        captionMaterial.SetFloat(ShaderUtilities.ID_UnderlaySoftness, 0.35f);
+        captionMaterial.DisableKeyword(ShaderUtilities.Keyword_Glow);
+        captionMaterial.SetFloat(ShaderUtilities.ID_GlowPower, 0f);
+        return captionMaterial;
     }
 
     private void BuildSpotlight(ICollection<Vector2Int> focus, string caption, Sprite icon)

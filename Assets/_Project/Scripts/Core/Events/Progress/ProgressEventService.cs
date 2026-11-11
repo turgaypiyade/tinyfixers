@@ -80,6 +80,11 @@ public class ProgressEventService : MonoBehaviour, IProgressEventService
     private float                              nextEndedReloadTime;
     private bool                               levelGateOpen = true;
 
+    /// Açılış seviyesine gelinmedi: ana menüde kilitli (gri) gösterilir (ProgressEventPanel + EventLockOverlay).
+    public bool IsLevelLocked => !levelGateOpen;
+    /// Geçerli açılış seviyesi (taban + sunucu yükseltmesi).
+    public int  UnlockLevel { get; private set; } = 1;
+
     private readonly List<ProgressGoalRuntime> goals        = new();
     private readonly List<SessionGainRecord>   sessionGains = new();
 
@@ -233,6 +238,7 @@ public class ProgressEventService : MonoBehaviour, IProgressEventService
     private void UpdateLevelGate()
     {
         int minLevel = Mathf.Max(LocalMinLevel(), remoteSeason != null ? remoteSeason.MinLevel : 1);
+        UnlockLevel = minLevel;
         levelGateOpen = PlayerPrefs.GetInt("current_level", 1) >= minLevel;
     }
 

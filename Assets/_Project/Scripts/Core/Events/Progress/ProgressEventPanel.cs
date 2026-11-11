@@ -45,6 +45,7 @@ public class ProgressEventPanel : MonoBehaviour
     {
         if (timerText == null) return;
         var service = ProgressEventService.Instance;
+        if (ShowLockedIfGated(service)) return;
         if (service == null || service.State != ProgressEventState.Active)
         {
             HideVisuals();
@@ -100,6 +101,7 @@ public class ProgressEventPanel : MonoBehaviour
     private void Show()
     {
         var service = ProgressEventService.Instance;
+        if (ShowLockedIfGated(service)) return;
         if (service == null || service.State != ProgressEventState.Active)
         {
             HideVisuals();
@@ -199,6 +201,25 @@ public class ProgressEventPanel : MonoBehaviour
     }
 
     // ── Helpers ──────────────────────────────────────────────────
+
+    // Açılış seviyesine gelinmediyse panel boş kalmaz (kullanıcı 2026-11-10): ilk hedef + ilk ödülle dolu çubuk ve sayaç
+    // kutusu birlikte gri, köşede kilit; sayaç kutusunda "SEVİYE N". Gelince kilit kalkar, normal akış sürer.
+    private bool lockedBarFilled;
+
+    private bool ShowLockedIfGated(ProgressEventService service)
+    {
+        if (service == null || !service.IsLevelLocked || service.Goals == null || service.Goals.Count == 0)
+        {
+            EventLockOverlay.Release(gameObject);
+            lockedBarFilled = false;
+            return false;
+        }
+        if (currentBar == null || currentGoalIndex != 0) { SpawnBar(0, service); lockedBarFilled = false; }
+        SetVisualsActive(true);
+        if (!lockedBarFilled && currentBar != null) { currentBar.RefreshDisplay(); lockedBarFilled = true; }
+        EventLockOverlay.Apply(gameObject, service.UnlockLevel, timerText, keepTexts: true);
+        return true;
+    }
 
     private void SpawnBar(int index, IProgressEventService service)
     {

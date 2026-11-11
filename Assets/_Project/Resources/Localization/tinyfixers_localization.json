@@ -617,6 +617,14 @@
           "value": "Devam Et"
         },
         {
+          "key": "level_end_next_level",
+          "value": "Sonraki Seviye"
+        },
+        {
+          "key": "event_locked_level",
+          "value": "SEVİYE {0}"
+        },
+        {
           "key": "level_end_exit_title",
           "value": "Oyundan Çık"
         },
@@ -2390,23 +2398,23 @@
         },
         {
           "key": "tab_home",
-          "value": "Home"
+          "value": "Ana Menü"
         },
         {
           "key": "tab_journey",
-          "value": "Journey"
+          "value": "Yolculuk"
         },
         {
           "key": "tab_market",
-          "value": "Market"
+          "value": "Mağaza"
         },
         {
           "key": "tab_ranks",
-          "value": "Ranks"
+          "value": "Liderlik"
         },
         {
           "key": "tab_team",
-          "value": "Team"
+          "value": "Takım"
         },
         {
           "key": "wheel_come_tomorrow",
@@ -2510,7 +2518,7 @@
         },
         {
           "key": "main_missions",
-          "value": "MISSIONS"
+          "value": "GÖREV"
         },
         {
           "key": "settings_follow",
@@ -2551,6 +2559,22 @@
         {
           "key": "legal_title",
           "value": "Hoş geldin!"
+        },
+        {
+          "key": "legal_compact_body",
+          "value": "Oynamak için <link=terms><u>Kullanım Şartları</u></link>'nı kabul etmeli ve <link=privacy><u>Gizlilik Politikası</u></link>'nı incelediğini onaylamalısın."
+        },
+        {
+          "key": "legal_compact_body_update",
+          "value": "<link=terms><u>Kullanım Şartları</u></link> ve <link=privacy><u>Gizlilik Politikası</u></link> güncellendi. Oynamaya devam etmek için onaylaman gerekiyor."
+        },
+        {
+          "key": "legal_compact_hint",
+          "value": "Kabul ediyorsan \"Devam\"a dokun."
+        },
+        {
+          "key": "legal_continue",
+          "value": "Devam"
         },
         {
           "key": "legal_body",
@@ -4208,6 +4232,14 @@
         {
           "key": "level_end_continue",
           "value": "Continue"
+        },
+        {
+          "key": "level_end_next_level",
+          "value": "Next Level"
+        },
+        {
+          "key": "event_locked_level",
+          "value": "LEVEL {0}"
         },
         {
           "key": "level_end_exit_title",
@@ -6144,6 +6176,22 @@
         {
           "key": "legal_title",
           "value": "Welcome!"
+        },
+        {
+          "key": "legal_compact_body",
+          "value": "To play Wonder Fixers you must agree to our <link=terms><u>Terms of Service</u></link> and confirm you have reviewed our <link=privacy><u>Privacy Policy</u></link>."
+        },
+        {
+          "key": "legal_compact_body_update",
+          "value": "Our <link=terms><u>Terms of Service</u></link> and <link=privacy><u>Privacy Policy</u></link> have been updated. Please confirm to keep playing."
+        },
+        {
+          "key": "legal_compact_hint",
+          "value": "Tap \"Continue\" if you agree."
+        },
+        {
+          "key": "legal_continue",
+          "value": "Continue"
         },
         {
           "key": "legal_body",

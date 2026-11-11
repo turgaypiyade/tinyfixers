@@ -19,6 +19,8 @@ public sealed class SafariEventController : MonoBehaviour
 {
     [Header("Config")]
     [SerializeField] private SafariConfig config;
+    // Ana menüde açılış seviyesine kadar kilitli görünüm (EventLockOverlay).
+    private int LockGate => config != null ? config.minLevelGate : 0;
 
     [Header("UI Refs")]
     [SerializeField] private SafariEventButton         eventButton;
@@ -51,7 +53,7 @@ public sealed class SafariEventController : MonoBehaviour
     {
         if (Time.unscaledTime < nextVisibilityCheck) return;
         nextVisibilityCheck = Time.unscaledTime + 1f;
-        eventButton?.SetVisible(IsEventAvailable);
+        eventButton?.SetVisible(IsEventAvailable, LockGate);
     }
 
     private void Awake()
@@ -126,7 +128,7 @@ public sealed class SafariEventController : MonoBehaviour
         {
             if (GameDiagnostics.CriticalErrors)
                 Debug.LogWarning("[Safari] SafariConfig yok (Resources/Events/SafariConfig). Event devre dışı.");
-            eventButton?.SetVisible(false);
+            eventButton?.SetVisible(false, LockGate);
             return;
         }
 
@@ -141,7 +143,7 @@ public sealed class SafariEventController : MonoBehaviour
         }
 
         bool available = IsEventAvailable;
-        eventButton?.SetVisible(available);
+        eventButton?.SetVisible(available, LockGate);
         if (!available) return;
 
         // Level'den yeni döndüysek sonucu değerlendir ve haritayı animasyonla aç.

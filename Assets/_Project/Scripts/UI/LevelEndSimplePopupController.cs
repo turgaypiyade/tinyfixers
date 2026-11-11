@@ -201,6 +201,11 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
     [Header("Progression")]
     [SerializeField] private string mainMenuSceneName = "MainMenu";
+
+    // İlk oturum (kullanıcı 2026-11-10, Knock Out referansı): level 1–4 kazanılınca menüye dönmeden sıradaki level açılır;
+    // level 5 bitince menü (ilk joker/PreLevel kullanımı level 6). Kayıpta normal fail akışı. Usta Ligi'nde uygulanmaz.
+    private const int ContinuousPlayUntilLevel = 5;
+    private bool continueToNextLevel;
     [SerializeField] private string prefsLevelKey = "current_level";
     [SerializeField] private LevelCatalog levelCatalog;
 
@@ -691,6 +696,13 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
     private bool returningToMainMenu;
 
+    // Çarpı: ilk levellardaki peş peşe oyunda da ana menüye döner (yalnız "Sonraki Seviye" bir sonraki levelı açar).
+    private void HandleSuccessCancelClicked()
+    {
+        continueToNextLevel = false;
+        HandleSuccessCloseClicked();
+    }
+
     private void HandleSuccessCloseClicked()
     {
         // Bu levelde progress-event ödülü kazanıldıysa önce sandık açılış töreni,
@@ -735,7 +747,8 @@ public class LevelEndSimplePopupController : MonoBehaviour
         var library = chapterThemeApplier != null ? chapterThemeApplier.ThemeLibrary : null;
         if (library == null) library = Resources.Load<ChapterThemeLibrary>("ChapterThemeLibrary");
         LoadingScreenManager.Show(library != null ? library.GetRandomLoadingImage() : null, minimumDisplayTime: 0f);
-        SceneManager.LoadScene(mainMenuSceneName, LoadSceneMode.Single);
+        // İlk levellar: menü yerine aynı oyun sahnesi yeniden açılır; level, current_level'den (zaten +1) okunur.
+        SceneManager.LoadScene(continueToNextLevel ? gameObject.scene.name : mainMenuSceneName, LoadSceneMode.Single);
     }
 
     private void QueueSuccessReturnToMainMenu()
@@ -1782,8 +1795,33 @@ public class LevelEndSimplePopupController : MonoBehaviour
         }
         ApplyRewardVisuals(stars, coins, score);
         SaveRewards(stars, coins, score);
+        int completedLevel = ResolveCurrentLevelNumber();
         AdvanceToNextLevel();
+        continueToNextLevel = completedLevel < ContinuousPlayUntilLevel
+                              && levelCatalog != null && completedLevel < levelCatalog.MaximumGlobalLevel;
+        ApplySuccessContinueLabel();
     }
+
+    // Buton yazısı bevel'e değmesin (kural: yan boşluk ≥44): yanlara margin, kutuya sığacak otomatik boyut — en fazla
+    // tasarımdaki punto (büyütmez). "Sonraki Seviye" gibi uzun etiket kendiliğinden küçülür.
+    private const float ContinueLabelSideMargin = 48f;
+    private float continueLabelBaseSize = -1f;
+
+    private void ApplySuccessContinueLabel()
+    {
+        if (successContinueText == null) return;
+        if (continueLabelBaseSize < 0f) continueLabelBaseSize = successContinueText.fontSize;
+        successContinueText.text = SuccessContinueLabel();
+        var m = successContinueText.margin;
+        successContinueText.margin = new Vector4(ContinueLabelSideMargin, m.y, ContinueLabelSideMargin, m.w);
+        successContinueText.enableAutoSizing = true;
+        successContinueText.fontSizeMax = continueLabelBaseSize;
+        successContinueText.fontSizeMin = continueLabelBaseSize * 0.55f;
+    }
+
+    private string SuccessContinueLabel() => continueToNextLevel
+        ? LocalizedText("level_end_next_level", "Sonraki Seviye")
+        : LocalizedText("level_end_continue", "Devam Et");
 
     // Usta Ligi kazancı (kullanıcı kararları 2026-11-03): ana yol İLERLEMEZ, yıldız/seviye puanı YOK; altın normal verilir;
     // lig puanı = (taban + kalan hamle × değer) × tur çarpanı, o turdaki en iyi puan sayılır. Etkinlikler kazancı
@@ -1895,14 +1933,16 @@ public class LevelEndSimplePopupController : MonoBehaviour
         int starAfter = PlayerWallet.TotalStars;
         int gainedStars = starAfter - starBefore;
 
+        // Menüye dönmeden art arda oynanan levellar (ilk oturum): uçuş ödülü birikir, menüde toplu uçar.
+        bool chaining = StarFlyToWalletAnimator.TryGetPendingReward(out int pendingReward, out int pendingBefore, out _);
         if (gainedStars > 0)
         {
-            PlayerPrefs.SetInt(StarFlyToWalletAnimator.PendingRewardKey, gainedStars);
-            PlayerPrefs.SetInt(StarFlyToWalletAnimator.PendingBeforeKey, starBefore);
+            PlayerPrefs.SetInt(StarFlyToWalletAnimator.PendingRewardKey, gainedStars + (chaining ? pendingReward : 0));
+            PlayerPrefs.SetInt(StarFlyToWalletAnimator.PendingBeforeKey, chaining ? pendingBefore : starBefore);
             PlayerPrefs.SetInt(StarFlyToWalletAnimator.PendingAfterKey, starAfter);
             PlayerPrefs.Save();
         }
-        else
+        else if (!chaining)
         {
             StarFlyToWalletAnimator.ClearPendingReward();
         }
@@ -2183,8 +2223,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
     {
         RefreshFailOfferVisuals();
 
-        if (successContinueText != null)
-            successContinueText.text = LocalizedText("level_end_continue", "Devam Et");
+        ApplySuccessContinueLabel();
 
         if (scoreLabelText != null)
             scoreLabelText.text = LocalizedText("level_end_score_label", "Puan:");
@@ -2197,7 +2236,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
         if (failCloseButton != null)
             failCloseButton.onClick.AddListener(HandleFailCloseClicked);
         if (successCloseButton != null)
-            successCloseButton.onClick.AddListener(HandleSuccessCloseClicked);
+            successCloseButton.onClick.AddListener(HandleSuccessCancelClicked);
         if (successContinueButton != null)
             successContinueButton.onClick.AddListener(HandleSuccessCloseClicked);
         if (skipBonusRoundButton != null)
@@ -2211,7 +2250,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
         if (failCloseButton != null)
             failCloseButton.onClick.RemoveListener(HandleFailCloseClicked);
         if (successCloseButton != null)
-            successCloseButton.onClick.RemoveListener(HandleSuccessCloseClicked);
+            successCloseButton.onClick.RemoveListener(HandleSuccessCancelClicked);
         if (successContinueButton != null)
             successContinueButton.onClick.RemoveListener(HandleSuccessCloseClicked);
         if (skipBonusRoundButton != null)

@@ -247,10 +247,13 @@ public sealed class RisingMapScreen : SafariMapScreenBase
         liftBuilt = true;
     }
 
+    // Dinlenirken de prosedürel asansör (katlanmış) gösterilir: eski statik RisingLiftT2 görseli yükselen asansörden
+    // farklı renkteydi (kullanıcı 2026-11-11). Statik görsel yalnız prosedürel asansör kurulamazsa yedek.
     private void SetLiftMode(bool resting)
     {
-        if (restLift != null) restLift.SetActive(resting);
-        if (lift != null) lift.gameObject.SetActive(!resting);
+        bool procedural = lift != null;
+        if (restLift != null) restLift.SetActive(!procedural);
+        if (lift != null) lift.gameObject.SetActive(true);
     }
 
     private void ParkLiftAtFloor(int floor)

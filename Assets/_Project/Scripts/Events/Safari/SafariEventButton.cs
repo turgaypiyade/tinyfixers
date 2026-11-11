@@ -65,8 +65,11 @@ public sealed class SafariEventButton : MonoBehaviour
     /// Harita bu noktadan daireyle açılır / buraya kapanır.
     public RectTransform IconRect => EventScreenIris.IconRect(this, visibilityRoot);
 
-    public void SetVisible(bool visible)
+    /// <paramref name="lockedUntilLevel"/>: etkinliğin açılış seviyesi; gelinmemişse gizlemek yerine kilitli gösterilir.
+    public void SetVisible(bool visible, int lockedUntilLevel = 0)
     {
+        if (visible) EventLockOverlay.Release(visibilityRoot);
+        else if (EventLockOverlay.Apply(visibilityRoot, lockedUntilLevel, labelText)) return;
         if (visibilityRoot != null && visibilityRoot.activeSelf != visible)
             visibilityRoot.SetActive(visible);
         if (visible) RefreshLabel();

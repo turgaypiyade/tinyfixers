@@ -41,8 +41,11 @@ public sealed class BridgeRepairEventButton : MonoBehaviour
 
     private void Update() => RefreshLabel(force: false);
 
-    public void SetVisible(bool visible)
+    /// <paramref name="lockedUntilLevel"/>: etkinliğin açılış seviyesi; gelinmemişse gizlemek yerine kilitli gösterilir.
+    public void SetVisible(bool visible, int lockedUntilLevel = 0)
     {
+        if (visible) EventLockOverlay.Release(visibilityRoot);
+        else if (EventLockOverlay.Apply(visibilityRoot, lockedUntilLevel, labelText)) return;
         if (visibilityRoot != null && visibilityRoot.activeSelf != visible)
             visibilityRoot.SetActive(visible);
         if (visible) { RefreshProgress(); RefreshLabel(force: true); }

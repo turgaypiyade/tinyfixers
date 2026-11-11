@@ -92559,7 +92559,7 @@ MonoBehaviour:
   lift: {fileID: 254774458}
   restLift: {fileID: 812721441}
   liftAnchor: {fileID: 1777732627}
-  liftAvatarOffsetY: -22
+  liftAvatarOffsetY: -27
   liftDeckOffsetY: -30
   liftMaxHeightUI: 900
   liftTileSize: 217.3913

@@ -44,6 +44,15 @@ public sealed class GearCupPreviewEventButton : MonoBehaviour
     {
         var config = GearCupPreviewConfig.Shared;
         bool unlocked = config != null && GearCupState.IsMenuAvailable;
+        // Açılış seviyesine kadar kilitli göster (EventLockOverlay); dokunuş ekranı açmaz, kilit sallanır.
+        if (!unlocked && config != null && EventLockOverlay.Apply(gameObject, config.minLevelGate, countdown))
+        {
+            visibility.alpha = 1;
+            visibility.blocksRaycasts = visibility.interactable = true;
+            if (iconAnimator != null && iconAnimator.enabled) iconAnimator.enabled = false;
+            return;
+        }
+        EventLockOverlay.Release(gameObject);
         visibility.alpha = unlocked ? 1 : 0;
         visibility.blocksRaycasts = visibility.interactable = unlocked;
         if (iconAnimator != null && iconAnimator.enabled != unlocked) iconAnimator.enabled = unlocked;

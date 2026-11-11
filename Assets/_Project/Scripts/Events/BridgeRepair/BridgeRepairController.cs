@@ -16,6 +16,8 @@ public sealed class BridgeRepairController : MonoBehaviour
 {
     [Header("Config")]
     [SerializeField] private BridgeRepairConfig config;
+    // Ana menüde açılış seviyesine kadar kilitli görünüm (EventLockOverlay).
+    private int LockGate => config != null ? config.minLevelGate : 0;
 
     [Header("UI Refs")]
     [SerializeField] private BridgeRepairEventButton eventButton;
@@ -104,13 +106,13 @@ public sealed class BridgeRepairController : MonoBehaviour
         {
             if (GameDiagnostics.CriticalErrors)
                 Debug.LogWarning("[BridgeRepair] Config yok (Resources/Events/BridgeRepairConfig). Event devre dışı.");
-            eventButton?.SetVisible(false);
+            eventButton?.SetVisible(false, LockGate);
             return;
         }
 
         BridgeRepairState.SyncCycle(config, UtcNow);
         bool available = IsEventAvailable;
-        eventButton?.SetVisible(available);
+        eventButton?.SetVisible(available, LockGate);
         if (!available) return;
 
         if (BridgeRepairState.HasJoined)
@@ -132,7 +134,7 @@ public sealed class BridgeRepairController : MonoBehaviour
         // Pencere oyun açıkken biterse ikon kaybolsun (saniyede bir kontrol).
         if (config == null || Time.unscaledTime < nextVisibilityCheck) return;
         nextVisibilityCheck = Time.unscaledTime + 1f;
-        eventButton?.SetVisible(IsEventAvailable);
+        eventButton?.SetVisible(IsEventAvailable, LockGate);
     }
 
     private bool NeedsPresentation()

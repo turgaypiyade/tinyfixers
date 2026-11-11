@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -55,6 +56,12 @@ public sealed class BottomTabController : MonoBehaviour
 
     private int currentIndex = -1;
 
+    // Türkçe "Ana Menü" sekmeye sığmıyor: TR'de yalnız HOME sekmesinin yazısı birkaç punto küçülür (kullanıcı 2026-11-10;
+    // diğer Türkçe sekme adları oturuyor).
+    private const float TurkishLabelSizeDelta = 3f;
+    private readonly List<TMP_Text> labelTexts = new();
+    private readonly List<float> labelBaseSizes = new();
+
     private void Awake()
     {
         for (int i = 0; i < tabs.Count; i++)
@@ -64,11 +71,32 @@ public sealed class BottomTabController : MonoBehaviour
             iconBasePos.Add(t.icon != null ? t.icon.anchoredPosition : Vector2.zero);
             iconBaseScale.Add(t.icon != null ? t.icon.localScale : Vector3.one);
             labelBaseScale.Add(t.label != null ? t.label.localScale : Vector3.one);
+            if (t.label != null && i == defaultIndex)
+                foreach (var text in t.label.GetComponentsInChildren<TMP_Text>(true))
+                {
+                    labelTexts.Add(text);
+                    labelBaseSizes.Add(text.fontSize);
+                }
 
             int captured = i;
             if (t.button != null)
                 t.button.onClick.AddListener(() => Select(captured));
         }
+    }
+
+    private void OnEnable()
+    {
+        GameLocalization.OnLanguageChanged += ApplyLanguageLabelSize;
+        ApplyLanguageLabelSize();
+    }
+
+    private void OnDisable() => GameLocalization.OnLanguageChanged -= ApplyLanguageLabelSize;
+
+    private void ApplyLanguageLabelSize()
+    {
+        float delta = GameLocalization.CurrentLanguage == "tr" ? TurkishLabelSizeDelta : 0f;
+        for (int i = 0; i < labelTexts.Count; i++)
+            if (labelTexts[i] != null) labelTexts[i].fontSize = labelBaseSizes[i] - delta;
     }
 
     private void Start()

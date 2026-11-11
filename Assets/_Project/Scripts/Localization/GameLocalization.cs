@@ -151,8 +151,15 @@ public static class GameLocalization
             currentLanguage = defaultLanguage;
     }
 
+    /// Editörde cihaz dili yerine geçen dil (TinyFixers ▸ Debug ▸ Dil menüsü; Play'ler arasında kalır, build'e girmez).
+    public const string EditorLanguageOverrideKey = "tinyfixers_editor_language";
+
     private static string DetectDeviceLanguage()
     {
+#if UNITY_EDITOR
+        string forced = UnityEditor.EditorPrefs.GetString(EditorLanguageOverrideKey, "");
+        if (forced == "tr" || forced == "en") return forced;
+#endif
         return Application.systemLanguage == SystemLanguage.Turkish ? "tr" : "en";
     }
 

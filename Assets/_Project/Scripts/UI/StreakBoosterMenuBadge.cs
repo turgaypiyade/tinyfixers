@@ -20,7 +20,7 @@ public sealed class StreakBoosterMenuBadge : MonoBehaviour
     [SerializeField] private Image progressFill;
     [Tooltip("Opsiyonel — '2/3' gibi stage yazısı.")]
     [SerializeField] private TMP_Text stageLabel;
-    [Tooltip("Event level eşiğinden önce gizlenecek root. Boşsa parent panel gizlenir.")]
+    [Tooltip("Event level eşiğinden önce kilitli gösterilecek root. Boşsa bu nesnenin kendisi (paneli gizlemez).")]
     [SerializeField] private GameObject visibilityRoot;
 
     [Header("Fill")]
@@ -45,8 +45,10 @@ public sealed class StreakBoosterMenuBadge : MonoBehaviour
 
     private void Awake()
     {
-        if (visibilityRoot == null && transform.parent != null)
-            visibilityRoot = transform.parent.gameObject;
+        // Yalnız kendini yönetir: eskiden boşsa EBEVEYN paneli (LeftEventPanel) gizleniyordu → panel artık başka
+        // etkinlikleri de (kilitli/açık) taşıdığı için level 30'a kadar hepsi kayboluyordu (2026-11-10).
+        if (visibilityRoot == null)
+            visibilityRoot = gameObject;
 
         if (progressFill != null)
         {
@@ -110,11 +112,14 @@ public sealed class StreakBoosterMenuBadge : MonoBehaviour
 
         if (!activeForLevel)
         {
-            SetVisibility(false);
             targetStage = 0;
+            // Açılış seviyesine kadar kilitli göster (EventLockOverlay, diğer etkinliklerle aynı).
+            if (EventLockOverlay.Apply(visibilityRoot, StreakBoosterEvent.ThresholdLevel, stageLabel)) return;
+            SetVisibility(false);
             return;
         }
 
+        EventLockOverlay.Release(visibilityRoot);
         SetVisibility(true);
         targetStage = StreakBoosterEvent.EffectiveStage(globalLevel);
         if (stageLabel != null)

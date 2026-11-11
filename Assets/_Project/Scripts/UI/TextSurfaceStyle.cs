@@ -74,6 +74,9 @@ public static class TextSurfaceStyle
         if (text.TryGetComponent(out TmpOutline legacy)) Object.Destroy(legacy);   // eski koddan kontur ezmesin
     }
 
+    /// Verilen zemin için paylaşılan TinyFixers Pop materyali (geçici stil değişimi yapan çağıranlar için).
+    internal static Material RuntimeMaterial(TMP_FontAsset font, Color surface) => MaterialFor(font, surface);
+
     private static Material MaterialFor(TMP_FontAsset font, Color surface)
     {
         Color32 key = surface;

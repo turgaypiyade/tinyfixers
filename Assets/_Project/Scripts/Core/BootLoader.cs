@@ -62,6 +62,7 @@ public class BootLoader : MonoBehaviour
             loadingLabel = char.ToUpper(loadingLabel[0]) + loadingLabel.Substring(1);
 
         EnsureLoadingText();
+        StyleLoadingText();
         if (loadingText != null) loadingText.gameObject.SetActive(!HasBrandSplash);
         StartCoroutine(LoadNext());
     }
@@ -167,10 +168,24 @@ public class BootLoader : MonoBehaviour
             SceneManager.LoadScene(nextSceneName);
     }
 
+    // "Loading" sabit kalır, yalnız noktalar belirir (kullanıcı 2026-11-10): eksik noktalar saydam yazılır → yazı genişliği
+    // değişmez, ortalı metin her nokta eklendiğinde kaymaz.
     private void SetLoadingDots(int dots)
     {
         if (loadingText == null) return;
-        loadingText.text = loadingLabel + new string('.', dots);
+        dots = Mathf.Clamp(dots, 0, 3);
+        loadingText.text = dots >= 3
+            ? loadingLabel + "..."
+            : loadingLabel + new string('.', dots) + "<alpha=#00>" + new string('.', 3 - dots);
+    }
+
+    // Yükleme görselinin alt kısmı krem taş: TinyFixers Pop, beyaz yüz, konturu krem zeminin koyusu (yazı kuralı).
+    private static readonly Color LoadingTextSurface = new Color(0.90f, 0.82f, 0.66f);
+
+    private void StyleLoadingText()
+    {
+        if (loadingText == null) return;
+        TextSurfaceStyle.Apply(loadingText, LoadingTextSurface);
     }
 
     // loadingText atanmadıysa Canvas altına ekranın altında ortalı bir TMP yazısı üretir.

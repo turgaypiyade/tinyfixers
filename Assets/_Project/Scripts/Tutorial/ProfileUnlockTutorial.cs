@@ -25,7 +25,7 @@ public sealed class ProfileUnlockTutorial : MonoBehaviour
     private const float TapTravel = 22f;
     private const float TapPeriod = 0.8f;
     private const float FadeDuration = 0.25f;
-    private static readonly Color DimColor = new Color(0f, 0f, 0f, 0.72f);
+    private static readonly Color DimColor = new Color(0f, 0f, 0f, 0.85f);   // kullanıcı 2026-11-11: biraz daha koyu
 
     // ── Bootstrap ────────────────────────────────────────────────────
 
@@ -269,12 +269,15 @@ public sealed class ProfileUnlockTutorial : MonoBehaviour
         target = newTarget;
         lastHole = default;
         tapTime = 0f;
-        // Menünün kendi fontu (isim alanı) — sonra kontur (TMP font-değişimi tuzağı).
-        var font = profile != null && profile.NameInput != null && profile.NameInput.textComponent != null
-            ? profile.NameInput.textComponent.font : null;
-        if (font != null) caption.font = font;
         caption.text = GameLocalization.Get(captionKey);
-        TmpOutline.Apply(caption, 0.22f, new Color(0.10f, 0.12f, 0.25f));
+        // Oyun anı yazısı → DynaPuff (oyun içi öğreticiyle aynı: beyaz yüz, yumuşak siyah kontur + hafif gölge).
+        var skin = CommonPopupSkin.Shared;
+        var font = skin != null ? skin.celebrationFont : null;
+        if (font != null && caption.font != font)
+        {
+            caption.font = font;
+            caption.fontSharedMaterial = TutorialOverlayController.CaptionMaterial(font);
+        }
         SetVisible(true);
         UpdateLayout();
     }
