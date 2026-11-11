@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: ChapterTheme_2
   m_EditorClassIdentifier: Assembly-CSharp::ChapterTheme
   chapterIndex: 2
-  gameBackground: {fileID: 21300000, guid: 501dea3808c7c499c91228de827c630c, type: 3}
+  gameBackground: {fileID: 21300000, guid: bb79624ec1c848779975e85a72c469f8, type: 3}
   gameTopHud: {fileID: 21300000, guid: a613c7faccef449fc85b7943d52d4deb, type: 3}
   gameBottomArea: {fileID: 21300000, guid: 43e44e3d560a74958bf1278d0c4e96a1, type: 3}
   menuBackground: {fileID: 21300000, guid: 4521c033365614105b1d105bdfdbc8e7, type: 3}
@@ -23,7 +23,7 @@ MonoBehaviour:
   menuRepairBtn: {fileID: 21300000, guid: 618b39e0230a1406ebfba99542c755c5, type: 3}
   borderColorId: 6
   borderSpriteLibrary: {fileID: 11400000, guid: b2b1fa88677e243bbbda0302c5efb9e1, type: 2}
-  lightBoardCells: 1
+  lightBoardCells: 0
   successAnimationBackground: {fileID: 0}
   preLevelPopupBackground: {fileID: 21300000, guid: c2cee371b18654473a7cf9bc0848606c, type: 3}
   preLevelContinueButton: {fileID: 21300000, guid: 31a3eec15ec7e4edebed2e4bd6c22218, type: 3}
