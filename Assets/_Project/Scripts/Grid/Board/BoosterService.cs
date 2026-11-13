@@ -32,6 +32,10 @@ public class BoosterService
         bool previousSpecialPhase = board.IsSpecialActivationPhase;
         board.IsSpecialActivationPhase = true;
         board.ResetGelSpreadForNewMove();
+        // Her joker kendi hamlesidir: üretici engellerin (HatLauncher, enerji kutusu…) "hamlede bir kez" listesi
+        // sıfırlanır. Yalnız taş hamlesinde sıfırlanıyordu → arada taş hamlesi olmadan ikinci joker aynı üreticiye
+        // vurunca vuruş yok sayılıyordu, hak da gidiyordu (kullanıcı 2026-11-14, L109). Tek jokerin içinde kural sürer.
+        board.ObstacleStateService?.ResetPerMoveEmitGuard();
 
         try
         {
