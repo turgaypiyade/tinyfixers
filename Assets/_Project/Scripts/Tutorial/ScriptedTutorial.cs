@@ -23,6 +23,11 @@ public sealed class ScriptedTutorial : MonoBehaviour
     private int levelNumber;
     private int width;
 
+    /// Karıştırma jokeri adımı henüz bitmedi mi? Bitene dek board "hamle yok" otomatik karıştırmasını yapmaz.
+    public static bool HoldsAutoShuffle => active != null && active.shuffleStepPending;
+
+    private bool shuffleStepPending;
+
     /// Pre-level special yerleştirmesi vb. bu hücreye dokunmamalı mı?
     public static bool IsReservedCell(int x, int y) =>
         active != null && reserved.Count > 0 && reserved.Contains(y * reservedWidth + x);
@@ -41,6 +46,10 @@ public sealed class ScriptedTutorial : MonoBehaviour
         runner.steps = level.tutorialSteps;
         runner.levelNumber = levelNumber;
         runner.width = level.width;
+        runner.shuffleStepPending = false;
+        for (int i = 0; i < level.tutorialSteps.Length; i++)
+            if (level.tutorialSteps[i].id == TutorialId.JokerShuffle && !IsSeen(levelNumber, i))
+                runner.shuffleStepPending = true;
 
         reserved.Clear();
         reservedWidth = level.width;
@@ -61,6 +70,7 @@ public sealed class ScriptedTutorial : MonoBehaviour
         if (active != null)
         {
             active.StopAllCoroutines();
+            if (active.board != null) active.board.ClearTutorialJokerGate();
             var overlay = FindOverlay();
             if (overlay != null && overlay.IsVisible) overlay.Hide();
         }
@@ -70,6 +80,7 @@ public sealed class ScriptedTutorial : MonoBehaviour
 
     private void OnDestroy()
     {
+        if (board != null) board.ClearTutorialJokerGate();
         if (active == this) { active = null; reserved.Clear(); }
     }
 
@@ -94,6 +105,16 @@ public sealed class ScriptedTutorial : MonoBehaviour
             yield return new WaitForSeconds(0.35f);
             yield return new WaitUntil(() => board == null || IsBoardReady(overlay));
             if (board == null) yield break;
+
+            if (IsJokerStep(steps[i].id))
+            {
+                if (i == 0) reserved.Clear();
+                yield return RunJokerStep(steps[i], overlay);
+                if (board == null) yield break;
+                if (steps[i].id == TutorialId.JokerShuffle) shuffleStepPending = false;
+                MarkSeen(levelNumber, i);
+                continue;
+            }
 
             if (!TryResolve(steps[i], out var from, out var to))
             {
@@ -126,6 +147,57 @@ public sealed class ScriptedTutorial : MonoBehaviour
         }
         Finish();
     }
+
+    // ── Joker adımı ── slot parlar, el slota dokunur → joker seçilince yalnız hedef açık kalır, el hedefe dokunur.
+    // Board kapısı başka jokeri, iptali, swap'ı ve hedef dışı dokunuşu reddeder; joker kullanılınca adım biter.
+    private static bool IsJokerStep(TutorialId id) => JokerIndex(id) >= 0;
+
+    private static int JokerIndex(TutorialId id) => id switch
+    {
+        TutorialId.JokerHammer => 0, TutorialId.JokerRow => 1, TutorialId.JokerColumn => 2,
+        TutorialId.JokerShuffle => 3, TutorialId.JokerPaint => 4, _ => -1,
+    };
+
+    private IEnumerator RunJokerStep(TutorialStep step, TutorialOverlayController overlay)
+    {
+        int index = JokerIndex(step.id);
+        var cell = new Vector2Int(Mathf.Max(0, step.fromCell) % width, Mathf.Max(0, step.fromCell) / width);
+        if (index == 3) cell = new Vector2Int(board.Width / 2, board.Height / 2);
+        if (!BoosterAccessService.CanUse(index) || !JokerFocusOverlayController.TryGetSlotRect(index, out var slot)
+            || cell.x >= board.Width || cell.y >= board.Height)
+        {
+            if (GameDiagnostics.CriticalErrors)
+                Debug.LogWarning($"[ScriptedTutorial] Level {levelNumber}: joker {index} kullanılamıyor / slot ya da hedef yok; adım atlandı.");
+            if (index == 3)
+            {
+                shuffleStepPending = false;
+                board.EnsurePlayableBoard();   // hamlesiz açılış oyuncuya kilitli kalmasın
+            }
+            yield break;
+        }
+
+        bool used = false;
+        board.SetTutorialJokerGate(index, cell, () => used = true);
+        overlay.ShowJokerSlot(slot, index, GameLocalization.Get("tutorial_joker_pick_desc"));
+        yield return new WaitUntil(() => board == null || board.IsBoosterModeActive || used);
+        if (board == null) yield break;
+
+        if (!used)
+        {
+            focus.Clear();
+            focus.Add(cell);   // kullanıcı 2026-11-13: yalnız vurulacak / dokunulacak hücre açık
+            overlay.ShowJokerTarget(focus, cell, index, GameLocalization.Get(JokerHintKey(index)));
+            yield return new WaitUntil(() => board == null || used);
+            if (board == null) yield break;
+        }
+        overlay.Hide();
+    }
+
+    private static string JokerHintKey(int index) => index switch
+    {
+        1 => "joker_hint_row", 2 => "joker_hint_column", 3 => "joker_hint_shuffle", 4 => "joker_hint_paint",
+        _ => "joker_hint_single",
+    };
 
     private void Finish()
     {

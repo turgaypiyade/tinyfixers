@@ -527,8 +527,18 @@ public class BoosterService
     private bool hammerOverpullUsed;
     private const float HammerCrackDownOffset = 25f;   // referans (1080x1920) piksel
 
+    // Oyuncunun İLK çekiç kullanımında cam kesin çatlar (kullanıcı 2026-11-13: joker tanıtım level'ı 12); sonra şansa bağlı.
+    private const string FirstHammerCrackKey = "hammer_first_crack_done";
+
     private bool ShouldOverpullHammer()
     {
+        if (!RuntimeSimulationSession.IsActive && PlayerPrefs.GetInt(FirstHammerCrackKey, 0) == 0)
+        {
+            PlayerPrefs.SetInt(FirstHammerCrackKey, 1);
+            PlayerPrefs.Save();
+            hammerOverpullUsed = true;
+            return true;
+        }
         if (hammerOverpullUsed && board.HammerScreenCrackOncePerBoard)
             return false;
         float chance = board.HammerScreenCrackChance;

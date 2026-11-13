@@ -167,8 +167,44 @@ public class JokerFocusOverlayController : MonoBehaviour
         SetSelectedJoker(-1);
     }
 
+    private static JokerFocusOverlayController activeInstance;
+
+    /// Öğretici: verilen jokerin (0..4) ekrandaki slotu. Joker çubuğu yoksa / slot bulunamazsa false.
+    public static bool TryGetSlotRect(int boosterIndex, out RectTransform slot)
+    {
+        slot = null;
+        if (activeInstance == null || !activeInstance.isActiveAndEnabled) return false;
+        for (int i = 0; i < activeInstance.cachedJokerCount; i++)
+            if (activeInstance.jokerIsBoosterSlot[i] && activeInstance.jokerBoosterIndices[i] == boosterIndex)
+                slot = activeInstance.jokerSlotTransforms[i] as RectTransform;
+        return slot != null;
+    }
+
+    /// Öğretici: seçili jokerin çerçeve görseli (9-slice) — öğretici açık alanının kenarını aynı çerçeveyle doldurur.
+    public static Sprite SelectionFrameSprite => activeInstance != null ? activeInstance.selectionFrameSprite : null;
+
+    /// Öğretici: joker kullanımındaki başlık bloğu (ikon, başlık, açıklama) şablonları ve bu jokerin başlık/ikonu —
+    /// öğretici aynı font/materyal/konumla kendi katmanında gösterir.
+    public static bool TryGetHeaderTemplate(int boosterIndex, out Image icon, out TextMeshProUGUI title,
+        out TextMeshProUGUI description, out string titleString, out Sprite iconSprite)
+    {
+        icon = null; title = description = null; titleString = null; iconSprite = null;
+        var o = activeInstance;
+        if (o == null || o.titleText == null || o.descriptionText == null || o.titleIcon == null) return false;
+        icon = o.titleIcon; title = o.titleText; description = o.descriptionText;
+        titleString = GameLocalization.Get(boosterIndex switch
+        {
+            1 => o.rowTitleKey, 2 => o.columnTitleKey, 3 => o.shuffleTitleKey, 4 => o.paintTitleKey,
+            _ => o.singleTitleKey,
+        });
+        var lib = TileIconLibrary.Shared;
+        iconSprite = lib != null ? lib.GetBoosterIcon(BoosterAccessService.ToMode(boosterIndex)) : null;
+        return true;
+    }
+
     private void OnEnable()
     {
+        activeInstance = this;
         if (board == null) board = FindFirstObjectByType<BoardController>();
         if (board != null)
         {
@@ -179,6 +215,7 @@ public class JokerFocusOverlayController : MonoBehaviour
 
     private void OnDisable()
     {
+        if (activeInstance == this) activeInstance = null;
         if (board != null)
         {
             board.OnBoosterTargetingChanged -= HandleBoosterTargetingChanged;
@@ -528,6 +565,11 @@ public class JokerFocusOverlayController : MonoBehaviour
 
         int boosterIndex = jokerBoosterIndices[tappedIndex];
         if (boosterIndex < 0) return;
+
+        // Joker öğreticisi: yalnız gösterilen joker seçilir, seçimi iptal edilemez.
+        if (board == null) board = FindFirstObjectByType<BoardController>();
+        if (board != null && board.TutorialJokerIndex >= 0
+            && (boosterIndex != board.TutorialJokerIndex || board.IsBoosterModeActive)) return;
 
         if (selectedJokerIndex == tappedIndex)
         {

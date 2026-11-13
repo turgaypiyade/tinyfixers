@@ -13,7 +13,7 @@ internal sealed class PatchBotImpactScorer
     {
         public ObstacleId id;
         public int origin, hits, value, cargo, wallStage;
-        public bool hittable, candidate, gel, perCell, tileGoal;
+        public bool hittable, candidate, gel, perCell, tileGoal, goalObstacle;
     }
 
     private struct Footprint
@@ -80,6 +80,7 @@ internal sealed class PatchBotImpactScorer
                         && obs.HasGrassFlowerAt(c.origin));
                 if (c.hittable)
                 {
+                    c.goalObstacle = goal;
                     c.hits = obs.GetActiveMeaningfulHitsAt(x, y);
                     c.value = goal ? 12 : 5;
                     c.candidate = board.TargetPool.ObstacleCapacityAt(x, y) > 0;
@@ -165,6 +166,11 @@ internal sealed class PatchBotImpactScorer
 
         board.TargetPool.CopyReservedCells(reserved);
         ties.Clear();
+        // Öncelik katmanı (kullanıcı kuralı 2026-10-03, 2026-11-13: PulseCore+PatchBot kasaya gitmiyordu): engeller —
+        // hedefte olsun olmasın — taşlardan ÖNCE; yük etkisi yalnız aynı katman içinde karşılaştırılır. Aksi hâlde
+        // 25 taşlık 5x5 alan, tek sayılan büyük engeli (kasa) geçiyordu. Sıra koordinatörle aynı:
+        // kargo yolu → hedef engel → diğer engel → taş.
+        int bestTier = int.MinValue;
         int bestScore = int.MinValue;
         float bestCenterDistance = float.MaxValue;
         for (int i = 0; i < size; i++)
@@ -182,6 +188,9 @@ internal sealed class PatchBotImpactScorer
             // Incidental flour cleared by another useful payload remains valid work.
             if (hasFlourSource && c.id == ObstacleId.Flour) continue;
             if (!area && (c.id != ObstacleId.OverrideBatteryBox || c.hits > 2)) continue;
+            int tier = c.cargo > 0 ? 3 : c.hittable ? (c.goalObstacle ? 2 : 1) : 0;
+            if (tier < bestTier) continue;
+            if (tier > bestTier) { bestTier = tier; bestScore = int.MinValue; bestCenterDistance = float.MaxValue; ties.Clear(); }
             int cx = i % width, cy = i / width;
             if (payload == TileSpecial.PulseCore && c.origin >= 0 && c.origin < size
                 && c.id != ObstacleId.Magnet && c.id != ObstacleId.Tube && !wall)

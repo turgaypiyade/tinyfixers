@@ -71,6 +71,7 @@ public static class TestLevelProgressionBootstrap
         // Level reklam hakkı kalıcı: Play'i durdurup açınca da aynı level'da tekrar açılmasın.
         bool hasAdContinueUsed = PlayerPrefs.HasKey(LevelAdRight.UsedLevelKey);
         int savedAdContinueUsed = PlayerPrefs.GetInt(LevelAdRight.UsedLevelKey, 0);
+        int savedAdContinueCount = PlayerPrefs.GetInt(LevelAdRight.UsedCountKey, 1);
 
         var timedRewardTypes = new[] { 1, 10, 11, 12, 13, 20, 21, 22, 23, 24 }; // Lives, Joker_LineH, PulseCore, Override, Joker_Line, boosters
         var savedTimedRewards = new string[timedRewardTypes.Length];
@@ -93,7 +94,10 @@ public static class TestLevelProgressionBootstrap
         PlayerPrefs.SetInt("wonder_completed_count", savedWonderDone); // wonder ilerlemesi korunur
         PlayerPrefs.SetInt("wonder_current_stage", savedWonderStg);
         if (hasAdContinueUsed)
+        {
             PlayerPrefs.SetInt(LevelAdRight.UsedLevelKey, savedAdContinueUsed);
+            PlayerPrefs.SetInt(LevelAdRight.UsedCountKey, savedAdContinueCount);
+        }
         PlayerPrefs.SetInt("initial_stars_granted", 1);
         PlayerPrefs.SetInt("first_launch_done", 1);
         PlayerPrefs.Save();

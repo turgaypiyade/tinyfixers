@@ -10,6 +10,13 @@ public enum TutorialId
     PulseCoreActivated = 7,
     PatchBotActivated  = 8,
     OverrideActivated  = 9,
+    // Joker tanıtımı (kullanıcı 2026-11-13): joker açılış level'ında bedava joker zorunlu kullandırılır.
+    // fromCell = hedef hücre (satır/sütun jokerinde o hücrenin satırı/sütunu; karıştırmada yok sayılır).
+    JokerHammer  = 10,
+    JokerRow     = 11,
+    JokerColumn  = 12,
+    JokerShuffle = 13,
+    JokerPaint   = 14,
 }
 
 // Sadece level-controlled combo tutorial'ları için (Group 2)

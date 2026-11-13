@@ -1098,6 +1098,21 @@ MonoBehaviour:
   breathe: 1
   breatheAmount: 0.035
   breathePeriod: 1.6
+--- !u!114 &714101000000000003
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2046354031634676808}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c369fc9ad96344f5ebbcfec0f8e2f6db, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UiClickSound
+  mode: 2
+  playOnPress: 1
+  clipOverride: {fileID: 8300000, guid: 1b262a3d840248f5ad1f17f1062266f1, type: 3}
 --- !u!1 &2289587397502679034
 GameObject:
   m_ObjectHideFlags: 0
@@ -3517,6 +3532,9 @@ MonoBehaviour:
   levelNameFontSize: 34
   levelNameColor: {r: 1, g: 0.92, b: 0.6, a: 1}
   titleYWithName: 540
+  ornamentNailPos: {x: -380, y: -30}
+  ornamentToolHeight: 230
+  ornamentNailSize: 40
   fallbackGoalIcon: {fileID: 0}
   energyGoalDefaultIcon: {fileID: 21300000, guid: d5c45b75a85134c80890a84f8f2852b4, type: 3}
   tileIconLibrary: {fileID: 11400000, guid: 44f21392c67a14dfbb8782561221acf8, type: 2}
@@ -3524,7 +3542,6 @@ MonoBehaviour:
   pulseCoreSlot: {fileID: 2002999623365644152}
   overrideSlot: {fileID: 7066371401348966316}
   specialsUnlockLevel: 6
-  audioSource: {fileID: 0}
   openSfx: {fileID: 0}
   selectSfx: {fileID: 0}
   continueSfx: {fileID: 0}
@@ -4607,18 +4624,3 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   target: {fileID: 9121566470586327935}
   key: prelevel_booster_select
---- !u!114 &714101000000000003
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2046354031634676808}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c369fc9ad96344f5ebbcfec0f8e2f6db, type: 3}
-  m_Name:
-  m_EditorClassIdentifier: Assembly-CSharp::UiClickSound
-  mode: 2
-  playOnPress: 1
-  clipOverride: {fileID: 8300000, guid: 1b262a3d840248f5ad1f17f1062266f1, type: 3}

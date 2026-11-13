@@ -395,3 +395,11 @@ Kullanıcının en yeni açık talimatı eski notlardan önceliklidir. Agent tas
 - `Design-Principles.md` / `Design-Feedback.md` — kurallar ve kullanıcının kaynak ifadeleri.
 - `Obstacle-Design-Guide.md` — mekanik ayrıntıları; güncel kodla kontrol edilir.
 - `References/Index.md` — kalıcı görsel referansların kapsamları.
+
+## 108 Altın Kupa — hamle 32→37 (kullanıcı kararı) · 2026-11-13
+
+Kullanıcı 108'i oynayınca "çok zor geldi, ardından 109 geliyor, iki zor üst üste" dedi. Agent analizi (ölçülmüş denge değil): ~100 vuruş iş (16 kenar Sandık3+altında çamur, 25 çamur, 8 PlasticTwoStage, 12 Sandık1), kupa içinde ~18 serbest hücre, ayak sandıklarının çoğuna yalnız special/üst kırılınca ulaşılıyor → x8 normal level için fazla, 109'dan (süper zor) ağır. Kullanıcı yalnız hamleyi seçti: **37**. Şekil/engeller/hedefler değişmedi (kullanıcının daha önce elle düzenlediği tahta). Hâlâ zorsa sonraki adım: kenar Sandık3→Sandık2.
+
+## 217 Kanatlı Kum Saati — hamlesiz açılış düzeltmesi · 2026-11-14
+
+Kullanıcı: "217'de hamle şansı yok, oto shuffle çalışmıyormuş kullanıcılarda." Kök: gövdedeki 35 pin çapraz 1-2-3-4 deseninde, olası kaydırma = 0; rastgele hücreler yalnız üst köşelerde 6 tane ve izole (eşleşme kuramaz) → açılış garantili hamlesiz. Motorun "hamle yok → karıştır" kontrolü yalnız oyuncu hamlesinden sonra çalışıyor, açılışta yok → oyuncu kilitli. Düzeltme (yalnız pin rengi, şekil/engel/hedef/hamle aynı): (4,3) 4→3 ve (5,6) 3→2 → 6 oynanabilir hamle (üst ve bel bölgesi), açılışta hazır eşleşme yok. Tüm V1 taraması: garantili hamlesiz açılış yalnız 23 (kargo tasarımı) ve 27 (bilinçli karıştırma öğreticisi). Yedek: scratchpad LevelV1_00002170.bak.asset. **Kural: pinli tasarımda en az birkaç oynanabilir hamle bırak; doğrula.**

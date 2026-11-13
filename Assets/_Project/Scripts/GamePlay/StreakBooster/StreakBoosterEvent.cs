@@ -16,7 +16,7 @@ using UnityEngine;
 public static class StreakBoosterEvent
 {
     // Bu level ve sonrasında event aktif. Inspector'dan değiştirilebilir (StreakBoosterConfig.Awake set eder).
-    public static int ThresholdLevel = 30;
+    public static int ThresholdLevel = 33;   // kullanıcı 2026-11-13: 32 Boya Kovası tanıtımı → event 33
 
     public const int MaxStage = 3;
 

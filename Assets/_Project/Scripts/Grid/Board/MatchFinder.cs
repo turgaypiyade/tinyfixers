@@ -845,6 +845,18 @@ public class MatchFinder
                 if (HasAnySpecialSwapAt(x, y, additionallyLockedCells))
                     return true;
 
+                // Hareketli engel (kargo, plastik, porselen…) taş gibi kaydırılır ama kendisi eşleşmez: komşu normal
+                // taş engelin yerine geçince orada eşleşme kuruyorsa geçerli hamledir (kullanıcı 2026-11-14; L23).
+                if (IsMovableSwapCandidate(x, y, additionallyLockedCells))
+                {
+                    if (WouldMovableSwapCreateMatch(x + 1, y, x, y, additionallyLockedCells)
+                        || WouldMovableSwapCreateMatch(x - 1, y, x, y, additionallyLockedCells)
+                        || WouldMovableSwapCreateMatch(x, y + 1, x, y, additionallyLockedCells)
+                        || WouldMovableSwapCreateMatch(x, y - 1, x, y, additionallyLockedCells))
+                        return true;
+                    continue;
+                }
+
                 if (!IsNormalSwapCandidate(tile, additionallyLockedCells))
                     continue;
 
@@ -893,6 +905,49 @@ public class MatchFinder
             return false;
 
         return board.Tiles[x, y] != null;
+    }
+
+    // Kaydırılabilir hareketli engel hücresi: taş görünümü var, kilitli/yağlı değil.
+    private bool IsMovableSwapCandidate(int x, int y, IReadOnlyCollection<Vector2Int> additionallyLockedCells)
+    {
+        var obs = board.ObstacleStateService;
+        return obs != null && obs.IsMovableObstacleAt(x, y) && IsSwappableNeighbor(x, y, additionallyLockedCells);
+    }
+
+    // (nx,ny)'deki normal taş (mx,my)'deki hareketli engelle yer değiştirince (mx,my)'de 3+ eşleşme kurar mı?
+    // Tahta değiştirilmez: engelin gideceği (nx,ny) hücresi sayımda engel sayılır.
+    private bool WouldMovableSwapCreateMatch(int nx, int ny, int mx, int my, IReadOnlyCollection<Vector2Int> additionallyLockedCells)
+    {
+        if (nx < 0 || nx >= board.Width || ny < 0 || ny >= board.Height) return false;
+        if (board.Holes[nx, ny] || IsAdditionallyLocked(nx, ny, additionallyLockedCells)) return false;
+        var tile = board.Tiles[nx, ny];
+        if (!IsNormalSwapCandidate(tile, additionallyLockedCells)) return false;
+
+        TileType type = tile.GetTileType();
+        int horizontal = 1
+            + CountSameTypeExcluding(mx - 1, my, -1, 0, type, nx, ny, additionallyLockedCells)
+            + CountSameTypeExcluding(mx + 1, my,  1, 0, type, nx, ny, additionallyLockedCells);
+        if (horizontal >= 3) return true;
+        int vertical = 1
+            + CountSameTypeExcluding(mx, my - 1, 0, -1, type, nx, ny, additionallyLockedCells)
+            + CountSameTypeExcluding(mx, my + 1, 0,  1, type, nx, ny, additionallyLockedCells);
+        return vertical >= 3;
+    }
+
+    private int CountSameTypeExcluding(int x, int y, int dx, int dy, TileType type, int exX, int exY,
+        IReadOnlyCollection<Vector2Int> additionallyLockedCells)
+    {
+        int count = 0;
+        while (x >= 0 && x < board.Width && y >= 0 && y < board.Height)
+        {
+            if (x == exX && y == exY) break;   // takastan sonra burada engel durur
+            if (board.Holes[x, y] || IsAdditionallyLocked(x, y, additionallyLockedCells)) break;
+            var t = board.Tiles[x, y];
+            if (!IsNormalSwapCandidate(t, additionallyLockedCells) || t.GetTileType() != type) break;
+            count++;
+            x += dx; y += dy;
+        }
+        return count;
     }
 
     private bool IsNormalSwapCandidate(TileView tile)

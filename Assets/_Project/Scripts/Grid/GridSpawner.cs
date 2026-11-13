@@ -357,7 +357,7 @@ public class GridSpawner : MonoBehaviour
 
         // Board taşlar dizili halde sağdan sola kayarak otursun (giriş animasyonu).
         // Initial settle (varsa) ekran dışında çalışır; sonra board kayarak gelir.
-        StartCoroutine(board.PlayBoardEntrance(resolveInitialOnStart ? board.ResolveInitial() : null));
+        StartCoroutine(board.PlayBoardEntrance(resolveInitialOnStart ? board.ResolveInitial() : board.EnsurePlayableInitial()));
     }
 
     private void PlayLevelMusic(LevelData activeLevel)

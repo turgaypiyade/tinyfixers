@@ -40,7 +40,7 @@ public sealed class ProfileUnlockTutorial : MonoBehaviour
     {
         if (scene.name != MainMenuSceneName || IsSeen() || RuntimeSimulationSession.IsActive) return;
         if (!PlayerProfile.CustomizationUnlocked) return;
-        if (PlayerProfile.PlayerName != PlayerProfile.DefaultName) { MarkSeen(); return; }   // zaten değiştirmiş
+        if (!PlayerProfile.HasDefaultName) { MarkSeen(); return; }   // zaten değiştirmiş
         new GameObject("ProfileUnlockTutorial").AddComponent<ProfileUnlockTutorial>();
     }
 

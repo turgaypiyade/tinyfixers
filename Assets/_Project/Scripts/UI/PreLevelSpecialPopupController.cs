@@ -78,6 +78,12 @@ public class PreLevelSpecialPopupController : MonoBehaviour
     [SerializeField] private Color levelNameColor = new Color(1f, 0.92f, 0.60f, 1f);
     [Tooltip("İsim varken 'LEVEL N' başlığının y konumu (anchoredPosition.y). İsimsiz levelde sahnedeki konum kalır.")]
     [SerializeField] private float titleYWithName = 540f;
+
+    [Header("Asılı süs (başlık şeridindeki çiviye asılı alet demeti)")]
+    [Tooltip("Çivinin başlık yazısı merkezine göre yeri. Başlık şeridinin sol ucu.")]
+    [SerializeField] private Vector2 ornamentNailPos = new Vector2(-330f, -30f);   // kullanıcı Play'de ayarladı 2026-11-13
+    [SerializeField] private float ornamentToolHeight = 230f;
+    [SerializeField] private float ornamentNailSize = 40f;
     private Vector2 titleBasePosition;
     private bool titleBaseCaptured;
     private int previewGoalCount = 1;
@@ -139,6 +145,9 @@ public class PreLevelSpecialPopupController : MonoBehaviour
         RegisterSlot(lineHSlot);
         RegisterSlot(pulseCoreSlot);
         RegisterSlot(overrideSlot);
+
+        if (titleText != null)
+            HangingOrnament.Create(titleText.rectTransform, ornamentNailPos, ornamentToolHeight, ornamentNailSize);
 
         SetPopupVisible(false, true);
     }
@@ -757,6 +766,8 @@ public class PreLevelSpecialPopupController : MonoBehaviour
         clone.name = "LevelNameText";
         if (clone.TryGetComponent(out LocalizedText localized)) Destroy(localized);   // metni biz yazıyoruz
         if (clone.TryGetComponent(out TextArcEffect arc)) Destroy(arc);               // düz, yaysız
+        foreach (var ornament in clone.GetComponentsInChildren<HangingOrnament>(true))
+            Destroy(ornament.gameObject);                                              // asılı süs yalnız başlıkta
         levelNameText = clone.GetComponent<TMP_Text>();
         levelNameText.raycastTarget = false;
         levelNameText.enableAutoSizing = false;

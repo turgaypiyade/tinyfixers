@@ -1721,6 +1721,14 @@
           "value": "Bir taşa dokun: o renk 3 hamle boyunca tahtadan çıkar!"
         },
         {
+          "key": "tutorial_joker_pick_desc",
+          "value": "Bedava jokerin hazır! Dokun ve seç."
+        },
+        {
+          "key": "profile_default_name",
+          "value": "Oyuncu"
+        },
+        {
           "key": "joker_paint_reject_goal",
           "value": "Bu renk hedeflerinde var, başka bir renk seç!"
         },
@@ -3597,6 +3605,10 @@
           "value": "ÜCRETSİZ"
         },
         {
+          "key": "ad_continue_ribbon",
+          "value": "+{0} HAMLE"
+        },
+        {
           "key": "level_end_fail_get_gold",
           "value": "Altın Al"
         },
@@ -5336,6 +5348,14 @@
         {
           "key": "joker_hint_paint",
           "value": "Tap a tile: that color leaves the board for 3 moves!"
+        },
+        {
+          "key": "tutorial_joker_pick_desc",
+          "value": "Your free joker is ready! Tap to pick it."
+        },
+        {
+          "key": "profile_default_name",
+          "value": "Player"
         },
         {
           "key": "joker_paint_reject_goal",
@@ -7212,6 +7232,10 @@
         {
           "key": "ad_free_ribbon",
           "value": "FREE"
+        },
+        {
+          "key": "ad_continue_ribbon",
+          "value": "+{0} MOVES"
         },
         {
           "key": "level_end_fail_get_gold",

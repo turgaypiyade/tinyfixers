@@ -2000,19 +2000,20 @@ public class LevelEndSimplePopupController : MonoBehaviour
     }
 
     // Coin harcandıktan (veya reklam ödülünden) sonra ortak "devam" akışı.
-    private void PerformContinue(int coinsSpent = 0, bool rewardedAd = false)
+    private void PerformContinue(int coinsSpent = 0, bool rewardedAd = false, int overrideMoves = 0)
     {
+        int moves = overrideMoves > 0 ? overrideMoves : currentOfferAmount;
         if (board == null) return;
 
         // Fail popup açılırken harcanan hakkı geri ver; oyuncu devam ediyor.
         if (lifeDebitedForFailure) LivesManager.RefundFailureLife();
         lifeDebitedForFailure = false;
 
-        LevelTelemetryStore.Continue(currentOfferAmount, coinsSpent, rewardedAd);
+        LevelTelemetryStore.Continue(moves, coinsSpent, rewardedAd);
         if (board.IsBilliardStuckFail)
-            board.ContinueWithBilliardRescue(currentOfferAmount);
+            board.ContinueWithBilliardRescue(moves);
         else
-            board.ContinueWithExtraMoves(currentOfferAmount);
+            board.ContinueWithExtraMoves(moves);
         board.SetInputLocked(false);
         extraMoveOfferAttempt++;
 
@@ -2033,15 +2034,16 @@ public class LevelEndSimplePopupController : MonoBehaviour
         board.ForceFullBoardSync();
     }
 
-    // Reklamla bedava devam: level'ın TEK reklam hakkı (RewardedAdCaps.Continue = LevelAdRight).
-    // Hak yalnız reklam gerçekten izlenince harcanır (yüklenemediyse ya da yarıda kapandıysa hak kalır).
+    // Reklamla bedava devam: level başına 2 hak, 1. reklam +2, 2. reklam +1 hamle (RewardedAdCaps.Continue =
+    // LevelAdRight; altın teklifinden bağımsız). Hak yalnız reklam gerçekten izlenince harcanır.
     private void WatchAdThenContinue()
     {
         if (_abandonWarning || board == null || !RewardedAdCaps.CanOffer(AdPlacement.Continue) || AdService.IsShowing) return;
+        int adMoves = LevelAdRight.NextAdMoves;
         RewardedAdCaps.Show(AdPlacement.Continue, () =>
         {
             if (this == null || board == null) return;
-            PerformContinue(rewardedAd: true);
+            PerformContinue(rewardedAd: true, overrideMoves: adMoves);
         });
     }
 
@@ -2096,6 +2098,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
         rt.anchoredPosition = failContinueGroupHome + new Vector2(width * 0.5f + gap * 0.5f, size * 0.08f);
         rt.SetAsLastSibling();
         failAdButton.SetVisible(show);
+        if (show) failAdButton.SetRibbonText(LocalizedFormat("ad_continue_ribbon", "+{0} HAMLE", LevelAdRight.NextAdMoves));
         if (show && !failAdOfferNoted)
         {
             failAdOfferNoted = true;

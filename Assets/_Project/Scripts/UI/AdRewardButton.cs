@@ -93,9 +93,19 @@ public sealed class AdRewardButton : MonoBehaviour
 
     private void OnDisable() => GameLocalization.OnLanguageChanged -= RefreshLabel;
 
+    private string ribbonOverride;
+
+    /// Kurdele yazısı (ör. fail'de "+3 HAMLE"); null → varsayılan "ÜCRETSİZ".
+    public void SetRibbonText(string text)
+    {
+        ribbonOverride = text;
+        RefreshLabel();
+    }
+
     private void RefreshLabel()
     {
-        if (ribbonLabel != null) ribbonLabel.text = GameLocalization.GetOr("ad_free_ribbon", "ÜCRETSİZ");
+        if (ribbonLabel != null)
+            ribbonLabel.text = !string.IsNullOrEmpty(ribbonOverride) ? ribbonOverride : GameLocalization.GetOr("ad_free_ribbon", "ÜCRETSİZ");
     }
 
     public void SetVisible(bool visible)

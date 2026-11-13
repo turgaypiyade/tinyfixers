@@ -56,6 +56,10 @@ MonoBehaviour:
   energyPerContainer: 10
   rocketBasketFireAllOnHit: 0
   comboTutorial: 0
+  tutorialSteps:
+  - id: 14
+    fromCell: 35
+    toCell: -1
   musicClip: {fileID: 0}
   musicVolume: 1
   obstacleLibrary: {fileID: 11400000, guid: 542e279c729681244b475a353cdd0e8f, type: 2}

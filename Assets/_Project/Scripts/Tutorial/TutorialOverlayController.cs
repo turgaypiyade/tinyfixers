@@ -53,6 +53,7 @@ public class TutorialOverlayController : MonoBehaviour
     private TMP_Text hintDescription;
     private TMP_Text hintContinue;
     private float hintOpenedAt;
+    private Vector3 handBaseScale = Vector3.one;
     private bool hintClosing;
     private bool keepHintBlocker;
 
@@ -84,8 +85,11 @@ public class TutorialOverlayController : MonoBehaviour
         }
 
         if (handIcon != null)
+        {
+            handBaseScale = handIcon.localScale;
             foreach (var g in handIcon.GetComponentsInChildren<Graphic>(true))
                 g.raycastTarget = false;
+        }
 
         if (hintDismissButton != null)
         {
@@ -355,6 +359,8 @@ public class TutorialOverlayController : MonoBehaviour
 
         gameObject.SetActive(true);
         transform.SetAsLastSibling();
+        SetHeaderVisible(false);
+        SetHoleFrameVisible(false);
         BuildSpotlight(focusCells, caption, icon);
 
         StopFade();
@@ -363,6 +369,188 @@ public class TutorialOverlayController : MonoBehaviour
         StopSwap();
         if (from != null && to != null)
             swapRoutine = StartCoroutine(LoopSwapWithHand(from, to));
+    }
+
+    /// Joker öğreticisi 1. adım: ekran kararır, yalnız joker slotu açık kalır; el slota dokunur. Yazı tahtanın üstünde.
+    public void ShowJokerSlot(RectTransform slot, int boosterIndex, string description)
+    {
+        PrepareSpotlightShow();
+        EnsureSpotlight();
+        spotlightRoot.gameObject.SetActive(true);
+        spotlightRoot.SetAsFirstSibling();
+        spotlightGroup.alpha = 0f;
+        spotlightDim.color = new Color(0f, 0f, 0f, spotlightAlpha);
+        spotRects.Clear();
+
+        var corners = new Vector3[4];
+        slot.GetWorldCorners(corners);
+        Vector2 min = spotlightRoot.InverseTransformPoint(corners[0]);
+        Vector2 max = spotlightRoot.InverseTransformPoint(corners[2]);
+        const float Pad = 14f, Far = 20000f;
+        var hole = Rect.MinMaxRect(min.x - Pad, min.y - Pad, max.x + Pad, max.y + Pad);
+        spotRects.Add(Rect.MinMaxRect(-Far, hole.yMax, Far, Far));
+        spotRects.Add(Rect.MinMaxRect(-Far, -Far, Far, hole.yMin));
+        spotRects.Add(Rect.MinMaxRect(-Far, hole.yMin, hole.xMin, hole.yMax));
+        spotRects.Add(Rect.MinMaxRect(hole.xMax, hole.yMin, Far, hole.yMax));
+        spotlightDim.SetRects(spotRects);
+        ShowHoleFrame(hole);
+
+        LayoutCaption(null, null, false, 0f, 0f, 0f);
+        ShowJokerHeader(boosterIndex, description);
+
+        fadeRoutine = StartCoroutine(FadeSpotlight(1f));
+        swapRoutine = StartCoroutine(LoopTapWithHand((corners[0] + corners[2]) * 0.5f));
+    }
+
+    /// Joker öğreticisi 2. adım: tahtada yalnız hedef hücreler açık (satır/sütun/tek hücre); el <paramref name="tapCell"/>'e dokunur.
+    public void ShowJokerTarget(ICollection<Vector2Int> focusCells, Vector2Int tapCell, int boosterIndex, string description)
+    {
+        PrepareSpotlightShow();
+        BuildSpotlight(focusCells, null, null);
+        ShowJokerHeader(boosterIndex, description);
+        fadeRoutine = StartCoroutine(FadeSpotlight(1f));
+        if (TryGetCellGrid(out var xEdge, out var yEdge))
+        {
+            ShowHoleFrame(Rect.MinMaxRect(xEdge[tapCell.x], yEdge[tapCell.y + 1], xEdge[tapCell.x + 1], yEdge[tapCell.y]));
+            var center = new Vector2((xEdge[tapCell.x] + xEdge[tapCell.x + 1]) * 0.5f, (yEdge[tapCell.y] + yEdge[tapCell.y + 1]) * 0.5f);
+            swapRoutine = StartCoroutine(LoopTapWithHand(spotlightRoot.TransformPoint(center)));
+        }
+    }
+
+    private void PrepareSpotlightShow()
+    {
+        if (board == null) board = FindFirstObjectByType<BoardController>();
+        tutorialFrom = tutorialTo = null;
+        if (hintGroup != null) hintGroup.gameObject.SetActive(false);
+        if (descriptionRoot != null) descriptionRoot.SetActive(false);
+        if (illustrationImage != null) illustrationImage.gameObject.SetActive(false);
+        if (dimImage != null) dimImage.gameObject.SetActive(false);
+        gameObject.SetActive(true);
+        transform.SetAsLastSibling();
+        StopFade();
+        StopSwap();
+        SetHeaderVisible(false);
+        SetHoleFrameVisible(false);
+    }
+
+    // Açık alanın kenarı: karartma dikdörtgen kesildiği için düz kesik görünür (kullanıcı 2026-11-13) → çerçeveyle
+    // çevrilir; çerçeve kesik kenarın üstüne biner. Görsel = seçili joker çerçevesinin beyaz kopyası (UIEffects/
+    // TutorialHoleFrame, 9-slice); renk Inspector'dan. Altın, ilk levelların açık sarı zemininde kayboluyordu → turkuaz.
+    [Header("Joker öğreticisi — açık alan çerçevesi")]
+    [SerializeField] private Color holeFrameColor = new Color(0.45f, 0.9f, 1f, 1f);
+    [Tooltip("Çerçeve inceliği: 1 = görselin kendi kalınlığı, büyüdükçe incelir (kullanıcı 2026-11-13: daha ince ve kibar).")]
+    [SerializeField, Range(1f, 8f)] private float holeFrameLineThinness = 3.8f;   // 2.6 → 3.8 (kullanıcı 2026-11-14: biraz daha ince)
+    private Image holeFrame;
+    private static Sprite holeFrameSprite;
+    private const float HoleFramePad = 4f;
+
+    private void ShowHoleFrame(Rect hole)
+    {
+        if (holeFrameSprite == null) holeFrameSprite = Resources.Load<Sprite>("UIEffects/TutorialHoleFrame");
+        var sprite = holeFrameSprite != null ? holeFrameSprite : JokerFocusOverlayController.SelectionFrameSprite;
+        if (sprite == null) { SetHoleFrameVisible(false); return; }
+        if (holeFrame == null)
+        {
+            var go = new GameObject("HoleFrame", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            go.layer = gameObject.layer;
+            go.transform.SetParent(spotlightRoot, false);
+            holeFrame = go.GetComponent<Image>();
+            holeFrame.raycastTarget = false;
+        }
+        holeFrame.sprite = sprite;
+        holeFrame.color = sprite == holeFrameSprite ? holeFrameColor : Color.white;
+        holeFrame.type = sprite.border.sqrMagnitude > 0f ? Image.Type.Sliced : Image.Type.Simple;
+        holeFrame.pixelsPerUnitMultiplier = holeFrameLineThinness;   // 9-slice kenarı bu oranda incelir
+        var rt = holeFrame.rectTransform;
+        rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.sizeDelta = hole.size + Vector2.one * (HoleFramePad * 2f);
+        rt.anchoredPosition = hole.center;
+        rt.SetSiblingIndex(1);   // karartmanın hemen üstünde, el/yazının altında
+        SetHoleFrameVisible(true);
+    }
+
+    private void SetHoleFrameVisible(bool visible)
+    {
+        if (holeFrame != null) holeFrame.gameObject.SetActive(visible);
+    }
+
+    // Joker başlık bloğu: joker kullanılırken görünen ikon + başlık + açıklamanın birebir kopyası (font, materyal,
+    // renk geçişi, ekran konumu aynı; kullanıcı 2026-11-13). Şablonlar JokerFocusOverlayController'dan bir kez kopyalanır.
+    private Image headerIcon;
+    private TextMeshProUGUI headerTitle;
+    private TextMeshProUGUI headerDescription;
+
+    private void ShowJokerHeader(int boosterIndex, string description)
+    {
+        if (!JokerFocusOverlayController.TryGetHeaderTemplate(boosterIndex, out var iconTpl, out var titleTpl,
+                out var descTpl, out var title, out var iconSprite))
+        {
+            LayoutCaption(description, iconSprite, false, 0f, 0f, 0f);   // şablon yoksa en azından yazı görünsün
+            return;
+        }
+        if (headerTitle == null)
+        {
+            headerIcon = CloneHeaderPart(iconTpl);
+            headerTitle = CloneHeaderPart(titleTpl);
+            headerDescription = CloneHeaderPart(descTpl);
+        }
+        headerIcon.sprite = iconSprite;
+        headerIcon.enabled = iconSprite != null;
+        headerTitle.text = title;
+        headerDescription.text = description;
+        SetHeaderVisible(true);
+    }
+
+    private T CloneHeaderPart<T>(T template) where T : Graphic
+    {
+        var clone = Instantiate(template, spotlightRoot);
+        clone.raycastTarget = false;
+        clone.gameObject.layer = gameObject.layer;
+        clone.gameObject.SetActive(true);
+        // Şablonun ekrandaki dikdörtgeni → bu katmanın uzayı (iki katman farklı köke bağlı olabilir).
+        var corners = new Vector3[4];
+        template.rectTransform.GetWorldCorners(corners);
+        Vector2 min = spotlightRoot.InverseTransformPoint(corners[0]);
+        Vector2 max = spotlightRoot.InverseTransformPoint(corners[2]);
+        var rt = clone.rectTransform;
+        rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.localScale = Vector3.one;
+        rt.sizeDelta = max - min;
+        rt.anchoredPosition = (min + max) * 0.5f;
+        return clone;
+    }
+
+    private void SetHeaderVisible(bool visible)
+    {
+        if (headerTitle == null) return;
+        headerIcon.gameObject.SetActive(visible);
+        headerTitle.gameObject.SetActive(visible);
+        headerDescription.gameObject.SetActive(visible);
+    }
+
+    // El hedefe gider, iki kez basar (küçülüp büyür), bekler; dokunulana dek tekrarlar.
+    private IEnumerator LoopTapWithHand(Vector3 worldTarget)
+    {
+        if (handIcon == null) yield break;
+        handIcon.pivot = handTipPivot;
+        handIcon.anchorMin = handIcon.anchorMax = new Vector2(0.5f, 0.5f);
+        handIcon.position = worldTarget;
+        handIcon.gameObject.SetActive(true);
+        Vector3 baseScale = handBaseScale;
+        while (true)
+        {
+            for (int press = 0; press < 2; press++)
+            {
+                for (float t = 0f; t < 0.32f; t += Time.unscaledDeltaTime)
+                {
+                    float k = Mathf.Sin(Mathf.Clamp01(t / 0.32f) * Mathf.PI);
+                    handIcon.localScale = baseScale * (1f - 0.18f * k);
+                    yield return null;
+                }
+                handIcon.localScale = baseScale;
+            }
+            yield return new WaitForSecondsRealtime(0.9f);
+        }
     }
 
     private void EnsureSpotlight()
@@ -716,7 +904,7 @@ public class TutorialOverlayController : MonoBehaviour
     private void StopSwap()
     {
         if (swapRoutine != null) { StopCoroutine(swapRoutine); swapRoutine = null; }
-        if (handIcon != null)    handIcon.gameObject.SetActive(false);
+        if (handIcon != null)    { handIcon.localScale = handBaseScale; handIcon.gameObject.SetActive(false); }
     }
 
     private void StopFade()

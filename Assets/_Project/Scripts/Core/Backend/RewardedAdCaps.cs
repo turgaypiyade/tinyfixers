@@ -6,7 +6,7 @@ public enum AdPlacement { Continue = 0, Life = 1, WheelSpin = 2 }
 
 /// <summary>
 /// Ödüllü reklamın TEK kapısı: yer başına günlük sınır + analitik (Docs/Monetization/RewardedAds_Plan.md).
-/// Continue = seviye başına tek hak (LevelAdRight, eski kayıt anahtarı korunur); diğerleri yerel günde N.
+/// Continue = seviye başına 2 hak (+2, +1 hamle; LevelAdRight); diğerleri yerel günde N.
 /// Hak yalnız reklam GERÇEKTEN izlenince harcanır; yarıda kapanan/yüklenemeyen reklam hakkı yemez.
 /// Sayaçlar cihaz yerelidir (bulut kaydına girmez): ödülün kendisi cüzdan/envanter yoluyla kaydedilir.
 /// </summary>
@@ -27,7 +27,7 @@ public static class RewardedAdCaps
         : UsedToday(placement) < DailyLimit(placement);
 
     public static int RemainingToday(AdPlacement placement) => placement == AdPlacement.Continue
-        ? (LevelAdRight.IsUsed ? 0 : 1)
+        ? Mathf.Max(0, LevelAdRight.MaxPerLevel - LevelAdRight.UsedCount)
         : Mathf.Max(0, DailyLimit(placement) - UsedToday(placement));
 
     /// <summary>Teklif ekranda gösterildi (izlenme oranı = ad_reward / ad_offer). Ekran açılışı başına bir kez çağır.</summary>

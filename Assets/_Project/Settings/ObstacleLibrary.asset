@@ -218,7 +218,8 @@ MonoBehaviour:
     breakParticleSprites:
     - {fileID: 5158904056406498323, guid: 8c185012295424a2187904d2bc9f87a9, type: 3}
     - {fileID: 6092200166686537689, guid: 8c185012295424a2187904d2bc9f87a9, type: 3}
-    particleScale: 1.4
+    particleScale: 2.0
+    particleCount: 3
     wardrobeItemSprites: []
     hamsterSatiety: 7
     hitSound: {fileID: 8300000, guid: 0f1bde174f79747b18d415aac08278f5, type: 3}
@@ -289,6 +290,8 @@ MonoBehaviour:
     goalIconSprite: {fileID: 0}
     coversCellFully: 1
     suppressHitParticles: 0
+    particleScale: 2.0
+    particleCount: 3
     hitParticleSprites: []
     breakParticleSprites: []
     wardrobeItemSprites: []
@@ -352,7 +355,8 @@ MonoBehaviour:
     hitParticleSprites: []
     breakParticleSprites:
     - {fileID: -5004397383896470501, guid: 8c185012295424a2187904d2bc9f87a9, type: 3}
-    particleScale: 1.4
+    particleScale: 2.0
+    particleCount: 3
     wardrobeItemSprites: []
     hamsterSatiety: 7
     hitSound: {fileID: 8300000, guid: 0f1bde174f79747b18d415aac08278f5, type: 3}
@@ -3847,7 +3851,8 @@ MonoBehaviour:
     - {fileID: 21300000, guid: 21ac026d255d4619959378c4b1368bbb, type: 3}
     - {fileID: 21300000, guid: 0de1906b5e424b748b91225be26bddfb, type: 3}
     - {fileID: 21300000, guid: 703fd6dff87a4d1ba5125a5c88968838, type: 3}
-    particleScale: 1.6
+    particleScale: 2.2
+    particleCount: 3
     wardrobeItemSprites: []
     hamsterSatiety: 7
     hitSound: {fileID: 8300000, guid: 0f1bde174f79747b18d415aac08278f5, type: 3}
@@ -3942,7 +3947,8 @@ MonoBehaviour:
     - {fileID: 21300000, guid: 09d8543c02134af3923d718f4dd19bf5, type: 3}
     - {fileID: 21300000, guid: 21bc27f297754d65970be744b64a2704, type: 3}
     - {fileID: 21300000, guid: 2953d6a2879e4b51ba312ab8cf4302d3, type: 3}
-    particleScale: 1.6
+    particleScale: 2.2
+    particleCount: 3
     wardrobeItemSprites: []
     hamsterSatiety: 7
     hitSound: {fileID: 8300000, guid: 0f1bde174f79747b18d415aac08278f5, type: 3}
@@ -4037,7 +4043,8 @@ MonoBehaviour:
     - {fileID: 21300000, guid: 30d8d5b28fa3454485600cf0c5caa168, type: 3}
     - {fileID: 21300000, guid: 13aed3b173844cf7a6eb997088013589, type: 3}
     - {fileID: 21300000, guid: 507e9db317f84d4c9e3679767c00c448, type: 3}
-    particleScale: 1.6
+    particleScale: 2.2
+    particleCount: 3
     wardrobeItemSprites: []
     hamsterSatiety: 7
     hitSound: {fileID: 8300000, guid: 0f1bde174f79747b18d415aac08278f5, type: 3}
@@ -4132,7 +4139,8 @@ MonoBehaviour:
     - {fileID: 21300000, guid: ef9c529b4c6e4979861a0e245be74709, type: 3}
     - {fileID: 21300000, guid: 15de396729ec473389d93219f909e9ca, type: 3}
     - {fileID: 21300000, guid: 49c00dbf8b8146e5ab890bfa7e3f32b5, type: 3}
-    particleScale: 1.6
+    particleScale: 2.2
+    particleCount: 3
     wardrobeItemSprites: []
     hamsterSatiety: 7
     hitSound: {fileID: 8300000, guid: 0f1bde174f79747b18d415aac08278f5, type: 3}

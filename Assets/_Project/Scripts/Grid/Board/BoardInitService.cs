@@ -10,8 +10,9 @@ public class BoardInitService
 {
     /// <param name="pinnedTypes">İsteğe bağlı: hücre başına TileType+1 (0 = rastgele). Pinli hücreler sabit kalır ve
     /// rastgele komşular onlarla hazır eşleşme kurmayacak şekilde seçilir (önceden tanımlı öğretici tahtaları).</param>
+    /// <param name="keepPinnedDeadlock">Yalnız karıştırma jokeri öğreticisi (27): hamle enjeksiyonu pinli taşa dokunmaz.</param>
     public TileType[,] SimulateInitialTypes(int width, int height, bool[,] holes, TileType[] randomPool,
-        int[,] pinnedTypes = null)
+        int[,] pinnedTypes = null, bool keepPinnedDeadlock = false)
     {
         var types = new TileType[width, height];
         var filled = new bool[width, height];
@@ -67,7 +68,7 @@ public class BoardInitService
         }
 
         if (fallbackCandidate != null &&
-            TryInjectPlayableMove(fallbackCandidate, holes, randomPool) &&
+            TryInjectPlayableMove(fallbackCandidate, keepPinnedDeadlock ? WithPinnedLocked(holes, pinnedTypes) : holes, randomPool) &&
             !HasImmediateMatch(fallbackCandidate, holes) &&
             HasAnyPlayableMove(fallbackCandidate, holes))
         {
@@ -75,6 +76,16 @@ public class BoardInitService
         }
 
         return fallbackCandidate ?? CloneTypes(types);
+    }
+
+    private static bool[,] WithPinnedLocked(bool[,] holes, int[,] pinnedTypes)
+    {
+        if (pinnedTypes == null) return holes;
+        var mask = (bool[,])holes.Clone();
+        for (int y = 0; y < mask.GetLength(1); y++)
+        for (int x = 0; x < mask.GetLength(0); x++)
+            if (pinnedTypes[x, y] > 0) mask[x, y] = true;
+        return mask;
     }
 
     private TileType PickTypeAvoidingMatch(TileType[,] types, bool[,] filled, int x, int y,

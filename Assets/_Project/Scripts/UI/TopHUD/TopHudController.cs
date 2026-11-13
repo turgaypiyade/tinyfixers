@@ -28,6 +28,30 @@ public class TopHudController : MonoBehaviour
     [Header("References")]
     [SerializeField] private BoardController board;
     [SerializeField] private TMP_Text movesText;
+
+    /// Top HUD'un arka plan görseli (TopHudVisuals/TopBG). Brumo'nun makara halkası bunun alt kenarından sarkar.
+    public RectTransform BackgroundRect
+    {
+        get
+        {
+            var bg = transform.Find("TopHudVisuals/TopBG");
+            return bg != null ? (RectTransform)bg : null;
+        }
+    }
+
+    /// Hamle sayacının görsel kutusu (yazının arka plan görseli varsa o, yoksa yazının kendisi). Brumo'nun makarası
+    /// buraya asılı görünür (BoardFixIntro).
+    public RectTransform MovesBadge
+    {
+        get
+        {
+            if (movesText == null) return null;
+            var t = movesText.transform.parent;
+            for (int i = 0; i < 2 && t != null; i++, t = t.parent)
+                if (t.TryGetComponent<UnityEngine.UI.Image>(out _)) return (RectTransform)t;
+            return movesText.rectTransform;
+        }
+    }
     [SerializeField] private Transform goalsRoot;
     [SerializeField] private TopHudGoalSlot goalSlotPrefab;
 

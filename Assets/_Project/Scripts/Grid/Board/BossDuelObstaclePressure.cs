@@ -30,6 +30,24 @@ public static class BossDuelObstaclePressure
         }
     }
 
+    /// Boss bu levelda hiç engel fırlatıyor mu? (level sayısı ya da yazılmış bir dalganın kendi sayısı > 0)
+    /// Havuz boşken varsayılan Oil'dir; sayı 0 ise o havuz hiç kullanılmaz (ipucu da gösterilmemeli).
+    public static bool ThrowsAny(LevelData level)
+    {
+        if (level == null) return false;
+        if (level.bossAttackOilCount > 0)
+        {
+            if (level.bossWaves == null || level.bossWaves.Length == 0) return true;
+            foreach (var w in level.bossWaves)
+                if (w == null || w.oilCount != 0) return true;   // -1 = level sayısı
+            return false;
+        }
+        if (level.bossWaves != null)
+            foreach (var w in level.bossWaves)
+                if (w != null && w.oilCount > 0) return true;
+        return false;
+    }
+
     public static List<ObstacleId> GetPool(LevelData level)
     {
         var pool = new List<ObstacleId>();

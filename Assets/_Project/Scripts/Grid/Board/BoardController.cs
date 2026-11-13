@@ -836,6 +836,43 @@ public class BoardController : MonoBehaviour
              || (ax == _tutorialSwapTo.x   && ay == _tutorialSwapTo.y   && bx == _tutorialSwapFrom.x && by == _tutorialSwapFrom.y));
     }
 
+    // ── Tutorial joker gate ── (ScriptedTutorial joker adımı: yalnız bu joker seçilir, yalnız bu hedefe kullanılır;
+    // swap/special/iptal kapalı. Input kilidi KULLANILMAZ: TryUseBoosterAtCell kilitliyken jokeri reddeder.)
+    private int _tutorialJokerIndex = -1;
+    private Vector2Int _tutorialJokerCell;
+    private System.Action _tutorialJokerUsed;
+
+    /// Öğreticinin zorunlu tuttuğu joker (0..4), yoksa -1. Joker çubuğu başka slotu ve iptali buna göre reddeder.
+    public int TutorialJokerIndex => _tutorialJokerIndex;
+
+    public void SetTutorialJokerGate(int boosterIndex, Vector2Int cell, System.Action onUsed)
+    {
+        _tutorialJokerIndex = boosterIndex;
+        _tutorialJokerCell = cell;
+        _tutorialJokerUsed = onUsed;
+        SetSelectedTile(null);
+    }
+
+    public void ClearTutorialJokerGate()
+    {
+        _tutorialJokerIndex = -1;
+        _tutorialJokerUsed = null;
+    }
+
+    private static int BoosterIndexOf(BoosterMode mode) => mode switch
+    {
+        BoosterMode.Single => 0, BoosterMode.Row => 1, BoosterMode.Column => 2,
+        BoosterMode.Shuffle => 3, BoosterMode.PaintBucket => 4, _ => -1,
+    };
+
+    private bool IsTutorialJokerTargetAllowed(int x, int y) => activeBooster switch
+    {
+        BoosterMode.Row     => y == _tutorialJokerCell.y,
+        BoosterMode.Column  => x == _tutorialJokerCell.x,
+        BoosterMode.Shuffle => true,
+        _                   => x == _tutorialJokerCell.x && y == _tutorialJokerCell.y,
+    };
+
     public event Action<int, ObstacleStageSnapshot> OnObstacleStageChanged;
     public event Action<int, ObstacleId> OnObstacleDestroyed;
     // Çiçekli çimin çiçekleri döküldü (hücre index'i). Görsel: GrassFlowerOverlayService.
@@ -2237,7 +2274,9 @@ public class BoardController : MonoBehaviour
             }
         }
 
-        return boardInitService.SimulateInitialTypes(width, height, lockedMask, randomPool, pinned);
+        // Yalnız karıştırma öğreticisi level'ı (27): pinli hamlesiz açılışa hamle enjekte edilmez.
+        return boardInitService.SimulateInitialTypes(width, height, lockedMask, randomPool, pinned,
+            keepPinnedDeadlock: HasShuffleTutorialStep());
     }
     // ═══════════════════════════════════════════════════════════════
     //  Busy / State
@@ -3406,6 +3445,7 @@ public class BoardController : MonoBehaviour
     {
         if (from == null || !from)
             return;
+        if (_tutorialJokerIndex >= 0) return;
 
         int nx = from.X + dirX, ny = from.Y + dirY;
 
@@ -3445,6 +3485,13 @@ public class BoardController : MonoBehaviour
 
     public void OnTileClicked(TileView tile)
     {
+        // Joker öğreticisi: yalnız seçili jokerin hedefi kabul edilir (hedef kontrolü TryUseBoosterAtCell'de).
+        if (_tutorialJokerIndex >= 0)
+        {
+            if (activeBooster != BoosterMode.None) TryUseBooster(tile);
+            return;
+        }
+
         if (IsBusy)
         {
             if (!useDynamicBoardInputGate || dynamicSwapLogicDepth > 0 || RemainingMoves <= 0)
@@ -3619,7 +3666,22 @@ public class BoardController : MonoBehaviour
 
     public bool TryUseBoosterAtCell(int x, int y)
     {
+        if (_tutorialJokerIndex < 0 || activeBooster == BoosterMode.None) return TryUseBoosterAtCellCore(x, y);
 
+        if (BoosterIndexOf(activeBooster) != _tutorialJokerIndex || !IsTutorialJokerTargetAllowed(x, y)) return true;
+        bool handled = TryUseBoosterAtCellCore(x, y);
+        // Joker gerçekten kullanıldıysa mod kapanır (geçersiz hedef / meşgul tahtada seçili kalır).
+        if (activeBooster == BoosterMode.None)
+        {
+            var used = _tutorialJokerUsed;
+            ClearTutorialJokerGate();
+            used?.Invoke();
+        }
+        return handled;
+    }
+
+    private bool TryUseBoosterAtCellCore(int x, int y)
+    {
         if (activeBooster == BoosterMode.None) return false;
         if (IsBusy || InputLocked) { return true; }
         if (x < 0 || x >= width || y < 0 || y >= height) return true;
@@ -4830,6 +4892,11 @@ public class BoardController : MonoBehaviour
             if (RemainingMoves <= 0)
                 break;
 
+            // Karıştırma jokeri öğreticisi bekliyorsa (27: hamlesiz açılış) otomatik karıştırma yapılmaz;
+            // tahtayı oyuncu jokerle karıştırır.
+            if (ScriptedTutorial.HoldsAutoShuffle)
+                break;
+
             if (!matchFinder.HasAnyPlayableSwap())
             {
                 if (BoardFlowTraceEnabled)
@@ -5232,6 +5299,27 @@ public class BoardController : MonoBehaviour
 
     public IEnumerator ResolveInitial() { BeginBusy(); yield return ResolveBoard(false); EndBusy(); }
 
+    /// Açılış güvenlik ağı (kullanıcı 2026-11-14: "başka zaman unutup hatalı level tasarlayabiliriz"; L217 hamlesiz
+    /// açılıyordu, motor yalnız hamleden SONRA karıştırıyordu): tahta oturunca (ekran dışında) oynanabilir hamle yoksa
+    /// güvenli karıştırma. HasAnyPlayableSwap artık hareketli engel kaydırmalarını da sayar (L23 kargo tahtası hamleli).
+    /// İstisna: karıştırma jokeri öğreticisi bekliyorsa (27) tahta bilerek hamlesiz kalır.
+    public IEnumerator EnsurePlayableInitial()
+    {
+        if (ScriptedTutorial.HoldsAutoShuffle || matchFinder == null || matchFinder.HasAnyPlayableSwap()) yield break;
+        if (GameDiagnostics.CriticalErrors)
+            Debug.LogWarning($"[Board] Level açılışı hamlesiz → güvenli karıştırma (level {CurrentLevel.Played}). Level tasarımını kontrol et.");
+        yield return EnsurePlayableBoardAfterSettleRoutine();
+    }
+
+    private bool HasShuffleTutorialStep()
+    {
+        var steps = levelData != null ? levelData.tutorialSteps : null;
+        if (steps == null) return false;
+        foreach (var step in steps)
+            if (step.id == TutorialId.JokerShuffle) return true;
+        return false;
+    }
+
     // Level girişi: board taşlar dizili halde sağdan sola kayarak otursun.
     // settleRoutine (genelde ResolveInitial) ekran DIŞINDA çalışır → oyuncu önce arka planı
     // görür, sonra hazır/oturmuş board kayarak gelir. Giriş boyunca input kilitli (BeginBusy).
@@ -5244,10 +5332,14 @@ public class BoardController : MonoBehaviour
         flowLive = true;   // board kuruldu: akış pompası (varsa) initial settle'dan itibaren çalışır
         BeginBusy();
 
+        // Ara sıra giriş eğlencesi (yalnız seçilen girişte; LevelIntroFun): Brumo yamuk tahtayı düzeltir / Pemi boyayı siler.
+        var introFun = slide ? LevelIntroFun.Pick(levelData) : LevelIntroKind.None;
+
         if (slide)
         {
             entranceInProgress = true;
             shakeTarget.anchoredPosition = home + new Vector2(ResolveEntranceOffsetX(), 0f);
+            if (introFun == LevelIntroKind.Brumo) shakeTarget.localRotation = Quaternion.Euler(0f, 0f, BoardFixIntro.TiltDegrees);
         }
 
         if (settleRoutine != null)
@@ -5287,6 +5379,8 @@ public class BoardController : MonoBehaviour
         }
 
         if (hudEntrance != null) hudEntrance.Complete();
+        if (introFun == LevelIntroKind.Brumo) yield return BoardFixIntro.Play(this, shakeTarget);
+        else if (introFun == LevelIntroKind.Pemi) yield return PaintCleanIntro.Play(shakeTarget, this);
         EndBusy();
     }
 
@@ -6596,6 +6690,9 @@ public class BoardController : MonoBehaviour
             moveClearPraisePopup.Bind(this);
         }
     }
+    /// Öğretici atlanırsa (27: karıştırma jokeri kullanılamadı) hamlesiz kalan tahtayı güvenli karıştırmayla aç.
+    public void EnsurePlayableBoard() => StartCoroutine(EnsurePlayableBoardAfterSettleRoutine());
+
     private IEnumerator EnsurePlayableBoardAfterSettleRoutine()
     {
         if (matchFinder == null || boosterService == null || boardInitService == null)

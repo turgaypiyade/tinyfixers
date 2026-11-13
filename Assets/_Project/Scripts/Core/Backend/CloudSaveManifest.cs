@@ -44,6 +44,7 @@ public static class CloudSaveManifest
         MasterLeagueRewards.KeyBadgeSilver,
         MasterLeagueRewards.KeyBadgeBronze,
         "player_avatar_id",
+        "player_name_code",       // otomatik isim numarası ("Oyuncu 48213") — cihaz değişince aynı kalsın
         "booster_hammer_count",
         "booster_row_count",
         "booster_column_count",
@@ -173,6 +174,7 @@ public static class CloudSaveManifest
         "stats_first_try_clears", "stats_current_streak", "stats_longest_streak",
         "stats_current_level_failed", "stats_level_fail_count", "safari_run_seed",
         "ad_continue_used_level",
+        "ad_continue_used_count",   // level başına 2 reklam hakkının kaçı kullanıldı
     };
 
     private static bool IsResettableProgress(string key) =>

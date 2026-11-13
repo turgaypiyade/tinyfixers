@@ -57,7 +57,8 @@ public class ObstacleHintManager : MonoBehaviour
 
     private bool CanIntroduceObstacle() => board != null && board.Tiles != null && board.Width > 0
         && !board.InputLocked && board.ActiveBackgroundJobs == 0 && !board.IsActionSequencePlaying
-        && overlay != null && !overlay.IsVisible && Time.timeScale > 0f;
+        && overlay != null && !overlay.IsVisible && Time.timeScale > 0f
+        && !LevelIntroFun.IsPlaying;   // giriş eğlencesi (Brumo/Pemi) bitsin, ipucu sonra
 
     private IEnumerator ShowPendingHints()
     {
@@ -245,8 +246,11 @@ public class ObstacleHintManager : MonoBehaviour
         // oyuncuya level başında anlatılır (yağ/plastik vb. + alet tehdidi; renkliler tek ipucu).
         if (levelData.levelKind == LevelKind.BossDuel)
         {
-            foreach (var id in BossDuelObstaclePressure.GetPool(levelData))
-                AddId(id);
+            // Fırlatma sayısı 0 olan boss'ta havuz (boşsa varsayılan Oil) hiç kullanılmaz → ipucu da yok
+            // (kullanıcı 2026-11-13: yağ 10. level boss'unda değil, 11'de tanıtılsın).
+            if (BossDuelObstaclePressure.ThrowsAny(levelData))
+                foreach (var id in BossDuelObstaclePressure.GetPool(levelData))
+                    AddId(id);
 
             if (levelData.bossToolThreatEnabled)
             {
