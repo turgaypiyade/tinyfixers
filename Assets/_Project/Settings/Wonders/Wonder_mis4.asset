@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: "Miyav Piramidi"
   taskIcon: {fileID: 0}
   backgroundSprite: {fileID: 21300000, guid: 1ae149420bdbb442ea753a52bcb2fe61, type: 3}
-  unrestoredTexture: {fileID: 2800000, guid: 21b6f1a680a2575a8b3a787e1f30c2c4, type: 3}
+  unrestoredTexture: {fileID: 0}
   totalStages: 10
   tasks:
   - name: "Kaz\u0131 Alan\u0131n\u0131 Temizle"
@@ -139,6 +139,59 @@ MonoBehaviour:
     weight: 0
   chestClosedSprite: {fileID: 21300000, guid: 4158f6743c7c545678bc1ad5daed3817, type: 3}
   chestOpenedSprite: {fileID: 21300000, guid: e2ca9e0f34b7f401e949f0682cb1c32d, type: 3}
+  buildSiteTexture: {fileID: 2800000, guid: b4d4799d4e234c8d92e9d5afba04802e, type: 3}
+  buildFinalSprite: {fileID: 0}
+  buildPieceMap: {fileID: 2800000, guid: b12a71436d1f43afa140afe74f9f883f, type: 3}
+  buildPieceBounds:
+  - serializedVersion: 2
+    x: 0.0
+    y: 0.362
+    width: 1.0
+    height: 0.052
+  - serializedVersion: 2
+    x: 0.0
+    y: 0.414
+    width: 1.0
+    height: 0.064
+  - serializedVersion: 2
+    x: 0.557
+    y: 0.395
+    width: 0.164
+    height: 0.073
+  - serializedVersion: 2
+    x: 0.493
+    y: 0.468
+    width: 0.196
+    height: 0.077
+  - serializedVersion: 2
+    x: 0.042
+    y: 0.477
+    width: 0.833
+    height: 0.068
+  - serializedVersion: 2
+    x: 0.259
+    y: 0.545
+    width: 0.531
+    height: 0.109
+  - serializedVersion: 2
+    x: 0.398
+    y: 0.655
+    width: 0.273
+    height: 0.055
+  - serializedVersion: 2
+    x: 0.471
+    y: 0.709
+    width: 0.131
+    height: 0.047
+  buildModeLive: 1
+  buildHammerFrames:
+  - {fileID: 21300000, guid: ab9da204e8f948a7aeef4a967f793eaa, type: 3}
+  - {fileID: 21300000, guid: 1812ae7fd7fe49a7929444e9300bad2c, type: 3}
+  - {fileID: 21300000, guid: fdc38a5db871407185d20805c2089481, type: 3}
+  - {fileID: 21300000, guid: 50d088531438401286e159fa141d05ab, type: 3}
+  buildHammerTool: {fileID: 0}
+  buildDustSprite: {fileID: 21300000, guid: fcb102e8a0844c7d97c823a6de9da986, type: 3}
+  buildStarSprite: {fileID: 21300000, guid: 3777501fcbb794f35a8cee09ef4e7973, type: 3}
   welderFrames:
   - {fileID: 21300000, guid: d25032ca758ce4d7db141f69a983a2ee, type: 3}
   - {fileID: 21300000, guid: b10915ec26fab4b08b3e8ccdbe5ba52e, type: 3}

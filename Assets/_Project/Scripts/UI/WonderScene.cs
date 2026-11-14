@@ -46,16 +46,17 @@ public class WonderScene : MonoBehaviour
         // --- Arka plan (tam ekran cover + reveal) ---------------------
         var bg = NewChild("WonderBackground", typeof(Image), typeof(AspectRatioFitter), typeof(WonderRevealView));
         var bgImg = bg.GetComponent<Image>();
-        bgImg.sprite = def.backgroundSprite;
+        var sprite = def.RevealSprite;   // inşaat modunda iskelesiz bitmiş hal (varsa)
+        bgImg.sprite = sprite;
         bgImg.preserveAspect = false;
         var fitter = bg.GetComponent<AspectRatioFitter>();
         fitter.aspectMode = AspectRatioFitter.AspectMode.EnvelopeParent;
-        if (def.backgroundSprite != null)
-            fitter.aspectRatio = (float)def.backgroundSprite.texture.width / def.backgroundSprite.texture.height;
+        if (sprite != null)
+            fitter.aspectRatio = (float)sprite.texture.width / sprite.texture.height;
 
         var view = bg.GetComponent<WonderRevealView>();
         view.ConfigureShader(shader);
-        view.ConfigureUnrestoredTexture(def.unrestoredTexture);
+        view.ConfigureFor(def);   // inşaat modu açıksa şantiye resmi + parça haritası, değilse eski restorasyon
         view.wonderId = def.wonderId;
         view.totalStages = def.TaskCount;
         view.welderFrames = def.welderFrames;

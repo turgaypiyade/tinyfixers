@@ -87,6 +87,54 @@ public class WonderDefinition : ScriptableObject
         return starCostBase + starCostStep * Mathf.Max(0, stage);
     }
 
+    [Header("İnşaat Modu (pilot) — şantiye resmi + bitmiş resim")]
+    [Tooltip("Bitmemiş şantiye hali; bitmiş resimle piksel hizalı. Açılmamış parçalar buradan gösterilir.")]
+    public Texture2D buildSiteTexture;
+    [Tooltip("İnşaat modunun bitmiş hali (ör. iskelesiz). Boşsa backgroundSprite. Yalnız inşaat modunda kullanılır.")]
+    public Sprite buildFinalSprite;
+    [Tooltip("İsteğe bağlı ara aşama (üç resim: şantiye → ara → bitmiş). Doluysa parça haritasının G kanalı ara→bitmiş görevidir.")]
+    public Texture2D buildMidTexture;
+    [Tooltip("Parça haritası (Point): R = görev indeksi + 1 (şantiye→ara/bitmiş), G = ara→bitmiş (üç resimde), 0 = değişmez.")]
+    public Texture2D buildPieceMap;
+    [Tooltip("Görev başına parçanın sınırı (normalize, sol-alt). Genişliği 0 olan görev = bitmiş resmin üstünden parlatma.")]
+    public Rect[] buildPieceBounds;
+    [Tooltip("Kapalıyken yalnız editörde 'İnşaat Pilotu' menüsüyle görünür; canlı sürümü etkilemez.")]
+    public bool buildModeLive;
+    [Tooltip("Görevde kaynakçı maymun çıksın mı? Resimde zaten maymun varsa (ör. Sidney) kapat.")]
+    public bool buildShowWelder = true;
+    [Tooltip("Görevde çekiçli karakter çıksın mı? Resimde aynı karakter varsa kapat.")]
+    public bool buildShowHammerer = true;
+    [Tooltip("Çekiçle vuran karakter kareleri (son kare = vuruş anı).")]
+    public Sprite[] buildHammerFrames;
+    public Sprite buildHammerTool;
+    public Sprite buildDustSprite;
+    public Sprite buildStarSprite;
+
+#if UNITY_EDITOR
+    public const string BuildPilotPrefKey = "debug_wonder_build_pilot";
+#endif
+
+    /// İki resimli inşaat modu bu harikada açık mı? (canlı bayrağı ya da editör pilot anahtarı)
+    public bool UsesBuildMode
+    {
+        get
+        {
+            if (buildSiteTexture == null || buildPieceMap == null) return false;
+            if (buildModeLive) return true;
+#if UNITY_EDITOR
+            return UnityEngine.PlayerPrefs.GetInt(BuildPilotPrefKey, 0) == 1;
+#else
+            return false;
+#endif
+        }
+    }
+
+    /// Görev sahnesinde gösterilecek bitmiş resim: inşaat modunda (varsa) iskelesiz hal, değilse arka plan.
+    public Sprite RevealSprite => UsesBuildMode && buildFinalSprite != null ? buildFinalSprite : backgroundSprite;
+
+    public Rect BuildPieceBounds(int stage) =>
+        buildPieceBounds != null && stage >= 0 && stage < buildPieceBounds.Length ? buildPieceBounds[stage] : default;
+
     [Header("Kaynakçı")]
     public Sprite[] welderFrames;
     public float welderFps = 10f;

@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: "E\u011Fik Pati Kulesi"
   taskIcon: {fileID: 0}
   backgroundSprite: {fileID: 21300000, guid: cda4afd3ade84d6984408892992cd2d7, type: 3}
-  unrestoredTexture: {fileID: 2800000, guid: 0317a2b5d2775f2180bf5b71e9b0b10a, type: 3}
+  unrestoredTexture: {fileID: 0}
   totalStages: 10
   tasks:
   - name: "\u00c7evreyi Temizle"
@@ -129,6 +129,58 @@ MonoBehaviour:
     weight: 0
   chestClosedSprite: {fileID: 21300000, guid: 4158f6743c7c545678bc1ad5daed3817, type: 3}
   chestOpenedSprite: {fileID: 21300000, guid: e2ca9e0f34b7f401e949f0682cb1c32d, type: 3}
+  buildSiteTexture: {fileID: 2800000, guid: 9483526bff0041f394608ff32ab66fdc, type: 3}
+  buildPieceMap: {fileID: 2800000, guid: 73753d235459426f998c7fba0d7d2e25, type: 3}
+  buildPieceBounds:
+  - serializedVersion: 2
+    x: 0.33
+    y: 0.292
+    width: 0.564
+    height: 0.186
+  - serializedVersion: 2
+    x: 0.0
+    y: 0.315
+    width: 0.33
+    height: 0.501
+  - serializedVersion: 2
+    x: 0.33
+    y: 0.479
+    width: 0.475
+    height: 0.064
+  - serializedVersion: 2
+    x: 0.391
+    y: 0.542
+    width: 0.414
+    height: 0.064
+  - serializedVersion: 2
+    x: 0.805
+    y: 0.387
+    width: 0.195
+    height: 0.329
+  - serializedVersion: 2
+    x: 0.423
+    y: 0.606
+    width: 0.38
+    height: 0.067
+  - serializedVersion: 2
+    x: 0.438
+    y: 0.673
+    width: 0.354
+    height: 0.067
+  - serializedVersion: 2
+    x: 0.48
+    y: 0.739
+    width: 0.243
+    height: 0.121
+  buildModeLive: 1
+  buildHammerFrames:
+  - {fileID: 21300000, guid: ab9da204e8f948a7aeef4a967f793eaa, type: 3}
+  - {fileID: 21300000, guid: 1812ae7fd7fe49a7929444e9300bad2c, type: 3}
+  - {fileID: 21300000, guid: fdc38a5db871407185d20805c2089481, type: 3}
+  - {fileID: 21300000, guid: 50d088531438401286e159fa141d05ab, type: 3}
+  buildHammerTool: {fileID: 0}
+  buildDustSprite: {fileID: 21300000, guid: fcb102e8a0844c7d97c823a6de9da986, type: 3}
+  buildStarSprite: {fileID: 21300000, guid: 3777501fcbb794f35a8cee09ef4e7973, type: 3}
   welderFrames:
   - {fileID: 21300000, guid: d25032ca758ce4d7db141f69a983a2ee, type: 3}
   - {fileID: 21300000, guid: b10915ec26fab4b08b3e8ccdbe5ba52e, type: 3}

@@ -35,6 +35,9 @@ public class WonderRevealOverlay : MonoBehaviour
         StartCoroutine(PreviewRestorationRoutine(wonder));
     }
 
+    /// Editör önizlemesi: bir sonraki önizleme bu harikanın 1. görevinden başlar.
+    public void ResetPreview() { _previewWonder = null; _previewStage = 0; }
+
     IEnumerator PreviewRestorationRoutine(WonderDefinition wonder)
     {
         IsPlaying = true;
@@ -42,6 +45,9 @@ public class WonderRevealOverlay : MonoBehaviour
         {
             int stages = Mathf.Max(1, wonder.TaskCount);
             if (_previewWonder != wonder) { _previewWonder = wonder; _previewStage = 0; }
+#if UNITY_EDITOR
+            Debug.Log($"[WonderBuild] {wonder.name}: görev {_previewStage % stages + 1}/{stages} oynuyor (inşaat modu: {(wonder.UsesBuildMode ? "açık" : "kapalı")}).");
+#endif
             float from = (_previewStage++ % stages) / (float)stages;
             yield return PrepareReveal(wonder, from, true);
             var view = _scene.View;
@@ -107,7 +113,9 @@ public class WonderRevealOverlay : MonoBehaviour
         if (root != null) root.SetActive(true);
         EnsureScene();
         // Reuse the character, material and spark buffer on subsequent tasks.
-        var view = _scene.definition == wonder && _scene.View != null ? _scene.View : _scene.Build(wonder);
+        // İnşaat modu açılıp kapanınca (editör pilot anahtarı) sahne yeniden kurulur.
+        var view = _scene.definition == wonder && _scene.View != null && _scene.View.IsBuildMode == wonder.UsesBuildMode
+            ? _scene.View : _scene.Build(wonder);
         view.useRustRestoration = restoration;
         view.animateDuration = revealDuration;
         yield return null;

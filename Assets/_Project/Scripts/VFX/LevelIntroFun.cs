@@ -4,21 +4,24 @@ public enum LevelIntroKind { None, Brumo, Pemi }
 
 /// <summary>
 /// Level başlangıcı eğlencesi seçimi (kullanıcı 2026-11-13): tahta girişinde ara sıra kısa bir karakter anı.
-///   • Brumo (BoardFixIntro): yamuk tahtayı ip-makarayla düzeltir — level 5'in ilk girişinde garantili, bir kez.
-///   • Pemi (PaintCleanIntro): kova cama boya döker, cephe asansörüyle Tinko + Pemi siler — level 8 garantili, bir kez.
-///   • Level 6+: girişlerin ~%15'inde ikisinden biri rastgele. Oturum başına en fazla 1; tekrar denemede ve boss'ta yok.
+///   • Brumo (BoardFixIntro): yamuk tahtayı ip-makarayla düzeltir — level 5'te garantili, bir kez.
+///   • Pemi (PaintCleanIntro): kova cama boya döker, gondolla Tinko + Pemi siler — level 8'de garantili, bir kez.
+///   • Garantiler kaçırılırsa (tekrar deneme vb.) sonraki ilk uygun girişte gelir.
+///   • Level 6+: ZAR YOK (2026-11-14: %15 ile 47. seviyeye kadar hiç çıkmadı) — her EveryEntries ilk-deneme
+///     girişinden birinde sırayla Brumo / Pemi. Sayaç cihazda kalıcı; tekrar denemede ve boss'ta sayılmaz.
 /// Eğlence oynarken öğretici/ipucu pencereleri bekler (IsPlaying).
 /// </summary>
 public static class LevelIntroFun
 {
-    private const float Chance = 0.15f;
+    private const int EveryEntries = 6;   // ≈ %17: her 6 yeni seviyeden birinde
     // Pemi v1 beğenilmedi; v2 (cephe asansörü: Tinko + Pemi) kullanıcı onayıyla açık (2026-11-13: "çok daha iyi oldu").
     private const bool PemiEnabled = true;
     private const int MinRandomLevel = 6;
     private const int BrumoLevel = 5, PemiLevel = 8;
     private const string BrumoSeenKey = "boardfix_guaranteed_seen";
     private const string PemiSeenKey = "paintclean_guaranteed_seen";
-    private static bool playedThisSession;
+    private const string SinceKey = "levelintro_entries_since";
+    private const string NextPemiKey = "levelintro_next_is_pemi";
 
     /// Bir giriş eğlencesi oynuyor mu? Engel ipucu penceresi bitene dek bekler.
     public static bool IsPlaying { get; internal set; }
@@ -37,28 +40,39 @@ public static class LevelIntroFun
         if (ConsumeDebug(DebugForceBrumoKey) && BoardFixIntro.CanPlay()) return LevelIntroKind.Brumo;
         if (ConsumeDebug(DebugForcePemiKey) && PaintCleanIntro.CanPlay()) return LevelIntroKind.Pemi;
 #endif
-        if (playedThisSession || level.levelKind != LevelKind.Normal) return LevelIntroKind.None;
+        if (level.levelKind != LevelKind.Normal) return LevelIntroKind.None;
         int n = CurrentLevel.Played;
         if (LevelAttemptStats.AttemptsOn(n) > 1) return LevelIntroKind.None;
 
-        if (n == BrumoLevel && PlayerPrefs.GetInt(BrumoSeenKey, 0) == 0 && BoardFixIntro.CanPlay())
+        if (n >= BrumoLevel && PlayerPrefs.GetInt(BrumoSeenKey, 0) == 0 && BoardFixIntro.CanPlay())
             return Mark(LevelIntroKind.Brumo, BrumoSeenKey);
-        if (PemiEnabled && n == PemiLevel && PlayerPrefs.GetInt(PemiSeenKey, 0) == 0 && PaintCleanIntro.CanPlay())
+        if (PemiEnabled && n >= PemiLevel && PlayerPrefs.GetInt(PemiSeenKey, 0) == 0 && PaintCleanIntro.CanPlay())
             return Mark(LevelIntroKind.Pemi, PemiSeenKey);
 
-        if (n < MinRandomLevel || Random.value > Chance) return LevelIntroKind.None;
-        var kind = PemiEnabled && Random.value < 0.5f ? LevelIntroKind.Pemi : LevelIntroKind.Brumo;
-        bool ok = kind == LevelIntroKind.Brumo ? BoardFixIntro.CanPlay() : PaintCleanIntro.CanPlay();
-        if (!ok) return LevelIntroKind.None;
-        playedThisSession = true;
+        if (n < MinRandomLevel) return LevelIntroKind.None;
+        int since = PlayerPrefs.GetInt(SinceKey, 0) + 1;
+        if (since < EveryEntries)
+        {
+            PlayerPrefs.SetInt(SinceKey, since);
+            PlayerPrefs.Save();
+            return LevelIntroKind.None;
+        }
+        bool pemi = PemiEnabled && PlayerPrefs.GetInt(NextPemiKey, 0) == 1;
+        var kind = pemi && PaintCleanIntro.CanPlay() ? LevelIntroKind.Pemi
+            : BoardFixIntro.CanPlay() ? LevelIntroKind.Brumo
+            : PemiEnabled && PaintCleanIntro.CanPlay() ? LevelIntroKind.Pemi : LevelIntroKind.None;
+        if (kind == LevelIntroKind.None) return kind;
+        PlayerPrefs.SetInt(NextPemiKey, kind == LevelIntroKind.Brumo ? 1 : 0);   // sırayla
+        PlayerPrefs.SetInt(SinceKey, 0);
+        PlayerPrefs.Save();
         return kind;
     }
 
     private static LevelIntroKind Mark(LevelIntroKind kind, string key)
     {
         PlayerPrefs.SetInt(key, 1);
+        PlayerPrefs.SetInt(SinceKey, 0);   // garantili gösterimden sonra sayaç baştan
         PlayerPrefs.Save();
-        playedThisSession = true;
         return kind;
     }
 

@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: "Büyük Pati Seddi"
   taskIcon: {fileID: 0}
   backgroundSprite: {fileID: 21300000, guid: 85430392c02e14202abc451668ac9fcc, type: 3}
-  unrestoredTexture: {fileID: 2800000, guid: 64f65e8c43d0573db90e84c8dd5cbad0, type: 3}
+  unrestoredTexture: {fileID: 0}
   totalStages: 8
   tasks:
   - name: "\u00c7al\u0131\u015fma Alan\u0131n\u0131 Temizle"
@@ -169,6 +169,59 @@ MonoBehaviour:
     weight: 0
   chestClosedSprite: {fileID: 21300000, guid: 4158f6743c7c545678bc1ad5daed3817, type: 3}
   chestOpenedSprite: {fileID: 21300000, guid: e2ca9e0f34b7f401e949f0682cb1c32d, type: 3}
+  buildSiteTexture: {fileID: 2800000, guid: 53584c5ec3884cd5aaf408b0af683171, type: 3}
+  buildFinalSprite: {fileID: 0}
+  buildPieceMap: {fileID: 2800000, guid: 6469ebef543444ca8fe73452d4106524, type: 3}
+  buildPieceBounds:
+  - serializedVersion: 2
+    x: 0.421
+    y: 0.215
+    width: 0.555
+    height: 0.132
+  - serializedVersion: 2
+    x: 0.59
+    y: 0.347
+    width: 0.393
+    height: 0.079
+  - serializedVersion: 2
+    x: 0.59
+    y: 0.426
+    width: 0.41
+    height: 0.275
+  - serializedVersion: 2
+    x: 0.788
+    y: 0.347
+    width: 0.156
+    height: 0.162
+  - serializedVersion: 2
+    x: 0.215
+    y: 0.356
+    width: 0.375
+    height: 0.401
+  - serializedVersion: 2
+    x: 0.233
+    y: 0.474
+    width: 0.664
+    height: 0.273
+  - serializedVersion: 2
+    x: 0.634
+    y: 0.589
+    width: 0.271
+    height: 0.045
+  - serializedVersion: 2
+    x: 0.248
+    y: 0.587
+    width: 0.59
+    height: 0.176
+  buildModeLive: 1
+  buildHammerFrames:
+  - {fileID: 21300000, guid: ab9da204e8f948a7aeef4a967f793eaa, type: 3}
+  - {fileID: 21300000, guid: 1812ae7fd7fe49a7929444e9300bad2c, type: 3}
+  - {fileID: 21300000, guid: fdc38a5db871407185d20805c2089481, type: 3}
+  - {fileID: 21300000, guid: 50d088531438401286e159fa141d05ab, type: 3}
+  buildHammerTool: {fileID: 0}
+  buildDustSprite: {fileID: 21300000, guid: fcb102e8a0844c7d97c823a6de9da986, type: 3}
+  buildStarSprite: {fileID: 21300000, guid: 3777501fcbb794f35a8cee09ef4e7973, type: 3}
   welderFrames:
   - {fileID: 21300000, guid: d25032ca758ce4d7db141f69a983a2ee, type: 3}
   - {fileID: 21300000, guid: b10915ec26fab4b08b3e8ccdbe5ba52e, type: 3}

@@ -188,6 +188,13 @@ public class LevelEndSimplePopupController : MonoBehaviour
     [SerializeField] private bool useFlatCoinReward = true;
     [Tooltip("useFlatCoinReward açıkken verilecek sabit level-sonu coin.")]
     [SerializeField, Min(0)] private int flatCoinReward = 10;
+    [Tooltip("İlk seviyelerde etkinlikler henüz açılmadığı için tek altın kaynağı seviye ödülü; bu seviyeye kadar (dahil) " +
+             "earlyFlatCoinReward verilir (2026-11-14: 47. seviyede ~1300 → hedef 1500-1700 bandı).")]
+    [SerializeField, Min(0)] private int earlyCoinRewardUntilLevel = 50;
+    [SerializeField, Min(0)] private int earlyFlatCoinReward = 18;
+    [Tooltip("LevelDifficultyTag: zor (5 ile biten) / çok zor (9 ile biten) seviyelerin altını. Erken bantta büyük olan geçerli.")]
+    [SerializeField, Min(0)] private int hardCoinReward = 15;
+    [SerializeField, Min(0)] private int veryHardCoinReward = 20;
 
     [Header("Score (Puan)")]
     [Tooltip("Level kazanınca verilen taban puan. Leaderboard/team metriğine (TotalScore) eklenir.")]
@@ -1725,7 +1732,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
         // varsayılan olduğundan, çok sayıda event kaybı varken balonu kalabalıklaştırmasın diye atlanır.
         var level = board != null ? board.ActiveLevelData : null;
         int coinReward = useFlatCoinReward
-            ? Mathf.Max(0, flatCoinReward)
+            ? FlatCoinReward()
             : (level != null ? Mathf.Max(0, level.baseCoinReward) : 0);
         if (coinReward > 0 && items.Count <= maxEventLossesWithCoin)
             items.Insert(0, (coinIcon, LocalizedText("level_end_loss_coin", "Altın"), coinReward, false));
@@ -1873,7 +1880,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
         // Sabit (küçük) level-sonu ödülü — in-game gold'dan ayrı. baseCoinReward/hamle bonusu
         // formülü kullanılmaz; "her kazanışta ekstra ~10 coin" gibi öngörülebilir küçük ödül.
         if (useFlatCoinReward)
-            return Mathf.Max(0, flatCoinReward);
+            return FlatCoinReward();
 
         LevelData levelData = board != null ? board.ActiveLevelData : null;
         int baseReward = Mathf.Max(0, levelData != null ? levelData.baseCoinReward : baseCoins);
@@ -1883,6 +1890,17 @@ public class LevelEndSimplePopupController : MonoBehaviour
         float remainingRatio = Mathf.Clamp01((float)_movesAtWin / levelData.moves);
         int remainingBonus = Mathf.RoundToInt(baseReward * remainingRatio * Mathf.Max(0f, remainingMoveBonusRatio));
         return baseReward + Mathf.Max(0, remainingBonus);
+    }
+
+    private int FlatCoinReward()
+    {
+        if (MasterLeague.IsPlaying) return Mathf.Max(0, flatCoinReward);
+        int level = ResolveCurrentLevelNumber();
+        int reward = level <= earlyCoinRewardUntilLevel ? earlyFlatCoinReward : flatCoinReward;
+        var tier = LevelDifficultyTag.For(level);
+        if (tier == LevelDifficulty.Hard) reward = Mathf.Max(reward, hardCoinReward);
+        else if (tier == LevelDifficulty.VeryHard) reward = Mathf.Max(reward, veryHardCoinReward);
+        return Mathf.Max(0, reward);
     }
 
     private int CalculateScore() => scoreBase + _movesAtWin * scorePerRemainingMove;

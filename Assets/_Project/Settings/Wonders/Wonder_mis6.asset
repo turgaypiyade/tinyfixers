@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: "Kuyruk Kanyonu"
   taskIcon: {fileID: 0}
   backgroundSprite: {fileID: 21300000, guid: 06e32a2005f441eab75a96b577587c79, type: 3}
-  unrestoredTexture: {fileID: 2800000, guid: f27a79866fed51ac98840105e9298064, type: 3}
+  unrestoredTexture: {fileID: 0}
   totalStages: 8
   tasks:
   - name: "Patikayı Temizle"
@@ -124,6 +124,59 @@ MonoBehaviour:
     weight: 0
   chestClosedSprite: {fileID: 21300000, guid: 4158f6743c7c545678bc1ad5daed3817, type: 3}
   chestOpenedSprite: {fileID: 21300000, guid: e2ca9e0f34b7f401e949f0682cb1c32d, type: 3}
+  buildSiteTexture: {fileID: 2800000, guid: 044849b21001482b855533c0485c3ef4, type: 3}
+  buildFinalSprite: {fileID: 0}
+  buildPieceMap: {fileID: 2800000, guid: 6a4bfc335e9f4ce090230ee528a82168, type: 3}
+  buildPieceBounds:
+  - serializedVersion: 2
+    x: 0.0
+    y: 0.0
+    width: 1.0
+    height: 0.154
+  - serializedVersion: 2
+    x: 0.0
+    y: 0.154
+    width: 1.0
+    height: 0.102
+  - serializedVersion: 2
+    x: 0.031
+    y: 0.256
+    width: 0.955
+    height: 0.167
+  - serializedVersion: 2
+    x: 0.025
+    y: 0.383
+    width: 0.175
+    height: 0.165
+  - serializedVersion: 2
+    x: 0.37
+    y: 0.25
+    width: 0.34
+    height: 0.178
+  - serializedVersion: 2
+    x: 0.73
+    y: 0.221
+    width: 0.245
+    height: 0.264
+  - serializedVersion: 2
+    x: 0.045
+    y: 0.221
+    width: 0.21
+    height: 0.175
+  - serializedVersion: 2
+    x: 0.023
+    y: 0.266
+    width: 0.878
+    height: 0.319
+  buildModeLive: 1
+  buildHammerFrames:
+  - {fileID: 21300000, guid: ab9da204e8f948a7aeef4a967f793eaa, type: 3}
+  - {fileID: 21300000, guid: 1812ae7fd7fe49a7929444e9300bad2c, type: 3}
+  - {fileID: 21300000, guid: fdc38a5db871407185d20805c2089481, type: 3}
+  - {fileID: 21300000, guid: 50d088531438401286e159fa141d05ab, type: 3}
+  buildHammerTool: {fileID: 0}
+  buildDustSprite: {fileID: 21300000, guid: fcb102e8a0844c7d97c823a6de9da986, type: 3}
+  buildStarSprite: {fileID: 21300000, guid: 3777501fcbb794f35a8cee09ef4e7973, type: 3}
   welderFrames:
   - {fileID: 21300000, guid: d25032ca758ce4d7db141f69a983a2ee, type: 3}
   - {fileID: 21300000, guid: b10915ec26fab4b08b3e8ccdbe5ba52e, type: 3}

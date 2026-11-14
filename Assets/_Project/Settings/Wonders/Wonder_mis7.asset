@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: "Ayasofya"
   taskIcon: {fileID: 0}
   backgroundSprite: {fileID: 21300000, guid: 735d1cf105524ea5a66cd76c251deeee, type: 3}
-  unrestoredTexture: {fileID: 2800000, guid: c7a5b74848af5de8a321293c8e3f021b, type: 3}
+  unrestoredTexture: {fileID: 0}
   totalStages: 8
   tasks:
   - name: "\u0130skeleyi Onar"
@@ -159,6 +159,60 @@ MonoBehaviour:
     weight: 0
   chestClosedSprite: {fileID: 21300000, guid: 4158f6743c7c545678bc1ad5daed3817, type: 3}
   chestOpenedSprite: {fileID: 21300000, guid: e2ca9e0f34b7f401e949f0682cb1c32d, type: 3}
+  buildSiteTexture: {fileID: 2800000, guid: 5e1b3252ba73456487d1d30dd4047878, type: 3}
+  buildFinalSprite: {fileID: 0}
+  buildMidTexture: {fileID: 2800000, guid: 2d0891c8d31e4e2092b7067099da947e, type: 3}
+  buildPieceMap: {fileID: 2800000, guid: 21ba1b6f5035440f8d22a8ff7d9a9903, type: 3}
+  buildPieceBounds:
+  - serializedVersion: 2
+    x: 0.159
+    y: 0.405
+    width: 0.725
+    height: 0.282
+  - serializedVersion: 2
+    x: 0.324
+    y: 0.302
+    width: 0.453
+    height: 0.167
+  - serializedVersion: 2
+    x: 0.105
+    y: 0.469
+    width: 0.792
+    height: 0.099
+  - serializedVersion: 2
+    x: 0.077
+    y: 0.568
+    width: 0.7
+    height: 0.145
+  - serializedVersion: 2
+    x: 0.148
+    y: 0.329
+    width: 0.75
+    height: 0.404
+  - serializedVersion: 2
+    x: 0.334
+    y: 0.599
+    width: 0.345
+    height: 0.13
+  - serializedVersion: 2
+    x: 0.159
+    y: 0.403
+    width: 0.725
+    height: 0.414
+  - serializedVersion: 2
+    x: 0
+    y: 0
+    width: 0
+    height: 0
+  buildModeLive: 1
+  buildHammerFrames:
+  - {fileID: 21300000, guid: ab9da204e8f948a7aeef4a967f793eaa, type: 3}
+  - {fileID: 21300000, guid: 1812ae7fd7fe49a7929444e9300bad2c, type: 3}
+  - {fileID: 21300000, guid: fdc38a5db871407185d20805c2089481, type: 3}
+  - {fileID: 21300000, guid: 50d088531438401286e159fa141d05ab, type: 3}
+  buildHammerTool: {fileID: 0}
+  buildDustSprite: {fileID: 21300000, guid: fcb102e8a0844c7d97c823a6de9da986, type: 3}
+  buildStarSprite: {fileID: 21300000, guid: 3777501fcbb794f35a8cee09ef4e7973, type: 3}
   welderFrames:
   - {fileID: 21300000, guid: d25032ca758ce4d7db141f69a983a2ee, type: 3}
   - {fileID: 21300000, guid: b10915ec26fab4b08b3e8ccdbe5ba52e, type: 3}

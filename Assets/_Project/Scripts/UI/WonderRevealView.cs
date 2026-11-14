@@ -77,6 +77,8 @@ public class WonderRevealView : MonoBehaviour
     int _animationVersion;
     float _reveal;
     WonderTaskRegions _regions;   // null → eski eğri parça düzeni
+    WonderDefinition _build;      // null → inşaat modu kapalı (iki resim: şantiye + bitmiş)
+    WonderBuildFx _buildFx;
     static readonly int RevealId = Shader.PropertyToID("_Reveal");
     static readonly int RestorationId = Shader.PropertyToID("_Restoration");
     static readonly int RestorationRectId = Shader.PropertyToID("_RestorationRect");
@@ -93,6 +95,11 @@ public class WonderRevealView : MonoBehaviour
     static readonly int ContextRevealId = Shader.PropertyToID("_ContextReveal");
     static readonly int UnrestoredTexId = Shader.PropertyToID("_UnrestoredTex");
     static readonly int UseUnrestoredTexId = Shader.PropertyToID("_UseUnrestoredTex");
+    static readonly int PieceMapId = Shader.PropertyToID("_PieceMap");
+    static readonly int UsePieceMapId = Shader.PropertyToID("_UsePieceMap");
+    static readonly int BuildAnimId = Shader.PropertyToID("_BuildAnim");
+    static readonly int MidTexId = Shader.PropertyToID("_MidTex");
+    static readonly int UseMidTexId = Shader.PropertyToID("_UseMidTex");
 
     Image WelderImage
     {
@@ -153,6 +160,26 @@ public class WonderRevealView : MonoBehaviour
         if (_mat == null) return;
         _mat.SetTexture(UnrestoredTexId, texture);
         _mat.SetFloat(UseUnrestoredTexId, texture != null ? 1f : 0f);
+    }
+
+    /// <summary>İnşaat modu: açılmamış parçalar şantiye resminden, açılanlar bitmiş resimden gelir.
+    /// def.UsesBuildMode değilse eski restorasyon aynen kalır. Doku tahsisi yok; iki içe aktarılmış doku ödünç alınır.</summary>
+    public bool IsBuildMode => _build != null;
+
+    public void ConfigureFor(WonderDefinition def)
+    {
+        bool build = def != null && def.UsesBuildMode;
+        _build = build ? def : null;
+        if (build && (def.buildPieceBounds == null || def.buildPieceBounds.Length != def.TaskCount))
+            Debug.LogWarning($"[WonderBuild] {def.wonderId}: parça sınırı {def.buildPieceBounds?.Length ?? 0}, görev {def.TaskCount} — fazla parçalar hiç açılmaz.");
+        ConfigureUnrestoredTexture(build ? def.buildSiteTexture : def != null ? def.unrestoredTexture : null);
+        if (_mat == null) return;
+        _mat.SetTexture(PieceMapId, build ? def.buildPieceMap : null);
+        _mat.SetFloat(UsePieceMapId, build ? 1f : 0f);
+        bool mid = build && def.buildMidTexture != null;
+        _mat.SetTexture(MidTexId, mid ? def.buildMidTexture : null);
+        _mat.SetFloat(UseMidTexId, mid ? 1f : 0f);
+        ApplyReveal(_reveal);
     }
 
 #if UNITY_EDITOR
@@ -230,7 +257,7 @@ public class WonderRevealView : MonoBehaviour
         wonderId = wonder.wonderId;
         totalStages = Mathf.Max(1, wonder.TaskCount);
         useRustRestoration = true;
-        ConfigureUnrestoredTexture(wonder.unrestoredTexture);
+        ConfigureFor(wonder);
         SetTaskRegions(WonderTaskRegions.From(wonder));
         SetRevealImmediate(progress);
     }
@@ -253,6 +280,11 @@ public class WonderRevealView : MonoBehaviour
         if (target <= start || _mat == null)
         {
             ApplyReveal(target);
+            yield break;
+        }
+        if (_build != null)
+        {
+            yield return AnimateBuild(target, version);
             yield break;
         }
         if (useRustRestoration)
@@ -431,6 +463,218 @@ public class WonderRevealView : MonoBehaviour
         }
     }
 
+    // ---- İnşaat modu ------------------------------------------------------
+    // Maymun kaynak yapar + karakter çekiçle vurur → toz bulutu parçayı örter → altında takas →
+    // toz dağılır, yıldızlar uçuşur → parça üzerinde soldan sağa ışıma. Hepsi görev başına bir kez; boşta Update yok.
+
+    IEnumerator AnimateBuild(float target, int version)
+    {
+        int count = Mathf.Max(1, totalStages);
+        int first = Mathf.Clamp(Mathf.FloorToInt(_reveal * count + 0.001f), 0, count - 1);
+        int end = Mathf.Clamp(Mathf.RoundToInt(target * count), first + 1, count);
+        try
+        {
+            for (int stage = first; stage < end; stage++)
+            {
+                if (!AnimationIsCurrent(version)) yield break;
+                ApplyReveal((float)stage / count);
+                Rect piece = _build.BuildPieceBounds(stage);
+                if (piece.width <= 0f || piece.height <= 0f)
+                    yield return AnimateBuildShine(stage, version);
+                else
+                    yield return AnimateBuildPiece(stage, piece, version);
+                if (!AnimationIsCurrent(version)) yield break;
+                ResetRestorationAnimation();
+                ApplyReveal((float)(stage + 1) / count);
+            }
+            ApplyReveal(target);
+        }
+        finally
+        {
+            if (version == _animationVersion)
+            {
+                StopWeldingEffects(false);
+                if (welderRobot != null) welderRobot.gameObject.SetActive(false);
+                ResetWelderScale();
+                ResetRestorationAnimation();
+                _anim = null;
+            }
+        }
+    }
+
+    IEnumerator AnimateBuildPiece(int stage, Rect piece, int version)
+    {
+        EnsureBuildFx();
+        Rect rect = _rt.rect;
+        var local = new Rect(rect.xMin + piece.xMin * rect.width, rect.yMin + piece.yMin * rect.height,
+            piece.width * rect.width, piece.height * rect.height);
+        _mat.SetVector(TaskBoundsId, new Vector4(piece.xMin, piece.yMin, piece.xMax, piece.yMax));
+        _mat.SetVector(BuildAnimId, new Vector4(stage, 0f, 0f, 1f));
+
+        // Zaman çizelgesi animateDuration'a ölçeklenir (overlay 3.4 sn verir).
+        // Toz önce tam örter; parça onun ARKASINDA alttan yükselir, bu sırada toz önde kalıp incelir.
+        float total = Mathf.Max(2.6f, animateDuration * 1.15f);
+        float k = total / 3.9f;
+        float dustIn = 0.55f * k, riseFrom = 0.85f * k, riseTo = 2.35f * k, dustGone = 2.85f * k;
+        float workEnd = 2.3f * k, starsAt = 2.45f * k, sweepFrom = 2.55f * k;
+
+        ResetWelderFrame();
+        bool welder = _build.buildShowWelder && welderRobot != null;   // resimde maymun varsa ikinci maymun çıkmaz
+        _buildFx.Begin(local);
+        // Yerde: torç ucu iki karakterin ortasının hemen solunda (gövde sola uzanır; WorkX kenardan payı bırakır).
+        Vector2 weldTip = new Vector2(_buildFx.WorkX - _buildFx.CharacterHeight * 0.15f,
+            local.yMin + Mathf.Min(local.height * 0.4f, _buildFx.CharacterHeight * 0.6f));
+        // Yüksek parça: karakterler tepedeki kirişten inen gondolda çalışır (havada durmazlar).
+        bool crane = _buildFx.UsesCrane;
+        if (welderRobot != null)
+        {
+            // Kaynakçı da parçaya oranla küçük (paslı restorasyondaki tam boyu etkilemez; ResetWelderScale geri alır).
+            // Perspektif: çekiçli karakterle aynı boy (ayakları aşağıdaysa büyük, yukarıdaysa küçük).
+            float welderH = Mathf.Max(1f, welderRobot.rect.height);
+            // MW kareleri çerçevenin ~%90'ını doldurur → görünen boy = CharacterHeight (ayı ile aynı).
+            welderRobot.localScale = Vector3.one * Mathf.Clamp(_buildFx.CharacterHeight / (0.9f * welderH), 0.25f, 1.6f);
+            welderRobot.gameObject.SetActive(welder);
+            if (welder) PlaceWelderAt(crane, weldTip);
+        }
+        if (crane)
+        {
+            const float craneIn = 2.0f;   // gösteri anı: araba ve gondol acele etmeden gelir (kullanıcı 2026-11-14); dönüş hızlı kalır
+            for (float t = 0f; t < craneIn;)
+            {
+                if (!AnimationIsCurrent(version)) yield break;
+                t += Time.deltaTime;
+                _buildFx.TickCraneIn(Mathf.Clamp01(t / craneIn));
+                if (welder) PlaceWelderAt(true, weldTip);
+                yield return null;
+            }
+        }
+        float fps = Mathf.Max(0.01f, welderFps);
+        float preparation = welderFrames != null ? Mathf.Max(0, welderFrames.Length - 1) / fps : 0f;
+        bool sparking = false, starsOn = false;
+
+        for (float t = 0f; t < total;)
+        {
+            if (!AnimationIsCurrent(version)) yield break;
+            t += Time.deltaTime;
+            if (welder && t < workEnd)
+            {
+                if (t < preparation) UpdateWelderFrame(t);
+                else if (!sparking)
+                {
+                    UpdateWelderFrame(preparation + 1f / fps);
+                    PlaceWelderAt(crane, weldTip);
+                    EnsureWeldSparks();
+                    UpdateWeldEmitter();
+                    if (_uiSparks != null) _uiSparks.Begin(GetWeldTipLocal(), GetWelderSize());
+                    if (weldLight != null) weldLight.gameObject.SetActive(true);
+                    _welding = true;
+                    GameEventSfx.StartWelding();
+                    sparking = true;
+                }
+                if (sparking) { UpdateWeldEmitter(); UpdateWeldLight(t); }
+            }
+            else if (sparking)
+            {
+                StopWeldingEffects(false);
+                if (!crane && welderRobot != null) welderRobot.gameObject.SetActive(false);   // gondolda kalır, onunla döner
+                sparking = false;
+            }
+
+            // Toz: hızla tam yoğunluğa çıkar, yükselme boyunca ince bir perdeye düşer, sonra kaybolur.
+            float rise = Mathf.Clamp01((t - riseFrom) / (riseTo - riseFrom));
+            float dust = t < dustIn ? t / dustIn
+                : t < riseFrom ? 1f
+                : t < riseTo ? Mathf.Lerp(1f, 0.3f, rise)
+                : 0.3f * (1f - Mathf.Clamp01((t - riseTo) / (dustGone - riseTo)));
+            _buildFx.TickWork(t, dust, t < workEnd);
+
+            float sweep = t >= sweepFrom ? Mathf.Clamp01((t - sweepFrom) / (total - sweepFrom)) : 0f;
+            _mat.SetVector(BuildAnimId, new Vector4(stage, Smooth01(rise), sweep, 1f));
+            if (!starsOn && t >= starsAt)
+            {
+                starsOn = true;
+                _buildFx.BeginStars(local.center);
+                GameEventSfx.PlayGoalComplete();
+            }
+            if (starsOn) _buildFx.TickStars(t - starsAt);
+            yield return null;
+        }
+        if (crane)
+        {
+            const float craneOut = 0.85f;
+            for (float t = 0f; t < craneOut;)
+            {
+                if (!AnimationIsCurrent(version)) yield break;
+                t += Time.deltaTime;
+                _buildFx.TickCraneOut(Mathf.Clamp01(t / craneOut));
+                if (welder) PlaceWelderAt(true, weldTip);
+                yield return null;
+            }
+            if (welderRobot != null) welderRobot.gameObject.SetActive(false);
+        }
+        _buildFx.Clear();
+    }
+
+    /// Gondolda: kaynakçının görsel tabanı gondol zeminine (WelderFeet + anlık kayma) oturur; yerde: torç ucu parçaya.
+    void PlaceWelderAt(bool crane, Vector2 weldTip)
+    {
+        if (!crane) { PlaceWelderTip(weldTip); return; }
+        var img = WelderImage;
+        if (welderRobot == null || img == null) return;
+        Rect r = img.rectTransform.rect;
+        if (img.preserveAspect && img.sprite != null)
+        {
+            Vector2 src = img.sprite.rect.size;
+            float sc = Mathf.Min(r.width / src.x, r.height / src.y);
+            Vector2 size = src * sc;
+            r = new Rect(r.center - size * 0.5f, size);
+        }
+        Vector3 feetNow = _rt.InverseTransformPoint(img.rectTransform.TransformPoint(new Vector3(r.center.x, r.yMin, 0f)));
+        Vector3 target = _buildFx.WelderFeet + _buildFx.CraneOffset;
+        welderRobot.position += _rt.TransformVector(target - feetNow);
+    }
+
+    /// Parçası olmayan görev (ör. "Mermeri Parlat"): bitmiş resmin üstünden çapraz parlama + yıldızlar.
+    IEnumerator AnimateBuildShine(int stage, int version)
+    {
+        EnsureBuildFx();
+        _mat.SetVector(TaskBoundsId, new Vector4(0f, 0f, 1f, 1f));
+        Rect rect = _rt.rect;
+        _buildFx.BeginStars(rect.center);
+        GameEventSfx.PlayGoalComplete();
+        float total = Mathf.Max(1.2f, animateDuration * 0.6f);
+        for (float t = 0f; t < total;)
+        {
+            if (!AnimationIsCurrent(version)) yield break;
+            t += Time.deltaTime;
+            _mat.SetVector(TaskAnimId, new Vector4(stage, Mathf.Clamp01(t / total), (int)WonderTaskAction.Shine, 1f));
+            _buildFx.TickStars(t);
+            yield return null;
+        }
+        _buildFx.Clear();
+    }
+
+    static float Smooth01(float x) => x * x * (3f - 2f * x);
+
+    void EnsureBuildFx()
+    {
+        if (_buildFx != null) return;
+        _buildFx = WonderBuildFx.Create(_rt, _build);
+    }
+
+    void ResetWelderScale()
+    {
+        if (welderRobot != null) welderRobot.localScale = Vector3.one;
+    }
+
+    void PlaceWelderTip(Vector2 local)
+    {
+        if (welderRobot == null || WelderImage == null) return;
+        Vector3 origin = _rt.InverseTransformPoint(welderRobot.position);
+        Vector3 tip = _rt.InverseTransformPoint(GetWeldTipWorld());
+        welderRobot.position = _rt.TransformPoint((Vector3)local - (tip - origin));
+    }
+
     void EnsureFallingPiece()
     {
         if (_fallingPiece != null) return;
@@ -516,7 +760,9 @@ public class WonderRevealView : MonoBehaviour
     void ResetRestorationAnimation()
     {
         if (_fallingPiece != null) _fallingPiece.Clear();
+        if (_buildFx != null) _buildFx.Clear();
         if (_mat == null) return;
+        _mat.SetVector(BuildAnimId, Vector4.zero);
         _mat.SetVector(RegionCutId, Vector4.zero);
         _mat.SetVector(RegionFinishId, Vector4.zero);
         _mat.SetVector(TorchId, Vector4.zero);
@@ -567,7 +813,7 @@ public class WonderRevealView : MonoBehaviour
         _mat.SetFloat(ContextRevealId, _reveal);
         if (_mat.HasProperty(RhodesTorchId))
             _mat.SetFloat(RhodesTorchId, HasRhodesTorch(_image.sprite) ? 1f : 0f);
-        _mat.SetFloat(RestorationId, useRustRestoration ? 1f : 0f);
+        _mat.SetFloat(RestorationId, useRustRestoration || _build != null ? 1f : 0f);
         _mat.SetFloat(TaskRegionsId, useRustRestoration && _regions != null ? 1f : 0f);
         _mat.SetFloat(RegionCountId, Mathf.Max(1, totalStages));
         _mat.SetFloat(RegionStrideId, WonderRestorationLayout.Stride(totalStages));

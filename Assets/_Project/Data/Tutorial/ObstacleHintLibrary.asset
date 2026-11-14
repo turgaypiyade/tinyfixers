@@ -166,7 +166,7 @@ MonoBehaviour:
   - id: 31
     iconOverride: {fileID: 0}
     titleLocKey: hint_obstacle_hatlauncher_name
-    fallbackTitle: Energy Hat
+    fallbackTitle: Hammer Box
     locKey: hint_obstacle_hatlauncher
     fallbackText:
   - id: 32
@@ -184,7 +184,7 @@ MonoBehaviour:
   - id: 34
     iconOverride: {fileID: 0}
     titleLocKey: hint_obstacle_cargo_name
-    fallbackTitle: Cargo
+    fallbackTitle: Pandi
     locKey: hint_obstacle_cargo
     fallbackText:
   - id: 35
@@ -340,7 +340,7 @@ MonoBehaviour:
   - id: 44
     iconOverride: {fileID: 0}
     titleLocKey: hint_obstacle_keygenerator_name
-    fallbackTitle: Key Generator
+    fallbackTitle: Gem Machine
     locKey: hint_obstacle_keygenerator
     fallbackText:
   - id: 45

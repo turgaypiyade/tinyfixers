@@ -9,6 +9,11 @@ Shader "UI/WonderReveal"
         _Color ("Tint", Color) = (1,1,1,1)
         [NoScaleOffset] _UnrestoredTex ("Baked blurred restoration preview", 2D) = "gray" {}
         [HideInInspector] _UseUnrestoredTex ("Use baked preview", Float) = 0
+        [NoScaleOffset] _PieceMap ("Build piece map (R = task+1, point)", 2D) = "black" {}
+        [HideInInspector] _UsePieceMap ("Two-image build mode", Float) = 0
+        [NoScaleOffset] _MidTex ("Build middle stage (optional)", 2D) = "gray" {}
+        [HideInInspector] _UseMidTex ("Three-image build mode", Float) = 0
+        [HideInInspector] _BuildAnim ("Piece, swapped, sweep, active", Vector) = (0, 0, 0, 0)
 
         _Reveal        ("Reveal (0..1)", Range(0,1)) = 1
 
@@ -110,6 +115,10 @@ Shader "UI/WonderReveal"
             sampler2D _MainTex;
             sampler2D _UnrestoredTex;
             float _UseUnrestoredTex;
+            sampler2D _PieceMap;
+            sampler2D _MidTex;
+            float _UsePieceMap, _UseMidTex;
+            float4 _BuildAnim;
             fixed4 _Color;
 
             float  _Reveal;
@@ -347,8 +356,54 @@ Shader "UI/WonderReveal"
                 return c;
             }
 
+            // İnşaat modu (iki resim): parça haritası pikselin hangi göreve ait olduğunu söyler.
+            // Açılmamış parça şantiye resminden, açılmış parça bitmiş resimden gelir; parça dışı iki resimde aynıdır.
+            // Takas toz bulutunun altında tek karede olur (_BuildAnim.y); ardından parça üzerinde soldan sağa ışıma.
+            // Üç resim (_UseMidTex): R = yıkıntı→yarım görevi, G = yarım→bitmiş görevi (her ikisi görev+1, 0 = değişmez).
+            float3 buildImage(float2 uv, float3 photo)
+            {
+                float count = max(1.0, _RegionCount);
+                float n = _Reveal * count;
+                float4 pm = tex2D(_PieceMap, uv);
+                float tA = floor(pm.r * 255.0 + 0.5) - 1.0;
+                float tB = _UseMidTex > 0.5 ? floor(pm.g * 255.0 + 0.5) - 1.0 : -1.0;
+                float3 c = photo;
+                if (tA >= 0.0 || tB >= 0.0)
+                {
+                    float dA = tA < 0.0 ? 1.0 : step(tA + 0.5, n);
+                    float dB = tB < 0.0 ? 1.0 : step(tB + 0.5, n);
+                    float animA = _BuildAnim.w * step(0.0, tA) * (1.0 - step(0.5, abs(tA - _BuildAnim.x)));
+                    float animB = _BuildAnim.w * step(0.0, tB) * (1.0 - step(0.5, abs(tB - _BuildAnim.x)));
+                    float2 local = saturate((uv - _TaskBounds.xy) / max(_TaskBounds.zw - _TaskBounds.xy, float2(0.001, 0.001)));
+                    // Yükselme: parça toz bulutunun arkasında alttan yukarı oluşur (_BuildAnim.y 0..1), cephe hafif dalgalı.
+                    float front = lerp(-0.06, 1.08, _BuildAnim.y);
+                    float risen = step(local.y + (vnoise(local.x * 14.0) - 0.5) * 0.05, front);
+                    if (animA > 0.5) dA = risen;
+                    if (animB > 0.5) dB = risen;
+                    if (dA < 0.5) c = tex2D(_UnrestoredTex, uv).rgb;
+                    else if (dB < 0.5) c = tex2D(_MidTex, uv).rgb;
+                    if (max(animA, animB) > 0.5 && _BuildAnim.y > 0.0 && _BuildAnim.y < 1.0)
+                    {
+                        float rim = (local.y - front) / 0.025;
+                        c += float3(1.0, 0.9, 0.7) * exp(-rim * rim) * 0.35;   // yükselen kenarda ince sıcak ışık
+                    }
+                    if (max(animA, animB) > 0.5 && _BuildAnim.z > 0.0)
+                    {
+                        float s = local.x + (1.0 - local.y) * 0.18;
+                        float bd = (s - lerp(-0.25, 1.25, _BuildAnim.z)) / 0.07;
+                        float band = exp(-bd * bd);
+                        float lum = dot(c, float3(0.299, 0.587, 0.114));
+                        c += float3(1.0, 0.95, 0.80) * band * (0.35 + lum * 0.65);
+                    }
+                }
+                if (_TaskAnim.w > 0.5 && _TaskAnim.z > 4.5)
+                    c = shineOverlay(uv, c, photo, _TaskAnim.y);
+                return c;
+            }
+
             float3 restoredImage(float2 uv, float3 photo)
             {
+                if (_UsePieceMap > 0.5) return buildImage(uv, photo);
                 float count = max(1.0, _RegionCount);
                 if (_TaskRegions > 0.5)
                 {

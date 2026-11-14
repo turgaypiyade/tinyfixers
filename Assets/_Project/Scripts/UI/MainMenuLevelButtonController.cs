@@ -31,6 +31,18 @@ public class MainMenuLevelButtonController : MonoBehaviour, IPointerDownHandler,
     [Tooltip("Oyunu ilk kez açan kullanıcıya verilecek altın miktarı.")]
     [SerializeField] private int initialCoins = 500;
 
+    [Header("Zorluk Etiketi (LevelDifficultyTag)")]
+    [Tooltip("Etiket görünürken SEVİYE yazısı bu kadar yukarı kayar; etiket ortalanmış olarak altında durur.")]
+    [SerializeField] private float difficultyTitleLift = 16f;
+    [SerializeField] private float difficultyTagOffsetY = -36f;
+    [SerializeField, Min(8f)] private float difficultyTagFontSize = 26f;
+    [Tooltip("Buton gövdesinin koyulaşması (0..1); altın çerçeve korunur (UI/DarkenExceptGold).")]
+    [SerializeField, Range(0f, 1f)] private float hardButtonDarken = 0.2f;
+    [SerializeField, Range(0f, 1f)] private float veryHardButtonDarken = 0.36f;
+    [Tooltip("Etiket yazı rengi (kontur başlıkla aynı koyu ton).")]
+    [SerializeField] private Color hardTagColor = new Color(1f, 0.80f, 0.62f, 1f);
+    [SerializeField] private Color veryHardTagColor = new Color(1f, 0.66f, 0.66f, 1f);
+
     [Header("Debug Level Selector")]
     [SerializeField] private bool enableDebugLevelSelector = true;
     [SerializeField, Min(0.25f)] private float debugLongPressSeconds = 3f;
@@ -96,9 +108,95 @@ public class MainMenuLevelButtonController : MonoBehaviour, IPointerDownHandler,
     {
         if (levelText == null) return;
         // Ana yol bitti → buton Usta Ligi'ni başlatır (Docs/MasterLeague_Plan.md).
-        levelText.text = MasterLeague.IsUnlocked(levelCatalog)
+        bool league = MasterLeague.IsUnlocked(levelCatalog);
+        levelText.text = league
             ? GameLocalization.GetFormat("master_league_title_lap", MasterLeague.LevelNumber)
             : GameLocalization.GetFormat("prelevel_popup_title_level", currentLevel);
+        ApplyDifficultyTag(league ? LevelDifficulty.Normal : LevelDifficultyTag.For(currentLevel));
+    }
+
+    private TextMeshProUGUI difficultyTag;
+    private Image buttonImage;
+    private Material buttonDarkenMat;
+    private static readonly int DarkenId = Shader.PropertyToID("_Darken");
+    private Vector2 titleBasePos;
+    private bool difficultyInit;
+
+    /// "SEVİYE 45" altında ortalanmış küçük ZOR / ÇOK ZOR yazısı + koyulaşan buton (kullanıcı 2026-11-14).
+    private void ApplyDifficultyTag(LevelDifficulty tier)
+    {
+        if (!difficultyInit)
+        {
+            difficultyInit = true;
+            titleBasePos = levelText.rectTransform.anchoredPosition;
+            TryGetComponent(out buttonImage);
+        }
+        bool on = tier != LevelDifficulty.Normal;
+        if (on && difficultyTag == null) difficultyTag = CreateDifficultyTag();
+        levelText.rectTransform.anchoredPosition = titleBasePos + (on ? new Vector2(0f, difficultyTitleLift) : Vector2.zero);
+        if (difficultyTag != null)
+        {
+            difficultyTag.gameObject.SetActive(on);
+            if (on)
+            {
+                bool veryHard = tier == LevelDifficulty.VeryHard;
+                difficultyTag.text = veryHard
+                    ? GameLocalization.GetOr("level_tag_very_hard", "ÇOK ZOR")
+                    : GameLocalization.GetOr("level_tag_hard", "ZOR");
+                difficultyTag.color = veryHard ? veryHardTagColor : hardTagColor;
+            }
+        }
+        ApplyButtonDarken(tier == LevelDifficulty.VeryHard ? veryHardButtonDarken
+            : tier == LevelDifficulty.Hard ? hardButtonDarken : 0f);
+    }
+
+    // Normal seviyede butonun kendi materyali (null) kalır; materyal yalnız zor seviyede, tek örnek, yeniden kullanılır.
+    private void ApplyButtonDarken(float amount)
+    {
+        if (buttonImage == null) return;
+        if (amount <= 0f)
+        {
+            if (buttonDarkenMat != null && buttonImage.material == buttonDarkenMat) buttonImage.material = null;
+            return;
+        }
+        if (buttonDarkenMat == null)
+        {
+            var shader = Resources.Load<Shader>("Shaders/UI_DarkenExceptGold");
+            if (shader == null) return;
+            buttonDarkenMat = new Material(shader) { name = "LevelButtonDarken", hideFlags = HideFlags.DontSave };
+        }
+        buttonDarkenMat.SetFloat(DarkenId, amount);
+        buttonImage.material = buttonDarkenMat;
+    }
+
+    private void OnDestroy()
+    {
+        if (buttonDarkenMat != null) Destroy(buttonDarkenMat);
+    }
+
+    private TextMeshProUGUI CreateDifficultyTag()
+    {
+        var src = levelText.rectTransform;
+        var go = new GameObject("DifficultyTag", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI))
+        { layer = levelText.gameObject.layer };
+        var rt = (RectTransform)go.transform;
+        rt.SetParent(src.parent, false);
+        rt.SetSiblingIndex(src.GetSiblingIndex() + 1);
+        rt.anchorMin = src.anchorMin; rt.anchorMax = src.anchorMax; rt.pivot = src.pivot;
+        rt.sizeDelta = src.sizeDelta;
+        rt.anchoredPosition = titleBasePos + new Vector2(0f, difficultyTagOffsetY);
+        var tmp = go.GetComponent<TextMeshProUGUI>();
+        // Başlığın yazı stili (beyaz yüz + zemin koyusu kontur) aynen; yalnız küçük punto.
+        tmp.font = levelText.font;
+        tmp.fontSharedMaterial = levelText.fontSharedMaterial;
+        tmp.color = levelText.color;
+        tmp.fontStyle = levelText.fontStyle;
+        tmp.enableAutoSizing = false;
+        tmp.fontSize = difficultyTagFontSize;
+        tmp.alignment = TextAlignmentOptions.Center;
+        tmp.textWrappingMode = TextWrappingModes.NoWrap;
+        tmp.raycastTarget = false;
+        return tmp;
     }
 
     // Ana yol bittiyse sıradaki lig seviyesini oturuma al; bitmediyse (yeni paket geldi) lig oturumunu kapat.
@@ -258,7 +356,7 @@ public class MainMenuLevelButtonController : MonoBehaviour, IPointerDownHandler,
         panelRt.anchorMax = new Vector2(0.5f, 0.5f);
         panelRt.pivot = new Vector2(0.5f, 0.5f);
         panelRt.anchoredPosition = Vector2.zero;
-        panelRt.sizeDelta = new Vector2(460f, 460f);
+        panelRt.sizeDelta = new Vector2(460f, 540f);
 
         var panelImage = panel.AddComponent<Image>();
         panelImage.color = new Color(0.08f, 0.10f, 0.13f, 0.97f);
@@ -299,6 +397,8 @@ public class MainMenuLevelButtonController : MonoBehaviour, IPointerDownHandler,
         CreateDebugButton(panel.transform, "İlerlemeyi Sıfırla", new Color(0.60f, 0.22f, 0.20f, 1f), ConfirmDebugProgressReset);
         CreateDebugText(panel.transform, "ResetHint", "Altın ve yıldızların korunur.", 17f,
             FontStyles.Normal, TextAlignmentOptions.Center, new Color(0.83f, 0.89f, 0.96f, 1f), 24f);
+
+        CreateDebugButton(panel.transform, "Kayıtları Sil (Yeni Oyuncu)", new Color(0.45f, 0.10f, 0.12f, 1f), ConfirmDebugFreshStart);
 
         debugPanelRoot.SetActive(false);
     }
@@ -423,6 +523,30 @@ public class MainMenuLevelButtonController : MonoBehaviour, IPointerDownHandler,
             + "Altın, yıldız, envanter ve hesap bilgilerin korunur. Bu işlem bulut kaydına da uygulanır.",
             new RuntimeChoicePopup.Choice("Vazgeç", null),
             new RuntimeChoicePopup.Choice("Sıfırla", ResetDebugProgress, true));
+    }
+
+    private void ConfirmDebugFreshStart()
+    {
+        debugLevelInput?.DeactivateInputField();
+        if (EventSystem.current != null) EventSystem.current.SetSelectedGameObject(null);
+        RuntimeChoicePopup.Show("Tüm kayıtlar silinsin mi?",
+            "Bu cihazdaki HER ŞEY silinir: seviye, altın, yıldız, envanter, görevler, ayarlar.\n\n"
+            + "Oyun kapanır; yeniden açınca yeni bir oyuncu olarak seviye 1'den başlarsın. Buluttan hiçbir şey çekilmez, "
+            + "eski hesabın bulut verisine dokunulmaz (ama bu cihazdan ona geri dönülemez).",
+            new RuntimeChoicePopup.Choice("Vazgeç", null),
+            new RuntimeChoicePopup.Choice("Sil ve Kapat", DebugFreshStart, true));
+    }
+
+    private void DebugFreshStart()
+    {
+        if (this == null || !DebugSelectorEnabled) return;
+        DevFreshStart.Schedule();
+#if UNITY_EDITOR
+        UnityEditor.EditorPrefs.SetBool(TestLevelProgressionBootstrap.FreshUserNextLaunchKey, true);
+        UnityEditor.EditorApplication.isPlaying = false;
+#else
+        Application.Quit();
+#endif
     }
 
     private void ResetDebugProgress()

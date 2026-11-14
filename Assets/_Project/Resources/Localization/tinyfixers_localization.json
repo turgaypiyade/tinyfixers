@@ -882,7 +882,7 @@
         },
         {
           "key": "hint_obstacle_plastic_orange",
-          "value": "Turuncu plastik. Yanında eşleştirme yaparak kır."
+          "value": "Turuncu plastik. Yanında HERHANGİ bir renkte eşleşme yaparak kır."
         },
         {
           "key": "hint_obstacle_plastic_orange_name",
@@ -890,7 +890,7 @@
         },
         {
           "key": "hint_obstacle_plastic_yellow",
-          "value": "Sarı plastik. Yanında eşleştirme yaparak kır."
+          "value": "Sarı plastik. Yalnızca yanında SARI taşlarla eşleşme yaparak ya da special veya jokerle kırılır."
         },
         {
           "key": "hint_obstacle_plastic_yellow_name",
@@ -898,7 +898,7 @@
         },
         {
           "key": "hint_obstacle_plastic_blue",
-          "value": "Mavi plastik. Yanında eşleştirme yaparak kır."
+          "value": "Mavi plastik. Yalnızca yanında MAVİ taşlarla eşleşme yaparak ya da special veya jokerle kırılır."
         },
         {
           "key": "hint_obstacle_plastic_blue_name",
@@ -906,7 +906,7 @@
         },
         {
           "key": "hint_obstacle_plastic_red",
-          "value": "Kırmızı plastik. Yanında eşleştirme yaparak kır."
+          "value": "Kırmızı plastik. Yalnızca yanında KIRMIZI taşlarla eşleşme yaparak ya da special veya jokerle kırılır."
         },
         {
           "key": "hint_obstacle_plastic_red_name",
@@ -914,7 +914,7 @@
         },
         {
           "key": "hint_obstacle_plastic_green",
-          "value": "Yeşil plastik. Yanında eşleştirme yaparak kır."
+          "value": "Yeşil plastik. Yalnızca yanında YEŞİL taşlarla eşleşme yaparak ya da special veya jokerle kırılır."
         },
         {
           "key": "hint_obstacle_plastic_green_name",
@@ -1026,11 +1026,11 @@
         },
         {
           "key": "hint_obstacle_hatlauncher",
-          "value": "Şapkaya vurunca enerji hedefe uçar. Yakınında eşleştirerek enerjiyi topla."
+          "value": "Kutuya vurdukça bir çekiç fırlar ve hedefe uçar. Yanında eşleştirerek çekiçleri topla."
         },
         {
           "key": "hint_obstacle_hatlauncher_name",
-          "value": "Enerji Şapkası"
+          "value": "Çekiç Kutusu"
         },
         {
           "key": "hint_obstacle_goldmoney",
@@ -1098,11 +1098,11 @@
         },
         {
           "key": "hint_obstacle_cargo",
-          "value": "Kargoyu en alta indir. Dibe ulaşınca hedefe sayılır."
+          "value": "Pandi'yi en alta indir. Dibe ulaşınca kurtulur ve hedefe sayılır."
         },
         {
           "key": "hint_obstacle_cargo_name",
-          "value": "Kargo"
+          "value": "Pandi"
         },
         {
           "key": "hint_obstacle_player_shield_pickup",
@@ -1234,11 +1234,11 @@
         },
         {
           "key": "hint_obstacle_keygenerator",
-          "value": "Vurdukça anahtar üretir. Anahtarları eşleştirip topla!"
+          "value": "Vurdukça elmas üretir. Elmasları eşleştirip topla!"
         },
         {
           "key": "hint_obstacle_keygenerator_name",
-          "value": "Anahtar Makinesi"
+          "value": "Elmas Makinesi"
         },
         {
           "key": "hint_obstacle_eggbird",
@@ -3627,6 +3627,14 @@
         {
           "key": "hint_obstacle_hot_air_balloon",
           "value": "Balonu yalnız special'lar ve jokerler şişirir. Üçüncü vuruşta dolabını yarar ve uçar; üstündeki iki sütunu açar, yolundaki special'ları patlatır."
+        },
+        {
+          "key": "level_tag_hard",
+          "value": "ZOR"
+        },
+        {
+          "key": "level_tag_very_hard",
+          "value": "ÇOK ZOR"
         }
       ]
     },
@@ -4503,7 +4511,7 @@
         },
         {
           "key": "hint_obstacle_plastic_orange",
-          "value": "Orange plastic. Match adjacent tiles to shatter it."
+          "value": "Orange plastic. Match tiles of ANY color next to it to shatter it."
         },
         {
           "key": "hint_obstacle_plastic_orange_name",
@@ -4511,7 +4519,7 @@
         },
         {
           "key": "hint_obstacle_plastic_yellow",
-          "value": "Yellow plastic. Match adjacent tiles to shatter it."
+          "value": "Yellow plastic. Breaks only with matches of YELLOW tiles next to it, or with specials and jokers."
         },
         {
           "key": "hint_obstacle_plastic_yellow_name",
@@ -4519,7 +4527,7 @@
         },
         {
           "key": "hint_obstacle_plastic_blue",
-          "value": "Blue plastic. Match adjacent tiles to shatter it."
+          "value": "Blue plastic. Breaks only with matches of BLUE tiles next to it, or with specials and jokers."
         },
         {
           "key": "hint_obstacle_plastic_blue_name",
@@ -4527,7 +4535,7 @@
         },
         {
           "key": "hint_obstacle_plastic_red",
-          "value": "Red plastic. Match adjacent tiles to shatter it."
+          "value": "Red plastic. Breaks only with matches of RED tiles next to it, or with specials and jokers."
         },
         {
           "key": "hint_obstacle_plastic_red_name",
@@ -4535,7 +4543,7 @@
         },
         {
           "key": "hint_obstacle_plastic_green",
-          "value": "Green plastic. Match adjacent tiles to shatter it."
+          "value": "Green plastic. Breaks only with matches of GREEN tiles next to it, or with specials and jokers."
         },
         {
           "key": "hint_obstacle_plastic_green_name",
@@ -4647,11 +4655,11 @@
         },
         {
           "key": "hint_obstacle_hatlauncher",
-          "value": "Hit the hat to launch energy toward the goal. Match nearby to collect it."
+          "value": "Each hit launches a hammer toward the goal. Match nearby to collect the hammers."
         },
         {
           "key": "hint_obstacle_hatlauncher_name",
-          "value": "Energy Hat"
+          "value": "Hammer Box"
         },
         {
           "key": "hint_obstacle_goldmoney",
@@ -4719,11 +4727,11 @@
         },
         {
           "key": "hint_obstacle_cargo",
-          "value": "Drop cargo to the bottom. It counts when it exits the board."
+          "value": "Bring Pandi down to the bottom. Pandi is rescued when it exits the board."
         },
         {
           "key": "hint_obstacle_cargo_name",
-          "value": "Cargo"
+          "value": "Pandi"
         },
         {
           "key": "hint_obstacle_player_shield_pickup",
@@ -4855,11 +4863,11 @@
         },
         {
           "key": "hint_obstacle_keygenerator",
-          "value": "Each hit makes a key. Match the keys to collect them!"
+          "value": "Each hit makes a gem. Match the gems to collect them!"
         },
         {
           "key": "hint_obstacle_keygenerator_name",
-          "value": "Key Generator"
+          "value": "Gem Machine"
         },
         {
           "key": "hint_obstacle_eggbird",
@@ -7256,6 +7264,14 @@
         {
           "key": "hint_obstacle_hot_air_balloon",
           "value": "Only specials and jokers inflate the balloon. On the third hit it bursts out of its cabinet and flies up, clearing the two columns above and setting off any specials in its way."
+        },
+        {
+          "key": "level_tag_hard",
+          "value": "HARD"
+        },
+        {
+          "key": "level_tag_very_hard",
+          "value": "SUPER HARD"
         }
       ]
     }
