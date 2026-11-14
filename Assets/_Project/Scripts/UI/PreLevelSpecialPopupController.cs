@@ -789,6 +789,7 @@ public class PreLevelSpecialPopupController : MonoBehaviour
 
     private IEnumerator CoOpen()
     {
+        GameAnalytics.OnboardingStep(6);   // seviye penceresi
         SetPopupVisible(true, false);
         PlayOneShot(openSfx);
         // Ortak popup girişi: panel yukarıdan kayar (stretch panelde ölçek animasyonu doğru görünmüyordu).

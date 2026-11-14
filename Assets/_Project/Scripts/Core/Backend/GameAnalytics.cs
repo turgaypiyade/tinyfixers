@@ -16,7 +16,8 @@ using Firebase.Analytics;
 ///      (tanımlanmayan parametreler raporlarda görünmez; BigQuery export'ta hep vardır).
 ///
 /// Event'ler: level_start (level, attempt) · level_end (level, attempt, success, seconds, moves_left,
-/// assist_tier, fails_before, moves_total). Kullanıcı özelliği: current_level.
+/// assist_tier, fails_before, moves_total) · level_pause (level, attempt, seconds, moves_used, moves_total — level
+/// yarıdayken uygulama arka plana gitti/kapandı). Kullanıcı özelliği: current_level.
 /// </summary>
 public static class GameAnalytics
 {
@@ -43,9 +44,43 @@ public static class GameAnalytics
                 ("measurement_version", 2), ("is_development", Debug.isDebugBuild ? 1 : 0));
             if (r.Won) SetCurrentLevel(r.Level + 1);
         };
+        // Level yarıdayken uygulama arka plana gitti/kapandı. Ardından level_end gelmiyorsa oyuncu orada bıraktı.
+        LevelAttemptStats.OnAttemptPaused += (level, attempt, seconds, movesUsed, movesTotal) =>
+            Log("level_pause", ("level", level), ("attempt", attempt), ("seconds", seconds),
+                ("moves_used", movesUsed), ("moves_total", movesTotal), ("is_development", Debug.isDebugBuild ? 1 : 0));
 #if TF_FIREBASE_ANALYTICS
         FirebaseAuthService.OnReady += () => FirebaseAnalytics.SetUserId(FirebaseAuthService.UserId);
 #endif
+    }
+
+    // ── İlk açılış hunisi (kullanıcı 2026-11-14: first_open 144, level_start 72 → yarısı level 1'e başlamadan
+    // kayboluyor; hangi ekranda?) Her adım cihaz başına BİR KEZ gönderilir: 1 açıldı · 2 yükleme bitti · 3 kabul kutusu
+    // · 4 kabul edildi · 5 ana menü · 6 seviye penceresi · 7 oyun tahtası. seconds = uygulama açılışından beri süre.
+    // Firebase hazır olana dek bellekte bekler (açılışın ilk saniyeleri).
+    private const string OnboardingKey = "onboarding_step_sent";
+    private static readonly System.Collections.Generic.List<(int step, long seconds)> pendingSteps = new();
+    private static bool onboardingHooked;
+
+    public static void OnboardingStep(int step)
+    {
+        if (RuntimeSimulationSession.IsActive || step <= PlayerPrefs.GetInt(OnboardingKey, 0)) return;
+        PlayerPrefs.SetInt(OnboardingKey, step);
+        PlayerPrefs.Save();
+        pendingSteps.Add((step, (long)Time.realtimeSinceStartup));
+        if (!onboardingHooked)
+        {
+            onboardingHooked = true;
+            FirebaseAuthService.OnReady += FlushOnboarding;   // hazırsa hemen çağrılır
+        }
+        else if (FirebaseAuthService.IsReady) FlushOnboarding();
+    }
+
+    private static void FlushOnboarding()
+    {
+        for (int i = 0; i < pendingSteps.Count; i++)
+            Log("onboarding_step", ("step", pendingSteps[i].step), ("seconds", pendingSteps[i].seconds),
+                ("is_development", Debug.isDebugBuild ? 1 : 0));
+        pendingSteps.Clear();
     }
 
     private static void SetCurrentLevel(int level)
@@ -78,7 +113,7 @@ public static class GameAnalytics
         if (RuntimeSimulationSession.IsActive) return;
 #if TF_FIREBASE_ANALYTICS
         parameters ??= System.Array.Empty<(string name, long value)>();
-        bool isLevelEvent = eventName == "level_start" || eventName == "level_end";
+        bool isLevelEvent = eventName == "level_start" || eventName == "level_end" || eventName == "level_pause";
         long level = isLevelEvent ? CurrentLevel.Played : 0;
         int count = isLevelEvent ? 1 : 0;
         for (int i = 0; i < parameters.Length; i++)

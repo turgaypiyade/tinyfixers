@@ -321,9 +321,12 @@ public class GridSpawner : MonoBehaviour
         ProgressEventService.Instance?.BeginLevelStaging();
         LivesManager.ClaimPendingPurchaseThanks();
         LevelAttemptStats.BeginAttempt(CurrentLevel.Played, resolvedLevel.moves);
+        GameAnalytics.OnboardingStep(7);   // oyun tahtası kuruldu (ilk level)
 
         board.Init(width, height, iconLibrary);
         board.SetLevelData(resolvedLevel);
+        board.OnMovesChanged -= LevelAttemptStats.NoteMovesLeft;   // yarım bırakılan level analitiği (level_pause)
+        board.OnMovesChanged += LevelAttemptStats.NoteMovesLeft;
         ScriptedTutorial.Begin(board, resolvedLevel, CurrentLevel.Global);
         EnsureKeyGeneratorService();
         SetupBirdHouses();

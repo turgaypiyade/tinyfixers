@@ -49,6 +49,7 @@ public class MainMenuLevelButtonController : MonoBehaviour, IPointerDownHandler,
 
     private void Start()
     {
+        GameAnalytics.OnboardingStep(5);   // ana menü göründü
         LivesTimerService.InitialCoins = initialCoins;
         LivesTimerService.EnsureExists();
         currentLevel = PlayerPrefs.GetInt(prefsLevelKey, 1);

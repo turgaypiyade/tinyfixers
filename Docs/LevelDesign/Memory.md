@@ -403,3 +403,7 @@ Kullanıcı 108'i oynayınca "çok zor geldi, ardından 109 geliyor, iki zor üs
 ## 217 Kanatlı Kum Saati — hamlesiz açılış düzeltmesi · 2026-11-14
 
 Kullanıcı: "217'de hamle şansı yok, oto shuffle çalışmıyormuş kullanıcılarda." Kök: gövdedeki 35 pin çapraz 1-2-3-4 deseninde, olası kaydırma = 0; rastgele hücreler yalnız üst köşelerde 6 tane ve izole (eşleşme kuramaz) → açılış garantili hamlesiz. Motorun "hamle yok → karıştır" kontrolü yalnız oyuncu hamlesinden sonra çalışıyor, açılışta yok → oyuncu kilitli. Düzeltme (yalnız pin rengi, şekil/engel/hedef/hamle aynı): (4,3) 4→3 ve (5,6) 3→2 → 6 oynanabilir hamle (üst ve bel bölgesi), açılışta hazır eşleşme yok. Tüm V1 taraması: garantili hamlesiz açılış yalnız 23 (kargo tasarımı) ve 27 (bilinçli karıştırma öğreticisi). Yedek: scratchpad LevelV1_00002170.bak.asset. **Kural: pinli tasarımda en az birkaç oynanabilir hamle bırak; doğrula.**
+
+## 1–25 hamle ayarı (oyuncu verisi) · 2026-11-14
+
+Kullanıcı: "25'e kadar bak, gerekiyorsa artıralım." Kaynak: GA4 level_end 8–14 Kas (testçiler dahil, küçük örneklem) + iş yükü. Gözlem: oyuncular İLK KAYIPTA bırakıyor (L1, L6, L9, L19). Kazanma oranı düşük olanlar artırıldı (yalnız moves; şekil/engel/hedef aynı): **L1 30→40** (%79), **L4 33→38** (%67), **L9 25→28** (%60), **L15 26→30** (%46), **L19 18→21** (%62), **L23 25→32** (%23, 17 kayıp — bloğun 3. levelı ama en zoru). Diğerleri %86–100, dokunulmadı. Canlı için aynı değerler Firestore config/levels moves'a önerildi; build yayılınca Firestore'dan silinebilir.

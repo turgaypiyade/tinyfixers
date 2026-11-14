@@ -60,6 +60,20 @@ public static class LevelAttemptStats
     public static event Action<int, int> OnAttemptStarted;
     /// Deneme bitti (kazanma ya da vazgeçme).
     public static event Action<LevelAttemptResult> OnAttemptEnded;
+    /// Deneme sürerken uygulama arka plana gitti / kapandı: (level, attempt, seconds, movesUsed, movesTotal).
+    /// Yarıda bırakılan level'ı ölçmek için (kullanıcı 2026-11-14: yeni oyuncular level 2–4'te oyunu kapatıyor).
+    public static event Action<int, int, int, int, int> OnAttemptPaused;
+    private static int s_movesLeftNow = -1;
+
+    /// Board kalan hamleyi bildirir (GridSpawner → BoardController.OnMovesChanged).
+    public static void NoteMovesLeft(int movesLeft) => s_movesLeftNow = movesLeft;
+
+    private static void RaisePaused()
+    {
+        if (RuntimeSimulationSession.IsActive || s_activeLevel <= 0) return;
+        int used = s_movesLeftNow >= 0 ? Mathf.Max(0, s_movesTotal - s_movesLeftNow) : 0;
+        OnAttemptPaused?.Invoke(s_activeLevel, AttemptsOn(s_activeLevel), Mathf.RoundToInt(s_activeSeconds), used, s_movesTotal);
+    }
 
     private static int s_activeLevel = -1;
     private static float s_activeSeconds;
@@ -133,6 +147,7 @@ public static class LevelAttemptStats
         s_struggleRecorded = false;
         s_movesLeftAtWin = 0;
         s_movesTotal = movesTotal;
+        s_movesLeftNow = movesTotal;
         s_activeAssistTier = LevelAssist.TierFor(level);
         LevelTelemetryStore.Begin(level, attempt, ConsecutiveFails(level), StrugglesOn(level), s_activeAssistTier, movesTotal);
         EnsureTimer();
@@ -230,10 +245,16 @@ public static class LevelAttemptStats
 
         private void OnApplicationPause(bool paused)
         {
-            if (paused) LevelTelemetryStore.Checkpoint(Mathf.RoundToInt(s_activeSeconds));
+            if (!paused) return;
+            LevelTelemetryStore.Checkpoint(Mathf.RoundToInt(s_activeSeconds));
+            RaisePaused();
         }
 
-        private void OnApplicationQuit() => LevelTelemetryStore.Checkpoint(Mathf.RoundToInt(s_activeSeconds));
+        private void OnApplicationQuit()
+        {
+            LevelTelemetryStore.Checkpoint(Mathf.RoundToInt(s_activeSeconds));
+            RaisePaused();
+        }
 
         private void Update()
         {

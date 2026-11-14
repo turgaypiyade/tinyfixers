@@ -2,15 +2,6 @@ fileFormatVersion: 2
 guid: 70536964206c4f4cba9727e52831bf86
 TextureImporter:
   internalIDToNameTable: []
-  - first:
-      213: -4102495647906312354
-    second: BlueStonev7_1
-  - first:
-      213: -7582975554487700744
-    second: BlueStonev7_2
-  - first:
-      213: -3304632127364545505
-    second: BlueStonev7_3
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -104,14 +95,27 @@ TextureImporter:
     forceMaximumCompressionQuality_BC6H_BC7: 0
   - serializedVersion: 4
     buildTarget: iOS
-    maxTextureSize: 2048
+    maxTextureSize: 512
     resizeAlgorithm: 0
-    textureFormat: -1
+    textureFormat: 48
     textureCompression: 0
     compressionQuality: 50
     crunchedCompression: 0
     allowsAlphaSplitting: 0
-    overridden: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Android
+    maxTextureSize: 512
+    resizeAlgorithm: 0
+    textureFormat: 48
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
     ignorePlatformSupport: 0
     androidETC2FallbackOverride: 0
     forceMaximumCompressionQuality_BC6H_BC7: 0

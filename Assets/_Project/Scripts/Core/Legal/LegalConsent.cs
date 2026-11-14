@@ -172,6 +172,7 @@ public sealed class LegalConsent : MonoBehaviour
 
     private void BuildGate(bool isUpdate)
     {
+        if (!isUpdate) GameAnalytics.OnboardingStep(3);   // kabul kutusu gösterildi
         gate = new GameObject("LegalConsentGate");
         gate.transform.SetParent(transform, false);
         var canvas = gate.AddComponent<Canvas>();
@@ -265,6 +266,7 @@ public sealed class LegalConsent : MonoBehaviour
 
     private void Accept()
     {
+        GameAnalytics.OnboardingStep(4);   // kabul edildi
         PlayerPrefs.SetString(AcceptedKey, RequiredVersion);
         PlayerPrefs.SetString(AcceptedAtKey, DateTime.UtcNow.ToString("o"));
         PlayerPrefs.Save();

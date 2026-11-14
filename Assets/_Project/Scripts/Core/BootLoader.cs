@@ -61,6 +61,7 @@ public class BootLoader : MonoBehaviour
         if (!string.IsNullOrEmpty(loadingLabel))
             loadingLabel = char.ToUpper(loadingLabel[0]) + loadingLabel.Substring(1);
 
+        GameAnalytics.OnboardingStep(1);   // uygulama açıldı
         EnsureLoadingText();
         StyleLoadingText();
         if (loadingText != null) loadingText.gameObject.SetActive(!HasBrandSplash);
@@ -136,6 +137,7 @@ public class BootLoader : MonoBehaviour
         // benimsensin ki ilk-açılış hibeleri güvenilir değere yazılsın.
         // Şartlar/Gizlilik kabulü ana menüden ÖNCE (bulut kayıt geldikten sonra → yeniden kuran oyuncuya tekrar
         // sorulmaz). Ana menünün öğretici/etkinlik pencereleri kabul edilene dek başlamaz.
+        GameAnalytics.OnboardingStep(2);   // yükleme bitti
         yield return LegalConsent.RunBootGate();
 
         if (!FirebaseCloudSaveService.RestoreResolved && !CurrencyLedger.EverSynced)
