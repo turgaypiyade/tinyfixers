@@ -68,12 +68,43 @@ public sealed class OverrideSpecialView : MonoBehaviour
     private const string ChargePoolKey = "Override.ChargeLightning";
 
     public bool UsesTurnFramesOnly => turnFramesOnly;
+
+    // Deneme Override (alet taşları seti): prefab'ın asıl görsel/oran değerleri bir kez saklanır,
+    // her oynatmada anahtara göre seçilir (yalnız editör + Dev Build). Tahsis yok.
+    private bool _origCaptured;
+    private Sprite _oTop, _oBottom, _oFull;
+    private Sprite[] _oTopFrames, _oBottomFrames;
+    private Vector2 _oTopSize, _oTopOffset, _oBottomSize, _oBottomOffset;
+
+    private void ApplySpriteSet()
+    {
+        if (!_origCaptured)
+        {
+            _origCaptured = true;
+            _oTop = topHalfSprite; _oBottom = bottomHalfSprite; _oFull = fullSphereSprite;
+            _oTopFrames = topTurnFrames; _oBottomFrames = bottomTurnFrames;
+            _oTopSize = topTurnSizeRatio; _oTopOffset = topTurnOffsetRatio;
+            _oBottomSize = bottomTurnSizeRatio; _oBottomOffset = bottomTurnOffsetRatio;
+        }
+        var lib = TileIconLibrary.Shared;
+        bool tool = lib != null && lib.ToolOverrideReady;
+        topHalfSprite = tool ? lib.toolOverrideUp : _oTop;
+        bottomHalfSprite = tool ? lib.toolOverrideDown : _oBottom;
+        fullSphereSprite = tool ? lib.toolOverride : _oFull;
+        topTurnFrames = tool ? lib.toolOverrideTurnTop : _oTopFrames;
+        bottomTurnFrames = tool ? lib.toolOverrideTurnBottom : _oBottomFrames;
+        topTurnSizeRatio = tool ? lib.toolOverrideTopTurnSize : _oTopSize;
+        topTurnOffsetRatio = tool ? lib.toolOverrideTopTurnOffset : _oTopOffset;
+        bottomTurnSizeRatio = tool ? lib.toolOverrideBottomTurnSize : _oBottomSize;
+        bottomTurnOffsetRatio = tool ? lib.toolOverrideBottomTurnOffset : _oBottomOffset;
+    }
     public bool IsPlaying => externalTurning || routine != null || idleRoutine != null;
 
     /// <summary>Copies asset references/configuration only; the combo drives both views in its own loop.</summary>
     public bool BeginComboTurn(OverrideSpecialView source, Image icon, bool opposite)
     {
         Stop();
+        if (source != null) source.ApplySpriteSet();
         if (source == null || source.topTurnFrames == null || source.topTurnFrames.Length == 0
             || source.bottomTurnFrames == null || source.bottomTurnFrames.Length == 0) return false;
         topHalfSprite = source.topHalfSprite;
@@ -137,6 +168,7 @@ public sealed class OverrideSpecialView : MonoBehaviour
         if (!gameObject.activeInHierarchy) return;
         Stop();
         activating = activation;
+        ApplySpriteSet();
         BuildChildren();
 
         ConfigureHalf(topImage, topHalfSprite, true);

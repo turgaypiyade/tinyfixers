@@ -34,7 +34,7 @@ MonoBehaviour:
       amount: 1
       durationMinutes: 0
     - type: 2
-      amount: 1
+      amount: 2
       durationMinutes: 0
     completionRewards:
     - type: 20
@@ -54,7 +54,7 @@ MonoBehaviour:
       amount: 1
       durationMinutes: 0
     - type: 2
-      amount: 1
+      amount: 2
       durationMinutes: 0
     - type: 0
       amount: 60
@@ -63,7 +63,7 @@ MonoBehaviour:
       amount: 1
       durationMinutes: 0
     - type: 2
-      amount: 1
+      amount: 2
       durationMinutes: 0
     completionRewards:
     - type: 0
@@ -104,10 +104,10 @@ MonoBehaviour:
       amount: 1
       durationMinutes: 0
     - type: 2
-      amount: 1
+      amount: 2
       durationMinutes: 0
     - type: 2
-      amount: 1
+      amount: 2
       durationMinutes: 0
     - type: 2
       amount: 2

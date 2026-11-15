@@ -530,7 +530,7 @@ public class PreLevelSpecialPopupController : MonoBehaviour
             return fallbackGoalIcon;
 
         if (goal.iconOverride != null)
-            return goal.iconOverride;
+            return TileIconLibrary.MapTileSprite(goal.iconOverride);
 
         // Enerji hedefi: override boşsa varsayılan çekiç (yoksa hedef PreLevel'de hiç görünmüyordu).
         if (goal.targetType == LevelGoalTargetType.Collectible && goal.collectibleId == CollectibleId.EnergyOrb

@@ -10,6 +10,82 @@ public class TileIconLibrary : ScriptableObject
     public Sprite plate;
     public Sprite key;
 
+    [Header("Deneme: Alet taşları (2026-11-14) — yalnız editör + Development Build")]
+    [Tooltip("Sarı baret / kırmızı koni / mavi somun / yeşil metre. Mağaza sürümünde HİÇ kullanılmaz; " +
+             "karar verilince gear/core/bolt/plate'e taşınır.")]
+    public Sprite toolGear;
+    public Sprite toolCore;
+    public Sprite toolBolt;
+    public Sprite toolPlate;
+    [Tooltip("Deneme roketi (magenta): taş ikonu, 5'er dönme karesi, uçuş yarımları + alevli roket.")]
+    public Sprite toolLineH;
+    public Sprite toolLineV;
+    public Sprite[] toolLineHSpin;
+    public Sprite[] toolLineVSpin;
+    public Sprite toolRocketLeft;
+    public Sprite toolRocketRight;
+    public Sprite toolSplitLeft;
+    public Sprite toolSplitRight;
+    [Tooltip("Deneme Override: tam küre, iki yarım, dönme kareleri (üst 8 / alt 6) + karelerin tuvale göre oranları.")]
+    public Sprite toolOverride;
+    public Sprite toolOverrideUp;
+    public Sprite toolOverrideDown;
+    public Sprite[] toolOverrideTurnTop;
+    public Sprite[] toolOverrideTurnBottom;
+    public Vector2 toolOverrideTopTurnSize;
+    public Vector2 toolOverrideTopTurnOffset;
+    public Vector2 toolOverrideBottomTurnSize;
+    public Vector2 toolOverrideBottomTurnOffset;
+
+    /// Deneme Override seti tam ve açık mı?
+    public bool ToolOverrideReady => ToolTilesActive && toolOverride != null && toolOverrideUp != null && toolOverrideDown != null
+        && toolOverrideTurnTop != null && toolOverrideTurnTop.Length > 0 && toolOverrideTurnBottom != null && toolOverrideTurnBottom.Length > 0;
+
+    public const string ToolTilesPrefKey = "debug_tool_tiles";
+    private static int s_toolTiles = -1;   // -1 = okunmadı; hot path'te PlayerPrefs okunmaz
+
+    /// Deneme alet taşları açık mı? Mağaza sürümünde her zaman kapalı. Test cihazında varsayılan KAPALI (debug panelinden açılır).
+    public static bool ToolTilesActive
+    {
+        get
+        {
+            if (!Application.isEditor && !Debug.isDebugBuild) return false;
+            if (s_toolTiles < 0) s_toolTiles = PlayerPrefs.GetInt(ToolTilesPrefKey, 0);   // 2026-11-15: alet taşlarından vazgeçildi → varsayılan KAPALI
+            return s_toolTiles == 1;
+        }
+        set
+        {
+            s_toolTiles = value ? 1 : 0;
+            PlayerPrefs.SetInt(ToolTilesPrefKey, s_toolTiles);
+            PlayerPrefs.Save();
+        }
+    }
+
+    private Sprite Pick(Sprite normal, Sprite tool) => tool != null && ToolTilesActive ? tool : normal;
+
+    /// Deneme seti açıksa roket dönme kareleri; değilse null (TileView kendi karelerini kullanır).
+    public static Sprite[] ToolLineSpinFrames(TileSpecial special)
+    {
+        if (!ToolTilesActive) return null;
+        var lib = Shared;
+        if (lib == null) return null;
+        var f = special == TileSpecial.LineH ? lib.toolLineHSpin : special == TileSpecial.LineV ? lib.toolLineVSpin : null;
+        return f != null && f.Length > 0 && f[0] != null ? f : null;
+    }
+
+    /// Elle girilmiş eski taş görseli (seviye hedefi iconOverride) → deneme seti açıksa karşılığı.
+    public static Sprite MapTileSprite(Sprite sprite)
+    {
+        if (sprite == null || !ToolTilesActive) return sprite;
+        var lib = Shared;
+        if (lib == null) return sprite;
+        if (sprite == lib.gear) return lib.Get(TileType.Gear);
+        if (sprite == lib.core) return lib.Get(TileType.Core);
+        if (sprite == lib.bolt) return lib.Get(TileType.Bolt);
+        if (sprite == lib.plate) return lib.Get(TileType.Plate);
+        return sprite;
+    }
+
     [Header("Special Tile Icons")]
     public Sprite lineH;
     public Sprite lineV;
@@ -94,10 +170,10 @@ public class TileIconLibrary : ScriptableObject
         switch (special)
         {
             case TileSpecial.LineH:
-                return lineH;
+                return Pick(lineH, toolLineH);
 
             case TileSpecial.LineV:
-                return lineV;
+                return Pick(lineV, toolLineV);
 
             case TileSpecial.PatchBot:
                 return patchBotAlone;
@@ -106,7 +182,7 @@ public class TileIconLibrary : ScriptableObject
                 return pulseCore;
 
             case TileSpecial.SystemOverride:
-                return overrideRed; // default fallback — callers should use GetOverrideIcon for color-keyed
+                return Pick(overrideRed, toolOverride); // default fallback — callers should use GetOverrideIcon for color-keyed
 
             default:
                 return null;
@@ -119,6 +195,7 @@ public class TileIconLibrary : ScriptableObject
     /// </summary>
     public Sprite GetOverrideIcon(TileType baseType)
     {
+        if (toolOverride != null && ToolTilesActive) return toolOverride;
         switch (baseType)
         {
             case TileType.Gear:   return overrideYellow;
@@ -135,10 +212,10 @@ public class TileIconLibrary : ScriptableObject
     {
         return type switch
         {
-            TileType.Gear => gear,
-            TileType.Core => core,
-            TileType.Bolt => bolt,
-            TileType.Plate => plate,
+            TileType.Gear => Pick(gear, toolGear),
+            TileType.Core => Pick(core, toolCore),
+            TileType.Bolt => Pick(bolt, toolBolt),
+            TileType.Plate => Pick(plate, toolPlate),
             TileType.Key => key,
             _ => null
         };

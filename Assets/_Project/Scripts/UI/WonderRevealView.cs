@@ -532,7 +532,8 @@ public class WonderRevealView : MonoBehaviour
             // Perspektif: çekiçli karakterle aynı boy (ayakları aşağıdaysa büyük, yukarıdaysa küçük).
             float welderH = Mathf.Max(1f, welderRobot.rect.height);
             // MW kareleri çerçevenin ~%90'ını doldurur → görünen boy = CharacterHeight (ayı ile aynı).
-            welderRobot.localScale = Vector3.one * Mathf.Clamp(_buildFx.CharacterHeight / (0.9f * welderH), 0.25f, 1.6f);
+            _welderBaseScale = Mathf.Clamp(_buildFx.CharacterHeight / (0.9f * welderH), 0.25f, 1.6f);
+            welderRobot.localScale = Vector3.one * _welderBaseScale;
             welderRobot.gameObject.SetActive(welder);
             if (welder) PlaceWelderAt(crane, weldTip);
         }
@@ -621,6 +622,8 @@ public class WonderRevealView : MonoBehaviour
         if (!crane) { PlaceWelderTip(weldTip); return; }
         var img = WelderImage;
         if (welderRobot == null || img == null) return;
+        // Perspektifli rayda gondol uzakta küçük: kaynakçı da aynı ölçekte.
+        welderRobot.localScale = Vector3.one * (_welderBaseScale * _buildFx.CraneScale);
         Rect r = img.rectTransform.rect;
         if (img.preserveAspect && img.sprite != null)
         {
@@ -630,7 +633,7 @@ public class WonderRevealView : MonoBehaviour
             r = new Rect(r.center - size * 0.5f, size);
         }
         Vector3 feetNow = _rt.InverseTransformPoint(img.rectTransform.TransformPoint(new Vector3(r.center.x, r.yMin, 0f)));
-        Vector3 target = _buildFx.WelderFeet + _buildFx.CraneOffset;
+        Vector3 target = _buildFx.WelderFeet;   // anlık (gondolla taşınır)
         welderRobot.position += _rt.TransformVector(target - feetNow);
     }
 
@@ -661,6 +664,8 @@ public class WonderRevealView : MonoBehaviour
         if (_buildFx != null) return;
         _buildFx = WonderBuildFx.Create(_rt, _build);
     }
+
+    float _welderBaseScale = 1f;
 
     void ResetWelderScale()
     {

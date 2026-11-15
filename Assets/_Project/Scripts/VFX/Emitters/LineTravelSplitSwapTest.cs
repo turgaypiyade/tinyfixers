@@ -126,6 +126,29 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
 
     private bool IsAlive(Image img) => SafeRect(img) != null;
 
+    // Deneme roketi: prefab'ın asıl görselleri bir kez saklanır, her Play'de anahtara göre seçilir.
+    private Sprite _origRocketL, _origRocketR, _origSplitL, _origSplitR;
+    private bool _origCaptured;
+
+    private void ApplySpriteSet()
+    {
+        if (!_origCaptured)
+        {
+            _origCaptured = true;
+            _origRocketL = rocketLeftSprite; _origRocketR = rocketRightSprite;
+            _origSplitL = splitLeftSprite; _origSplitR = splitRightSprite;
+        }
+        var lib = TileIconLibrary.ToolTilesActive ? TileIconLibrary.Shared : null;
+        bool tool = lib != null && lib.toolRocketLeft != null && lib.toolRocketRight != null
+                    && lib.toolSplitLeft != null && lib.toolSplitRight != null;
+        // ApplyAxisVisualRotation yatayda 180°, dikeyde +90° döndürür → deneme görsellerinde başı (kubbe)
+        // dönüş SONRASI hareket yönüne bakması için sol görüntüye "sağ" çizim verilir (kullanıcı: baş geride uçuyordu).
+        rocketLeftSprite = tool ? lib.toolRocketRight : _origRocketL;
+        rocketRightSprite = tool ? lib.toolRocketLeft : _origRocketR;
+        splitLeftSprite = tool ? lib.toolSplitRight : _origSplitL;
+        splitRightSprite = tool ? lib.toolSplitLeft : _origSplitR;
+    }
+
     private void Awake()
     {
         var leftRt = SafeRect(leftImage);
@@ -197,6 +220,7 @@ public class LineTravelSplitSwapTestUI : MonoBehaviour
 
     public void Play(LineAxis axisMode, Vector2 originAnchoredPos, int steps, float cellSizePxOverride)
     {
+        ApplySpriteSet();
         if (leftImage) leftImage.enabled = false;
         if (rightImage) rightImage.enabled = false;
 

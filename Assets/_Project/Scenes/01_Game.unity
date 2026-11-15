@@ -17629,8 +17629,8 @@ MonoBehaviour:
   goalCheckMarkSprite: {fileID: 0}
   coinsEarnedText: {fileID: 0}
   coinsEarnedKey: level_end_coins_earned
-  star3Ratio: 0.5
-  star2Ratio: 0.2
+  star3Ratio: 0.35
+  star2Ratio: 0.25
   baseCoins: 100
   remainingMoveBonusRatio: 0.5
   useFlatCoinReward: 1

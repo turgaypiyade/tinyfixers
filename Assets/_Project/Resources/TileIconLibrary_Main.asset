@@ -17,6 +17,27 @@ MonoBehaviour:
   bolt: {fileID: 21300000, guid: 70536964206c4f4cba9727e52831bf86, type: 3}
   plate: {fileID: 21300000, guid: db27638c3082145f39319cecdb591da0, type: 3}
   key: {fileID: 21300000, guid: 38884719e46114284996c0d3e316e882, type: 3}
+  toolGear: {fileID: 0}
+  toolCore: {fileID: 0}
+  toolBolt: {fileID: 0}
+  toolPlate: {fileID: 0}
+  toolLineH: {fileID: 0}
+  toolLineV: {fileID: 0}
+  toolLineHSpin: []
+  toolLineVSpin: []
+  toolRocketLeft: {fileID: 0}
+  toolRocketRight: {fileID: 0}
+  toolSplitLeft: {fileID: 0}
+  toolSplitRight: {fileID: 0}
+  toolOverride: {fileID: 0}
+  toolOverrideUp: {fileID: 0}
+  toolOverrideDown: {fileID: 0}
+  toolOverrideTurnTop: []
+  toolOverrideTurnBottom: []
+  toolOverrideTopTurnSize: {x: 0.980064, y: 0.641148}
+  toolOverrideTopTurnOffset: {x: -0.001994, y: 0.173046}
+  toolOverrideBottomTurnSize: {x: 0.919458, y: 0.365231}
+  toolOverrideBottomTurnOffset: {x: -0.002791, y: -0.309410}
   lineH: {fileID: 21300000, guid: 2a754af4759b54bd3a1d36f710c306fb, type: 3}
   lineV: {fileID: 21300000, guid: 00ce8ec47914c4823a84bf22086d7f13, type: 3}
   patchBotAlone: {fileID: 21300000, guid: 98cc830716f274b7796cfce1eeeca02a, type: 3}

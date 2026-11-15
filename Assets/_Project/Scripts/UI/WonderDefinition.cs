@@ -104,6 +104,13 @@ public class WonderDefinition : ScriptableObject
     public bool buildShowWelder = true;
     [Tooltip("Görevde çekiçli karakter çıksın mı? Resimde aynı karakter varsa kapat.")]
     public bool buildShowHammerer = true;
+    [Tooltip("Vinç rayı (perspektif): görünen alanda normalize, (0,0) sol-alt. Başlangıç = Bitiş ise düz kiriş ekranın tepesinde.")]
+    public Vector2 buildRailStart;
+    public Vector2 buildRailEnd;
+    [Tooltip("Ray uçlarındaki ölçek (uzak uç küçük). Araba, gondol, ipler ve karakterler bununla büyür/küçülür.")]
+    public float buildRailScaleStart = 1f;
+    public float buildRailScaleEnd = 1f;
+    public bool HasBuildRail => buildRailStart != buildRailEnd;
     [Tooltip("Çekiçle vuran karakter kareleri (son kare = vuruş anı).")]
     public Sprite[] buildHammerFrames;
     public Sprite buildHammerTool;

@@ -13,6 +13,8 @@ public sealed class RegionUnlockItem : MonoBehaviour
     [Header("Refs (ikon-sol, metin-orta, buton-sağ)")]
     [SerializeField] private Image iconImage;
     [SerializeField] private TMP_Text nameText;
+    /// Liste bölüm başlığı aynı yazı stilini kullanır (font/materyal/renk).
+    public TMP_Text NameText => nameText;
     [Tooltip("Buton üzerindeki yıldız sayısı (starCost).")]
     [SerializeField] private TMP_Text starCountText;
     [Tooltip("Buton üzerindeki 'AÇ' metni — lokalize anahtarı worldmap_unlock_button.")]

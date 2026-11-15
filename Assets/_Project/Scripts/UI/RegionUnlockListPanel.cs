@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 
 /// <summary>
 /// Bölge açma görev listesi paneli. Aynı anda N (varsayılan 3) açılabilir bölge gösterir.
@@ -63,6 +64,15 @@ public sealed class RegionUnlockListPanel : MonoBehaviour
     private bool inViewMode;
 
     private float SlotY(int slotIndex) => firstSlotY - slotIndex * (itemHeight + itemSpacing);
+
+    [Header("Harika Başlıkları")]
+    // Görev listesinde her harika bloğunun üstünde ara başlık (kullanıcı 2026-11-15: "Harika · Görev" satırı
+    // yazıyı küçültüp sığmıyordu; Market'teki gibi ara başlık).
+    [SerializeField, Min(20f)] private float headerHeight = 58f;
+    [SerializeField, Min(10f)] private float headerFontSize = 46f;
+    [Tooltip("Başlıklı listede satır arası (başlıklar yer kapladığı için normalden sıkı).")]
+    [SerializeField, Min(0f)] private float headerItemSpacing = 10f;
+    private readonly List<GameObject> headers = new();
 
     // ─── Lifecycle ──────────────────────────────────────────────────────────
 
@@ -230,6 +240,8 @@ public sealed class RegionUnlockListPanel : MonoBehaviour
     {
         foreach (var it in items) if (it != null) Destroy(it.gameObject);
         items.Clear();
+        foreach (var h in headers) if (h != null) Destroy(h);
+        headers.Clear();
 
         if (WonderMode) { RebuildWonderItems(); return; }
 
@@ -297,20 +309,51 @@ public sealed class RegionUnlockListPanel : MonoBehaviour
         if (allCompletedMessage != null)
             allCompletedMessage.SetActive(rows.Count == 0 && !showLockedTeaser);
 
-        // Birden fazla event listedeyse görev adının önüne event adını yaz (aynı görev
-        // isimleri event'ler arasında tekrar ediyor → hangi event olduğu belli olsun).
-        bool multiEvent = showLockedTeaser;
-        for (int i = 1; i < rows.Count && !multiEvent; i++)
-            multiEvent = rows[i].eventIndex != rows[0].eventIndex;
-
-        int slot = 0;
+        // Her harika bloğunun üstünde ara başlık; satırda yalnız görev adı (tam boy yazı).
+        // Satırlar MERKEZDEN konumlanır (prefab pivot 0.5). Başlıklar yer kapladığı için toplam yükseklik
+        // eski 3 satırlık alanı aşarsa liste bütünüyle küçültülür → çerçeveden taşmaz.
+        // Satırlar TAM boy kalır (kullanıcı: küçülünce çirkin). Alan yetmezse önce önizleme satırları düşer;
+        // her harikanın sıradaki görevi ve kilitli satır her zaman kalır. O da yetmezse son çare küçültme.
+        float available = visibleSlotCount * itemHeight + Mathf.Max(0, visibleSlotCount - 1) * itemSpacing
+                          + itemSpacing;   // satır arası bandın altına/üstüne pay
+        float Needed(List<(int eventIndex, int stage, bool isEventNext)> list, bool teaser)
+        {
+            int hc = 0, rc = list.Count, pe = -1;
+            foreach (var r in list) if (r.eventIndex != pe) { hc++; pe = r.eventIndex; }
+            if (teaser) { hc++; rc++; }
+            return rc * itemHeight + hc * headerHeight + Mathf.Max(0, rc + hc - 1) * headerItemSpacing;
+        }
+        var kept = new List<(int eventIndex, int stage, bool isEventNext)>();
+        foreach (var r in rows) if (r.isEventNext) kept.Add(r);
+        // Kilitli harika satırı da yalnız sığarsa (yoksa 2 görev kalır, satırlar küçülmez).
+        if (showLockedTeaser && Needed(kept, true) > available) showLockedTeaser = false;
+        foreach (var r in rows)
+        {
+            if (r.isEventNext) continue;
+            kept.Add(r);
+            kept.Sort((a, b) => a.eventIndex != b.eventIndex ? a.eventIndex.CompareTo(b.eventIndex) : a.stage.CompareTo(b.stage));
+            if (Needed(kept, showLockedTeaser) > available) kept.Remove(r);
+        }
+        kept.Sort((a, b) => a.eventIndex != b.eventIndex ? a.eventIndex.CompareTo(b.eventIndex) : a.stage.CompareTo(b.stage));
+        rows = kept;
+        float needed = Needed(rows, showLockedTeaser);
+        float scale = needed > available && needed > 0f ? available / needed : 1f;
+        float top = firstSlotY + itemHeight * 0.5f;   // ilk slotun üst kenarı
+        int lastEvent = -1;
         foreach (var row in rows)
         {
             var w = wonderCatalog.Get(row.eventIndex);
+            if (row.eventIndex != lastEvent)
+            {
+                lastEvent = row.eventIndex;
+                AddHeader(w.LocalizedName, ref top, scale);
+            }
             var item = Instantiate(itemPrefab, itemsContainer);
-            item.SetInstantY(SlotY(slot++));
+            item.transform.localScale = Vector3.one * scale;
+            item.SetInstantY(top - itemHeight * scale * 0.5f);
+            top -= (itemHeight + headerItemSpacing) * scale;
 
-            string title = RowTitle(w, w.GetTaskName(row.stage), multiEvent);
+            string title = w.GetTaskName(row.stage);
 
             if (w.HasExplicitTaskIcon(row.stage))
                 item.BindTask(title, w.GetTaskIcon(row.stage), wonderCatalog.GetStarCost(row.eventIndex, row.stage),
@@ -331,9 +374,11 @@ public sealed class RegionUnlockListPanel : MonoBehaviour
             var locked = wonderCatalog.Get(unlocked);
             if (locked != null)
             {
+                AddHeader(locked.LocalizedName, ref top, scale);
                 var item = Instantiate(itemPrefab, itemsContainer);
-                item.SetInstantY(SlotY(slot));
-                item.BindTaskRevealIcon(RowTitle(locked, locked.GetTaskName(0), multiEvent),
+                item.transform.localScale = Vector3.one * scale;
+                item.SetInstantY(top - itemHeight * scale * 0.5f);
+                item.BindTaskRevealIcon(locked.GetTaskName(0),
                                         locked.backgroundSprite, 0f, wonderCatalog.GetStarCost(unlocked, 0),
                                         this, isActive: false, wonderEventIndex: unlocked);
                 item.ApplyChapterLock(ChapterLockText());
@@ -344,11 +389,36 @@ public sealed class RegionUnlockListPanel : MonoBehaviour
         if (progressBar != null) progressBar.ApplyInstant();
     }
 
-    private static string RowTitle(WonderDefinition w, string taskName, bool prefixEventName)
+    /// Harika bloğu ara başlığı: büyük beyaz yazı, bordo kontur (kullanıcı: bant gerekmez).
+    /// Liste her görevde yeniden kurulur; başlıklar satırlarla birlikte silinir.
+    private void AddHeader(string text, ref float top, float scale)
     {
-        if (!prefixEventName || w == null) return taskName;
-        string eventName = w.LocalizedName;
-        return string.IsNullOrEmpty(eventName) ? taskName : $"{eventName} · {taskName}";
+        var src = itemPrefab != null ? (RectTransform)itemPrefab.transform : null;
+        var go = new GameObject("WonderHeader", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI))
+        { layer = itemsContainer.gameObject.layer };
+        var rt = (RectTransform)go.transform;
+        rt.SetParent(itemsContainer, false);
+        if (src != null)
+        {
+            rt.anchorMin = src.anchorMin; rt.anchorMax = src.anchorMax;
+            rt.sizeDelta = new Vector2(src.sizeDelta.x, headerHeight);
+        }
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.localScale = Vector3.one * scale;
+        rt.anchoredPosition = new Vector2(0f, top - headerHeight * scale * 0.5f);   // merkez = üst kenar - yarım
+        var tmp = go.GetComponent<TextMeshProUGUI>();
+        var style = itemPrefab != null ? itemPrefab.NameText : null;
+        if (style != null) { tmp.font = style.font; tmp.fontStyle = style.fontStyle; }
+        tmp.text = text;
+        tmp.enableAutoSizing = true;
+        tmp.fontSizeMax = headerFontSize;
+        tmp.fontSizeMin = headerFontSize * 0.6f;
+        tmp.alignment = TextAlignmentOptions.Center;
+        tmp.textWrappingMode = TextWrappingModes.NoWrap;
+        tmp.raycastTarget = false;
+        TextSurfaceStyle.Apply(tmp, TextSurface.Maroon);   // beyaz yüz + bordo kontur (yazı kuralı)
+        headers.Add(go);
+        top -= (headerHeight + headerItemSpacing) * scale;
     }
 
     /// <summary>"30. seviye bitince açılır" — kilit kuralı bölüm bazlı, ama oyuncu bölüm numarasını hiçbir

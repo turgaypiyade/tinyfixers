@@ -174,8 +174,8 @@ public class LevelEndSimplePopupController : MonoBehaviour
     [SerializeField] private string coinsEarnedKey = "level_end_coins_earned";
 
     [Header("Star Thresholds (remaining moves / starting moves)")]
-    [Range(0f, 1f)][SerializeField] private float star3Ratio = 0.5f;
-    [Range(0f, 1f)][SerializeField] private float star2Ratio = 0.2f;
+    [Range(0f, 1f)][SerializeField] private float star3Ratio = 0.35f;
+    [Range(0f, 1f)][SerializeField] private float star2Ratio = 0.25f;
 
     [Header("Coin Reward")]
     [Tooltip("Fallback only when ActiveLevelData is unavailable. Normal rewards come from LevelData.baseCoinReward.")]
@@ -3108,7 +3108,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
             return null;
 
         if (goal.iconOverride != null)
-            return goal.iconOverride;
+            return TileIconLibrary.MapTileSprite(goal.iconOverride);
 
         if (goal.targetType == LevelGoalTargetType.Tile)
         {

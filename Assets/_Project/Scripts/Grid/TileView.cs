@@ -31,6 +31,8 @@ public class TileView : MonoBehaviour,
     /// LineH/LineV oluşum flipbook kareleri. Hiç dolu kare yoksa null döner (→ düz dönüş fallback).
     public Sprite[] GetLineSpinFrames(TileSpecial special)
     {
+        var tool = TileIconLibrary.ToolLineSpinFrames(special);   // deneme roketi (yalnız editör + Dev Build)
+        if (tool != null) return tool;
         var frames = special == TileSpecial.LineH ? lineHSpinFrames
                    : special == TileSpecial.LineV ? lineVSpinFrames
                    : null;

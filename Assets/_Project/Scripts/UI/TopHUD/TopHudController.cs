@@ -389,7 +389,7 @@ public class TopHudController : MonoBehaviour
             return fallbackGoalIcon;
 
         if (goal.iconOverride != null)
-            return goal.iconOverride;
+            return TileIconLibrary.MapTileSprite(goal.iconOverride);
 
         Sprite sourceOverride = ResolveSourceLevelIconOverride(goalIndex);
         if (sourceOverride != null)
@@ -445,7 +445,7 @@ public class TopHudController : MonoBehaviour
             return null;
 
         var sourceGoal = sourceLevel.goals[goalIndex];
-        return sourceGoal != null ? sourceGoal.iconOverride : null;
+        return sourceGoal != null ? TileIconLibrary.MapTileSprite(sourceGoal.iconOverride) : null;
     }
 
     // Son 5 hamle uyarısı: yalnız AZALIRKEN 5'e inince (devam ile eklenen hamle çalmaz), hedefler bitmemişse.

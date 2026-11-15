@@ -54,14 +54,14 @@ public class ProgressGoalDefinition
         if (lib == null) return null;
         return type switch
         {
-            ProgressGoalType.TileCleared_Gear => lib.gear,
-            ProgressGoalType.TileCleared_Core => lib.core,
-            ProgressGoalType.TileCleared_Bolt => lib.bolt,
-            ProgressGoalType.TileCleared_Plate => lib.plate,
-            ProgressGoalType.TileCleared_Any => lib.gear,
-            ProgressGoalType.LineH => lib.lineH,
-            ProgressGoalType.LineV => lib.lineV,
-            ProgressGoalType.LineAny => lib.lineH,
+            ProgressGoalType.TileCleared_Gear => lib.Get(TileType.Gear),
+            ProgressGoalType.TileCleared_Core => lib.Get(TileType.Core),
+            ProgressGoalType.TileCleared_Bolt => lib.Get(TileType.Bolt),
+            ProgressGoalType.TileCleared_Plate => lib.Get(TileType.Plate),
+            ProgressGoalType.TileCleared_Any => lib.Get(TileType.Gear),
+            ProgressGoalType.LineH => lib.GetSpecialIcon(TileSpecial.LineH),
+            ProgressGoalType.LineV => lib.GetSpecialIcon(TileSpecial.LineV),
+            ProgressGoalType.LineAny => lib.GetSpecialIcon(TileSpecial.LineH),
             ProgressGoalType.ObstacleCleared => lib.obstacleGoal, // never a booster sprite (reads as the reward)
             ProgressGoalType.SpecialCreated => lib.pulseCore,
             ProgressGoalType.LevelWon => lib.star,

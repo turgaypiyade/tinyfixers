@@ -356,7 +356,7 @@ public class MainMenuLevelButtonController : MonoBehaviour, IPointerDownHandler,
         panelRt.anchorMax = new Vector2(0.5f, 0.5f);
         panelRt.pivot = new Vector2(0.5f, 0.5f);
         panelRt.anchoredPosition = Vector2.zero;
-        panelRt.sizeDelta = new Vector2(460f, 540f);
+        panelRt.sizeDelta = new Vector2(460f, 610f);
 
         var panelImage = panel.AddComponent<Image>();
         panelImage.color = new Color(0.08f, 0.10f, 0.13f, 0.97f);
@@ -399,6 +399,14 @@ public class MainMenuLevelButtonController : MonoBehaviour, IPointerDownHandler,
             FontStyles.Normal, TextAlignmentOptions.Center, new Color(0.83f, 0.89f, 0.96f, 1f), 24f);
 
         CreateDebugButton(panel.transform, "Kayıtları Sil (Yeni Oyuncu)", new Color(0.45f, 0.10f, 0.12f, 1f), ConfirmDebugFreshStart);
+        Button toolTiles = null;
+        toolTiles = CreateDebugButton(panel.transform, ToolTilesLabel(), new Color(0.20f, 0.42f, 0.36f, 1f), () =>
+        {
+            TileIconLibrary.ToolTilesActive = !TileIconLibrary.ToolTilesActive;
+            var label = toolTiles != null ? toolTiles.GetComponentInChildren<TMP_Text>() : null;
+            if (label != null) label.text = ToolTilesLabel();
+            SetDebugStatus("Taş seti bir sonraki seviyede değişir.", false);
+        });
 
         debugPanelRoot.SetActive(false);
     }
@@ -524,6 +532,8 @@ public class MainMenuLevelButtonController : MonoBehaviour, IPointerDownHandler,
             new RuntimeChoicePopup.Choice("Vazgeç", null),
             new RuntimeChoicePopup.Choice("Sıfırla", ResetDebugProgress, true));
     }
+
+    private static string ToolTilesLabel() => TileIconLibrary.ToolTilesActive ? "Taşlar: YENİ (alet)" : "Taşlar: ESKİ";
 
     private void ConfirmDebugFreshStart()
     {

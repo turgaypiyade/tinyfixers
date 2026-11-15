@@ -37,6 +37,8 @@ public sealed class WonderBuildFx : MonoBehaviour
     const float GondolaMinCenter = 0.45f;   // parça merkezi resmin bu oranından yüksekse gondol gelir
     const float RopeThickness = 10f;
     const float CraneTopMargin = 0.06f;     // kirişin ekran üstünden payı (görünüm yüksekliğine oran)
+    const float CraneSizeScale = 0.9f;      // gondol + içindeki karakterler + araba
+    const float GroundSizeScale = 0.9f;     // yerde çalışan karakterler
     // Görsel ölçüleri (Resources/WonderBuild): ray kirişin altından %32'de; arabanın üst tekerlek merkezi altından %88'de,
     // alt makaralar %17'de, x %18 / %83. Gondol kancaları üst köşelerde.
     // Ölçülen noktalar (2026-11-14): makara merkezleri x %16.9 / %83.0, alttan %16.9, yarıçap = genişliğin %11.4'ü;
@@ -45,14 +47,24 @@ public sealed class WonderBuildFx : MonoBehaviour
     const float TrolleyPulleyLeft = 0.169f, TrolleyPulleyRight = 0.830f, TrolleyPulleyRadius = 0.114f;
     const float GondolaHookLeft = 0.054f, GondolaHookRight = 0.903f, GondolaHookFromBottom = 0.94f;
     const int RopeArcSegments = 4;            // ip makaranın tepesinden dış yanına dolanır
-    Image _beam, _trolley, _gondola;
+    WonderBeamGraphic _beam;
+    WonderBeamGraphic _trolley, _gondola;   // perspektifli dörtgen: uzak kenar küçük, rayla aynı eğimde
     readonly Image[] _ropes = new Image[2 * (RopeArcSegments + 1)];
     bool _crane;
-    float _gx, _gw, _gh, _tw, _th, _railY, _finalBottom, _tuckedBottom, _startX, _endX;
+    WonderDefinition _def;
+    // Ray (perspektif): A→B doğrusu, uçlarda ölçek. Düz kirişte sA = sB = 1 ve A/B aynı yükseklikte.
+    Vector2 _railA, _railB;
+    float _railSA = 1f, _railSB = 1f, _railTg, _railTStart, _railTEnd, _beamH;
+    // Ölçek 1'deki boyutlar; anlık boyut = taban × ray ölçeği.
+    float _gw1, _gh1, _tw1, _th1, _kg;
+    // Gondolun son konumu (alt-orta) ve son boyları.
+    float _gx, _gw, _gh, _finalBottom;
     public bool UsesCrane => _crane;
     /// Gondolun son konumuna göre anlık kayması (karakterler bununla taşınır).
     public Vector2 CraneOffset { get; private set; }
-    /// Gondolda kaynakçının ayak noktası (gondol son konumunda).
+    /// Karakterlerin anlık ölçeği (gondol uzakta küçük; son konumda 1).
+    public float CraneScale { get; private set; } = 1f;
+    /// Gondolda kaynakçının ayak noktası — ANLIK (gondolla taşınır ve ölçeklenir).
     public Vector2 WelderFeet { get; private set; }
 
     public static WonderBuildFx Create(RectTransform view, WonderDefinition def)
@@ -76,11 +88,17 @@ public sealed class WonderBuildFx : MonoBehaviour
         var gondola = Resources.Load<Sprite>("PaintCleanIntro/Gondola/Gondola_Front");
         var rope = Resources.Load<Sprite>("BoardFixIntro/Rope_Tile");
         if (beam == null || trolley == null || gondola == null || rope == null) return;   // görsel yoksa eski yer düzeni
-        _beam = NewImage("CraneBeam", layer, beam);
-        _beam.preserveAspect = false;
-        _trolley = NewImage("CraneTrolley", layer, trolley);
-        _trolley.preserveAspect = false;
-        _trolley.rectTransform.pivot = new Vector2(0.5f, 0f);
+        var beamGo = new GameObject("CraneBeam", typeof(RectTransform), typeof(CanvasRenderer), typeof(WonderBeamGraphic))
+        { layer = layer.gameObject.layer };
+        var brt = (RectTransform)beamGo.transform;
+        brt.SetParent(layer, false);
+        brt.anchorMin = brt.anchorMax = new Vector2(0.5f, 0.5f);
+        brt.sizeDelta = Vector2.zero;
+        _beam = beamGo.GetComponent<WonderBeamGraphic>();
+        _beam.Sprite = beam;
+        _beam.raycastTarget = false;
+        beamGo.SetActive(false);
+        _trolley = NewQuad("CraneTrolley", layer, trolley);
         // İpler arabanın ÖNÜNDE (makaranın üstünden dolanırken görünsün), gondolun arkasında.
         for (int i = 0; i < _ropes.Length; i++)
         {
@@ -91,9 +109,22 @@ public sealed class WonderBuildFx : MonoBehaviour
             r.rectTransform.pivot = new Vector2(0f, 0.5f);
             _ropes[i] = r;
         }
-        _gondola = NewImage("CraneGondola", layer, gondola);
-        _gondola.preserveAspect = false;
-        _gondola.rectTransform.pivot = new Vector2(0.5f, 0f);
+        _gondola = NewQuad("CraneGondola", layer, gondola);
+    }
+
+    static WonderBeamGraphic NewQuad(string name, RectTransform layer, Sprite sprite)
+    {
+        var go = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(WonderBeamGraphic))
+        { layer = layer.gameObject.layer };
+        var rt = (RectTransform)go.transform;
+        rt.SetParent(layer, false);
+        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.sizeDelta = Vector2.zero;
+        var g = go.GetComponent<WonderBeamGraphic>();
+        g.Sprite = sprite;
+        g.raycastTarget = false;
+        go.SetActive(false);
+        return g;
     }
 
     static RectTransform NewLayer(string name, RectTransform parent)
@@ -127,6 +158,7 @@ public sealed class WonderBuildFx : MonoBehaviour
     void Init(RectTransform view, RectTransform back, RectTransform front, WonderDefinition def)
     {
         _view = view;
+        _def = def;
         var dust = def.buildDustSprite != null ? def.buildDustSprite : Resources.Load<Sprite>("Hamster/Hamster_Dust");
         for (int i = 0; i < DustCount; i++)
         {
@@ -174,6 +206,8 @@ public sealed class WonderBuildFx : MonoBehaviour
             && (piece.center.y - image.yMin) / image.height >= GondolaMinCenter;
         // Perspektif: boy, ayakların ekrandaki yüksekliğinden — aşağıda (yakın) büyük, yukarıda (uzak) küçük.
         _hammererH = PerspectiveHeight(craneWanted ? piece.yMin + piece.height * 0.3f : piece.yMin, bounds);
+        // Kullanıcı 2026-11-15: yerdeki ilk pozlar büyük → %10 küçük (gondol boyu CraneSizeScale ile ayrıca).
+        if (!craneWanted) _hammererH *= GroundSizeScale;
         if (craneWanted) PlanCrane(piece, bounds);
         // Yerde: iki karakter parçanın ortasında yan yana (kaynakçı solda, ayı sağda); ikisinin toplam genişliği
         // görünen alana sığacak kadar kenardan içeride (Pisa yan binalarda maymun soldan dışarıda kalıyordu).
@@ -188,10 +222,10 @@ public sealed class WonderBuildFx : MonoBehaviour
             : new Vector2(x, piece.yMin + _hammererH * 0.05f);
         var rt = _hammerer.rectTransform;
         rt.sizeDelta = new Vector2(w, frameH);
-        rt.anchoredPosition = _hammererPos + CraneOffset;
+        rt.anchoredPosition = _crane ? _hammerNow : _hammererPos;
         // Önceki görevin sönme durumu kalmasın: gondolla gelirken de görünür (Eyfel'de Brumo görünmüyordu).
         _hammerer.sprite = _hammerFrames[0];
-        rt.localScale = new Vector3(-1f, 1f, 1f);
+        rt.localScale = new Vector3(-CraneScale, CraneScale, 1f);
         var hc = _hammerer.color; hc.a = 1f; _hammerer.color = hc;
         _hammerer.gameObject.SetActive(true);
         if (_tool != null)
@@ -237,45 +271,77 @@ public sealed class WonderBuildFx : MonoBehaviour
     void PlanCrane(Rect piece, Rect bounds)
     {
         _crane = true;
-        var gs = _gondola.sprite.rect.size;
-        var ts = _trolley.sprite.rect.size;
-        _gw = Mathf.Clamp(_hammererH * 3f, 240f, 680f);   // iki karakter yan yana sığsın
-        _gh = _gw * gs.y / gs.x;
-        _gx = Mathf.Clamp(piece.center.x, bounds.xMin + _gw * 0.5f + 8f, bounds.xMax - _gw * 0.5f - 8f);
+        var gs = _gondola.Sprite.rect.size;
+        var ts = _trolley.Sprite.rect.size;
+        _beamH = bounds.width * _beam.Sprite.rect.height / _beam.Sprite.rect.width;
+        if (_def != null && _def.HasBuildRail)
+        {
+            // Perspektifli ray: uzak uç küçük, yakın uç büyük (Golden Gate: köprüyle aynı yön).
+            _railA = new Vector2(bounds.xMin + _def.buildRailStart.x * bounds.width, bounds.yMin + _def.buildRailStart.y * bounds.height);
+            _railB = new Vector2(bounds.xMin + _def.buildRailEnd.x * bounds.width, bounds.yMin + _def.buildRailEnd.y * bounds.height);
+            _railSA = Mathf.Max(0.2f, _def.buildRailScaleStart);
+            _railSB = Mathf.Max(0.2f, _def.buildRailScaleEnd);
+        }
+        else
+        {
+            // Düz kiriş her zaman ekranın en üstünde (kullanıcı 2026-11-14); çentik/durum çubuğu altında pay.
+            float y = bounds.yMax - bounds.height * CraneTopMargin - _beamH * (1f - BeamRailFromBottom);
+            _railA = new Vector2(bounds.xMin, y);
+            _railB = new Vector2(bounds.xMax, y);
+            _railSA = _railSB = 1f;
+        }
+        float dx = Mathf.Abs(_railB.x - _railA.x) > 1f ? _railB.x - _railA.x : 1f;
+        // Gondol yalnız ray üstünde, parçanın x'ine en yakın noktada iner; kenarlarda pay.
+        _railTg = Mathf.Clamp((piece.center.x - _railA.x) / dx, 0.08f, 0.92f);
+        _kg = RailScale(_railTg);
+        // Ölçek 1'deki gondol: karakter boyundan; yakın uçta bile görünen genişliğin %42'sini aşmaz.
+        // Kullanıcı 2026-11-15: gondol ve karakterler köprüyü/ekranı kapatıyordu → %10 küçük (CraneSizeScale).
+        _gw1 = Mathf.Clamp(_hammererH * 3f * CraneSizeScale / _kg, 216f, bounds.width * 0.38f / Mathf.Max(_railSA, _railSB));
+        _gh1 = _gw1 * gs.y / gs.x;
+        _tw1 = _gw1 * 0.62f;
+        _th1 = _tw1 * ts.y / ts.x;
+        _gw = _gw1 * _kg; _gh = _gh1 * _kg;
+        _hammererH = _gw / 3f;   // karakterler gondolla aynı ölçekte
+        _gx = RailPoint(_railTg).x;
         float floor = piece.yMin + piece.height * 0.3f;
         _finalBottom = floor - _gh * 0.42f;
-        WelderFeet = new Vector2(_gx - _gw * 0.2f, floor);
-        _tw = _gw * 0.62f;
-        _th = _tw * ts.y / ts.x;
-        float beamH = bounds.width * _beam.sprite.rect.height / _beam.sprite.rect.width;
-        // Kiriş her zaman ekranın en üstünde (kullanıcı 2026-11-14: ortada durunca dağınık görünüyordu); gondol
-        // oradan uzun iplerle iner. Üst pay: çentik/durum çubuğu altında kalsın.
-        _railY = bounds.yMax - bounds.height * CraneTopMargin - beamH * (1f - BeamRailFromBottom);
-        var brt = _beam.rectTransform;
-        brt.sizeDelta = new Vector2(bounds.width, beamH);
-        brt.anchoredPosition = new Vector2(bounds.center.x, _railY - beamH * (BeamRailFromBottom - 0.5f));
-        _trolley.rectTransform.sizeDelta = new Vector2(_tw, _th);
-        _gondola.rectTransform.sizeDelta = new Vector2(_gw, _gh);
-        float trolleyBottom = _railY - _th * TrolleyWheelFromBottom;
-        _tuckedBottom = Mathf.Max(_finalBottom, trolleyBottom - 24f - _gh);
-        float edge = Mathf.Max(_tw, _gw);
+        // Kenardan gir/çık: görünen alanın dışında kalan ray parametreleri (uzak uç da dışarıya uzatılır).
+        float pad = (_gw1 * Mathf.Max(_railSA, _railSB)) / Mathf.Abs(dx);
+        float tLeft = (bounds.xMin - _railA.x) / dx - pad, tRight = (bounds.xMax - _railA.x) / dx + pad;
         bool fromRight = _gx < bounds.center.x;
-        _startX = fromRight ? bounds.xMax + edge : bounds.xMin - edge;
-        _endX = fromRight ? bounds.xMin - edge : bounds.xMax + edge;
+        _railTStart = fromRight ? tRight : tLeft;
+        _railTEnd = fromRight ? tLeft : tRight;
+        DrawBeam(bounds, dx);
         _beam.gameObject.SetActive(true);
         _trolley.gameObject.SetActive(true);
         _gondola.gameObject.SetActive(true);
         foreach (var r in _ropes) r.gameObject.SetActive(true);
-        ApplyCrane(_startX, 0f, 0f);
+        ApplyCrane(_railTStart, 0f, 0f);
     }
+
+    Vector2 RailPoint(float t) => Vector2.LerpUnclamped(_railA, _railB, t);
+    float RailScale(float t) => Mathf.Max(0.2f, Mathf.LerpUnclamped(_railSA, _railSB, t));
+
+    /// Kiriş: ray doğrusu boyunca yamuk; kalınlık uçlardaki ölçekle. Ray çizgisi kirişin altından %32'de.
+    void DrawBeam(Rect bounds, float dx)
+    {
+        float t0 = (bounds.xMin - _railA.x) / dx, t1 = (bounds.xMax - _railA.x) / dx;
+        Vector2 p0 = RailPoint(t0), p1 = RailPoint(t1);
+        float h0 = _beamH * RailScale(t0), h1 = _beamH * RailScale(t1);
+        _beam.SetQuad(new Vector2(p0.x, p0.y - h0 * BeamRailFromBottom), new Vector2(p0.x, p0.y + h0 * (1f - BeamRailFromBottom)),
+            new Vector2(p1.x, p1.y + h1 * (1f - BeamRailFromBottom)), new Vector2(p1.x, p1.y - h1 * BeamRailFromBottom));
+    }
+
+    Vector2 _gondolaBottomNow;
+    Vector2 GondolaBottomNow() => _gondolaBottomNow;
 
     /// Geliş: araba kenardan parçanın üstüne kayar (kiriş belirir), sonra gondol iner. p 0..1.
     public void TickCraneIn(float p)
     {
         if (!_crane) return;
-        float x = p < 0.45f ? Mathf.Lerp(_startX, _gx, Smooth01(p / 0.45f)) : _gx;
+        float t = p < 0.45f ? Mathf.Lerp(_railTStart, _railTg, Smooth01(p / 0.45f)) : _railTg;
         float drop = p < 0.45f ? 0f : Smooth01((p - 0.45f) / 0.55f);
-        ApplyCrane(x, drop, Mathf.Clamp01(p / 0.25f));
+        ApplyCrane(t, drop, Mathf.Clamp01(p / 0.25f));
     }
 
     /// Dönüş: gondol yukarı çekilir, araba karşı kenara kayıp çıkar, kiriş söner. p 0..1.
@@ -283,33 +349,73 @@ public sealed class WonderBuildFx : MonoBehaviour
     {
         if (!_crane) return;
         float drop = p < 0.55f ? 1f - Smooth01(p / 0.55f) : 0f;
-        float x = p < 0.55f ? _gx : Mathf.Lerp(_gx, _endX, Smooth01((p - 0.55f) / 0.45f));
-        ApplyCrane(x, drop, 1f - Mathf.Clamp01((p - 0.75f) / 0.25f));
+        float t = p < 0.55f ? _railTg : Mathf.Lerp(_railTg, _railTEnd, Smooth01((p - 0.55f) / 0.45f));
+        ApplyCrane(t, drop, 1f - Mathf.Clamp01((p - 0.75f) / 0.25f));
     }
 
-    void ApplyCrane(float trolleyX, float drop, float beamAlpha)
+    Vector2 _hammerNow;
+    // Dörtgen köşeleri (sol-alt, sol-üst, sağ-üst, sağ-alt) — ip ve karakter noktaları bunlardan.
+    Vector2 _qBL, _qTL, _qTR, _qBR;
+
+    float RailSlope => Mathf.Abs(_railB.x - _railA.x) > 1f ? (_railB.y - _railA.y) / (_railB.x - _railA.x) : 0f;
+    float RailT(float x) => Mathf.Abs(_railB.x - _railA.x) > 1f ? (x - _railA.x) / (_railB.x - _railA.x) : 0f;
+
+    /// Perspektifli dörtgen: genişlik merkez ölçekle, her kenarın yüksekliği o kenarın ray ölçeğiyle,
+    /// alt kenar rayla aynı eğimde. bottomAtCenter: merkezdeki alt kenar y; wheelFrac>0 ise kenarlar raya oturur.
+    void PlaceQuad(WonderBeamGraphic g, float cx, float bottomAtCenter, float w, float h1, float wheelFrac)
     {
-        float bottom = Mathf.Lerp(_tuckedBottom, _finalBottom, drop);
-        CraneOffset = new Vector2(trolleyX - _gx, bottom - _finalBottom);
+        float xl = cx - w * 0.5f, xr = cx + w * 0.5f;
+        float hl = h1 * RailScale(RailT(xl)), hr = h1 * RailScale(RailT(xr));
+        float bl, br;
+        if (wheelFrac > 0f)
+        {
+            bl = RailPoint(RailT(xl)).y - hl * wheelFrac;
+            br = RailPoint(RailT(xr)).y - hr * wheelFrac;
+        }
+        else
+        {
+            float s = RailSlope;
+            bl = bottomAtCenter + s * (xl - cx);
+            br = bottomAtCenter + s * (xr - cx);
+        }
+        _qBL = new Vector2(xl, bl); _qTL = new Vector2(xl, bl + hl);
+        _qTR = new Vector2(xr, br + hr); _qBR = new Vector2(xr, br);
+        g.SetQuad(_qBL, _qTL, _qTR, _qBR);
+    }
+
+    Vector2 QuadPoint(float u, float v) => Vector2.Lerp(Vector2.Lerp(_qBL, _qBR, u), Vector2.Lerp(_qTL, _qTR, u), v);
+
+    void ApplyCrane(float t, float drop, float beamAlpha)
+    {
+        float k = RailScale(t);
+        float cs = k / _kg;
+        Vector2 rail = RailPoint(t);
+        float tw = _tw1 * k, th = _th1 * k, gw = _gw1 * k, gh = _gh1 * k;
+        float trolleyBottom = rail.y - th * TrolleyWheelFromBottom;
+        float tucked = Mathf.Max(_finalBottom, trolleyBottom - 24f * k - gh);
+        float bottom = Mathf.Lerp(tucked, _finalBottom, drop);
+        _gondolaBottomNow = new Vector2(rail.x, bottom);
+        CraneScale = cs;
+        CraneOffset = _gondolaBottomNow - new Vector2(_gx, _finalBottom);
         var bc = _beam.color; bc.a = beamAlpha; _beam.color = bc;
-        float trolleyBottom = _railY - _th * TrolleyWheelFromBottom;
-        _trolley.rectTransform.anchoredPosition = new Vector2(trolleyX, trolleyBottom);
-        _gondola.rectTransform.anchoredPosition = new Vector2(trolleyX, bottom);
-        float pulleyY = trolleyBottom + _th * TrolleyPulleyFromBottom;
-        float hookY = bottom + _gh * GondolaHookFromBottom;
-        float radius = _tw * TrolleyPulleyRadius * 0.92f;   // ipin oturduğu oluk, dış kenarın biraz içinde
-        WrapRope(0, new Vector2(trolleyX + _tw * (TrolleyPulleyLeft - 0.5f), pulleyY), radius,
-            new Vector2(trolleyX + _gw * (GondolaHookLeft - 0.5f), hookY), -1f);
-        WrapRope(RopeArcSegments + 1, new Vector2(trolleyX + _tw * (TrolleyPulleyRight - 0.5f), pulleyY), radius,
-            new Vector2(trolleyX + _gw * (GondolaHookRight - 0.5f), hookY), 1f);
+        float radius = tw * TrolleyPulleyRadius * 0.92f;   // ipin oturduğu oluk, dış kenarın biraz içinde
+        PlaceQuad(_trolley, rail.x, trolleyBottom, tw, _th1, TrolleyWheelFromBottom);
+        Vector2 pulleyL = QuadPoint(TrolleyPulleyLeft, TrolleyPulleyFromBottom), pulleyR = QuadPoint(TrolleyPulleyRight, TrolleyPulleyFromBottom);
+        PlaceQuad(_gondola, rail.x, bottom, gw, _gh1, 0f);
+        Vector2 hookL = QuadPoint(GondolaHookLeft, GondolaHookFromBottom), hookR = QuadPoint(GondolaHookRight, GondolaHookFromBottom);
+        // Karakterler gondolun içinde: ayaklar ön panelin arkasında (%42); kaynakçı solda, ayı sağda.
+        WelderFeet = QuadPoint(0.3f, 0.42f);
+        _hammerNow = QuadPoint(0.7f, 0.42f);
+        WrapRope(0, pulleyL, radius, hookL, -1f);
+        WrapRope(RopeArcSegments + 1, pulleyR, radius, hookR, 1f);
         if (_hammerer != null && _hammerer.gameObject.activeSelf)
         {
             var rt = _hammerer.rectTransform;
-            rt.anchoredPosition = _hammererPos + CraneOffset;
-            if (drop < 0.999f || trolleyX != _gx)
+            rt.anchoredPosition = _hammerNow;
+            if (drop < 0.999f || Mathf.Abs(t - _railTg) > 1e-4f)
             {
                 _hammerer.sprite = _hammerFrames[0];
-                rt.localScale = new Vector3(-1f, 1f, 1f);
+                rt.localScale = new Vector3(-cs, cs, 1f);
             }
         }
     }
@@ -471,6 +577,7 @@ public sealed class WonderBuildFx : MonoBehaviour
         foreach (var r in _ropes) if (r != null) r.gameObject.SetActive(false);
         _crane = false;
         CraneOffset = Vector2.zero;
+        CraneScale = 1f;
         _lastHit = -1;
         _workEndedAt = -1f;
     }
