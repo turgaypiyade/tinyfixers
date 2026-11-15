@@ -19,7 +19,7 @@ MonoBehaviour:
   unrestoredTexture: {fileID: 0}
   totalStages: 8
   tasks:
-  - name: "\u0130skeleyi Onar"
+  - name: "Minare Temellerini Kur"
     icon: {fileID: 21300000, guid: 1fb0f30def2d4caca47e0accfe5ab2ea, type: 3}
     starCost: 0
     action: 0
@@ -39,7 +39,7 @@ MonoBehaviour:
       y: 0.49
       width: 0.47
       height: 0.065
-  - name: "Duvarları Onar"
+  - name: "Duvarlar\u0131 Onar"
     icon: {fileID: 21300000, guid: c66edef96c29464ab529d546c266276c, type: 3}
     starCost: 0
     action: 0
@@ -64,7 +64,7 @@ MonoBehaviour:
       y: 0.505
       width: 0.16
       height: 0.035
-  - name: "Yarım Kubbeleri Onar"
+  - name: "Yar\u0131m Kubbeleri Onar"
     icon: {fileID: 21300000, guid: 94bb05b98c6f41c7a455018760fe4087, type: 3}
     starCost: 0
     action: 0
@@ -119,7 +119,7 @@ MonoBehaviour:
       y: 0.635
       width: 0.06
       height: 0.175
-  - name: "Meydanı Düzenle"
+  - name: "Meydan\u0131 D\u00fczenle"
     icon: {fileID: 21300000, guid: ad205e8cea27452285ac767f010c8d44, type: 3}
     starCost: 0
     action: 4

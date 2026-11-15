@@ -19,7 +19,7 @@ MonoBehaviour:
   unrestoredTexture: {fileID: 0}
   totalStages: 8
   tasks:
-  - name: "Rıhtımı Temizle"
+  - name: "R\u0131ht\u0131m\u0131 Temizle"
     icon: {fileID: 21300000, guid: c66edef96c29464ab529d546c266276c, type: 3}
     starCost: 0
     action: 4
@@ -29,7 +29,7 @@ MonoBehaviour:
       y: 0
       width: 1
       height: 0.17
-  - name: "Limanı Temizle"
+  - name: "Sol Kabu\u011fu Kur"
     icon: {fileID: 21300000, guid: ad205e8cea27452285ac767f010c8d44, type: 3}
     starCost: 0
     action: 4
@@ -39,7 +39,7 @@ MonoBehaviour:
       y: 0.17
       width: 1
       height: 0.13
-  - name: "Temeli Onar"
+  - name: "Kabuk \u0130skeletini Kur"
     icon: {fileID: 21300000, guid: 164c417e2cf5453ab447915656e66848, type: 3}
     starCost: 0
     action: 0
@@ -49,7 +49,7 @@ MonoBehaviour:
       y: 0.29
       width: 0.96
       height: 0.06
-  - name: "İskeleyi Kur"
+  - name: "Orta Kabu\u011fu Kur"
     icon: {fileID: 21300000, guid: 0149ac3d2ba142c49e79a8b44c7c4301, type: 3}
     starCost: 0
     action: 0
@@ -59,7 +59,7 @@ MonoBehaviour:
       y: 0.38
       width: 0.14
       height: 0.16
-  - name: "İpi Bağla"
+  - name: "\u0130skeleyi Kur"
     icon: {fileID: 21300000, guid: 94bb05b98c6f41c7a455018760fe4087, type: 3}
     starCost: 0
     action: 0
@@ -74,7 +74,7 @@ MonoBehaviour:
       y: 0.45
       width: 0.22
       height: 0.19
-  - name: "Kabukları Kaynakla"
+  - name: "Kabuklar\u0131 Kaynakla"
     icon: {fileID: 21300000, guid: 6b497708e5124ea79b4a79473300d4af, type: 3}
     starCost: 0
     action: 0
@@ -84,7 +84,7 @@ MonoBehaviour:
       y: 0.38
       width: 0.33
       height: 0.21
-  - name: "Fayansları Döşe"
+  - name: "Fayanslar\u0131 D\u00f6\u015fe"
     icon: {fileID: 21300000, guid: 1fb0f30def2d4caca47e0accfe5ab2ea, type: 3}
     starCost: 0
     action: 0
@@ -94,7 +94,7 @@ MonoBehaviour:
       y: 0.39
       width: 0.36
       height: 0.15
-  - name: "Camları Parlat"
+  - name: "Camlar\u0131 Parlat"
     icon: {fileID: 21300000, guid: ad205e8cea27452285ac767f010c8d44, type: 3}
     starCost: 0
     action: 1

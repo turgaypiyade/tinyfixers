@@ -29,7 +29,7 @@ MonoBehaviour:
       y: 0
       width: 1
       height: 0.1
-  - name: "Kaideleri Sağlamlaştır"
+  - name: "Kaideleri Sa\u011flamla\u015ft\u0131r"
     icon: {fileID: 21300000, guid: 164c417e2cf5453ab447915656e66848, type: 3}
     starCost: 0
     action: 0
@@ -44,7 +44,7 @@ MonoBehaviour:
       y: 0.33
       width: 0.23
       height: 0.15
-  - name: "Bronz Bacakları Kaynakla"
+  - name: "Bronz Bacaklar\u0131 Kaynakla"
     icon: {fileID: 21300000, guid: 6b497708e5124ea79b4a79473300d4af, type: 3}
     starCost: 0
     action: 0
@@ -104,7 +104,7 @@ MonoBehaviour:
       y: 0.79
       width: 0.18
       height: 0.11
-  - name: "Meşaleyi Yak"
+  - name: "Me\u015faleyi Yak"
     icon: {fileID: 21300000, guid: 3b929942fbef4f1081d53ef3f7ed1084, type: 3}
     starCost: 0
     action: 3

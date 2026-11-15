@@ -29,7 +29,7 @@ MonoBehaviour:
       y: 0
       width: 0.42
       height: 0.15
-  - name: "Temeli Güçlendir"
+  - name: "Temeli G\u00fc\u00e7lendir"
     icon: {fileID: 21300000, guid: 164c417e2cf5453ab447915656e66848, type: 3}
     starCost: 0
     action: 0
@@ -39,7 +39,7 @@ MonoBehaviour:
       y: 0.1
       width: 0.55
       height: 0.2
-  - name: "Duvarları Yükselt"
+  - name: "Duvarlar\u0131 Y\u00fckselt"
     icon: {fileID: 21300000, guid: 164c417e2cf5453ab447915656e66848, type: 3}
     starCost: 0
     action: 0
@@ -64,7 +64,7 @@ MonoBehaviour:
       y: 0.33
       width: 0.15
       height: 0.17
-  - name: "Geçitleri Aç"
+  - name: "Ge\u00e7itleri A\u00e7"
     icon: {fileID: 21300000, guid: 1fb0f30def2d4caca47e0accfe5ab2ea, type: 3}
     starCost: 0
     action: 0
@@ -74,7 +74,7 @@ MonoBehaviour:
       y: 0.5
       width: 0.08
       height: 0.05
-  - name: "Gözetleme Kulelerini Onar"
+  - name: "G\u00f6zetleme Kulelerini Onar"
     icon: {fileID: 21300000, guid: 0149ac3d2ba142c49e79a8b44c7c4301, type: 3}
     starCost: 0
     action: 0

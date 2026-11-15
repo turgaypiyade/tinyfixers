@@ -19,7 +19,7 @@ MonoBehaviour:
   unrestoredTexture: {fileID: 0}
   totalStages: 10
   tasks:
-  - name: "\u00c7evreyi Temizle"
+  - name: "Kulenin Temelini Kur"
     icon: {fileID: 21300000, guid: ad205e8cea27452285ac767f010c8d44, type: 3}
     starCost: 0
     action: 4
@@ -29,7 +29,7 @@ MonoBehaviour:
       y: 0
       width: 0.92
       height: 0.16
-  - name: "\u0130skeleyi Onar"
+  - name: "Sol Binay\u0131 Onar"
     icon: {fileID: 21300000, guid: 0149ac3d2ba142c49e79a8b44c7c4301, type: 3}
     starCost: 0
     action: 0
@@ -39,7 +39,7 @@ MonoBehaviour:
       y: 0.31
       width: 0.12
       height: 0.4
-  - name: "Temel Ta\u015Flar\u0131n\u0131 Onar"
+  - name: "\u0130kinci Kat\u0131 Y\u00fckselt"
     icon: {fileID: 21300000, guid: 164c417e2cf5453ab447915656e66848, type: 3}
     starCost: 0
     action: 0
@@ -59,7 +59,7 @@ MonoBehaviour:
       y: 0.31
       width: 0.3
       height: 0.11
-  - name: "Kemerleri Yenile"
+  - name: "Sa\u011f Binay\u0131 Onar"
     icon: {fileID: 21300000, guid: 1fb0f30def2d4caca47e0accfe5ab2ea, type: 3}
     starCost: 0
     action: 0
@@ -69,7 +69,7 @@ MonoBehaviour:
       y: 0.415
       width: 0.31
       height: 0.23
-  - name: "Mermeri Parlat"
+  - name: "Kemerleri Yenile"
     icon: {fileID: 21300000, guid: ad205e8cea27452285ac767f010c8d44, type: 3}
     starCost: 0
     action: 5
@@ -79,7 +79,7 @@ MonoBehaviour:
       y: 0.31
       width: 0.32
       height: 0.41
-  - name: "\xC7an Kat\u0131n\u0131 Onar"
+  - name: "\u00dcst Kat\u0131 Tamamla"
     icon: {fileID: 21300000, guid: c379b8fd59ef4cefaa152197af4525a3, type: 3}
     starCost: 0
     action: 0
@@ -89,7 +89,7 @@ MonoBehaviour:
       y: 0.72
       width: 0.23
       height: 0.09
-  - name: "Bayra\u011f\u0131 Yenile"
+  - name: "\u00c7an Kat\u0131n\u0131 ve Bayra\u011f\u0131 Yenile"
     icon: {fileID: 21300000, guid: 365a7eb126eb4ce5af2c91c86f6ad07d, type: 3}
     starCost: 0
     action: 2
