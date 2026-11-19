@@ -80,6 +80,8 @@ public sealed class JourneyScreenController : MonoBehaviour
 
     private void OnDisable() => WonderProgress.OnBackgroundChanged -= RefreshUseButtons;
 
+    private WorldTourMap tourMap;
+
     private void Build()
     {
         if (TryBuildWonderList()) return;
@@ -156,6 +158,20 @@ public sealed class JourneyScreenController : MonoBehaviour
         }
 
         if (builtScroll != null) StartCoroutine(SnapToBottomNextFrame());
+        return true;
+    }
+
+    // Dünya haritası (2026-11-18): harita görseli (Resources/WorldTour/WorldMap) varsa liste yerine harita.
+    // Her açılışta yeniden kurulur (ilerleme + yeni harikaya uçak geçişi güncel olsun).
+    private bool TryBuildWorldTour()
+    {
+        if (wonderCatalog == null || wonderCatalog.Count == 0 || !WorldTourMap.HasArt) return false;
+        if (currentCard != null) currentCard.gameObject.SetActive(false);
+        if (nextCard != null) nextCard.gameObject.SetActive(false);
+        var listScroll = listContent != null ? listContent.GetComponentInParent<ScrollRect>(true) : builtScroll;
+        if (listScroll != null) listScroll.gameObject.SetActive(false);
+        if (tourMap != null) Destroy(tourMap.gameObject);
+        tourMap = WorldTourMap.Build((RectTransform)transform, wonderCatalog, topMargin, BottomInset());
         return true;
     }
 

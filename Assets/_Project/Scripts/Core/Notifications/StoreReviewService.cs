@@ -1,9 +1,6 @@
 using System;
 using System.Collections;
 using UnityEngine;
-#if TF_PLAY_REVIEW && UNITY_ANDROID && !UNITY_EDITOR
-using Google.Play.Review;
-#endif
 
 /// <summary>
 /// Mağaza değerlendirmesi (rate us) — işletim sisteminin KENDİ penceresi, araya soru koymadan.
@@ -15,9 +12,9 @@ using Google.Play.Review;
 ///  - level ≥ <see cref="MinLevel"/>, son istekten ≥ <see cref="MinDaysBetween"/> gün, uygulama sürümü başına 1.
 ///  - Bildirim izni ön-popup'ı bekliyorsa o oturumda istenmez (iki pencere üst üste binmesin).
 ///
-/// Android: Google Play In-App Review paketi + Scripting Define <c>TF_PLAY_REVIEW</c> gerekir; define yokken
-/// Android'de otomatik istek atlanır (Ayarlar butonu mağaza sayfasını yine açar). Pencere yalnız Play
-/// Store'dan (iç test dahil) kurulan sürümde görünür; kabloyla kurulan APK'de görünmemesi normaldir.
+/// Android: Play In-App Review kütüphanesi (com.google.android.play:review, Editor/Review/PlayReviewDependencies.xml)
+/// doğrudan JNI ile çağrılır; Unity eklenti paketi/define gerekmez. Pencere yalnız Play Store'dan (iç test dahil)
+/// kurulan sürümde görünür; kabloyla kurulan APK'de görünmemesi normaldir.
 /// </summary>
 public static class StoreReviewService
 {
@@ -60,7 +57,7 @@ public static class StoreReviewService
     {
         if (PlayerPrefs.GetInt(KeyPending, 0) == 0) return;
         if (!IsEligible()) return;
-        if (NotificationPermissionPrompt.WillShowThisSession) return;
+        if (NotificationPermissionPrompt.WillShowThisSession || DailySlotEventButton.WheelHasPriority) return;
         EnsureRunner().StartCoroutine(CoRequestDelayed());
     }
 
@@ -76,6 +73,7 @@ public static class StoreReviewService
     {
         yield return new WaitForSecondsRealtime(MainMenuDelaySeconds);
         if (PlayerPrefs.GetInt(KeyPending, 0) == 0 || !IsEligible()) yield break;
+        if (DailySlotEventButton.WheelHasPriority) yield break;   // çark açıksa bu ziyaret atlanır; bayrak sonraki menüye kalır
         if (!PlatformCanRequest()) yield break;
 
         PlayerPrefs.SetInt(KeyPending, 0);
@@ -111,7 +109,7 @@ public static class StoreReviewService
         return true;
 #elif UNITY_IOS
         return true;
-#elif UNITY_ANDROID && TF_PLAY_REVIEW
+#elif UNITY_ANDROID
         return true;
 #else
         return false;
@@ -123,23 +121,37 @@ public static class StoreReviewService
 #if UNITY_IOS && !UNITY_EDITOR
         UnityEngine.iOS.Device.RequestStoreReview();
         yield break;
-#elif TF_PLAY_REVIEW && UNITY_ANDROID && !UNITY_EDITOR
-        var manager = new ReviewManager();
-        var request = manager.RequestReviewFlow();
-        yield return request;
-        if (request.Error != ReviewErrorCode.NoError)
+#elif UNITY_ANDROID && !UNITY_EDITOR
+        AndroidJavaObject activity, manager;
+        try
         {
-            if (GameDiagnostics.CriticalErrors)
-                Debug.LogWarning($"[StoreReview] RequestReviewFlow: {request.Error}");
+            using (var player = new AndroidJavaClass("com.unity3d.player.UnityPlayer"))
+                activity = player.GetStatic<AndroidJavaObject>("currentActivity");
+            using (var factory = new AndroidJavaClass("com.google.android.play.core.review.ReviewManagerFactory"))
+                manager = factory.CallStatic<AndroidJavaObject>("create", activity);
+        }
+        catch (Exception e)
+        {
+            if (GameDiagnostics.CriticalErrors) Debug.LogWarning($"[StoreReview] create: {e.Message}");
             yield break;
         }
-        var launch = manager.LaunchReviewFlow(request.GetResult());
-        yield return launch;
-        if (launch.Error != ReviewErrorCode.NoError)
-            {
-                if (GameDiagnostics.CriticalErrors)
-                    Debug.LogWarning($"[StoreReview] LaunchReviewFlow: {launch.Error}");
-            }
+
+        var request = new TaskListener(wantResult: true);
+        using (var task = manager.Call<AndroidJavaObject>("requestReviewFlow"))
+            task.Call<AndroidJavaObject>("addOnCompleteListener", request).Dispose();
+        yield return request.Wait();
+        if (!request.Success || request.Result == null)
+        {
+            if (GameDiagnostics.CriticalErrors) Debug.LogWarning("[StoreReview] requestReviewFlow başarısız");
+            manager.Dispose(); activity.Dispose();
+            yield break;
+        }
+
+        var launch = new TaskListener(wantResult: false);
+        using (var task = manager.Call<AndroidJavaObject>("launchReviewFlow", activity, request.Result))
+            task.Call<AndroidJavaObject>("addOnCompleteListener", launch).Dispose();
+        yield return launch.Wait();
+        request.Result.Dispose(); manager.Dispose(); activity.Dispose();
 #else
         yield break;
 #endif
@@ -155,4 +167,38 @@ public static class StoreReviewService
     }
 
     private sealed class Runner : MonoBehaviour { }
+
+#if UNITY_ANDROID && !UNITY_EDITOR
+    /// gms Task tamamlanma dinleyicisi. Java tarafında (Unity dışı iş parçacığı) çağrılır: yalnız bayrak/sonuç yazar,
+    /// coroutine bunu zaman aşımıyla bekler (Play cevap vermezse menü takılmaz).
+    private sealed class TaskListener : AndroidJavaProxy
+    {
+        private const float TimeoutSeconds = 10f;
+        private readonly bool _wantResult;
+        private volatile bool _done;
+        public bool Success { get; private set; }
+        public AndroidJavaObject Result { get; private set; }
+
+        public TaskListener(bool wantResult) : base("com.google.android.gms.tasks.OnCompleteListener")
+            => _wantResult = wantResult;
+
+        // Java imzası: void onComplete(Task task)
+        private void onComplete(AndroidJavaObject task)
+        {
+            try
+            {
+                Success = task.Call<bool>("isSuccessful");
+                if (Success && _wantResult) Result = task.Call<AndroidJavaObject>("getResult");
+            }
+            catch (Exception) { Success = false; }
+            _done = true;
+        }
+
+        public IEnumerator Wait()
+        {
+            float end = Time.realtimeSinceStartup + TimeoutSeconds;
+            while (!_done && Time.realtimeSinceStartup < end) yield return null;
+        }
+    }
+#endif
 }

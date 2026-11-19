@@ -50,6 +50,12 @@ public static class NotificationPlanner
     private const int PriorityWheel = 20;
     private const int PriorityComebackBoost = 25;
     private const int PriorityComeback = 10;
+    private const int PriorityNextDay = 15;
+
+    // Ertesi gün hatırlatması (2026-11-17, D1 ~%15): yalnız ilk haftadaki oyuncuya — ileri oyuncunun bildirim düzeni
+    // değişmesin. Son oturumdan 20 saat sonra (sessiz saatte sabah 10:00'a kayar).
+    private const int NextDayNewPlayerDays = 7;
+    private static readonly TimeSpan NextDayDelay = TimeSpan.FromHours(20);
 
     public static List<PlannedNotification> Build(DateTime utcNow)
     {
@@ -58,6 +64,7 @@ public static class NotificationPlanner
         AddRising(candidates, utcNow);
         AddBridgeRepair(candidates, utcNow);
         AddWheel(candidates, utcNow);
+        AddNextDay(candidates, utcNow);
         // Bonus hazır olacaksa 36. saatte "ödüller seni bekliyor"; o zaman 2. gün genel hatırlatması gereksiz.
         if (!AddComebackBoost(candidates, utcNow))
             AddComeback(candidates, utcNow, 2, "notif_comeback_title", "notif_comeback_body");
@@ -136,6 +143,16 @@ public static class NotificationPlanner
         if (wait <= TimeSpan.Zero) return;   // hak zaten hazır; geri dönüş hatırlatması kapsar
         AddForward(list, "wheel_ready", PriorityWheel, utcNow + wait, utcNow,
             "notif_wheel_title", "notif_wheel_body");
+    }
+
+    private static void AddNextDay(List<PlannedNotification> list, DateTime utcNow)
+    {
+        if ((DateTime.Now - PlayerStats.FirstLaunchDate).TotalDays >= NextDayNewPlayerDays) return;
+        DateTime fire = utcNow + NextDayDelay;
+        // Çark hakkı zaten ertesi gün hazır oluyorsa onun bildirimi yeter (aynı gün iki "geri gel" olmasın).
+        foreach (var n in list)
+            if (n.Kind == "wheel_ready" && Math.Abs((n.FireUtc - fire).TotalHours) < 8) return;
+        AddForward(list, "next_day", PriorityNextDay, fire, utcNow, "notif_nextday_title", "notif_nextday_body");
     }
 
     private static bool AddComebackBoost(List<PlannedNotification> list, DateTime utcNow)

@@ -108,9 +108,10 @@ public static class EventSfx
         var lib = Library;
         if (lib == null || lib.ambientLoop == null || !GameSettings.SoundEnabled) return;
         Ensure();
+        s_runner.StopAmbientFade();
+        s_loop.volume = lib.ambientVolume;
         if (s_loop.isPlaying && s_loop.clip == lib.ambientLoop) return;
         s_loop.clip = lib.ambientLoop;
-        s_loop.volume = lib.ambientVolume;
         s_loop.loop = true;
         s_loop.mute = !GameSettings.SoundEnabled;
         s_loop.Play();
@@ -118,7 +119,30 @@ public static class EventSfx
 
     public static void StopAmbient()
     {
-        if (s_loop != null && s_loop.isPlaying) s_loop.Stop();
+        if (s_runner != null) s_runner.StopAmbientFade();
+        if (s_loop != null) { s_loop.Stop(); s_loop.clip = null; }
+    }
+
+    // Ekrana özel ortam döngüsü (ör. şehir gezisi uğultusu): merkezi loop kaynağını kullanır, ses ayarına uyar
+    // (kapalıysa başlamaz; açıkken kapatılırsa ApplySound anında susturur). Yumuşak giriş.
+    public static void StartAmbientClip(AudioClip clip, float volume, float fadeIn = 0.6f)
+    {
+        if (clip == null || !GameSettings.SoundEnabled) return;
+        Ensure();
+        s_runner.StopAmbientFade();
+        s_loop.clip = clip;
+        s_loop.loop = true;
+        s_loop.volume = 0f;
+        s_loop.mute = !GameSettings.SoundEnabled;
+        s_loop.Play();
+        s_runner.FadeAmbient(Mathf.Clamp01(volume), fadeIn, stopAtEnd: false);
+    }
+
+    // Yalnız verilen klip çalıyorsa yavaşça kısıp durdurur (başka ortam sesine dokunmaz).
+    public static void FadeOutAmbientClip(AudioClip clip, float seconds = 0.4f)
+    {
+        if (s_loop == null || s_runner == null || clip == null || s_loop.clip != clip || !s_loop.isPlaying) return;
+        s_runner.FadeAmbient(0f, seconds, stopAtEnd: true);
     }
 
     private static int PickSource()
@@ -171,6 +195,37 @@ public static class EventSfx
 
     private sealed class Runner : MonoBehaviour
     {
+        private Coroutine _ambientFade;
+        private float _ambientTargetVolume;
+        private bool _ambientStopAtEnd;
+
+        public void StopAmbientFade()
+        {
+            if (_ambientFade != null) StopCoroutine(_ambientFade);
+            _ambientFade = null;
+        }
+
+        public void FadeAmbient(float to, float seconds, bool stopAtEnd)
+        {
+            StopAmbientFade();
+            _ambientTargetVolume = to;
+            _ambientStopAtEnd = stopAtEnd;
+            _ambientFade = StartCoroutine(FadeAmbientRoutine(to, seconds, stopAtEnd));
+        }
+
+        private IEnumerator FadeAmbientRoutine(float to, float seconds, bool stopAtEnd)
+        {
+            float from = s_loop.volume;
+            for (float t = 0f; t < seconds; t += Time.unscaledDeltaTime)
+            {
+                s_loop.volume = Mathf.Lerp(from, to, t / seconds);
+                yield return null;
+            }
+            s_loop.volume = to;
+            if (stopAtEnd) { s_loop.Stop(); s_loop.clip = null; }
+            _ambientFade = null;
+        }
+
         private void OnEnable()
         {
             GameSettings.OnSoundChanged += ApplySound;
@@ -179,7 +234,18 @@ public static class EventSfx
 
         public void ApplySound(bool enabled)
         {
-            if (!enabled) StopAllCoroutines();
+            if (!enabled)
+            {
+                // Kapatma fade'ini yarım bırakıp sonraki unmute'ta eski şehri çalma.
+                // Giriş fade'inde ise hedef sesi sakla; yeniden açılınca normal seviyede duyulsun.
+                if (_ambientFade != null && s_loop != null)
+                {
+                    StopAmbientFade();
+                    if (_ambientStopAtEnd) { s_loop.Stop(); s_loop.clip = null; }
+                    else s_loop.volume = _ambientTargetVolume;
+                }
+                StopAllCoroutines();
+            }
             if (s_pool != null)
                 for (int i = 0; i < s_pool.Length; i++)
                 {

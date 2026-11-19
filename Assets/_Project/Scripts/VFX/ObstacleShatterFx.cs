@@ -34,7 +34,8 @@ public static class ObstacleShatterFx
     private static readonly Vector3[] corners = new Vector3[4];
 
     /// source: engelin tahtadaki Image'ı (çağıran hemen ardından yok edebilir — sprite + konum burada yakalanır).
-    public static void Play(BoardController board, MonoBehaviour host, RectTransform root, Image source, int footprintCells)
+    public static void Play(BoardController board, MonoBehaviour host, RectTransform root, Image source, int footprintCells,
+        bool goldScatter = false)
     {
         if (host == null || root == null || source == null || source.sprite == null) return;
         int layout = footprintCells <= 1 ? Random.Range(0, 2) : Random.Range(2, Layouts.Length);
@@ -44,12 +45,15 @@ public static class ObstacleShatterFx
         source.rectTransform.GetWorldCorners(corners);
         Vector2 bl = root.InverseTransformPoint(corners[0]);
         Vector2 tr = root.InverseTransformPoint(corners[2]);
-        host.StartCoroutine(Run(root, pieces, Layouts[layout], bl, tr - bl, source.color, ObstacleDebrisBounds.For(board, root)));
+        host.StartCoroutine(Run(root, pieces, Layouts[layout], bl, tr - bl, source.color,
+            ObstacleDebrisBounds.For(board, root), goldScatter));
     }
 
     private static IEnumerator Run(RectTransform root, Sprite[] pieces, Rect[] layout, Vector2 bl, Vector2 size,
-        Color tint, ObstacleDebrisBounds bounds)
+        Color tint, ObstacleDebrisBounds bounds, bool goldScatter)
     {
+        float life = goldScatter ? 1.3f : Life;
+        float fadeStart = goldScatter ? 0.65f : 0.55f;
         int n = pieces.Length;
         var imgs = new Image[n];
         var vel = new Vector2[n];
@@ -77,9 +81,13 @@ public static class ObstacleShatterFx
                 Vector2 dir = (off.sqrMagnitude > 1f ? off.normalized : Random.insideUnitCircle.normalized)
                               + Random.insideUnitCircle * 0.2f;
                 vel[i] = (dir.normalized + Vector2.up * 0.7f) * span * Random.Range(1.0f, 1.5f);
+                // Gold halves both hop upward and scatter sideways, then fade during their fall.
+                if (goldScatter)
+                    vel[i] = new Vector2((i == 0 ? -1f : 1f) * Random.Range(1.7f, 2.2f),
+                        Random.Range(2.0f, 2.5f)) * span;
                 Vector2 start = rt.localPosition;
                 Vector2 fittedSize = pieceSize;
-                bounds.Fit(ref start, ref vel[i], ref fittedSize, Life);
+                bounds.Fit(ref start, ref vel[i], ref fittedSize, life);
                 rt.localPosition = start;
                 rt.sizeDelta = fittedSize;
                 // Büyük parçalar ağır döner: dışa doğru, bölme çizgisinden uzaklaşan yönde.
@@ -95,10 +103,10 @@ public static class ObstacleShatterFx
             flash.rectTransform.SetSiblingIndex(Mathf.Max(0, imgs[0].rectTransform.GetSiblingIndex()));
 
             float gravity = span * 4.5f;
-            for (float t = 0f; t < Life; t += Time.deltaTime)
+            for (float t = 0f; t < life; t += Time.deltaTime)
             {
-                float dt = Time.deltaTime, k = t / Life;
-                float fade = k < 0.55f ? 1f : 1f - (k - 0.55f) / 0.45f;
+                float dt = Time.deltaTime, k = t / life;
+                float fade = k < fadeStart ? 1f : 1f - (k - fadeStart) / (1f - fadeStart);
                 float f = Mathf.Clamp01(t / FlashTime);
                 if (flash != null)
                 {

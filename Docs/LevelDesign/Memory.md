@@ -1,5 +1,9 @@
 # TinyFixers level tasarım hafızası
 
+## 29 hamle 27→30 — canlı oyuncu verisi · 2026-11-16
+
+Kaynak: GA4 level_end (1–15 Kas, canlı Android). En ileri giden iki gerçek oyuncu (23108RN04Y, CPH2325) 29'da 4'er kayıpla durdu, 29'u kazanan yok; bu noktada geri gelmediler. Kullanıcı: **“29 evet zor muş onu artıralım bence”**. Yalnız `LevelV1_00000290` moves 27→30 (hedef 16× obstacle 21, 8×11). Maske/engel/hedef/isim/GUID/katalog aynı. Sonu9 = Super Hard rolü korunur; amaç duvarı yumuşatmak. Sim/bot ölçümü yok, yeni denge doğrulanmadı; 2 oyunculuk veri. Asset değişikliği bir sonraki build'le ya da kullanıcının açıkça isteyeceği uzak level yayınıyla canlıya gider.
+
 ## 235 v2 — tek kütleli katmanlı kemer uygulandı · 2026-11-07
 
 Bu turdaki kullanıcı isteği: “şimdi 235 üzerinde çok düşünerek değerlendir. katmanlı yapı kullanabilirsin”. Yalnız 235 revize edildi. İlk U taslağı 176/182’ye benzediği için bırakıldı; son fikir **alt kenardan yükselen tek taş kemer kütlesi + iki heykel ayağı + geniş üst çalışma avlusu**. Bunlar agent değerlendirmesidir; yeni sürümün kullanıcı görsel/oyun onayı yoktur.

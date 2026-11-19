@@ -45,7 +45,18 @@ public static class UiButtons
     {
         if (button == null) return;
         var image = button.targetGraphic as Image ?? button.GetComponent<Image>();
-        Apply(image, kind);
+        // Yeşil/mavi AKSİYON butonları: oyunun kendi popup butonu + PreLevel'deki sarı çerçeve
+        // (parlak kapsül "yapma" duruyordu; kullanıcı 2026-11-19). Sekme zeminleri (Apply(Image)) kapsül kalır.
+        var skin = CommonPopupSkin.Shared;
+        Sprite popupSprite = skin == null ? null
+            : kind == Kind.Green ? skin.continueButton
+            : kind == Kind.Blue ? skin.secondaryButton : null;
+        if (popupSprite != null)
+        {
+            ApplySprite(image, popupSprite);
+            ButtonFrameBacking.Attach(button, skin.continueButtonFrame);
+        }
+        else Apply(image, kind);
 
         if (!styleLabel) return;
         foreach (var label in button.GetComponentsInChildren<TMP_Text>(true))
@@ -111,8 +122,12 @@ public static class UiButtons
     public static void Apply(Image image, Kind kind)
     {
         if (image == null) return;
-        var sprite = SpriteOf(kind);
-        if (sprite == null) return;
+        ApplySprite(image, SpriteOf(kind));
+    }
+
+    private static void ApplySprite(Image image, Sprite sprite)
+    {
+        if (image == null || sprite == null) return;
         image.sprite = sprite;
         image.type = Image.Type.Sliced;
         image.color = Color.white;

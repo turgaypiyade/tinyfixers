@@ -21,7 +21,7 @@ public sealed class CoinFlyToWalletAnimator : MonoBehaviour
     [SerializeField] private TMP_Text chipMoneyText;
 
     [Header("Motion")]
-    [SerializeField, Min(1)] private int maxFlyingCoins = 12;
+    [SerializeField, Min(1)] private int maxFlyingCoins = 16;
     [SerializeField, Min(0.05f)] private float duration = 0.65f;
     [SerializeField, Min(0f)] private float stagger = 0.05f;
     [SerializeField] private bool preferLevelButtonStart = true;
@@ -32,8 +32,8 @@ public sealed class CoinFlyToWalletAnimator : MonoBehaviour
     [SerializeField] private Vector2 cometControlOffset = new Vector2(45f, 30f);
     [SerializeField] private AnimationCurve moveCurve;
     [SerializeField] private AnimationCurve scaleCurve = new AnimationCurve(
-        new Keyframe(0f, 2f),
-        new Keyframe(1f, 0.6f));
+        new Keyframe(0f, 2.4f),
+        new Keyframe(1f, 0.7f));
 
     [Header("Target Punch")]
     [SerializeField, Min(1f)] private float targetPunchScale = 1.12f;
@@ -154,6 +154,9 @@ public sealed class CoinFlyToWalletAnimator : MonoBehaviour
 
         while (LoadingScreenManager.IsVisible)
             yield return null;
+        // Önce ödül sandığı (progress event) açılır; altınlar sandıktan SONRA sayaca akar.
+        while (MainMenuRewardCollectFx.ChestPending || RewardChestRevealOverlay.IsShowing)
+            yield return null;
 
         yield return null;
         Canvas.ForceUpdateCanvases();
@@ -189,13 +192,12 @@ public sealed class CoinFlyToWalletAnimator : MonoBehaviour
 
     private IEnumerator CoPlayCoinFly(int pendingReward, int pendingBefore, int pendingAfter)
     {
-        int coinCount = Mathf.Clamp(Mathf.CeilToInt(pendingReward / 25f), 3, Mathf.Max(1, maxFlyingCoins));
+        // 2026-11-18: daha dolu bir yağmur — en az 6, her ~20 altına bir para (görsel şov, kullanıcı isteği).
+        int coinCount = Mathf.Clamp(Mathf.CeilToInt(pendingReward / 20f), 6, Mathf.Max(6, maxFlyingCoins));
         float totalDuration = duration + stagger * Mathf.Max(0, coinCount - 1);
 
         OnCoinFlyStarted?.Invoke();
         PlayOneShot(startSfx);
-
-        Coroutine countRoutine = StartCoroutine(UiNumberTween.Tween(chipMoneyText, pendingBefore, pendingAfter, totalDuration, formatChipMoneyN0, GameEventSfx.PlayCoinTick));
 
         int completedCoins = 0;
         for (int i = 0; i < coinCount; i++)
@@ -203,6 +205,9 @@ public sealed class CoinFlyToWalletAnimator : MonoBehaviour
             int coinIndex = i;
             StartCoroutine(CoFlyOneCoin(coinIndex, () => completedCoins++));
         }
+        // Sayaç, ilk paralar saçılıp cüzdana yönelince saymaya başlar (patlama ~0.3 sn).
+        yield return new WaitForSecondsRealtime(0.3f);
+        Coroutine countRoutine = StartCoroutine(UiNumberTween.Tween(chipMoneyText, pendingBefore, pendingAfter, totalDuration, formatChipMoneyN0, GameEventSfx.PlayCoinTick));
 
         while (completedCoins < coinCount)
             yield return null;
@@ -246,8 +251,21 @@ public sealed class CoinFlyToWalletAnimator : MonoBehaviour
             UnityEngine.Random.Range(-randomStartOffset.x, randomStartOffset.x),
             UnityEngine.Random.Range(-randomStartOffset.y, randomStartOffset.y));
 
+        // Patlama: paralar önce merkezden dışarı saçılıp büyür, kısa bir an asılı kalır, sonra cüzdana süzülür.
+        Vector2 burst = start + UnityEngine.Random.insideUnitCircle.normalized * UnityEngine.Random.Range(110f, 230f);
+        coinRect.anchoredPosition = start;
+        coinRect.localScale = Vector3.zero;
+        const float burstTime = 0.22f;
+        for (float b = 0f; b < burstTime; b += Time.unscaledDeltaTime)
+        {
+            float k = UiNumberTween.EaseOut(b / burstTime);
+            coinRect.anchoredPosition = Vector2.LerpUnclamped(start, burst, k);
+            coinRect.localScale = Vector3.one * (EvaluateScale(0f) * (0.4f + 0.6f * k));
+            yield return null;
+        }
+        yield return new WaitForSecondsRealtime(0.08f);
+        start = burst;
         Vector2 control = GetCometControlPoint(start, end);
-
         coinRect.anchoredPosition = start;
         coinRect.localScale = Vector3.one * EvaluateScale(0f);
 
@@ -316,7 +334,7 @@ public sealed class CoinFlyToWalletAnimator : MonoBehaviour
         rect.pivot = new Vector2(0.5f, 0.5f);
 
         if (rect.sizeDelta.x <= 0f || rect.sizeDelta.y <= 0f)
-            rect.sizeDelta = new Vector2(72f, 72f);
+            rect.sizeDelta = new Vector2(84f, 84f);
 
         image.raycastTarget = false;
         image.transform.SetAsLastSibling();

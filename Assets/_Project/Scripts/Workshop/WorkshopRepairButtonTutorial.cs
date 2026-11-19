@@ -8,7 +8,7 @@ using UnityEngine.UI;
 /// Ana menü yönlendirmesi, iki aşama (kullanıcı kararı 2026-11-10: yeni oyuncu önce oynasın, görevler sonra):
 ///  • Hiç level bitirmemiş oyuncu (current_level 1): karartma + yalnız LEVEL butonu açık + el (metin yok; kullanıcı
 ///    2026-11-10 "zorla bastıralım"). Butona basınca kapanır; seen işaretlenmez (her açılışta level 1'deyse tekrar).
-///  • Level 10 (ilk boss) bitince (current_level ≥ MissionsUnlockLevel; kullanıcı 2026-11-10 "önce oyun oynasın")
+///  • Level 5 bitince (current_level ≥ MissionsUnlockLevel; önce 11 idi, kullanıcı 2026-11-17 erkene çekti)
 ///    ilk ana menü ziyaretinde, kazanılan yıldızlar cüzdana uçtuktan sonra: RepairButton'a dokunmayı öğreten görev
 ///    öğreticisi (el + metin + diğer butonlar kilitli).
 ///  • İkisi de menü SAKİNKEN ve hedef gerçekten en üstteyken başlar (ProfileUnlockTutorial ile aynı denetim); sırasında
@@ -21,13 +21,16 @@ using UnityEngine.UI;
 public class WorkshopRepairButtonTutorial : MonoBehaviour
 {
     private const string KeyTutorialSeen = "tutorial_seen_workshop_repair";
-    /// Görev öğreticisi bu current_level'den itibaren açılır (= level 5 kazanıldı).
-    public const int MissionsUnlockLevel = 11;
+    /// Görev öğreticisi bu current_level'den itibaren açılır (= level 5 kazanıldı → ilk ana menü ziyareti; 1–5 oyun
+    /// içinde art arda oynanır). 2026-11-17: 11→6 — D1 ~%15, ilk gün oyuncuların çoğu 5–15'te bırakıyor ve harika
+    /// inşasını hiç görmeden gidiyordu (kullanıcı "daha erkene çek").
+    public const int MissionsUnlockLevel = 6;
     private const float StarFlyWaitSeconds = 5f;   // kazanılan yıldızların cüzdana uçuşunu bekleme sınırı
     private const float IdleBeforeShow = 0.8f;     // menü bu kadar süre sakin + hedef en üstte kalınca başla
 
     [Header("References")]
     [SerializeField] private Button repairButton;
+    public Button RepairButton => repairButton;
     [Tooltip("Tutorial UI root — dim background + hand + text içeren GameObject.")]
     [SerializeField] private GameObject tutorialOverlay;
     [Tooltip("Buton üstünde gösterilecek el ikonu (RectTransform).")]

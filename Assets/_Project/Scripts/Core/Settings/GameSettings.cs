@@ -13,6 +13,7 @@ public static class GameSettings
     private const string KeyVibration    = "settings_vibration_on";
     private const string KeyHint         = "settings_hint_on";
     private const string KeyNotification = "settings_notification_on";
+    private const string KeyCityFacts    = "settings_city_facts_on";   // şehir gezisinde ayının bilgi balonu
 
     private const string KeyInstagramFollowed = "settings_instagram_followed";
 
@@ -22,6 +23,7 @@ public static class GameSettings
     public static event Action<bool> OnVibrationChanged;
     public static event Action<bool> OnHintChanged;
     public static event Action<bool> OnNotificationChanged;
+    public static event Action<bool> OnCityFactsChanged;
 
     // ── Defaults ─────────────────────────────────────────────────────────────
     private const int DefaultOn = 1;
@@ -34,6 +36,7 @@ public static class GameSettings
     public static bool VibrationEnabled    { get => GetBool(KeyVibration);    set => SetBool(KeyVibration,    value, OnVibrationChanged); }
     public static bool HintEnabled         { get => GetBool(KeyHint);         set => SetBool(KeyHint,         value, OnHintChanged); }
     public static bool NotificationEnabled { get => GetBool(KeyNotification); set => SetBool(KeyNotification, value, OnNotificationChanged); }
+    public static bool CityFactsEnabled    { get => GetBool(KeyCityFacts);    set => SetBool(KeyCityFacts,    value, OnCityFactsChanged); }
 
     public static bool InstagramFollowed
     {

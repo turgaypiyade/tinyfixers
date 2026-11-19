@@ -29,6 +29,7 @@ public static class GameAnalytics
         {
             SetCurrentLevel(level);
             Log("level_start", ("level", level), ("attempt", attempt));
+            LogFirstGameStart(level, attempt);
         };
         LevelAttemptStats.OnAttemptEnded += r =>
         {
@@ -41,7 +42,7 @@ public static class GameAnalytics
                 ("struggles_before", r.StrugglesBefore), ("struggled", r.Struggled ? 1 : 0),
                 ("continues", r.Continues), ("extra_moves", r.ExtraMoves),
                 ("continue_coins", r.ContinueCoinsSpent), ("ad_continues", r.AdContinues),
-                ("measurement_version", 2), ("is_development", Debug.isDebugBuild ? 1 : 0));
+                ("measurement_version", 2), ("ram_gb", RamGb), ("is_development", Debug.isDebugBuild ? 1 : 0));
             if (r.Won) SetCurrentLevel(r.Level + 1);
         };
         // Level yarıdayken uygulama arka plana gitti/kapandı. Ardından level_end gelmiyorsa oyuncu orada bıraktı.
@@ -50,8 +51,59 @@ public static class GameAnalytics
                 ("moves_used", movesUsed), ("moves_total", movesTotal), ("is_development", Debug.isDebugBuild ? 1 : 0));
 #if TF_FIREBASE_ANALYTICS
         FirebaseAuthService.OnReady += () => FirebaseAnalytics.SetUserId(FirebaseAuthService.UserId);
+        FirebaseAuthService.OnReady += SetDeviceProperties;
 #endif
     }
+
+    // ── Google Ads dönüşümü (2026-11-16): kurulum başına İLK seviye başlangıcı → "oyuna_basladi". Önceden yalnız GA4'te
+    // türetilmiş olaydı (dar tanım, 33 kişi); Ads dönüşümü aynı adı dinler. Bayrak cihaz yerelidir (cloud save'e girmez):
+    // yeniden kurulum = yeni kurulum. 1.0.9 yayılınca GA4 > Etkinlik oluştur'daki eski oyuna_basladi kuralı silinmeli.
+    private const string KeyGameStartLogged = "ga_oyuna_basladi_logged";
+
+    private static void LogFirstGameStart(int level, int attempt)
+    {
+        if (RuntimeSimulationSession.IsActive) return;
+        if (PlayerPrefs.GetInt(KeyGameStartLogged, 0) == 1) return;
+        // Eski kurulumlarda bu yeni bayrak yok. İlk levelin ilk denemesi dışındaki
+        // başlangıçları işaretle ama yeni oyuncu dönüşümü olarak gönderme.
+        bool firstStart = !MasterLeague.IsPlaying && CurrentLevel.Global == 1 && level == 1 && attempt == 1;
+        PlayerPrefs.SetInt(KeyGameStartLogged, 1);
+        PlayerPrefs.Save();
+        if (!firstStart) return;
+        Log("oyuna_basladi", ("ram_gb", RamGb), ("is_development", Debug.isDebugBuild ? 1 : 0));
+    }
+
+    // ── Cihaz profili (kullanıcı 2026-11-15: oyunda kalan grubu tanımak + reklam hedeflemesi). GA4 model/OS'u kendisi
+    // toplar; RAM, çekirdek, GPU, ekran ve kaba sınıf toplanmaz. Kullanıcı özelliği olarak bir kez yazılır (GA4 > Custom
+    // definitions > User scope: device_ram_gb, device_tier, device_cores, device_gpu, device_screen). Huni olayları RAM'i
+    // ayrıca parametre olarak taşır → tanım yapılmadan da kırılım alınır.
+    public static int RamGb => Mathf.Max(1, Mathf.RoundToInt(SystemInfo.systemMemorySize / 1024f));
+
+    /// Kaba cihaz sınıfı: low ≤3 GB veya ≤4 çekirdek · high ≥8 GB ve ≥8 çekirdek · arası mid.
+    public static string DeviceTier
+    {
+        get
+        {
+            int ram = RamGb, cores = SystemInfo.processorCount;
+            if (ram <= 3 || cores <= 4) return "low";
+            if (ram >= 8 && cores >= 8) return "high";
+            return "mid";
+        }
+    }
+
+    private static void SetDeviceProperties()
+    {
+        if (RuntimeSimulationSession.IsActive) return;
+#if TF_FIREBASE_ANALYTICS
+        FirebaseAnalytics.SetUserProperty("device_ram_gb", RamGb.ToString());
+        FirebaseAnalytics.SetUserProperty("device_tier", DeviceTier);
+        FirebaseAnalytics.SetUserProperty("device_cores", SystemInfo.processorCount.ToString());
+        FirebaseAnalytics.SetUserProperty("device_gpu", Clip(SystemInfo.graphicsDeviceName, 36));
+        FirebaseAnalytics.SetUserProperty("device_screen", Screen.currentResolution.width + "x" + Screen.currentResolution.height);
+#endif
+    }
+
+    private static string Clip(string v, int max) => string.IsNullOrEmpty(v) ? "unknown" : (v.Length <= max ? v : v.Substring(0, max));
 
     // ── İlk açılış hunisi (kullanıcı 2026-11-14: first_open 144, level_start 72 → yarısı level 1'e başlamadan
     // kayboluyor; hangi ekranda?) Her adım cihaz başına BİR KEZ gönderilir: 1 açıldı · 2 yükleme bitti · 3 kabul kutusu
@@ -79,6 +131,7 @@ public static class GameAnalytics
     {
         for (int i = 0; i < pendingSteps.Count; i++)
             Log("onboarding_step", ("step", pendingSteps[i].step), ("seconds", pendingSteps[i].seconds),
+                ("ram_gb", RamGb), ("cores", SystemInfo.processorCount),
                 ("is_development", Debug.isDebugBuild ? 1 : 0));
         pendingSteps.Clear();
     }

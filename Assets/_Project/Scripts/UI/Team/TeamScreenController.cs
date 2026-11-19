@@ -28,6 +28,7 @@ public sealed class TeamScreenController : MonoBehaviour
 
     [Header("Alt butonlar")]
     [SerializeField] private Button requestLifeButton;
+    public Button RequestLifeButton => requestLifeButton;   // takım öğreticisi (TeamIntroTutorial)
     [SerializeField] private Button messageButton;
     [Tooltip("Takımdan ayrıl butonu (opsiyonel). Boşsa header'a runtime bir buton kurulur.")]
     [SerializeField] private Button leaveButton;

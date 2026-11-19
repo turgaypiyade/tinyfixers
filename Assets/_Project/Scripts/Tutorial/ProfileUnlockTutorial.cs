@@ -66,6 +66,10 @@ public sealed class ProfileUnlockTutorial : MonoBehaviour
     private TutorialSpotlightGraphic dim;
     private RectTransform hand;
     private TMP_Text caption;
+    private RectTransform holeMask, halo;
+    private Image haloImage;
+    private Vector3 targetBaseScale;
+    private bool highlightAvatar;
 
     private Button avatarButton;
     private ProfilePageController profile;
@@ -149,7 +153,10 @@ public sealed class ProfileUnlockTutorial : MonoBehaviour
 
     /// Ana menüde yönlendirme başlatmaya engel bir an var mı (yükleme, onay, seçim/sandık/satın alma penceresi,
     /// reklam, ödül uçuşu)? Görev öğreticisi de kendi başlangıcında bunu kullanır (kendini beklemesin diye ayrı).
-    internal static bool IsMenuBusyExceptMissions() =>
+    internal static bool IsMenuBusyExceptMissions() => IsMenuBusyCore() || DailySlotEventButton.WheelHasPriority;
+
+    /// Günlük çark hariç engeller (çarkın kendi açılışı bunu bekler; çarkın önceliği var — kullanıcı 2026-11-18).
+    internal static bool IsMenuBusyCore() =>
         LoadingScreenManager.IsVisible || CustomIntroLoadingManager.IsVisible
         || LegalConsent.NeedsAcceptance || LegalConsent.IsShowing
         || RuntimeChoicePopup.IsShowing || RewardChestRevealOverlay.IsShowing || ShopPurchaseCelebration.IsShowing
@@ -223,6 +230,22 @@ public sealed class ProfileUnlockTutorial : MonoBehaviour
         dim.raycastTarget = true;   // delik dışı her dokunuşu yutar
         dim.UseRaycastHole = true;
 
+        var maskGo = NewChild("HoleMask", typeof(Image));
+        holeMask = (RectTransform)maskGo.transform;
+        holeMask.anchorMin = holeMask.anchorMax = new Vector2(0.5f, 0.5f);
+        var maskImage = maskGo.GetComponent<Image>();
+        maskImage.sprite = WorldTourTutorial.HoleSprite();
+        maskImage.color = DimColor;
+        maskImage.raycastTarget = false;
+
+        var haloGo = NewChild("Halo", typeof(Image));
+        halo = (RectTransform)haloGo.transform;
+        halo.anchorMin = halo.anchorMax = new Vector2(0.5f, 0.5f);
+        haloImage = haloGo.GetComponent<Image>();
+        haloImage.sprite = WorldTourTutorial.HaloSprite();
+        haloImage.color = new Color(1f, 0.86f, 0.35f, 0.9f);
+        haloImage.raycastTarget = false;
+
         var handGo = NewChild("Finger", typeof(Image));
         hand = (RectTransform)handGo.transform;
         hand.anchorMin = hand.anchorMax = new Vector2(0.5f, 0.5f);
@@ -266,7 +289,12 @@ public sealed class ProfileUnlockTutorial : MonoBehaviour
 
     private void ShowStep(RectTransform newTarget, string captionKey)
     {
+        RestoreTargetScale();
         target = newTarget;
+        targetBaseScale = target.localScale;
+        highlightAvatar = avatarButton != null && target == avatarButton.transform;
+        holeMask.gameObject.SetActive(highlightAvatar);
+        halo.gameObject.SetActive(highlightAvatar);
         lastHole = default;
         tapTime = 0f;
         caption.text = GameLocalization.Get(captionKey);
@@ -285,7 +313,7 @@ public sealed class ProfileUnlockTutorial : MonoBehaviour
     private void SetVisible(bool visible)
     {
         group.blocksRaycasts = visible;
-        if (!visible) { group.alpha = 0f; target = null; }
+        if (!visible) { RestoreTargetScale(); group.alpha = 0f; target = null; }
     }
 
     private IEnumerator Fade(float to)
@@ -299,6 +327,21 @@ public sealed class ProfileUnlockTutorial : MonoBehaviour
         group.alpha = to;
     }
 
+    private void RestoreTargetScale()
+    {
+        if (highlightAvatar && target != null) target.localScale = targetBaseScale;
+    }
+
+    private void OnDisable()
+    {
+        StopAllCoroutines();
+        RestoreTargetScale();
+        target = null;
+        if (group != null) { group.alpha = 0f; group.blocksRaycasts = false; }
+    }
+
+    private void OnDestroy() => RestoreTargetScale();
+
     private void LateUpdate()
     {
         if (target == null) return;
@@ -310,7 +353,20 @@ public sealed class ProfileUnlockTutorial : MonoBehaviour
     private void UpdateLayout()
     {
         if (target == null) return;
+        RestoreTargetScale(); // Ölçümü nabızdan bağımsız tut; açıklık titremesin.
         Rect hole = HoleOf(target);
+        if (highlightAvatar)
+        {
+            float radius = Mathf.Max(hole.width, hole.height) * 0.5f;
+            hole = new Rect(hole.center - Vector2.one * radius, Vector2.one * (radius * 2f));
+            float pulse = 0.5f - 0.5f * Mathf.Cos(Mathf.Repeat(tapTime / 1.1f, 1f) * Mathf.PI * 2f);
+            target.localScale = targetBaseScale * (1f + 0.08f * pulse);
+            holeMask.anchoredPosition = hole.center;
+            holeMask.sizeDelta = hole.size;
+            halo.anchoredPosition = hole.center;
+            halo.sizeDelta = hole.size * (1.7f + 0.12f * pulse);
+            haloImage.canvasRenderer.SetAlpha(0.55f + 0.45f * pulse);
+        }
         if (hole != lastHole)
         {
             lastHole = hole;

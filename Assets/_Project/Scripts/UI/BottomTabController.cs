@@ -87,10 +87,15 @@ public sealed class BottomTabController : MonoBehaviour
     private void OnEnable()
     {
         GameLocalization.OnLanguageChanged += ApplyLanguageLabelSize;
+        WonderProgress.OnTaskCompleted += HandleWonderTask;
         ApplyLanguageLabelSize();
     }
 
-    private void OnDisable() => GameLocalization.OnLanguageChanged -= ApplyLanguageLabelSize;
+    private void OnDisable()
+    {
+        GameLocalization.OnLanguageChanged -= ApplyLanguageLabelSize;
+        WonderProgress.OnTaskCompleted -= HandleWonderTask;
+    }
 
     private void ApplyLanguageLabelSize()
     {
@@ -99,8 +104,29 @@ public sealed class BottomTabController : MonoBehaviour
             if (labelTexts[i] != null) labelTexts[i].fontSize = labelBaseSizes[i] - delta;
     }
 
+    private GameObject worldTourGlobe;
+    private WonderCatalog worldTourCatalog;
+
+    private bool GlobeVisible => worldTourGlobe != null && currentIndex == defaultIndex
+                                 && WorldTourGlobeButton.IsUnlocked(worldTourCatalog);
+
+    // İlk görev adımı yapılınca dünya butonu hemen belirir (öğretici onu gösterir).
+    private void HandleWonderTask(int _) { if (worldTourGlobe != null) worldTourGlobe.SetActive(GlobeVisible); }
+
     private void Start()
     {
+        // Sağ alt dünya butonu (yalnız HOME'da); harita görseli yoksa kurulmaz.
+        var rootCanvas = GetComponentInParent<Canvas>();
+        var background = FindAnyObjectByType<WonderBackgroundView>(FindObjectsInactive.Include);
+        var repairTutorial = FindAnyObjectByType<WorkshopRepairButtonTutorial>(FindObjectsInactive.Include);
+        var repairButton = repairTutorial != null && repairTutorial.RepairButton != null
+            ? (RectTransform)repairTutorial.RepairButton.transform : null;
+        worldTourCatalog = background != null ? background.Catalog : null;
+        if (rootCanvas != null && background != null)
+            worldTourGlobe = WorldTourGlobeButton.Create((RectTransform)rootCanvas.rootCanvas.transform,
+                (RectTransform)transform, repairButton, homeOnlyElements != null && homeOnlyElements.Length > 0 && homeOnlyElements[0] != null
+                    ? homeOnlyElements[0].transform : null, background.Catalog);
+
         Select(Mathf.Clamp(defaultIndex, 0, Mathf.Max(0, tabs.Count - 1)), force: true);
 
         // Başka sahneden "marketi aç" istendiyse (ör. 01_Game fail popup → Satın Al),
@@ -111,6 +137,16 @@ public sealed class BottomTabController : MonoBehaviour
     public void Select(int index) => Select(index, force: false);
 
     public int CurrentIndex => currentIndex;
+
+    /// Paneli (ya da çocukları) T bileşenini taşıyan sekme — öğreticiler hedef butonu sahne aramadan bulsun.
+    public int FindTabIndex<T>() where T : Component
+    {
+        for (int i = 0; i < tabs.Count; i++)
+            if (tabs[i]?.panel != null && tabs[i].panel.GetComponentInChildren<T>(true) != null) return i;
+        return -1;
+    }
+
+    public Button TabButton(int index) => index >= 0 && index < tabs.Count ? tabs[index].button : null;
 
     /// Ana ekran (HOME) sekmesine geçer.
     public void SelectHome() => Select(defaultIndex, force: false);
@@ -133,6 +169,7 @@ public sealed class BottomTabController : MonoBehaviour
         if (homeOnlyElements != null)
             foreach (var go in homeOnlyElements)
                 if (go != null) go.SetActive(onHome);
+        if (worldTourGlobe != null) worldTourGlobe.SetActive(GlobeVisible);
     }
 
     private void ApplyState(int i, bool selected)

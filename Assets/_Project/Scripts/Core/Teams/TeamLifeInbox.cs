@@ -67,7 +67,7 @@ public sealed class TeamLifeInbox
                               && RequestLockRemaining(DateTime.UtcNow) <= TimeSpan.Zero;
 
     /// <summary>
-    /// Zaman kilidinin kalanı: takıma yeni katılan 24 saat, istek yapan (bu takımda) 4 saat
+    /// Zaman kilidinin kalanı: takım DEĞİŞTİREN 24 saat (ilk takımda kilit yok — PlayerTeamState), istek yapan (bu takımda) 4 saat
     /// bekler. Zero = kilit yok. Takım değişince state sıfırlandığı için kilitler takım başınadır.
     /// </summary>
     public TimeSpan RequestLockRemaining(DateTime now)

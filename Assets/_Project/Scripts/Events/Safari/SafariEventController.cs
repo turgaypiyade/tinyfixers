@@ -209,6 +209,7 @@ public sealed class SafariEventController : MonoBehaviour
         if (FindFirstObjectByType<TutorialOverlayController>() != null) return true;
         // Mission/workshop tutorial'ı ilk kez gösteriliyorsa (görülmedi + sahnede) engelle.
         if (WorkshopRepairButtonTutorial.BlocksOpeningPopups()) return true;
+        if (DailySlotEventButton.WheelHasPriority) return true;   // günlük çark açılışta önce gelir
         return false;
     }
 

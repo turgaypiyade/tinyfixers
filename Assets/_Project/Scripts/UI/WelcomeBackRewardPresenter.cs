@@ -8,6 +8,8 @@ public static class WelcomeBackRewardPresenter
     {
         if (RuntimeSimulationSession.IsActive || SceneManager.GetActiveScene().name != "MainMenu"
             || !WelcomeBackReward.HasPending
+            || ComebackBoost.HasPending || ComebackGiftOverlay.IsShowing   // geri dönüş töreni altını da gösterir
+            || DailySlotEventButton.WheelHasPriority
             || !FirebaseCloudSaveService.RestoreResolved || LoadingScreenManager.IsVisible
             || CustomIntroLoadingManager.IsVisible || RuntimeChoicePopup.IsShowing
             || ShopPurchaseCelebration.IsShowing || RewardChestRevealOverlay.IsShowing

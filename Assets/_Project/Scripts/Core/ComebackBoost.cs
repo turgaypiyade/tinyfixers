@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System;
 using System.Globalization;
 using UnityEngine;
@@ -15,6 +16,8 @@ public static class ComebackBoost
     public const double LongAbsenceHours = 72;
     public const int ShortMinutes = 30;
     public const int LongMinutes = 45;
+    private const int MinLevel = 2;           // at least one level played
+    private const int SpecialsUnlockLevel = 6; // PreLevelSpecialPopupController.specialsUnlockLevel
     private const double CooldownDays = 7;
 
     // Device-local like the absence clock (see WelcomeBackReward).
@@ -37,7 +40,7 @@ public static class ComebackBoost
     public static bool WouldQualifyAt(DateTime utc)
     {
         if (HasPending) return true;
-        if (!BoosterAccessService.IsUnlocked(0)) return false;
+        if (CurrentLevel.Global < MinLevel) return false;
         long last = ReadTicks(LastGrantKey);
         return last <= 0 || utc.Ticks - last >= TimeSpan.FromDays(CooldownDays).Ticks;
     }
@@ -48,8 +51,9 @@ public static class ComebackBoost
     internal static void Queue(TimeSpan absence, long nowTicks)
     {
         if (RuntimeSimulationSession.IsActive || HasPending || absence.TotalHours < MinAbsenceHours) return;
-        // No joker unlocked yet → a free window would be meaningless.
-        if (!BoosterAccessService.IsUnlocked(0)) return;
+        // 2026-11-17: jokers unlock at 12 but most day-1 players stop at 2–15 → they got nothing (and no notification).
+        // Now everyone from level 2 gets the window; it always includes infinite lives (Gifts()).
+        if (CurrentLevel.Global < MinLevel) return;
         long last = ReadTicks(LastGrantKey);
         if (last > 0 && last <= nowTicks && nowTicks - last < TimeSpan.FromDays(CooldownDays).Ticks) return;
         PlayerPrefs.SetInt(PendingKey, absence.TotalHours >= LongAbsenceHours ? LongMinutes : ShortMinutes);
@@ -61,7 +65,7 @@ public static class ComebackBoost
     {
         int minutes = PendingMinutes;
         if (RuntimeSimulationSession.IsActive || minutes <= 0) return false;
-        foreach (var type in Grants) TimedRewardService.Grant(type, minutes);
+        foreach (var gift in Gifts(minutes)) TimedRewardService.Grant(gift.type, minutes);
         PlayerPrefs.SetInt(PendingKey, 0);
         PlayerPrefs.SetString(LastGrantKey, DateTime.UtcNow.Ticks.ToString(CultureInfo.InvariantCulture));
         PlayerPrefs.Save();
@@ -71,12 +75,30 @@ public static class ComebackBoost
         return true;
     }
 
+    /// <summary>
+    /// What the window contains for THIS player: infinite lives always, plus only the jokers/pre-level specials that are
+    /// already unlocked (locked ones would be shown but unusable).
+    /// </summary>
+    public static List<DailySlotReward> Gifts(int minutes)
+    {
+        var list = new List<DailySlotReward> { new DailySlotReward { type = DailySlotRewardType.Lives, durationMinutes = minutes } };
+        bool specials = CurrentLevel.Global >= SpecialsUnlockLevel;
+        foreach (var type in Grants)
+        {
+            bool open = type >= DailySlotRewardType.Booster_Hammer && type <= DailySlotRewardType.Booster_PaintBucket
+                ? BoosterAccessService.IsUnlocked((int)type - (int)DailySlotRewardType.Booster_Hammer)
+                : specials;
+            if (open) list.Add(new DailySlotReward { type = type, durationMinutes = minutes });
+        }
+        return list;
+    }
+
     /// <summary>Main-menu popup; driven by the existing one-second lives tick (no extra update loop).</summary>
     public static void TickPresenter()
     {
         if (shownThisSession || !HasPending || RuntimeSimulationSession.IsActive
             || SceneManager.GetActiveScene().name != "MainMenu"
-            || WelcomeBackReward.HasPending || !FirebaseCloudSaveService.RestoreResolved
+            || !FirebaseCloudSaveService.RestoreResolved
             || LoadingScreenManager.IsVisible || CustomIntroLoadingManager.IsVisible || RuntimeChoicePopup.IsShowing
             || ShopPurchaseCelebration.IsShowing || RewardChestRevealOverlay.IsShowing
             || MarketNavigator.IsMenuMarketOpen()) return;
@@ -85,14 +107,19 @@ public static class ComebackBoost
         for (int i = 0; i < popups.Length; i++)
             if (popups[i].IsVisible) return;
 
-        // Once per session: closing the popup keeps the gift for the next session instead of nagging.
+        if (DailySlotEventButton.WheelHasPriority || ComebackGiftOverlay.IsShowing) return;   // günlük çark önce
+
+        // Once per session: the gift starts only when the player taps; closing the app keeps it for next session.
         shownThisSession = true;
-        RuntimeChoicePopup.Show(GameLocalization.GetOr("comeback_boost_title", "WE MISSED YOU!"),
-            GameLocalization.GetFormat("comeback_boost_message", PendingMinutes),
-            new RuntimeChoicePopup.Choice(GameLocalization.GetOr("comeback_boost_start", "START"), () =>
-            {
-                if (Claim()) EventSfx.Play(x => x.uiTap);
-            }, true));
+        var gifts = Gifts(PendingMinutes);
+        // 72h+ absence: the welcome-back coins join the same ceremony instead of a separate chest.
+        bool coins = WelcomeBackReward.HasPending;
+        if (coins) gifts.Insert(0, new DailySlotReward { type = DailySlotRewardType.Coins, amount = WelcomeBackReward.Coins });
+        ComebackGiftOverlay.Show(gifts, () =>
+        {
+            if (coins && WelcomeBackReward.GrantPending()) FirebaseCloudSaveService.MarkDirty();
+            if (Claim()) EventSfx.Play(x => x.uiTap);
+        });
     }
 
     private static BoardController.BoosterMode ToMode(DailySlotRewardType type) => type switch

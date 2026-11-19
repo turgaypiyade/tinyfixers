@@ -14,6 +14,7 @@ using UnityEngine.UI;
 public class WonderBackgroundView : MonoBehaviour
 {
     [SerializeField] private WonderCatalog catalog;
+    public WonderCatalog Catalog => catalog;
     [SerializeField] private Shader revealShader;
     [SerializeField] private Sprite weldLightSprite;
     [Tooltip("İçeriğin kurulduğu tam ekran kap (slide bunun x'ini oynatır)")]

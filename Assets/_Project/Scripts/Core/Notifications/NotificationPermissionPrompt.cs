@@ -12,8 +12,10 @@ using UnityEngine.UI;
 /// </summary>
 public sealed class NotificationPermissionPrompt : MonoBehaviour
 {
-    /// Bu seviyeye gelen (ilk 3 level'ı bitiren) oyuncuya sorulur.
-    private const int PromptFromLevel = 4;
+    /// Bu seviyeye gelen (ilk level'ı bitiren) oyuncuya sorulur. 2026-11-17: 4→2 — ertesi gün hatırlatması (D1) için
+    /// izin ilk günden alınmalı; 1–4 oyun içinde sürdüğü için pratikte ilk ana menü ziyaretinde sorulur. Daha önce
+    /// sorulmuş (ileri) oyuncuyu etkilemez.
+    private const int PromptFromLevel = 2;
     private const float ShowDelaySeconds = 1.5f;
 
     private static bool s_scheduledThisSession;
@@ -43,6 +45,8 @@ public sealed class NotificationPermissionPrompt : MonoBehaviour
     private IEnumerator Start()
     {
         yield return new WaitForSecondsRealtime(ShowDelaySeconds);
+        // Günlük çark açılıştaki ilk pencere (kullanıcı 2026-11-18): çark kapanana dek bekle.
+        while (DailySlotEventButton.WheelHasPriority) yield return new WaitForSecondsRealtime(0.25f);
         if (LocalNotificationService.Consent != LocalNotificationService.ConsentState.NotAsked)
         {
             Destroy(gameObject);

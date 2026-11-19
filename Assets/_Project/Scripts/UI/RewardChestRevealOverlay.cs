@@ -47,6 +47,7 @@ public sealed class RewardChestRevealOverlay : MonoBehaviour
     private bool _finished;
     private bool _tapAllowed;
     private string _titleKey;
+    private TMP_Text _titleLabel;
 
     // ─────────────────────────────────────────────────────────────────
 
@@ -112,18 +113,19 @@ public sealed class RewardChestRevealOverlay : MonoBehaviour
         {
             var title = NewRect("Title", transform);
             title.anchoredPosition = new Vector2(0f, 650f);
-            title.sizeDelta = new Vector2(960f, 130f);
+            title.sizeDelta = new Vector2(980f, 170f);
             var label = title.gameObject.AddComponent<TextMeshProUGUI>();
             label.text = GameLocalization.Get(_titleKey);
             if (_font != null) label.font = _font;
-            label.fontSize = 60f;
+            label.fontSize = 96f;
             label.enableAutoSizing = true;
-            label.fontSizeMin = 30f;
-            label.fontSizeMax = 60f;
-            label.fontStyle = FontStyles.Bold;
+            label.fontSizeMin = 48f;
+            label.fontSizeMax = 96f;
             label.alignment = TextAlignmentOptions.Center;
-            label.color = new Color(1f, 0.88f, 0.36f);
             label.raycastTarget = false;
+            // 2026-11-18: sönük sarı yazı yerine oyun başlık stili + harf harf giriş (TitleLetterPop).
+            TextSurfaceStyle.Apply(label, new Color(0.72f, 0.30f, 0.05f));
+            _titleLabel = label;
         }
 
         // Ödül sırası (sandığın üstünde, ortalanmış yatay dizilim).
@@ -195,6 +197,7 @@ public sealed class RewardChestRevealOverlay : MonoBehaviour
     {
         // 1) Karartma fade-in.
         yield return Animate(dimFadeIn, t => _group.alpha = t);
+        if (_titleLabel != null) StartCoroutine(TitleLetterPop.Play(_titleLabel));
 
         // 2) Sandık pop-in (overshoot'lu).
         yield return Animate(chestPopIn, t => _chest.localScale = Vector3.one * EaseOutBack(t));

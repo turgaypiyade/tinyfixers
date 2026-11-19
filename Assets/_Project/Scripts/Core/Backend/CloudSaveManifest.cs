@@ -75,6 +75,7 @@ public static class CloudSaveManifest
         "player_team_emblem",
         "player_team_min_chapter",
         "player_team_is_creator",
+        "player_team_ever_joined",    // ilk takım mı? (ilkinde can isteği hemen; değiştirince 24 saat)
         "initial_stars_granted",
         "prelevel_specials_rewarded",
         "first_launch_done",

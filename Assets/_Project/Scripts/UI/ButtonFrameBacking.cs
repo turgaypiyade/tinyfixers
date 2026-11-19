@@ -116,8 +116,12 @@ public sealed class ButtonFrameBacking : MonoBehaviour
         if (slot.GetSiblingIndex() != index - 1)
             slot.SetSiblingIndex(slot.GetSiblingIndex() < index ? index - 1 : index);
 
+        // Görselin gerçekte çizildiği oran: 9-slice (Sliced) buton yuvanın tamamını doldurur → yuva oranı;
+        // Simple + preserveAspect ise sprite oranı. (Sliced'da sprite oranı çerçeveyi butondan dar çiziyordu.)
         var art = GetComponent<Image>();
-        if (art != null && art.sprite != null && art.sprite.rect.height > 0f)
+        if (art != null && art.type == Image.Type.Sliced && rt.rect.height > 0f)
+            fit.aspectRatio = rt.rect.width / rt.rect.height;
+        else if (art != null && art.sprite != null && art.sprite.rect.height > 0f)
             fit.aspectRatio = art.sprite.rect.width / art.sprite.rect.height;
         lastRectSize = rt.rect.size;
         LayoutFrame();

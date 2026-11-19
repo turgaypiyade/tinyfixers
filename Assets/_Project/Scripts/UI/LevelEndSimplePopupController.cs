@@ -712,15 +712,8 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
     private void HandleSuccessCloseClicked()
     {
-        // Bu levelde progress-event ödülü kazanıldıysa önce sandık açılış töreni,
-        // sonra ana menü. Overlay DontDestroyOnLoad; onDone sahne geçişini yapar.
-        var chestRewards = ProgressEventService.Instance?.ConsumePendingRewardReveals();
-        if (chestRewards != null && chestRewards.Count > 0)
-        {
-            RewardChestRevealOverlay.Show(chestRewards, ReturnToMainMenuImmediate);
-            return;
-        }
-
+        // Progress-event son sandığı artık ANA MENÜDE açılır (kullanıcı 2026-11-18: sandık oyun sahnesinde/başka
+        // ekranda açılıyordu). MainMenuRewardCollectFx: başlık → sandık → altın sayaca → diğerleri level butonuna.
         ReturnToMainMenuImmediate();
     }
 

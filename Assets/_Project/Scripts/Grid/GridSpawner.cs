@@ -4489,6 +4489,8 @@ public class GridSpawner : MonoBehaviour
     private void PlayObstacleShatter(ObstacleVisualChange change, Image image)
     {
         if (image == null || image.sprite == null || board == null) return;
+        // Gold owns its goal-flight / two-piece break in BoardController; never shatter it twice.
+        if (BoardController.IsGoldCoin(change.obstacleId)) return;
         if (change.obstacleId == ObstacleId.Grass || change.obstacleId == ObstacleId.GrassFlower
             || change.obstacleId == ObstacleId.PaintCanBox || change.obstacleId == ObstacleId.FlyFruit)
             return;

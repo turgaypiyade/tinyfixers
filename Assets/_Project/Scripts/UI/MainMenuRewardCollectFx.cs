@@ -32,15 +32,25 @@ public sealed class MainMenuRewardCollectFx : MonoBehaviour
     {
         if (scene.name != MainMenuSceneName) return;
 
-        var rewards = ProgressEventService.Instance != null
-            ? ProgressEventService.Instance.ConsumePendingMenuRewardFx()
-            : null;
-        if (rewards == null || rewards.Count == 0) return;
+        var service = ProgressEventService.Instance;
+        var rewards = service != null ? service.ConsumePendingMenuRewardFx() : null;
+        var chest = service != null ? service.ConsumePendingRewardReveals() : null;
+        bool hasChest = chest != null && chest.Count > 0;
+        if ((rewards == null || rewards.Count == 0) && !hasChest) return;
 
         var root = new GameObject("MainMenuRewardCollectFx");
         var fx = root.AddComponent<MainMenuRewardCollectFx>();
-        fx._rewards = rewards;
+        fx._rewards = rewards ?? new List<DailySlotReward>();
+        fx._chest = chest;
+        ChestPending = hasChest;
     }
+
+    /// Bu menü girişinde progress-event son sandığı açılacak/açık (altın uçuşu ve çark bunu bekler).
+    public static bool ChestPending { get; private set; }
+
+    private List<DailySlotReward> _chest;
+
+    private void OnDestroy() => ChestPending = false;
 
     // ── Instance ──────────────────────────────────────────────────────
 
@@ -75,6 +85,15 @@ public sealed class MainMenuRewardCollectFx : MonoBehaviour
             yield return null;
         yield return null;
 
+        // 1) Etkinlik tamamlandıysa: başlık (harf harf) → sandık sarsılıp patlar → ödüller dizilir → dokun.
+        if (_chest != null && _chest.Count > 0)
+        {
+            bool done = false;
+            RewardChestRevealOverlay.Show(_chest, () => done = true, titleKey: "progress_chest_title");
+            while (!done && RewardChestRevealOverlay.IsShowing) yield return null;
+        }
+        ChestPending = false;   // altın uçuşu (CoinFlyToWalletAnimator) şimdi başlar
+
         RectTransform levelButton = FindLevelButton();
         RectTransform heart = FindHeartIcon();
 
@@ -82,6 +101,8 @@ public sealed class MainMenuRewardCollectFx : MonoBehaviour
         for (int i = 0; i < _rewards.Count; i++)
         {
             var reward = _rewards[i];
+            // Altın sayaca akan ortak uçuşta gösterilir; sandıkta zaten gösterilen ödül ikinci kez uçmaz.
+            if (reward == null || reward.type == DailySlotRewardType.Coins || (_chest != null && _chest.Contains(reward))) continue;
             var target = reward != null && reward.type == DailySlotRewardType.Lives && heart != null ? heart : levelButton;
             yield return CoCollectOne(reward, target);
         }
@@ -136,11 +157,10 @@ public sealed class MainMenuRewardCollectFx : MonoBehaviour
         int amount = reward != null ? Mathf.Max(1, reward.amount) : 1;
         string name = reward != null && !string.IsNullOrEmpty(reward.DisplayName) ? reward.DisplayName + " " : "";
         label.text = $"{name}x{amount}";
-        label.fontSize = 44;
-        label.fontStyle = FontStyles.Bold;
+        label.fontSize = 52;
         label.alignment = TextAlignmentOptions.Center;
-        label.color = new Color(1f, 0.9f, 0.55f, 1f);
         label.raycastTarget = false;
+        TextSurfaceStyle.Apply(label, new Color(0.72f, 0.30f, 0.05f));   // sönük sarı yerine oyun yazı stili
 
         // ── 1) Pop-in (büyük belirme) ──
         yield return Animate(0.35f, t => rt.localScale = Vector3.one * EaseOutBack(t));

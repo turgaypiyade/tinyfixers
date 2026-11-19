@@ -359,6 +359,7 @@ public sealed class BridgeRepairController : MonoBehaviour
     {
         if (FindFirstObjectByType<TutorialOverlayController>() != null) return true;
         if (WorkshopRepairButtonTutorial.BlocksOpeningPopups()) return true;
+        if (DailySlotEventButton.WheelHasPriority) return true;   // günlük çark açılışta önce gelir
         return false;
     }
 }

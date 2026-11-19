@@ -185,7 +185,10 @@ public class BoardBreakFxService
         // KeyGenerator'ın kendi katmanlı üretim animasyonu var (kol + tarama + materialize);
         // generic hit/break particle'ları onun üstüne binmesin.
         // Hamster kendi kare/zıplama/ayrılış animasyonunu oynar (HamsterObstacleService).
-        return change.obstacleId == ObstacleId.ColorChest
+        // Gold owns its gather/goal flight or two-piece shatter in BoardController.
+        // Suppress both hit and clear bursts here, before any generic particles are spawned.
+        return BoardController.IsGoldCoin(change.obstacleId)
+            || change.obstacleId == ObstacleId.ColorChest
             || change.obstacleId == ObstacleId.Wardrobe // whole item throws and four empty-cabinet chunks replace generic particles
             || change.obstacleId == ObstacleId.KeyGenerator
             || change.obstacleId == ObstacleId.BirdHouse   // kapak/kuş animasyonu BirdHouseService'te

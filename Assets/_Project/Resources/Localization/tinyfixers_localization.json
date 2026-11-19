@@ -637,6 +637,222 @@
           "value": "Kullan"
         },
         {
+          "key": "worldtour_here",
+          "value": "Şimdi burada"
+        },
+        {
+          "key": "worldtour_repair_cta",
+          "value": "Tamir Et!"
+        },
+        {
+          "key": "worldtour_tutorial_open",
+          "value": "Görevleri tamamla, dünyayı güzelleştir!"
+        },
+        {
+          "key": "worldtour_tutorial_pin",
+          "value": "İlk tamir edeceğin yer burası!"
+        },
+        {
+          "key": "worldtour_fact_mis1_0",
+          "value": "Biliyor muydun? Pisa Kulesi'nin yapımı 1173'te başladı ve neredeyse 200 yıl sürdü!"
+        },
+        {
+          "key": "worldtour_fact_mis1_1",
+          "value": "Kule daha yapılırken yumuşak toprağa gömülüp eğilmeye başladı."
+        },
+        {
+          "key": "worldtour_fact_mis1_2",
+          "value": "Tepesine çıkmak için yaklaşık 300 basamak tırmanman gerekir!"
+        },
+        {
+          "key": "worldtour_fact_mis1_3",
+          "value": "Kulenin tepesinde 7 çan var, her biri farklı bir nota çalar."
+        },
+        {
+          "key": "worldtour_fact_mis1_4",
+          "value": "Mühendisler kuleyi biraz düzeltti ama hâlâ yaklaşık 4 derece eğik!"
+        },
+        {
+          "key": "worldtour_fact_mis7_0",
+          "value": "Biliyor muydun? Ayasofya 537 yılında tamamlandı, yaklaşık 1500 yaşında!"
+        },
+        {
+          "key": "worldtour_fact_mis7_1",
+          "value": "Bu dev yapı sadece yaklaşık 5 yılda inşa edildi."
+        },
+        {
+          "key": "worldtour_fact_mis7_2",
+          "value": "Büyük kubbesi yerden yaklaşık 55 metre yükseklikte."
+        },
+        {
+          "key": "worldtour_fact_mis7_3",
+          "value": "Kubbenin çevresinde 40 pencere var, içeriyi ışıkla doldururlar."
+        },
+        {
+          "key": "worldtour_fact_mis7_4",
+          "value": "Yaklaşık 1000 yıl boyunca dünyanın en büyük kilisesi olarak kaldı."
+        },
+        {
+          "key": "worldtour_fact_mis9_0",
+          "value": "Biliyor muydun? Big Ben aslında kulenin değil, içindeki dev çanın adı!"
+        },
+        {
+          "key": "worldtour_fact_mis9_1",
+          "value": "Kulenin resmi adı Elizabeth Kulesi."
+        },
+        {
+          "key": "worldtour_fact_mis9_2",
+          "value": "Saat 1859'dan beri çalışıyor."
+        },
+        {
+          "key": "worldtour_fact_mis9_3",
+          "value": "Her saat kadranı yaklaşık 7 metre genişliğinde!"
+        },
+        {
+          "key": "worldtour_fact_mis9_4",
+          "value": "Çanların olduğu kata çıkmak için 334 basamak tırmanmak gerekir."
+        },
+        {
+          "key": "worldtour_fact_mis3_0",
+          "value": "Biliyor muydun? Eyfel Kulesi 1889'da bir dünya fuarı için yapıldı!"
+        },
+        {
+          "key": "worldtour_fact_mis3_1",
+          "value": "Aslında sadece 20 yıl kalması planlanmıştı."
+        },
+        {
+          "key": "worldtour_fact_mis3_2",
+          "value": "Yaklaşık 330 metre yüksekliğinde."
+        },
+        {
+          "key": "worldtour_fact_mis3_3",
+          "value": "Her 7 yılda bir baştan boyanıyor."
+        },
+        {
+          "key": "worldtour_fact_mis3_4",
+          "value": "Yaz sıcağında demir genleşir ve kule yaklaşık 15 santim uzar!"
+        },
+        {
+          "key": "worldtour_fact_mis4_0",
+          "value": "Biliyor muydun? Büyük Piramit yaklaşık 4500 yaşında!"
+        },
+        {
+          "key": "worldtour_fact_mis4_1",
+          "value": "Yaklaşık 2,3 milyon taş bloktan yapıldı."
+        },
+        {
+          "key": "worldtour_fact_mis4_2",
+          "value": "Yaklaşık 3800 yıl boyunca dünyanın en yüksek yapısıydı."
+        },
+        {
+          "key": "worldtour_fact_mis4_3",
+          "value": "Antik Dünyanın Yedi Harikası'ndan hâlâ ayakta kalan tek harika!"
+        },
+        {
+          "key": "worldtour_fact_mis4_4",
+          "value": "Sfenks'in gövdesi aslan, başı insan şeklinde."
+        },
+        {
+          "key": "worldtour_fact_mis5_0",
+          "value": "Biliyor muydun? Çin Seddi tüm kollarıyla 21.000 kilometreden uzun!"
+        },
+        {
+          "key": "worldtour_fact_mis5_1",
+          "value": "Yapımı 2000 yıldan uzun bir zamana yayıldı."
+        },
+        {
+          "key": "worldtour_fact_mis5_2",
+          "value": "Gözcüler kulelerden duman ve ateşle haber gönderirdi."
+        },
+        {
+          "key": "worldtour_fact_mis5_3",
+          "value": "Uzaydan çıplak gözle göründüğü sözü aslında bir efsane!"
+        },
+        {
+          "key": "worldtour_fact_mis6_0",
+          "value": "Biliyor muydun? Colorado Nehri bu kanyonu milyonlarca yılda oydu!"
+        },
+        {
+          "key": "worldtour_fact_mis6_1",
+          "value": "Kanyon bazı yerlerde 1,8 kilometreden derin."
+        },
+        {
+          "key": "worldtour_fact_mis6_2",
+          "value": "Yaklaşık 450 kilometre uzunluğunda."
+        },
+        {
+          "key": "worldtour_fact_mis6_3",
+          "value": "En alttaki kayalar yaklaşık 2 milyar yaşında!"
+        },
+        {
+          "key": "worldtour_fact_mis8_0",
+          "value": "Biliyor muydun? Rodos Heykeli güneş tanrısı Helios için yapıldı!"
+        },
+        {
+          "key": "worldtour_fact_mis8_1",
+          "value": "Yaklaşık 33 metre boyundaydı, 10 katlı bir bina kadar!"
+        },
+        {
+          "key": "worldtour_fact_mis8_2",
+          "value": "Yapımı yaklaşık 12 yıl sürdü."
+        },
+        {
+          "key": "worldtour_fact_mis8_3",
+          "value": "Sadece yaklaşık 54 yıl ayakta kaldı, sonra bir depremde yıkıldı."
+        },
+        {
+          "key": "worldtour_fact_mis8_4",
+          "value": "Antik Dünyanın Yedi Harikası'ndan biriydi."
+        },
+        {
+          "key": "worldtour_fact_mis2_0",
+          "value": "Biliyor muydun? Golden Gate Köprüsü 1937'de açıldı!"
+        },
+        {
+          "key": "worldtour_fact_mis2_1",
+          "value": "Turuncu rengi sisli havada kolay görünsün diye seçildi."
+        },
+        {
+          "key": "worldtour_fact_mis2_2",
+          "value": "İki kulesi arası yaklaşık 1280 metre."
+        },
+        {
+          "key": "worldtour_fact_mis2_3",
+          "value": "Her ana halatın içinde 27.000'den fazla ince tel var!"
+        },
+        {
+          "key": "worldtour_fact_mis2_4",
+          "value": "Kuleleri denizden yaklaşık 227 metre yükseğe çıkar."
+        },
+        {
+          "key": "worldtour_fact_mis10_0",
+          "value": "Biliyor muydun? Sidney Opera Binası 1973'te açıldı!"
+        },
+        {
+          "key": "worldtour_fact_mis10_1",
+          "value": "Çatısı bir milyondan fazla karoyla kaplı!"
+        },
+        {
+          "key": "worldtour_fact_mis10_2",
+          "value": "Çatıları denizdeki yelkenlere benzediği için çok ünlü."
+        },
+        {
+          "key": "worldtour_fact_mis10_3",
+          "value": "Danimarkalı mimar Jørn Utzon tasarladı."
+        },
+        {
+          "key": "worldtour_fact_mis10_4",
+          "value": "Her yıl burada 1500'den fazla gösteri yapılıyor."
+        },
+        {
+          "key": "settings_city_facts",
+          "value": "Şehir Bilgileri"
+        },
+        {
+          "key": "worldtour_see_wonder",
+          "value": "Harikayı Gör"
+        },
+        {
           "key": "leaderboard_level",
           "value": "Seviye {0}"
         },
@@ -1953,6 +2169,14 @@
           "value": "Adını buraya yaz"
         },
         {
+          "key": "team_tutorial_open",
+          "value": "Bir takıma katıl, can paylaşın!"
+        },
+        {
+          "key": "team_tutorial_request",
+          "value": "Canın bitince buradan takımından can iste. İlk takımında hemen isteyebilirsin!"
+        },
+        {
           "key": "team_life_progress_label",
           "value": "Alınan Can:"
         },
@@ -2062,7 +2286,7 @@
         },
         {
           "key": "save_progress_linked_provider",
-          "value": "Hesabın bağlandı ✓ ({0})"
+          "value": "Hesabın bağlandı ({0})"
         },
         {
           "key": "save_progress_conflict",
@@ -2070,7 +2294,7 @@
         },
         {
           "key": "save_progress_linked",
-          "value": "Hesabın bağlı ✓\nİlerlemen güvende."
+          "value": "Hesabın bağlı\nİlerlemen güvende."
         },
         {
           "key": "save_progress_not_linked",
@@ -2514,7 +2738,7 @@
         },
         {
           "key": "workshop_completed_message",
-          "value": "Atölye tamamlandı! 🎉"
+          "value": "Atölye tamamlandı!"
         },
         {
           "key": "tasks_title",
@@ -3190,7 +3414,7 @@
         },
         {
           "key": "notif_comeback_boost_body",
-          "value": "Geri dön: 30 dakika boyunca tüm jokerler SINIRSIZ!"
+          "value": "Geri dön: sınırsız can ve hediyeler seni bekliyor!"
         },
         {
           "key": "notif_comeback_body",
@@ -3203,6 +3427,22 @@
         {
           "key": "notif_comeback2_body",
           "value": "Hayvan dostların yardımını bekliyor, hadi geri dön! 🐾"
+        },
+        {
+          "key": "comeback_gift_title",
+          "value": "Hoş Geldin Hediyesi!"
+        },
+        {
+          "key": "comeback_gift_subtitle",
+          "value": "Tamir ekibinden birkaç hediye!"
+        },
+        {
+          "key": "notif_nextday_title",
+          "value": "Harikan seni bekliyor! 🏛️"
+        },
+        {
+          "key": "notif_nextday_body",
+          "value": "Dünkü tamir yarım kaldı, ekip yeni görevle hazır 🔨"
         },
         {
           "key": "notif_channel_name",
@@ -3367,6 +3607,10 @@
         {
           "key": "progress_event_name",
           "value": "Haftalık Görevler"
+        },
+        {
+          "key": "progress_chest_title",
+          "value": "Görevler Tamamlandı!"
         },
         {
           "key": "progress_info_title",
@@ -4272,6 +4516,222 @@
         {
           "key": "journey_use_background",
           "value": "Use"
+        },
+        {
+          "key": "worldtour_here",
+          "value": "You are here"
+        },
+        {
+          "key": "worldtour_repair_cta",
+          "value": "Repair It!"
+        },
+        {
+          "key": "worldtour_tutorial_open",
+          "value": "Complete tasks and make the world beautiful!"
+        },
+        {
+          "key": "worldtour_tutorial_pin",
+          "value": "This is the first place you will repair!"
+        },
+        {
+          "key": "worldtour_fact_mis1_0",
+          "value": "Did you know? Building the Tower of Pisa started in 1173 and took almost 200 years!"
+        },
+        {
+          "key": "worldtour_fact_mis1_1",
+          "value": "The tower began to lean while it was still being built, sinking into soft ground."
+        },
+        {
+          "key": "worldtour_fact_mis1_2",
+          "value": "You have to climb about 300 steps to reach the top!"
+        },
+        {
+          "key": "worldtour_fact_mis1_3",
+          "value": "There are 7 bells at the top, and each one plays a different note."
+        },
+        {
+          "key": "worldtour_fact_mis1_4",
+          "value": "Engineers straightened it a little, but it still leans about 4 degrees!"
+        },
+        {
+          "key": "worldtour_fact_mis7_0",
+          "value": "Did you know? Hagia Sophia was finished in 537, it is about 1500 years old!"
+        },
+        {
+          "key": "worldtour_fact_mis7_1",
+          "value": "This giant building was built in only about 5 years."
+        },
+        {
+          "key": "worldtour_fact_mis7_2",
+          "value": "Its big dome is about 55 meters above the floor."
+        },
+        {
+          "key": "worldtour_fact_mis7_3",
+          "value": "There are 40 windows around the dome that fill it with light."
+        },
+        {
+          "key": "worldtour_fact_mis7_4",
+          "value": "For about 1000 years it was the largest church in the world."
+        },
+        {
+          "key": "worldtour_fact_mis9_0",
+          "value": "Did you know? Big Ben is really the name of the giant bell, not the tower!"
+        },
+        {
+          "key": "worldtour_fact_mis9_1",
+          "value": "The tower's official name is the Elizabeth Tower."
+        },
+        {
+          "key": "worldtour_fact_mis9_2",
+          "value": "The clock has been ticking since 1859."
+        },
+        {
+          "key": "worldtour_fact_mis9_3",
+          "value": "Each clock face is about 7 meters wide!"
+        },
+        {
+          "key": "worldtour_fact_mis9_4",
+          "value": "You have to climb 334 steps to reach the bells."
+        },
+        {
+          "key": "worldtour_fact_mis3_0",
+          "value": "Did you know? The Eiffel Tower was built in 1889 for a world fair!"
+        },
+        {
+          "key": "worldtour_fact_mis3_1",
+          "value": "It was only supposed to stand for 20 years."
+        },
+        {
+          "key": "worldtour_fact_mis3_2",
+          "value": "It is about 330 meters tall."
+        },
+        {
+          "key": "worldtour_fact_mis3_3",
+          "value": "It is repainted every 7 years."
+        },
+        {
+          "key": "worldtour_fact_mis3_4",
+          "value": "In summer heat the iron expands and the tower grows about 15 centimeters!"
+        },
+        {
+          "key": "worldtour_fact_mis4_0",
+          "value": "Did you know? The Great Pyramid is about 4500 years old!"
+        },
+        {
+          "key": "worldtour_fact_mis4_1",
+          "value": "It was built from about 2.3 million stone blocks."
+        },
+        {
+          "key": "worldtour_fact_mis4_2",
+          "value": "For about 3800 years it was the tallest building in the world."
+        },
+        {
+          "key": "worldtour_fact_mis4_3",
+          "value": "It is the only one of the Seven Wonders of the Ancient World still standing!"
+        },
+        {
+          "key": "worldtour_fact_mis4_4",
+          "value": "The Sphinx has the body of a lion and the head of a human."
+        },
+        {
+          "key": "worldtour_fact_mis5_0",
+          "value": "Did you know? With all its parts, the Great Wall is longer than 21,000 kilometers!"
+        },
+        {
+          "key": "worldtour_fact_mis5_1",
+          "value": "It was built over more than 2000 years."
+        },
+        {
+          "key": "worldtour_fact_mis5_2",
+          "value": "Guards sent messages from the towers with smoke and fire."
+        },
+        {
+          "key": "worldtour_fact_mis5_3",
+          "value": "The idea that you can see it from space with your eyes is just a myth!"
+        },
+        {
+          "key": "worldtour_fact_mis6_0",
+          "value": "Did you know? The Colorado River carved this canyon over millions of years!"
+        },
+        {
+          "key": "worldtour_fact_mis6_1",
+          "value": "In some places the canyon is more than 1.8 kilometers deep."
+        },
+        {
+          "key": "worldtour_fact_mis6_2",
+          "value": "It is about 450 kilometers long."
+        },
+        {
+          "key": "worldtour_fact_mis6_3",
+          "value": "The rocks at the very bottom are about 2 billion years old!"
+        },
+        {
+          "key": "worldtour_fact_mis8_0",
+          "value": "Did you know? The Colossus of Rhodes was built for the sun god Helios!"
+        },
+        {
+          "key": "worldtour_fact_mis8_1",
+          "value": "It was about 33 meters tall, like a 10-story building!"
+        },
+        {
+          "key": "worldtour_fact_mis8_2",
+          "value": "It took about 12 years to build."
+        },
+        {
+          "key": "worldtour_fact_mis8_3",
+          "value": "It stood for only about 54 years before an earthquake knocked it down."
+        },
+        {
+          "key": "worldtour_fact_mis8_4",
+          "value": "It was one of the Seven Wonders of the Ancient World."
+        },
+        {
+          "key": "worldtour_fact_mis2_0",
+          "value": "Did you know? The Golden Gate Bridge opened in 1937!"
+        },
+        {
+          "key": "worldtour_fact_mis2_1",
+          "value": "Its orange color was chosen so it is easy to see in the fog."
+        },
+        {
+          "key": "worldtour_fact_mis2_2",
+          "value": "The two towers are about 1280 meters apart."
+        },
+        {
+          "key": "worldtour_fact_mis2_3",
+          "value": "Each main cable has more than 27,000 thin wires inside!"
+        },
+        {
+          "key": "worldtour_fact_mis2_4",
+          "value": "Its towers rise about 227 meters above the water."
+        },
+        {
+          "key": "worldtour_fact_mis10_0",
+          "value": "Did you know? The Sydney Opera House opened in 1973!"
+        },
+        {
+          "key": "worldtour_fact_mis10_1",
+          "value": "Its roof is covered with more than a million tiles!"
+        },
+        {
+          "key": "worldtour_fact_mis10_2",
+          "value": "It is famous because its roofs look like sails on the sea."
+        },
+        {
+          "key": "worldtour_fact_mis10_3",
+          "value": "It was designed by the Danish architect Jørn Utzon."
+        },
+        {
+          "key": "worldtour_fact_mis10_4",
+          "value": "More than 1500 shows take place here every year."
+        },
+        {
+          "key": "settings_city_facts",
+          "value": "City Facts"
+        },
+        {
+          "key": "worldtour_see_wonder",
+          "value": "See the Wonder"
         },
         {
           "key": "leaderboard_level",
@@ -5590,6 +6050,14 @@
           "value": "Type your name here"
         },
         {
+          "key": "team_tutorial_open",
+          "value": "Join a team and share lives!"
+        },
+        {
+          "key": "team_tutorial_request",
+          "value": "When you run out of lives, ask your team here. In your first team you can ask right away!"
+        },
+        {
           "key": "team_life_progress_label",
           "value": "Lives received:"
         },
@@ -5699,7 +6167,7 @@
         },
         {
           "key": "save_progress_linked_provider",
-          "value": "Account linked ✓ ({0})"
+          "value": "Account linked ({0})"
         },
         {
           "key": "save_progress_conflict",
@@ -5707,7 +6175,7 @@
         },
         {
           "key": "save_progress_linked",
-          "value": "Account linked ✓\nYour progress is safe."
+          "value": "Account linked\nYour progress is safe."
         },
         {
           "key": "save_progress_not_linked",
@@ -6151,7 +6619,7 @@
         },
         {
           "key": "workshop_completed_message",
-          "value": "Workshop complete! 🎉"
+          "value": "Workshop complete!"
         },
         {
           "key": "tasks_title",
@@ -6827,7 +7295,7 @@
         },
         {
           "key": "notif_comeback_boost_body",
-          "value": "Come back: all jokers are UNLIMITED for 30 minutes!"
+          "value": "Come back: unlimited lives and gifts are waiting!"
         },
         {
           "key": "notif_comeback_body",
@@ -6840,6 +7308,22 @@
         {
           "key": "notif_comeback2_body",
           "value": "Your animal friends need your help, come back! 🐾"
+        },
+        {
+          "key": "comeback_gift_title",
+          "value": "Welcome Back Gift!"
+        },
+        {
+          "key": "comeback_gift_subtitle",
+          "value": "A few gifts from the repair crew!"
+        },
+        {
+          "key": "notif_nextday_title",
+          "value": "Your wonder is waiting! 🏛️"
+        },
+        {
+          "key": "notif_nextday_body",
+          "value": "Yesterday's repair isn't finished, the crew is ready for the next task 🔨"
         },
         {
           "key": "notif_channel_name",
@@ -7004,6 +7488,10 @@
         {
           "key": "progress_event_name",
           "value": "Weekly Missions"
+        },
+        {
+          "key": "progress_chest_title",
+          "value": "Tasks Complete!"
         },
         {
           "key": "progress_info_title",

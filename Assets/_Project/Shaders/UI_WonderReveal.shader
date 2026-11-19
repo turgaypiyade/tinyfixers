@@ -364,7 +364,11 @@ Shader "UI/WonderReveal"
             {
                 float count = max(1.0, _RegionCount);
                 float n = _Reveal * count;
-                float4 pm = tex2D(_PieceMap, uv);
+                // Kenar pürüzü (kullanıcı 2026-11-18: "bıçakla kesilmiş gibi"): parça haritası gürültüyle kaydırılmış
+                // koordinattan okunur → açılan/açılmayan sınırı kırık-taş gibi düzensiz. İki ölçek: iri girinti + ince diş.
+                float2 jag = (float2(patinaNoise(uv * 38.0), patinaNoise(uv * 38.0 + 17.3)) - 0.5) * 0.014
+                           + (float2(patinaNoise(uv * 210.0 + 5.1), patinaNoise(uv * 210.0 + 41.7)) - 0.5) * 0.005;
+                float4 pm = tex2D(_PieceMap, uv + jag);
                 float tA = floor(pm.r * 255.0 + 0.5) - 1.0;
                 float tB = _UseMidTex > 0.5 ? floor(pm.g * 255.0 + 0.5) - 1.0 : -1.0;
                 float3 c = photo;

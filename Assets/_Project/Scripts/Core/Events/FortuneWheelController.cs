@@ -94,6 +94,23 @@ public class FortuneWheelController : MonoBehaviour
     [SerializeField] private float winnerTextWidth = 680f;
     [Tooltip("Yazının winnerDisplay merkezine göre Y konumu (ikon 200px → alt kenarı -100).")]
     [SerializeField] private float winnerTextOffsetY = -165f;
+    [Tooltip("Kazanılan ödül gösteriminin son ölçeği (ikon + yazı birlikte büyür).")]
+    [SerializeField, Range(1f, 2f)] private float winnerDisplayScale = 1.45f;
+
+    [Header("Atölye teması (2026-11-17): ayı kolu çeker, çark döner")]
+    [Tooltip("Kol kareleri: 0 = dik (bekleme), 1 = ara, 2 = çekilmiş. Üçü aynı tuvalde, kol tabanı hizalı.")]
+    [SerializeField] private Sprite[] leverFrames;
+    [Tooltip("Ayı bu objenin hemen önünde çizilir (sahnede Pointer: çarkın önü, kazanma karartmasının altı).")]
+    [SerializeField] private RectTransform leverBehind;
+    [SerializeField] private Vector2 leverPosition = new Vector2(-243f, -354f);
+    [SerializeField] private Vector2 leverSize = new Vector2(607f, 715f);
+    [SerializeField, Min(0.02f)] private float leverFrameSeconds = 0.07f;
+    [Tooltip("Başlık tabelası; başlık yazısı (wheel_title) koddan bunun üstüne kurulur.")]
+    [SerializeField] private RectTransform titleSign;
+    [SerializeField] private Vector2 titleOffset = new Vector2(2f, -66f);
+    [SerializeField] private Vector2 titleSize = new Vector2(660f, 150f);
+    [SerializeField] private float titleFontSize = 92f;
+    [SerializeField] private string titleKey = "wheel_title";
 
     [Header("Effects")]
     [SerializeField] private AudioClip tickSfx;
@@ -118,6 +135,8 @@ public class FortuneWheelController : MonoBehaviour
 
     // ── Lifecycle ────────────────────────────────────────────────────────────
 
+    private void OnDestroy() => IsOpen = false;
+
     private void Awake()
     {
         s_cooldownHours = spinCooldownHours;
@@ -127,6 +146,74 @@ public class FortuneWheelController : MonoBehaviour
         if (claimButton != null) claimButton.onClick.AddListener(OnClaimClicked);
         if (panelRoot   != null) panelRoot.SetActive(false);
         RemoveFauxBold();
+        BuildLever();
+        BuildTitle();
+    }
+
+    // ── Atölye teması: kol çeken ayı + tabela başlığı (koddan kurulur, sahnede yalnız sprite/yer) ─────────────────
+    private Image leverImage;
+    private TMP_Text titleText;
+
+    private void BuildLever()
+    {
+        if (panelRoot == null || leverFrames == null || leverFrames.Length < 3 || leverFrames[0] == null) return;
+        var go = new GameObject("BearLever", typeof(RectTransform), typeof(Image));
+        go.layer = panelRoot.layer;   // Screen Space Camera culling tuzağı
+        var rt = (RectTransform)go.transform;
+        rt.SetParent(leverBehind != null ? leverBehind.parent : panelRoot.transform, false);
+        if (leverBehind != null) rt.SetSiblingIndex(leverBehind.GetSiblingIndex() + 1);
+        rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.anchoredPosition = leverPosition;
+        rt.sizeDelta = leverSize;
+        leverImage = go.GetComponent<Image>();
+        leverImage.sprite = leverFrames[0];
+        leverImage.preserveAspect = true;
+        leverImage.raycastTarget = false;
+    }
+
+    private void BuildTitle()
+    {
+        if (titleSign == null || string.IsNullOrEmpty(titleKey)) return;
+        var go = new GameObject("Title", typeof(RectTransform), typeof(TextMeshProUGUI));
+        go.layer = titleSign.gameObject.layer;
+        var rt = (RectTransform)go.transform;
+        rt.SetParent(titleSign, false);
+        rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.anchoredPosition = titleOffset;
+        rt.sizeDelta = titleSize;
+        var tmp = go.GetComponent<TextMeshProUGUI>();
+        titleText = tmp;
+        tmp.text = GameLocalization.Get(titleKey);
+        tmp.enableAutoSizing = true;
+        tmp.fontSizeMax = titleFontSize;
+        tmp.fontSizeMin = titleFontSize * 0.5f;
+        tmp.alignment = TextAlignmentOptions.Center;
+        tmp.textWrappingMode = TextWrappingModes.NoWrap;
+        tmp.raycastTarget = false;
+        TextSurfaceStyle.Apply(tmp, new Color(0.45f, 0.22f, 0.08f));   // beyaz yüz + ahşap koyusu kontur (yazı kuralı)
+    }
+
+    private void SetLeverFrame(int i)
+    {
+        if (leverImage != null && i < leverFrames.Length && leverFrames[i] != null) leverImage.sprite = leverFrames[i];
+    }
+
+    // Dik → ara → çekilmiş (~0.15 sn); çark bu karede dönmeye başlar.
+    private IEnumerator PullLever()
+    {
+        if (leverImage == null) yield break;
+        SetLeverFrame(1);
+        yield return new WaitForSecondsRealtime(leverFrameSeconds);
+        SetLeverFrame(2);
+        yield return new WaitForSecondsRealtime(leverFrameSeconds);
+    }
+
+    private IEnumerator ReleaseLever()
+    {
+        if (leverImage == null) yield break;
+        SetLeverFrame(1);
+        yield return new WaitForSecondsRealtime(leverFrameSeconds);
+        SetLeverFrame(0);
     }
 
     // Çarktaki yazıların fontu zaten ExtraBold; sahnede açık kalan "Bold" işareti sahte kalınlık ekleyip harf
@@ -140,6 +227,9 @@ public class FortuneWheelController : MonoBehaviour
     }
 
     // ── Public API ───────────────────────────────────────────────────────────
+
+    /// Çark paneli açık (açılış pencereleri/öğreticiler bunu bekler — DailySlotEventButton.WheelHasPriority).
+    public static bool IsOpen { get; private set; }
 
     public static bool HasAvailableSpin()
     {
@@ -164,12 +254,15 @@ public class FortuneWheelController : MonoBehaviour
         if (panelRoot == null) return;
         if (!gameObject.activeSelf) gameObject.SetActive(true);
         panelRoot.SetActive(true);
+        IsOpen = true;
 
         isSpinning     = false;
         rewardClaimed  = false;
         selectedReward = null;
 
         if (innerWheel != null) innerWheel.localEulerAngles = Vector3.zero;
+        SetLeverFrame(0);
+        if (titleText != null) titleText.text = GameLocalization.Get(titleKey);   // dil değişmiş olabilir
 
         if (claimButton  != null) claimButton.gameObject.SetActive(false);
         if (rewardNameText != null) rewardNameText.text = "";
@@ -415,12 +508,18 @@ public class FortuneWheelController : MonoBehaviour
 
             tmp.text = "+" + reward.amount.ToString();
             if (amountFont != null) tmp.font = amountFont;
-            // Ödül yazısı ortak stili (altın outline + gölge); stil yoksa eski görünüm.
-            TextAlignmentOptions segmentAlign = tmp.alignment;
-            RewardTextStyle.ApplySharp(tmp, Mathf.Max(amountFontSize, tmp.fontSize) * 1.3f);   // küçük yazı: dar, net gölge
-            tmp.alignment = segmentAlign;
+            // Atölye çarkı (2026-11-17): miktar yazısı ikonun hemen altında, dilimle aynı yönde (yatay) ve göbekten
+            // uzakta; eskiden 90° döndürülüp göbeğe yakın duruyordu. Yazı kuralı: beyaz yüz + koyu kontur.
+            var amountRt = tmp.rectTransform;
+            amountRt.anchorMin = amountRt.anchorMax = amountRt.pivot = new Vector2(0.5f, 0.5f);
+            amountRt.localEulerAngles = Vector3.zero;
+            amountRt.sizeDelta = new Vector2(iconSize * 2f, iconSize * 0.6f);
+            amountRt.anchoredPosition = new Vector2(0f, iconOffsetY - iconSize * 0.78f);
+            tmp.fontSize = amountFontSize;
+            tmp.alignment = TextAlignmentOptions.Center;
             tmp.textWrappingMode = TMPro.TextWrappingModes.NoWrap;
             tmp.overflowMode = TextOverflowModes.Overflow;
+            TextSurfaceStyle.Apply(tmp, new Color(0.30f, 0.14f, 0.05f));
         }
     }
 
@@ -487,6 +586,11 @@ public class FortuneWheelController : MonoBehaviour
             return;
         }
         selectedReward = activeSpinConfig.rewards[selectedIndex];
+        // Ödül sonuç belli olur olmaz verilir (2026-11-17): eskiden yalnız "Topla"da veriliyordu → X ile kapatan, dönüş
+        // sırasında uygulamayı kapatan ya da arka plana alan oyuncu hakkını/altınını harcayıp ödülü kaybediyordu.
+        // "Topla" artık yalnız gösterimi kapatır.
+        DailySlotRewardService.Grant(selectedReward);
+        rewardClaimed = false;
 
         StartCoroutine(SpinRoutine());
     }
@@ -498,6 +602,7 @@ public class FortuneWheelController : MonoBehaviour
         if (spinButtonPulse != null) { StopCoroutine(spinButtonPulse); spinButtonPulse = null; }
         if (spinButton    != null) spinButton.interactable = false;
         if (rewardNameText != null) rewardNameText.text   = "";
+        yield return PullLever();
 
         int   count        = Mathf.Min(activeSpinConfig.rewards.Count, 8);
         float segmentAngle = 360f / count;
@@ -540,6 +645,7 @@ public class FortuneWheelController : MonoBehaviour
 
         if (sfxSource != null) { sfxSource.Stop(); sfxSource.loop = false; sfxSource.pitch = 1f; }
         innerWheel.localEulerAngles = new Vector3(0f, 0f, -targetCW);
+        StartCoroutine(ReleaseLever());
 
         if (GameSettings.SoundEnabled && sfxSource != null && winSfx != null) sfxSource.PlayOneShot(winSfx);
 
@@ -707,17 +813,17 @@ public class FortuneWheelController : MonoBehaviour
 
         for (float t = 0f; t < dur * 0.7f; t += Time.unscaledDeltaTime)
         {
-            rt.localScale = Vector3.Lerp(Vector3.zero, Vector3.one * 1.15f,
+            rt.localScale = Vector3.Lerp(Vector3.zero, Vector3.one * (winnerDisplayScale * 1.15f),
                 Mathf.SmoothStep(0f, 1f, t / (dur * 0.7f)));
             yield return null;
         }
         for (float t = 0f; t < dur * 0.3f; t += Time.unscaledDeltaTime)
         {
-            rt.localScale = Vector3.Lerp(Vector3.one * 1.15f, Vector3.one,
+            rt.localScale = Vector3.Lerp(Vector3.one * (winnerDisplayScale * 1.15f), Vector3.one * winnerDisplayScale,
                 Mathf.SmoothStep(0f, 1f, t / (dur * 0.3f)));
             yield return null;
         }
-        rt.localScale = Vector3.one;
+        rt.localScale = Vector3.one * winnerDisplayScale;
     }
 
     // Kazanan dilim büyüyünce dış çerçevenin (OuterFrame, çarkın üstünde çizilir) altında kalıyordu: dilim
@@ -756,8 +862,7 @@ public class FortuneWheelController : MonoBehaviour
 
     private void OnClaimClicked()
     {
-        if (selectedReward == null || rewardClaimed) return;
-        DailySlotRewardService.Grant(selectedReward);
+        if (selectedReward == null || rewardClaimed) return;   // ödül dönüş başında verildi (OnSpinClicked)
         rewardClaimed = true;
         if (claimButton != null) claimButton.interactable = false;
         StartCoroutine(CloseRoutine());
@@ -772,6 +877,7 @@ public class FortuneWheelController : MonoBehaviour
         if (spinButtonPulse   != null) { StopCoroutine(spinButtonPulse);   spinButtonPulse   = null; }
         yield return FadePanel(panelGroup != null ? panelGroup.alpha : 1f, 0f);
         if (panelRoot != null) panelRoot.SetActive(false);
+        IsOpen = false;
     }
 
     private IEnumerator FadePanel(float from, float to)

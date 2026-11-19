@@ -14,7 +14,7 @@ public sealed class WonderBuildFx : MonoBehaviour
     // 4 kare (kaldır, savur, vur, sek): kaldırışta bekler, vuruş hızlı. Vuruş anı = 3. karenin başı.
     static readonly float[] FourFrameEnds = { 0.42f, 0.54f, 0.8f, 1f };
     const float FourFrameHit = 0.54f, EvenHit = 0.75f;
-    static readonly Color DustColor = new Color(0.93f, 0.86f, 0.74f, 1f);
+    static readonly Color DustColor = new Color(0.99f, 0.97f, 0.93f, 1f);   // 2026-11-18: beyaza yakın (eski bej)
     static AudioClip s_hitClip;
     static bool s_hitLoaded;
 
@@ -189,13 +189,17 @@ public sealed class WonderBuildFx : MonoBehaviour
     public void Begin(Rect piece)
     {
         Clear();
-        float cw = piece.width / 4f, ch = piece.height / 4f;
-        float size = Mathf.Clamp(Mathf.Max(cw, ch) * 3f, 220f, 640f);   // büyük, yoğun bulut
+        // 2026-11-18 (kullanıcı: "çok dağınık"): bulut parçanın ortasına toplanır — yuvalar parça alanının %60'ında,
+        // puflar daha küçük; parça yine örtülür ama çevreye taşmaz.
+        const float Spread = 0.6f;
+        float cw = piece.width * Spread / 4f, ch = piece.height * Spread / 4f;
+        Vector2 origin = piece.center - new Vector2(piece.width, piece.height) * (Spread * 0.5f);
+        float size = Mathf.Clamp(Mathf.Max(cw, ch) * 2.8f, 180f, 460f);
         for (int i = 0; i < DustCount; i++)
         {
             int gx = i % 4, gy = i / 4;
-            _dustHome[i] = new Vector2(piece.xMin + (gx + 0.5f + Random.Range(-0.3f, 0.3f)) * cw,
-                piece.yMin + (gy + 0.5f + Random.Range(-0.3f, 0.3f)) * ch);
+            _dustHome[i] = new Vector2(origin.x + (gx + 0.5f + Random.Range(-0.3f, 0.3f)) * cw,
+                origin.y + (gy + 0.5f + Random.Range(-0.3f, 0.3f)) * ch);
             _dustSize[i] = size * Random.Range(0.85f, 1.15f);
             _dustSeed[i] = Random.Range(0f, 100f);
         }
@@ -468,7 +472,7 @@ public sealed class WonderBuildFx : MonoBehaviour
             float s = _dustSize[i] * (0.75f + 0.25f * Mathf.Clamp01(t * 2f) + 0.15f * (1f - dust) + 0.06f * Mathf.Sin(t * 2.1f + seed));
             var rt = img.rectTransform;
             rt.sizeDelta = new Vector2(s, s);
-            rt.anchoredPosition = _dustHome[i] + new Vector2(Mathf.Sin(t * 1.3f + seed) * 14f, t * 16f);
+            rt.anchoredPosition = _dustHome[i] + new Vector2(Mathf.Sin(t * 1.3f + seed) * 10f, t * 10f);
             rt.localRotation = Quaternion.Euler(0f, 0f, seed * 3.6f + t * 25f);
             var c = DustColor;
             c.a = 0.97f * dust;

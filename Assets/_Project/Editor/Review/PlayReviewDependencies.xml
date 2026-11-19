@@ -1,0 +1,6 @@
+<dependencies>
+  <!-- Google Play In-App Review: StoreReviewService bunu doğrudan JNI ile çağırır (Unity eklenti paketi gerekmez). -->
+  <androidPackages>
+    <androidPackage spec="com.google.android.play:review:2.0.2" />
+  </androidPackages>
+</dependencies>

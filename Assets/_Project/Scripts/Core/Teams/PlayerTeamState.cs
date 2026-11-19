@@ -17,8 +17,16 @@ public static class PlayerTeamState
     private const string KeyMinChapter  = "player_team_min_chapter";
     private const string KeyIsCreator   = "player_team_is_creator";
     private const string KeyJoinedTicks = "player_team_joined_ticks";
+    private const string KeyEverJoined  = "player_team_ever_joined";
 
     public static bool HasTeam => PlayerPrefs.GetInt(KeyJoined, 0) == 1;
+
+    // Bayraktan önce takıma girmiş oyuncu: şu an takımdaysa "daha önce takımda bulundu" sayılır (sonraki değişiklik 24 saat).
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+    private static void MigrateEverJoined()
+    {
+        if (HasTeam && PlayerPrefs.GetInt(KeyEverJoined, 0) == 0) { PlayerPrefs.SetInt(KeyEverJoined, 1); PlayerPrefs.Save(); }
+    }
 
     /// <summary>Firestore teams/{id} doküman kimliği ("" = eski yerel-sim takım).</summary>
     public static string TeamId => PlayerPrefs.GetString(KeyTeamId, "");
@@ -87,9 +95,13 @@ public static class PlayerTeamState
         PlayerPrefs.SetInt(KeyEmblem, Mathf.Max(0, emblemIndex));
         PlayerPrefs.SetString(KeyDesc, description ?? "");
         PlayerPrefs.SetInt(KeyMinChapter, Mathf.Max(0, minChapter));
-        // Yeni katılan 24 saat can isteyemez (TeamLifeInbox); kurucu kendi takımında muaf.
-        if (isCreator) PlayerPrefs.DeleteKey(KeyJoinedTicks);
+        // Can isteği kilidi (TeamLifeInbox, kullanıcı 2026-11-17): oyuncunun İLK takımında kilit yok — hemen can
+        // isteyebilir. Daha önce bir takımda bulunmuşsa (takım değiştirme) 24 saat bekler; çık-gir ile can toplanamaz.
+        // Kurucu kendi takımında muaf (takım kurmak altın ister).
+        bool firstTeam = PlayerPrefs.GetInt(KeyEverJoined, 0) == 0;
+        if (isCreator || firstTeam) PlayerPrefs.DeleteKey(KeyJoinedTicks);
         else PlayerPrefs.SetString(KeyJoinedTicks, System.DateTime.UtcNow.Ticks.ToString());
+        PlayerPrefs.SetInt(KeyEverJoined, 1);
         PlayerPrefs.Save();
     }
 }

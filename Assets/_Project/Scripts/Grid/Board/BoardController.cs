@@ -5886,6 +5886,8 @@ public class BoardController : MonoBehaviour
         // Önce destroy (pozisyon FX'i ClearAndDestroyTile içinde yayınlanır), sonra sayım —
         // böylece "+1" driver'ın buffer'ına gain event'inden ÖNCE düşer.
         var tile = tiles[ox, oy];
+        if (tile != null && IsGoldCoin(obstacleId))
+            PlayGoldCoinBreak(tile, obstacleId);   // görsel; taş aşağıda her zamanki gibi temizlenir
         if (tile != null)
         {
             var clearedType = tile.GetTileType();
@@ -5941,6 +5943,34 @@ public class BoardController : MonoBehaviour
     {
         return obstacleId == ObstacleId.Barrel
             || obstacleId == ObstacleId.Barrell_v2;
+    }
+
+    internal static bool IsGoldCoin(ObstacleId id) => id == ObstacleId.GoldMoney || id == ObstacleId.GoldCoin;
+
+    // Altın para kırılınca (kullanıcı 2026-11-18: "toz gibi dağılıyor"): seviyenin hedefindeyse kırılmadan HUD'daki
+    // hedefe havuzdaki ortak uçuş sistemiyle gider (sayım veri tarafında, level-end uçuşu bekler); hedef değilse kendi görselinden 2 büyük
+    // parçaya ayrılır (ObstacleShatterFx havuzu). İkisi de taş temizlenmeden ÖNCE görüntüyü senkron yakalar.
+    private void PlayGoldCoinBreak(TileView tile, ObstacleId id)
+    {
+        // Goal membership belongs to level data, not to whether a HUD flight can launch this frame.
+        var goals = levelData != null ? levelData.goals : null;
+        if (goals != null)
+        {
+            for (int i = 0; i < goals.Length; i++)
+            {
+                var goal = goals[i];
+                if (goal == null || goal.targetType != LevelGoalTargetType.Obstacle || goal.obstacleId != id)
+                    continue;
+
+                if (GoalFlyFx != null && TopHud != null
+                    && TopHud.TryGetGoalTargetRectForObstacle(id, out var goalSlot) && goalSlot != null)
+                    GoalFlyFx.TileFlight.Launch(this, GoalFlyFx.OverlayRoot, tile, goalSlot);
+                return;
+            }
+        }
+        var root = BoardVfxPlayer != null && BoardVfxPlayer.VfxRoot != null ? (RectTransform)BoardVfxPlayer.VfxRoot : BreakFxParent;
+        if (tile.IconImage != null && root != null)
+            ObstacleShatterFx.Play(this, this, root, tile.IconImage, 1, goldScatter: true);
     }
 
     internal static bool IsGelLauncher(ObstacleId obstacleId)

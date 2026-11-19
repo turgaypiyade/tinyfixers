@@ -233,7 +233,7 @@ public class ProgressEventService : MonoBehaviour, IProgressEventService
         return null;
     }
 
-    // Açılış seviyesi: uygulamadaki taban (scheduler asset'i, şu an 20) her kaynakta geçerli; sunucu
+    // Açılış seviyesi: uygulamadaki taban (scheduler asset'i, şu an 12; 2026-11-17 20→12) her kaynakta geçerli; sunucu
     // (config/progressEvent minLevel) yalnız YÜKSELTEBİLİR — eski/yanlış bir sunucu değeri event'i erken açmasın.
     private void UpdateLevelGate()
     {
@@ -621,6 +621,13 @@ public class ProgressEventService : MonoBehaviour, IProgressEventService
         if (def.reward == null) return;
         if (def.EffectiveRewardDurationMinutes > 0)
             TimedRewardService.Grant(def.reward.type, def.EffectiveRewardDurationMinutes);
+        else if (def.reward.type == DailySlotRewardType.Coins)
+        {
+            // Altın: menüde sayaca tıkır tıkır akan ortak uçuşa katılır (seviye sonu altınıyla birlikte).
+            int before = PlayerWallet.Coins;
+            DailySlotRewardService.Grant(def.reward);
+            CoinFlyToWalletAnimator.QueuePendingReward(PlayerWallet.Coins - before, before, PlayerWallet.Coins);
+        }
         else
             DailySlotRewardService.Grant(def.reward);
     }
