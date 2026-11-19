@@ -10,10 +10,38 @@ using UnityEngine;
 public static class TitleLetterPop
 {
     private const float LetterStagger = 0.045f;
+    private static Material rewardMaterial;
+
+    // Reward titles opt into this style; ordinary popup and journey titles stay unchanged.
+    public static void ApplyRewardStyle(TMP_Text text)
+    {
+        TextSurfaceStyle.Apply(text, TextSurface.Red);
+        if (text.font == null || text.font.material == null) return;
+        if (rewardMaterial == null)
+        {
+            rewardMaterial = new Material(text.font.material) { name = "RewardTitle_CreamRedGold" };
+            rewardMaterial.SetColor(ShaderUtilities.ID_FaceColor, new Color(1f, 0.96f, 0.72f));
+            rewardMaterial.SetColor(ShaderUtilities.ID_OutlineColor, new Color(0.48f, 0.025f, 0.035f));
+            rewardMaterial.SetFloat(ShaderUtilities.ID_OutlineWidth, 0.24f);
+            rewardMaterial.SetFloat(ShaderUtilities.ID_OutlineSoftness, 0f);
+            rewardMaterial.SetColor(ShaderUtilities.ID_UnderlayColor, new Color(1f, 0.72f, 0.035f));
+            rewardMaterial.SetFloat(ShaderUtilities.ID_UnderlayOffsetX, 0f);
+            rewardMaterial.SetFloat(ShaderUtilities.ID_UnderlayOffsetY, -0.12f);
+            rewardMaterial.SetFloat(ShaderUtilities.ID_UnderlayDilate, 0.65f);
+            rewardMaterial.SetFloat(ShaderUtilities.ID_UnderlaySoftness, 0f);
+            rewardMaterial.EnableKeyword(ShaderUtilities.Keyword_Outline);
+            rewardMaterial.EnableKeyword(ShaderUtilities.Keyword_Underlay);
+            ShaderUtilities.UpdateShaderRatios(rewardMaterial);
+        }
+        text.fontSharedMaterial = rewardMaterial;
+        text.color = Color.white;
+        text.extraPadding = true;
+        text.UpdateMeshPadding();
+    }
     private const float LetterDuration = 0.32f;
 
     // Harfler sırayla: yatayda dar + dikeyde uzun doğar, ters yönde ezilip yerine oturur (domino hissi).
-    public static IEnumerator Play(TMP_Text text)
+    public static IEnumerator Play(TMP_Text text, bool overlapEntrance = false)
     {
         text.ForceMeshUpdate();
         var info = text.textInfo;
@@ -21,7 +49,9 @@ public static class TitleLetterPop
         var source = new Vector3[info.meshInfo.Length][];
         for (int m = 0; m < info.meshInfo.Length; m++) source[m] = (Vector3[])info.meshInfo[m].vertices.Clone();
 
-        float total = (count - 1) * LetterStagger + LetterDuration;
+        float stagger = overlapEntrance ? 0.065f : LetterStagger;
+        float duration = overlapEntrance ? 0.46f : LetterDuration;
+        float total = (count - 1) * stagger + duration;
         for (float t = 0f; ; t += Time.unscaledDeltaTime)
         {
             bool done = t >= total;
@@ -32,19 +62,28 @@ public static class TitleLetterPop
                 int m = c.materialReferenceIndex, v = c.vertexIndex;
                 var src = source[m];
                 var dst = info.meshInfo[m].vertices;
-                float k = done ? 1f : Mathf.Clamp01((t - i * LetterStagger) / LetterDuration);
-                Vector2 scale = LetterScale(k);
+                float k = done ? 1f : Mathf.Clamp01((t - i * stagger) / duration);
+                Vector2 scale = overlapEntrance ? OverlapScale(k) : LetterScale(k);
+                float slide = overlapEntrance ? (1f - Mathf.SmoothStep(0f, 1f, k)) * text.fontSize * -0.38f : 0f;
                 Vector3 pivot = new Vector3((src[v].x + src[v + 2].x) * 0.5f, c.baseLine, 0f);
                 for (int j = 0; j < 4; j++)
                 {
                     Vector3 p = src[v + j] - pivot;
-                    dst[v + j] = pivot + new Vector3(p.x * scale.x, p.y * scale.y, 0f);
+                    dst[v + j] = pivot + new Vector3(p.x * scale.x + slide, p.y * scale.y, 0f);
                 }
             }
             text.UpdateVertexData(TMP_VertexDataUpdateFlags.Vertices);
             if (done) yield break;
             yield return null;
         }
+    }
+
+    private static Vector2 OverlapScale(float k)
+    {
+        if (k <= 0f) return Vector2.zero;
+        if (k < 0.25f) return Vector2.Lerp(new Vector2(0.65f, 0.85f), new Vector2(1.5f, 1.6f), k / 0.25f);
+        if (k < 0.7f) return Vector2.Lerp(new Vector2(1.5f, 1.6f), new Vector2(0.94f, 0.9f), Mathf.SmoothStep(0f, 1f, (k - 0.25f) / 0.45f));
+        return Vector2.Lerp(new Vector2(0.94f, 0.9f), Vector2.one, Mathf.SmoothStep(0f, 1f, (k - 0.7f) / 0.3f));
     }
 
     // 0 → görünmez, ~0.45 → dar/uzun (1.0x, 1.35y)... ~0.7 → ezik (1.2x, 0.8y), 1 → (1,1).

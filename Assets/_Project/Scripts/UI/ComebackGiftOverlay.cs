@@ -71,7 +71,7 @@ public sealed class ComebackGiftOverlay : MonoBehaviour
 
         _title = NewText("Title", new Vector2(0f, 640f), new Vector2(980f, 170f), 104f);
         _title.text = GameLocalization.GetOr("comeback_gift_title", "Hoş Geldin Hediyesi!");
-        TextSurfaceStyle.Apply(_title, TitleSurface);
+        TitleLetterPop.ApplyRewardStyle(_title);
 
         _subtitle = NewText("Subtitle", new Vector2(0f, 500f), new Vector2(900f, 140f), 54f);
         _subtitle.text = GameLocalization.GetOr("comeback_gift_subtitle", "Tamir ekibinden birkaç hediye!");
@@ -128,7 +128,7 @@ public sealed class ComebackGiftOverlay : MonoBehaviour
         }
         _group.alpha = 1f;
 
-        yield return TitleLetterPop.Play(_title);
+        yield return TitleLetterPop.Play(_title, overlapEntrance: true);
         yield return FadeText(_subtitle, 0.25f);
         for (int i = 0; i < _tiles.Count; i++)
         {

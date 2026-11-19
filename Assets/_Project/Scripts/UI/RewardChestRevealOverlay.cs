@@ -124,7 +124,7 @@ public sealed class RewardChestRevealOverlay : MonoBehaviour
             label.alignment = TextAlignmentOptions.Center;
             label.raycastTarget = false;
             // 2026-11-18: sönük sarı yazı yerine oyun başlık stili + harf harf giriş (TitleLetterPop).
-            TextSurfaceStyle.Apply(label, new Color(0.72f, 0.30f, 0.05f));
+            TitleLetterPop.ApplyRewardStyle(label);
             _titleLabel = label;
         }
 
@@ -197,7 +197,7 @@ public sealed class RewardChestRevealOverlay : MonoBehaviour
     {
         // 1) Karartma fade-in.
         yield return Animate(dimFadeIn, t => _group.alpha = t);
-        if (_titleLabel != null) StartCoroutine(TitleLetterPop.Play(_titleLabel));
+        if (_titleLabel != null) StartCoroutine(TitleLetterPop.Play(_titleLabel, overlapEntrance: true));
 
         // 2) Sandık pop-in (overshoot'lu).
         yield return Animate(chestPopIn, t => _chest.localScale = Vector3.one * EaseOutBack(t));
