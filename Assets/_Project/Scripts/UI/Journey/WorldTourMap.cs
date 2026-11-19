@@ -208,9 +208,13 @@ public sealed class WorldTourMap : MonoBehaviour
             TextSurfaceStyle.Apply(label, new Color(0.30f, 0.14f, 0.05f));
             if (isActive)
             {
+                // Warm gold marks the current destination against the blue/green map.
+                // Vertex tint keeps the shared text material and other destinations unchanged.
+                label.color = new Color(1f, 0.78f, 0.20f);
                 var here = NewText(badge, GameLocalization.GetOr("worldtour_here", "Şimdi burada"),
                     new Vector2(0f, half + 34f), new Vector2(PinWidth * 2.2f, 50f), 36f);
                 TextSurfaceStyle.Apply(here, new Color(0.62f, 0.08f, 0.10f));
+                here.color = new Color(1f, 0.90f, 0.52f);
             }
             var button = badge.gameObject.AddComponent<Button>();
             var hit = badge.gameObject.AddComponent<Image>();

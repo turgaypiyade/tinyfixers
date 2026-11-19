@@ -56,6 +56,22 @@ public sealed class SafariJoinPopupController : MonoBehaviour
         RefreshImages();
         if (root != null) root.SetActive(true);
         RefreshCopy();
+        // The panel stretches with the viewport: keep its header and X inside the artwork.
+        if (titleText != null)
+        {
+            CommonPopupView.Region(titleText.rectTransform, new Rect(0.20f, 0.875f, 0.60f, 0.10f));
+            titleText.alignment = TextAlignmentOptions.Center;
+            titleText.enableAutoSizing = true;
+            titleText.textWrappingMode = TextWrappingModes.NoWrap;
+        }
+        if (cancelButton != null)
+        {
+            var closeRect = (RectTransform)cancelButton.transform;
+            closeRect.anchorMin = closeRect.anchorMax = new Vector2(0.91f, 0.94f);
+            closeRect.pivot = new Vector2(0.5f, 0.5f);
+            closeRect.anchoredPosition = Vector2.zero;
+        }
+
         EventSfx.Play(x => x.popupOpen);
         if (entrance != null) StopCoroutine(entrance);
         entrance = StartCoroutine(Reveal());

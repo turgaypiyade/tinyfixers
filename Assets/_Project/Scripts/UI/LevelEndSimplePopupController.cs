@@ -376,6 +376,31 @@ public class LevelEndSimplePopupController : MonoBehaviour
             successCloseButtonImage = FindComponent<Image>(successPopupRoot.transform, "UIS/BtnSClose") ?? successCloseButtonImage;
             successTitleText = FindComponent<TMP_Text>(successPopupRoot.transform, "UIS/SuccessTitleText") ?? successTitleText;
             DisplayUpperCase.Apply(successTitleText);   // "SEVİYE 12"
+            // The artwork stretches with the popup; UIS has a fixed height, so its old
+            // pixel offsets put the header outside the ribbon on shorter screens.
+            if (successPopupImage != null)
+            {
+                if (successTitleText != null)
+                {
+                    var titleRect = successTitleText.rectTransform;
+                    titleRect.SetParent(successPopupImage.transform, false);
+                    titleRect.localScale = Vector3.one;
+                    titleRect.anchorMin = new Vector2(0.19f, 0.875f);
+                    titleRect.anchorMax = new Vector2(0.81f, 0.975f);
+                    titleRect.pivot = new Vector2(0.5f, 0.5f);
+                    titleRect.offsetMin = titleRect.offsetMax = Vector2.zero;
+                    successTitleText.alignment = TextAlignmentOptions.Center;
+                }
+                if (successCloseButton != null)
+                {
+                    var closeRect = (RectTransform)successCloseButton.transform;
+                    closeRect.SetParent(successPopupImage.transform, false);
+                    closeRect.localScale = Vector3.one;
+                    closeRect.anchorMin = closeRect.anchorMax = new Vector2(0.91f, 0.95f);
+                    closeRect.pivot = new Vector2(0.5f, 0.5f);
+                    closeRect.anchoredPosition = Vector2.zero;
+                }
+            }
             successContinueText = FindComponent<TMP_Text>(successContinue, "BtnContinueText") ?? successContinueText;
             scoreLabelText = FindComponent<TMP_Text>(successPopupRoot.transform, "UIS/ScoreRow/ScoreLabelText") ?? scoreLabelText;
             scoreValueText = FindComponent<TMP_Text>(successPopupRoot.transform, "UIS/ScoreRow/ScoreValueText") ?? scoreValueText;
