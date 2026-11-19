@@ -30,6 +30,8 @@ public sealed class WorldTourGlobeButton : MonoBehaviour
     private const float PlaneSize = 0.40f;
     private const float PlaneNoseDeg = 14f;   // görselde gövde ekseni (kuyruk→burun), sağ-hafif yukarı
     private bool _punching;
+    private readonly Vector3[] _placementCorners = new Vector3[4];
+    private Canvas _placementCanvas;
 
     /// <param name="placeAfter">Butonun sahnede hemen arkasına konacağı kardeş (popup'ların altında kalsın diye).</param>
     /// <param name="sitAbove">Dünya bu butonun (GÖREV) üstüne, sağ kenarına hizalı oturur; yoksa alt menünün üstüne.</param>
@@ -83,6 +85,7 @@ public sealed class WorldTourGlobeButton : MonoBehaviour
         }
         self._catalog = catalog;
         self._canvasRoot = canvasRoot;
+        self._placementCanvas = canvasRoot.GetComponent<Canvas>();
         self._bottomBar = bottomBar;
         self._sitAbove = sitAbove;
         self.Place();
@@ -124,27 +127,60 @@ public sealed class WorldTourGlobeButton : MonoBehaviour
         if (_plane != null) PosePlane(PlaneParkDeg);   // kapanırken yarım kalan turun katman sırası burada düzelir
     }
 
+    // Follow late layout/entrance animation and device safe-area changes without forcing a canvas rebuild.
+    private void LateUpdate()
+    {
+        if (_canvasRoot != null) Place();
+    }
+
     // Konum gerçek buton köşelerinden hesaplanır (canvas birimi, sağ-alt çapaya göre).
     private void Place()
     {
         var rt = (RectTransform)transform;
-        Canvas.ForceUpdateCanvases();
-        var corners = new Vector3[4];
+        var corners = _placementCorners;
+        Vector2 position;
         Rect canvasRect = _canvasRoot.rect;
         if (_sitAbove != null && _sitAbove.gameObject.activeInHierarchy)
         {
             _sitAbove.GetWorldCorners(corners);   // 1 = sol-üst, 2 = sağ-üst
             Vector3 topRight = _canvasRoot.InverseTransformPoint(corners[2]);
-            rt.anchoredPosition = new Vector2(topRight.x - canvasRect.xMax, topRight.y - canvasRect.yMin + Margin);
-            return;
+            position = new Vector2(topRight.x, topRight.y + Margin);
         }
-        float barTop = 260f;
-        if (_bottomBar != null)
+        else
         {
-            _bottomBar.GetWorldCorners(corners);
-            barTop = _canvasRoot.InverseTransformPoint(corners[1]).y - canvasRect.yMin;
+            float barTop = canvasRect.yMin + 260f;
+            if (_bottomBar != null)
+            {
+                _bottomBar.GetWorldCorners(corners);
+                barTop = _canvasRoot.InverseTransformPoint(corners[1]).y;
+            }
+            position = new Vector2(canvasRect.xMax - Margin, barTop + Margin);
         }
-        rt.anchoredPosition = new Vector2(-Margin, Mathf.Max(0f, barTop) + Margin);
+
+        // Root canvas can extend past the visible viewport on tall phones.
+        // Convert physical safe-area corners to the SAME local space as the button anchors.
+        var camera = _placementCanvas != null && _placementCanvas.renderMode != RenderMode.ScreenSpaceOverlay
+            ? _placementCanvas.worldCamera : null;
+        Rect safe = Screen.safeArea;
+        if (safe.width > 0f && safe.height > 0f
+            && RectTransformUtility.ScreenPointToLocalPointInRectangle(_canvasRoot, safe.min, camera, out var safeMin)
+            && RectTransformUtility.ScreenPointToLocalPointInRectangle(_canvasRoot, safe.max, camera, out var safeMax))
+        {
+            // Include the rotated plane's full orbit and the icon's tap scale.
+            float overhang = _plane != null
+                ? Size * Mathf.Max(0.075f, OrbitRx + PlaneSize * 0.707107f - 0.5f)
+                : Size * 0.075f;
+            float inset = Margin + overhang;
+            float minX = safeMin.x + inset + Size;
+            float maxX = safeMax.x - inset;
+            float minY = safeMin.y + inset;
+            float maxY = safeMax.y - inset - Size;
+            position.x = minX <= maxX ? Mathf.Clamp(position.x, minX, maxX) : (minX + maxX) * 0.5f;
+            position.y = minY <= maxY ? Mathf.Clamp(position.y, minY, maxY) : (minY + maxY) * 0.5f;
+        }
+        Vector2 anchored = position - new Vector2(canvasRect.xMax, canvasRect.yMin);
+        if ((rt.anchoredPosition - anchored).sqrMagnitude > 0.001f)
+            rt.anchoredPosition = anchored;
     }
 
     // Bir tur: park noktasından başlar, hızlı çıkar, yavaşlayarak park noktasına döner (küreyle aynı süre).
