@@ -51,6 +51,9 @@ public class PulsePulseExplosionVfx : MonoBehaviour
     [SerializeField, Range(0f, 1f)] private float haloMaxAlpha = 0.8f;
     [SerializeField] private float haloSpinSpeed = 40f;
     [SerializeField] private Color haloColor = new Color(1f, 0.86f, 0.45f, 1f);
+    [Tooltip("Işınların arkasındaki YUVARLAK sıcak parıltının opaklığı (hale opaklığına oranla). " +
+             "2026-11-22 kullanıcı: 0.45 fazla → 0.25.")]
+    [SerializeField, Range(0f, 1f)] private float haloGlowAlpha = 0.25f;
 
     [Header("Charge — Tingle (karıncalanma katmanı)")]
     [Tooltip("Elektrik kıvılcımı döngü kareleri (saydam, yalnız kıvılcım). Bombanın üstünde döngüde oynar, " +
@@ -463,7 +466,7 @@ public class PulsePulseExplosionVfx : MonoBehaviour
             if (glow != null)
             {
                 glow.rectTransform.localScale = Vector3.one * s;
-                glow.color = new Color(haloColor.r, haloColor.g * 0.9f, haloColor.b * 0.6f, a * 0.45f);
+                glow.color = new Color(haloColor.r, haloColor.g * 0.9f, haloColor.b * 0.6f, a * haloGlowAlpha);
             }
             yield return null;
         }
