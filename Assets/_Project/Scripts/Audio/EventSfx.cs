@@ -75,7 +75,7 @@ public static class EventSfx
 
     // BoardAudioDirector borrows the existing central voice pool for owned clip loops.
     // Loop voices are protected from one-shot stealing; no obstacle creates AudioSources.
-    public static Handle PlayTrackedClip(AudioClip clip, float volume, bool loop)
+    public static Handle PlayTrackedClip(AudioClip clip, float volume, bool loop, float pitch = 1f)
     {
         if (clip == null || !GameSettings.SoundEnabled) return default;
         Ensure();
@@ -83,13 +83,20 @@ public static class EventSfx
         if (i < 0) return default;
         var src = s_pool[i]; int token = ++s_tokens[i];
         src.Stop(); src.clip = clip; src.loop = loop; src.volume = Mathf.Clamp01(volume);
-        src.pitch = 1f; src.mute = !GameSettings.SoundEnabled; src.Play();
+        src.pitch = Mathf.Clamp(pitch, 0.1f, 3f); src.mute = !GameSettings.SoundEnabled; src.Play();
         return new Handle(i, token);
     }
 
     public static bool IsPlaying(Handle handle) => handle.Token != 0 && s_pool != null
         && handle.Index >= 0 && handle.Index < s_pool.Length && s_tokens[handle.Index] == handle.Token
         && s_pool[handle.Index] != null && s_pool[handle.Index].isPlaying;
+
+    public static void SetVolume(Handle handle, float volume)
+    {
+        if (handle.Token == 0 || s_pool == null || handle.Index < 0 || handle.Index >= s_pool.Length
+            || s_tokens[handle.Index] != handle.Token || s_pool[handle.Index] == null) return;
+        s_pool[handle.Index].volume = Mathf.Clamp01(volume);
+    }
 
     public static void Stop(Handle handle)
     {

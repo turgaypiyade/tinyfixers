@@ -20,19 +20,20 @@ public sealed class WorldTourMap : MonoBehaviour
     private const float PinAspect = 906f / 716f;   // Pin_Locked/Pin_Open görsel oranı
     private const float DotSpacing = 34f;
 
-    // Normalize harita konumları (sol-alt 0,0) — Resources/WorldTour/WorldMap.png'ye göre (2026-11-18).
+    // Normalize harita konumları (sol-alt 0,0) — Resources/WorldTour/WorldMap.png'ye göre (2026-11-22 yeni stilize
+    // harita: Avrupa büyük çizilmiş; konumlar görselden okundu, eskisi Docs/Degisenler/2026-11-22/WorldTour/).
     private static readonly Dictionary<string, Vector2> Spots = new Dictionary<string, Vector2>
     {
-        { "mis9",  new Vector2(0.383f, 0.825f) },   // Big Ben — Londra
-        { "mis3",  new Vector2(0.362f, 0.745f) },   // Eyfel — Paris
-        { "mis1",  new Vector2(0.420f, 0.632f) },   // Pisa
-        { "mis8",  new Vector2(0.556f, 0.532f) },   // Rodos
-        { "mis7",  new Vector2(0.598f, 0.650f) },   // Ayasofya — İstanbul
-        { "mis4",  new Vector2(0.540f, 0.405f) },   // Piramit — Nil
-        { "mis5",  new Vector2(0.850f, 0.680f) },   // Çin Seddi
-        { "mis2",  new Vector2(0.040f, 0.668f) },   // Golden Gate
-        { "mis6",  new Vector2(0.098f, 0.700f) },   // Büyük Kanyon
-        { "mis10", new Vector2(0.909f, 0.185f) },   // Sidney
+        { "mis9",  new Vector2(0.392f, 0.808f) },   // Big Ben — Londra
+        { "mis3",  new Vector2(0.312f, 0.745f) },   // Eyfel — Paris
+        { "mis1",  new Vector2(0.428f, 0.628f) },   // Pisa
+        { "mis8",  new Vector2(0.585f, 0.478f) },   // Rodos
+        { "mis7",  new Vector2(0.592f, 0.655f) },   // Ayasofya — İstanbul
+        { "mis4",  new Vector2(0.553f, 0.405f) },   // Piramit — Nil deltası
+        { "mis5",  new Vector2(0.845f, 0.715f) },   // Çin Seddi
+        { "mis2",  new Vector2(0.035f, 0.680f) },   // Golden Gate
+        { "mis6",  new Vector2(0.078f, 0.655f) },   // Büyük Kanyon
+        { "mis10", new Vector2(0.905f, 0.190f) },   // Sidney
     };
 
     public static bool HasArt => Resources.Load<Sprite>(ArtPath + "WorldMap") != null;
@@ -226,8 +227,7 @@ public sealed class WorldTourMap : MonoBehaviour
             button.onClick.AddListener(() =>
             {
                 // Şehir görseli varsa şehir gezisi (rozetten yakınlaşır), yoksa harikanın büyük görünümü.
-                if (CityTourView.HasArt(_catalog.Get(captured))) CityTourView.Show(_catalog, captured, badgeRt);
-                else WorldTourWonderView.Show(_catalog, captured);
+                if (!CityTourView.Show(_catalog, captured, badgeRt)) WorldTourWonderView.Show(_catalog, captured);
             });
         }
         return badge;

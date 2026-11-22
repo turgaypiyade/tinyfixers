@@ -911,12 +911,25 @@ public sealed class RisingMapScreen : SafariMapScreenBase
         EventSfx.Play(x => x.confetti);
         yield return rewardView.Present(share, prizePool, winners, finalGoldMoneySprite,
             rewardRibbonSprite, rewardButtonSprite, continueLabel != null ? continueLabel.font : null,
-            rewardCollectSfx, motionSfxGroup, rewardCountDuration, rewardEventLabelMaterial);
-        if (claim)
-            controller?.ClaimFinalReward(share, winners);
+            rewardCollectSfx, motionSfxGroup, rewardCountDuration, rewardEventLabelMaterial,
+            crowdStack != null ? crowdStack.PlayerAvatar : null);
+        bool granted = false;
+        if (claim && controller != null && !controller.FinalRewardClaimed)
+        {
+            int before = PlayerWallet.Coins;
+            controller.ClaimFinalReward(share, winners);
+            int after = PlayerWallet.Coins;
+            // Altınlar ana menüde cüzdana uçarak toplanır (ortak CoinFlyToWalletAnimator akışı).
+            if (after > before)
+            {
+                CoinFlyToWalletAnimator.QueuePendingReward(after - before, before, after);
+                granted = true;
+            }
+        }
         Destroy(rewardView.gameObject);
         rewardView = null;
         Hide();
+        if (granted) CoinFlyToWalletAnimator.PlayPendingNow();
     }
 
     /// Editör önizlemesi (TinyFixers ▸ Debug): kazanma ekranını ÖDÜL VERMEDEN ve Safari durumuna

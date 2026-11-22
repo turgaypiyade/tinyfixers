@@ -623,6 +623,17 @@ public sealed class PulseFuseSparkleView : MonoBehaviour
         }
     }
 
+    public void StopExternalFuse(RectTransform target)
+    {
+        if (target == null) return;
+        if (externalFuseTarget == target)
+        {
+            StopRoutine(ref externalFuseRoutine);
+            externalFuseTarget = null;
+        }
+        ClearSparks(target);
+    }
+
     private IEnumerator CoExternalFuse(RectTransform target, float sizeScale, float intensity, float duration, MonoBehaviour coroutineOwner)
     {
         Vector2 offset = fuseLocalOffset * sizeScale;

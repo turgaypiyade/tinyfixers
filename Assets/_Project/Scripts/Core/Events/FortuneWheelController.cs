@@ -120,6 +120,9 @@ public class FortuneWheelController : MonoBehaviour
 
     private DailySlotReward selectedReward;
     private DailySlotRewardConfig activeSpinConfig;
+    // Dilimlerin çizildiği liste. Reklamlı çevirme bedava listesini kullanır ama panel bedava hak yokken ücretli listeyle
+    // açılıyordu → çark ücretli dilimde durup bedava listeden ödül veriyordu (kullanıcı 2026-11-21). Çevirmede eşitlenir.
+    private DailySlotRewardConfig displayedConfig;
     private int selectedIndex;
     private bool isSpinning;
     private bool rewardClaimed;
@@ -413,10 +416,11 @@ public class FortuneWheelController : MonoBehaviour
 
     // ── Icon Placement ───────────────────────────────────────────────────────
 
-    private void PlaceIcons()
+    private void PlaceIcons(DailySlotRewardConfig config = null)
     {
         if (innerWheel == null) return;
-        var config = GetDisplayConfig();
+        config ??= GetDisplayConfig();
+        displayedConfig = config;
         if (config == null)
         {
             if (GameDiagnostics.CriticalErrors)
@@ -424,8 +428,13 @@ public class FortuneWheelController : MonoBehaviour
             return;
         }
 
+        // Önce ayır: Destroy kare sonunda çalışır, aynı karede yeniden çizilen dilimlerin indeksi kaymasın.
         for (int i = innerWheel.childCount - 1; i >= 0; i--)
-            Destroy(innerWheel.GetChild(i).gameObject);
+        {
+            var old = innerWheel.GetChild(i);
+            old.SetParent(null, false);
+            Destroy(old.gameObject);
+        }
         // Önceki kazanmada çerçevenin üstüne taşınan dilim çarkın dışında kaldı: o da gitsin.
         if (liftedWinner != null) Destroy(liftedWinner.gameObject);
         liftedWinner = null;
@@ -575,6 +584,9 @@ public class FortuneWheelController : MonoBehaviour
             }
             activeSpinConfig = config;
         }
+
+        // Kazanan dilim ekrandaki dilimle aynı listeden olmalı.
+        if (activeSpinConfig != displayedConfig) PlaceIcons(activeSpinConfig);
 
         int count = Mathf.Min(activeSpinConfig.rewards.Count, 8);
         selectedIndex = PickRandomIndex(count, activeSpinConfig);

@@ -456,6 +456,8 @@ public class LevelEndSimplePopupController : MonoBehaviour
         lastDisplayedOfferAmount = -1;
 
         ResolveSerializedReferences();
+        if (levelCompletionLogoAnimation != null)
+            levelCompletionLogoAnimation.Prewarm();   // havai fisek havuzu + dokular simdi (yukleme ekrani arkasinda)
         ApplyChapterThemeVisuals();
         HideAllPopups();
         RegisterButtonListeners();
@@ -2135,7 +2137,9 @@ public class LevelEndSimplePopupController : MonoBehaviour
         rt.SetAsLastSibling();
         failAdButton.SetVisible(show);
         if (show) failAdButton.SetRibbonText(LocalizedFormat("ad_continue_ribbon", "+{0} HAMLE", LevelAdRight.NextAdMoves));
-        if (show && !failAdOfferNoted)
+        // Teklif yalnız fail popup'ı gerçekten açıkken sayılır: level açılışında gizli popup da bu yoldan hazırlanıyordu
+        // ve her level_start'a sahte bir ad_offer ekliyordu (izlenme oranı ad_reward/ad_offer bozuluyordu).
+        if (show && failPopupShown && !failAdOfferNoted)
         {
             failAdOfferNoted = true;
             RewardedAdCaps.NoteOffer(AdPlacement.Continue);

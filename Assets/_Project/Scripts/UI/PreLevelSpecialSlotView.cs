@@ -106,8 +106,15 @@ public class PreLevelSpecialSlotView : MonoBehaviour
         if (timedCountdownText == null) return;
         if (!TimedRewardService.IsSpecialFree(special)) return;
 
-        timedCountdownText.text = FormatTimeSpan(GetTimedRemaining());
+        // Metin yalnız gösterilen saniye değişince yeniden üretilir (her karede string/TMP yeniden kurulumu yok).
+        var remaining = GetTimedRemaining();
+        long key = remaining > System.TimeSpan.Zero ? (long)System.Math.Ceiling(remaining.TotalSeconds) : 0;
+        if (key == lastCountdownKey) return;
+        lastCountdownKey = key;
+        timedCountdownText.text = FormatTimeSpan(remaining);
     }
+
+    private long lastCountdownKey = -1;
 
     public void Configure(TileSpecial slotSpecial, Sprite icon, ChapterTheme chapterTheme, bool unlocked = true, bool freeSession = false)
     {
@@ -315,6 +322,7 @@ public class PreLevelSpecialSlotView : MonoBehaviour
 
     private void RefreshLocalizedTexts()
     {
+        lastCountdownKey = -1;   // dil değişti: sayaç metni yeni dilde yeniden kurulsun
         if (nameText != null && !string.IsNullOrEmpty(nameLocalizationKey))
             nameText.text = GameLocalization.Get(nameLocalizationKey);
 

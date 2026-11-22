@@ -19,7 +19,8 @@ public enum BoardSfxCue
     ObstacleHit,
     ObstacleBreak,
     Swap,
-    InvalidSwap
+    InvalidSwap,
+    PulsePulseChargeUp   // şarj animasyonu boyunca (1.9 sn) yükselen ses; patlama sesi PulsePulseCharge'ta kalır
 }
 
 public struct BoardSfxRequest
@@ -145,6 +146,9 @@ public struct BoardSfxRequest
             priority: 90,
             duckFalls: true);
     }
+
+    public static BoardSfxRequest PulsePulseChargeUp(float delay = 0f)
+        => new BoardSfxRequest(BoardSfxCue.PulsePulseChargeUp, TileSpecial.PulseCore, 1, 3, delay, priority: 90, duckFalls: false);
 
     public static BoardSfxRequest ComboLineLine(float delay = 0f)
         => new BoardSfxRequest(BoardSfxCue.ComboLineLine,       TileSpecial.None,             1, 2, delay, 85, true);

@@ -83,7 +83,7 @@ public sealed class RegionUnlockItem : MonoBehaviour
     /// wonderEventIndex: satırın ait olduğu event; tıklanınca o event'in görevi yapılır.
     /// </summary>
     public void BindTask(string displayName, Sprite icon, int starCost, RegionUnlockListPanel panel,
-                         bool isActive, int wonderEventIndex = -1)
+                         bool isActive, int wonderEventIndex = -1, bool affordable = true)
     {
         this.region = null;
         this.panel = panel;
@@ -97,13 +97,13 @@ public sealed class RegionUnlockItem : MonoBehaviour
         }
         SetTaskLabels(displayName, starCost);
         if (canvasGroup != null) canvasGroup.alpha = 1f;
-        RefreshActiveState(isActive);
+        RefreshActiveState(isActive, affordable);
     }
 
     /// <summary>İkon = harika imajının reveal shader'ıyla 'reveal' kadar açılmış mini önizlemesi.</summary>
     public void BindTaskRevealIcon(string displayName, Sprite wonderSprite, float reveal,
                                    int starCost, RegionUnlockListPanel panel, bool isActive,
-                                   int wonderEventIndex = -1)
+                                   int wonderEventIndex = -1, bool affordable = true)
     {
         this.region = null;
         this.panel = panel;
@@ -127,7 +127,7 @@ public sealed class RegionUnlockItem : MonoBehaviour
         }
         SetTaskLabels(displayName, starCost);
         if (canvasGroup != null) canvasGroup.alpha = 1f;
-        RefreshActiveState(isActive);
+        RefreshActiveState(isActive, affordable);
     }
 
     private void SetTaskLabels(string displayName, int starCost)
@@ -181,7 +181,9 @@ public sealed class RegionUnlockItem : MonoBehaviour
         if (_iconRevealMat != null) Destroy(_iconRevealMat);
     }
 
-    public void RefreshActiveState(bool isActive)
+    /// <param name="affordable">false: sıradaki görev ama yıldız yetmiyor → buton pasif görünür (gri, nabızsız, tıklanmaz).
+    /// Kullanıcı 2026-11-22: "yıldız yokken mavi buton varmış gibi duruyor".</param>
+    public void RefreshActiveState(bool isActive, bool affordable = true)
     {
         if (activeHighlight != null) activeHighlight.SetActive(isActive);
         if (lockedOverlay   != null) lockedOverlay.SetActive(!isActive);
@@ -194,15 +196,20 @@ public sealed class RegionUnlockItem : MonoBehaviour
         {
             if (pulseRoutine != null) { StopCoroutine(pulseRoutine); pulseRoutine = null; }
             button.transform.localScale = Vector3.one;
-            if (isActive && isActiveAndEnabled)
+            if (isActive && affordable && isActiveAndEnabled)
                 pulseRoutine = StartCoroutine(PulseButton(button.transform));
         }
 
         if (button != null)
         {
-            button.interactable = isActive;
+            bool usable = isActive && affordable;
+            button.interactable = usable;
+            // Buton tint'i yalnız arka planı griler; üstündeki yıldız/sayı/yazı da sönsün.
+            var group = button.GetComponent<CanvasGroup>();
+            if (group == null && !usable && isActive) group = button.gameObject.AddComponent<CanvasGroup>();
+            if (group != null) group.alpha = isActive && !affordable ? 0.6f : 1f;
             button.onClick.RemoveAllListeners();
-            if (isActive && panel != null)
+            if (usable && panel != null)
             {
                 if (wonderEventIndex >= 0)
                 {

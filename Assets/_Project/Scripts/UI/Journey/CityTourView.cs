@@ -15,7 +15,7 @@ public sealed class CityTourView : MonoBehaviour
 {
     private const string ArtPath = "WorldTour/City_";
     // Bisikletli ayı (panorama yüksekliğine oranlar; hız ekran genişliği/sn).
-    private const float RiderGroundY = 0.28f, RideSpeed = 0.26f;   // meydanın ortası
+    private const float RideSpeed = 0.26f;   // meydanın ortası
 
     // Perspektif: ayak hizası ufka (HorizonY, alttan oran) yaklaştıkça karakter küçülür.
     // Ayakta bir karakterin boyu = DepthK × (HorizonY − y) (panorama yüksekliğine oran). Meydan arkası (y≈0.36) ≈ 0.06.
@@ -36,7 +36,32 @@ public sealed class CityTourView : MonoBehaviour
     private float _horizonY = HorizonY, _depthK = DepthK;
     private float StandHeight(float groundY) => _depthK * Mathf.Max(0.02f, _horizonY - groundY);
     private const float PedalFrameSec = 0.11f, TurnFrameSec = 0.16f, StartWait = 1.2f;
-    private const float EdgeMargin = 0.07f;      // panorama kenarına bu kadar kala döner
+    // Normalized wheel-contact endpoints, chosen on clear foreground in BOTH art variants.
+    // Endpoints include room for the rider's full width, not just its pivot.
+    private readonly struct RideRoute
+    {
+        public readonly Vector2 Left, Right;
+        public readonly float Scale;
+        public RideRoute(float left, float right, float yLeft, float yRight, float scale)
+        { Left = new Vector2(left, yLeft); Right = new Vector2(right, yRight); Scale = scale; }
+    }
+    private static readonly Dictionary<string, RideRoute> CityRoutes = new()
+    {
+        { "mis1", new RideRoute(0.26f, 0.74f, 0.12f, 0.15f, 0.70f) }, // between foreground benches
+        { "mis2", new RideRoute(0.27f, 0.73f, 0.13f, 0.16f, 0.52f) }, // clear of benches and food stalls
+        { "mis3", new RideRoute(0.14f, 0.59f, 0.13f, 0.16f, 0.72f) }, // stop before right bench and tree
+        { "mis4", new RideRoute(0.30f, 0.70f, 0.23f, 0.24f, 0.55f) }, // longer clear lane behind benches, between palm trunks
+        { "mis5", new RideRoute(0.20f, 0.80f, 0.30f, 0.31f, 0.55f) }, // wide paved lane beyond foreground benches
+        { "mis6", new RideRoute(0.29f, 0.71f, 0.07f, 0.10f, 0.58f) }, // wooden deck, ahead of damaged stone/props
+        { "mis7", new RideRoute(0.20f, 0.80f, 0.335f, 0.35f, 0.90f) }, // lane just behind the tram rails (2026-11-21: cafe tables/kiosks added both sides in front)
+        { "mis8", new RideRoute(0.31f, 0.69f, 0.09f, 0.12f, 0.66f) }, // central foreground, away from tree beds
+        { "mis9", new RideRoute(0.32f, 0.68f, 0.11f, 0.14f, 0.64f) }, // central paving between flower beds
+        { "mis10", new RideRoute(0.16f, 0.84f, 0.14f, 0.18f, 0.53f) }, // open paving ahead of cafe and palms
+    };
+    private RideRoute _route;
+    private float _riderAspect;
+    private bool _preview;
+    private bool _introReady, _keepOpeningFact;
     private const float UserHoldSec = 2.5f;      // oyuncu kaydırınca kamera bu kadar bekler, sonra ayıya döner
     private const float RideMin = 2.5f, RideMax = 5f, IdleMin = 1.5f, IdleMax = 2.8f;   // arada durup bekler
 
@@ -93,7 +118,7 @@ public sealed class CityTourView : MonoBehaviour
             {
                 new NpcSpec("Bunny_", 0.28f, 0.40f, 1.05f),
                 new NpcSpec("Ram_", 0.36f, 0.41f, 1.0f),
-                new NpcSpec("Monkey_", 0.70f, 0.41f, 1.3f),
+                new NpcSpec("Monkey_", 0.70f, 0.35f, 1.3f),
             }
         },
         // Big Ben: kafe masaları x .32-.41, telefon kulübesi .23-.26, çiçek tezgâhı .61-.67; meydan arkası alttan ~.395
@@ -189,18 +214,36 @@ public sealed class CityTourView : MonoBehaviour
     private bool _closing;
     private float _panoW, _panoH;
 
-    public static void Show(WonderCatalog catalog, int index, RectTransform fromBadge)
+    /// Şehir görseli yoksa false döner (çağıran harika görünümüne düşer).
+    public static bool Show(WonderCatalog catalog, int index, RectTransform fromBadge)
+        => ShowInternal(catalog, index, fromBadge, null);
+
+#if UNITY_EDITOR
+    public static void ShowPreview(WonderCatalog catalog, int index, bool completed)
+    {
+        if (_instance != null) { DestroyImmediate(_instance.gameObject); _instance = null; }
+        ShowInternal(catalog, index, null, completed);
+    }
+#endif
+
+    private static bool ShowInternal(WonderCatalog catalog, int index, RectTransform fromBadge, bool? previewCompleted)
     {
         var w = catalog != null ? catalog.Get(index) : null;
-        if (w == null || _instance != null || !HasArt(w)) return;
-        bool done = WonderProgress.IsEventComplete(catalog, index);
-        // Tamamlanmış → onarılmış hâl; değilse iskeleli. Biri eksikse diğeri kullanılır.
-        Sprite repaired = Resources.Load<Sprite>(ArtPath + w.wonderId);
-        Sprite site = Resources.Load<Sprite>(ArtPath + w.wonderId + "_Site");
-        Sprite art = done ? (repaired != null ? repaired : site) : (site != null ? site : repaired);
+        if (w == null) return false;
+        if (_instance != null) return true;   // zaten açık
+        bool done = previewCompleted ?? WonderProgress.IsEventComplete(catalog, index);
+        // Tamamlanmış → onarılmış hâl; değilse iskeleli. Yalnız gereken büyük görsel yüklenir;
+        // diğeri sadece o eksikse denenir (iki panorama birden bellekte durmasın).
+        string preferred = ArtPath + w.wonderId + (done ? "" : "_Site");
+        string fallback = ArtPath + w.wonderId + (done ? "_Site" : "");
+        Sprite art = Resources.Load<Sprite>(preferred);
+        if (art == null) art = Resources.Load<Sprite>(fallback);
+        if (art == null) return false;
         var go = new GameObject("CityTourView", typeof(RectTransform));
         _instance = go.AddComponent<CityTourView>();
+        _instance._preview = previewCompleted.HasValue;
         _instance.Build(catalog, index, w, art, fromBadge);
+        return true;
     }
 
     private void OnDestroy()
@@ -265,6 +308,8 @@ public sealed class CityTourView : MonoBehaviour
         _screenW = screenW;
         if (CityDepth.TryGetValue(w.wonderId, out var depth)) { _horizonY = depth.x; _depthK = depth.y; }
         SpawnNpcs(w.wonderId);   // ayıdan önce → ayının arkasında çizilir
+        _route = CityRoutes.TryGetValue(w.wonderId, out var route)
+            ? route : new RideRoute(0.4f, 0.6f, 0.12f, 0.12f, 0.65f);
         SpawnRider(focus);
         BuildBubble(w.wonderId);
         _ambience = Resources.Load<AudioClip>(AmbiencePath);
@@ -285,7 +330,7 @@ public sealed class CityTourView : MonoBehaviour
         TextSurfaceStyle.Apply(title, new Color(0.72f, 0.30f, 0.05f));
         StartCoroutine(TitleLetterPop.Play(title));
 
-        if (!WonderProgress.IsEventComplete(catalog, index)) BuildRepairButton(root);
+        if (!_preview && !WonderProgress.IsEventComplete(catalog, index)) BuildRepairButton(root);
         StartCoroutine(ZoomIn(fromBadge));
     }
 
@@ -342,6 +387,13 @@ public sealed class CityTourView : MonoBehaviour
         root.localScale = Vector3.one;
         root.anchoredPosition = Vector2.zero;
         _group.alpha = 1f;
+        _introReady = true;
+        if (_rider != null && FactsOn)
+        {
+            ShowFact();
+            _keepOpeningFact = true;
+            _stateT = FactIdle;
+        }
     }
 
     private void Close()
@@ -417,7 +469,7 @@ public sealed class CityTourView : MonoBehaviour
         var body = Resources.Load<Sprite>("WorldTour/BubbleBody");
         var tail = Resources.Load<Sprite>("WorldTour/BubbleTail");
         if (_facts.Count == 0 || body == null || tail == null) return;
-        _factIndex = Random.Range(0, _facts.Count);
+        _factIndex = 0;   // Every visit starts with the first sentence, then follows authored order.
 
         _bubble = NewRect("FactBubble", _pano);
         _bubble.anchorMin = _bubble.anchorMax = new Vector2(0f, 0f);
@@ -448,11 +500,18 @@ public sealed class CityTourView : MonoBehaviour
         var font = ResolveBubbleFont();
         if (font != null) _bubbleText.font = font;
         _bubble.gameObject.SetActive(false);
-        BuildFactsToggle();
+        BuildFactsToggle();   // önizlemede de görünür; orada açıp kapatmak kayıtlı ayarı değiştirmez
     }
 
     // Sağ üst "i": bilgileri açar/kapatır (GameSettings.CityFactsEnabled, kalıcı). Kapalıyken soluk.
+    // Editör önizlemesi kayıtlı ayara dokunmaz: yalnız bu ekranlık kopya değişir.
     private Image _factsIcon;
+    private bool? _previewFactsEnabled;
+    private bool FactsEnabled
+    {
+        get => _preview ? (_previewFactsEnabled ??= GameSettings.CityFactsEnabled) : GameSettings.CityFactsEnabled;
+        set { if (_preview) _previewFactsEnabled = value; else GameSettings.CityFactsEnabled = value; }
+    }
 
     private void BuildFactsToggle()
     {
@@ -467,8 +526,8 @@ public sealed class CityTourView : MonoBehaviour
         button.transition = Selectable.Transition.None;
         button.onClick.AddListener(() =>
         {
-            GameSettings.CityFactsEnabled = !GameSettings.CityFactsEnabled;
-            if (!GameSettings.CityFactsEnabled) HideFact();
+            FactsEnabled = !FactsEnabled;
+            if (!FactsEnabled) HideFact();
             RefreshFactsIcon();
         });
         RefreshFactsIcon();
@@ -476,7 +535,7 @@ public sealed class CityTourView : MonoBehaviour
 
     private void RefreshFactsIcon()
     {
-        if (_factsIcon != null) _factsIcon.color = GameSettings.CityFactsEnabled ? Color.white : new Color(1f, 1f, 1f, 0.4f);
+        if (_factsIcon != null) _factsIcon.color = FactsEnabled ? Color.white : new Color(1f, 1f, 1f, 0.4f);
     }
 
     // Yuvarlak kalın okuma fontu: Nunito Black, yoksa Inter ExtraBold/Bold (yüklü olanlar arasından).
@@ -493,7 +552,7 @@ public sealed class CityTourView : MonoBehaviour
         return nunito != null ? nunito : (interXB != null ? interXB : interB);
     }
 
-    private bool FactsOn => _bubble != null && GameSettings.CityFactsEnabled;
+    private bool FactsOn => _bubble != null && FactsEnabled;
 
     private void ShowFact()
     {
@@ -555,14 +614,13 @@ public sealed class CityTourView : MonoBehaviour
         _rider = NewRect("Rider", _pano);
         _rider.anchorMin = _rider.anchorMax = new Vector2(0f, 0f);
         _rider.pivot = new Vector2(0.5f, 0f);   // tekerlek altı
-        float h = _panoH * StandHeight(RiderGroundY);
         var s0 = _rideFrames[0];
-        _rider.sizeDelta = new Vector2(h * s0.rect.width / Mathf.Max(1f, s0.rect.height), h);
+        _riderAspect = s0.rect.width / Mathf.Max(1f, s0.rect.height);
         _riderImg = _rider.gameObject.AddComponent<Image>();
         _riderImg.sprite = s0;
         _riderImg.preserveAspect = true;
         _riderImg.raycastTarget = false;
-        _riderX = Mathf.Clamp(_panoW * startXNorm, _panoW * EdgeMargin, _panoW * (1f - EdgeMargin));
+        _riderX = Mathf.Clamp(_panoW * startXNorm, _panoW * _route.Left.x, _panoW * _route.Right.x);
         _state = RiderState.Wait;
         _stateT = StartWait;
         PlaceRider();
@@ -571,14 +629,18 @@ public sealed class CityTourView : MonoBehaviour
     private void PlaceRider()
     {
         float bob = _state == RiderState.Ride ? Mathf.Abs(Mathf.Sin(_bobT * 9f)) * _panoH * 0.003f : 0f;
-        _rider.anchoredPosition = new Vector2(_riderX, _panoH * RiderGroundY + bob);
+        float along = Mathf.InverseLerp(_route.Left.x, _route.Right.x, _riderX / _panoW);
+        float groundY = Mathf.Lerp(_route.Left.y, _route.Right.y, Mathf.SmoothStep(0f, 1f, along));
+        float height = _panoH * StandHeight(groundY) * _route.Scale;
+        _rider.sizeDelta = new Vector2(height * _riderAspect, height);
+        _rider.anchoredPosition = new Vector2(_riderX, _panoH * groundY + bob);
         // Sürüş kareleri sağa bakar → sola giderken ayna; dönüş kareleri kendi yönünde çizili.
         _rider.localScale = new Vector3(_state == RiderState.Turn || _dir > 0 ? 1f : -1f, 1f, 1f);
     }
 
     private void Update()
     {
-        if (_closing) return;
+        if (_closing || !_introReady) return;
         float dt = Time.unscaledDeltaTime;
         TickNpcs(dt);
         if (_rider == null) return;
@@ -586,7 +648,14 @@ public sealed class CityTourView : MonoBehaviour
         {
             case RiderState.Wait:
                 _stateT -= dt;
-                if (_stateT <= 0f) { HideFact(); _state = RiderState.Ride; _rideLeft = Random.Range(RideMin, RideMax); }
+                if (_stateT <= 0f)
+                {
+                    // The first sentence stays visible through the first leg of the tour.
+                    if (!_keepOpeningFact) HideFact();
+                    _keepOpeningFact = false;
+                    _state = RiderState.Ride;
+                    _rideLeft = Random.Range(RideMin, RideMax);
+                }
                 break;
             case RiderState.Ride:
                 _bobT += dt;
@@ -604,7 +673,7 @@ public sealed class CityTourView : MonoBehaviour
                 _riderX += _dir * RideSpeed * _screenW * dt;
                 _frameT += dt;
                 if (_frameT >= PedalFrameSec) { _frameT = 0f; _frame = (_frame + 1) % _rideFrames.Length; _riderImg.sprite = _rideFrames[_frame]; }
-                float lo = _panoW * EdgeMargin, hi = _panoW * (1f - EdgeMargin);
+                float lo = _panoW * _route.Left.x, hi = _panoW * _route.Right.x;
                 if ((_dir > 0 && _riderX >= hi) || (_dir < 0 && _riderX <= lo))
                 {
                     _riderX = Mathf.Clamp(_riderX, lo, hi);

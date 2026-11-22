@@ -1,5 +1,11 @@
 # Tasarım geri bildirimi
 
+## Erken reklam mekanikleri için görsel yön — kullanıcı · 2026-11-20
+
+Kaynak: “ilk levellarda kare gibi gidiyor, ama kare olanlarda da iç şekili birşeye benzetiyoruz”; “sinekte elma ... tamamen adacık şeklinde ... taşların ona ulaşmasına gerek yok”; “su kanalında mutlaka boardun alt kenarında bitsin”; “kuş evi minimum 2x3 ... ya da kenarlarda L”. Kapsam: yedekli yeniden tasarım yalnız V1 4/13/16. Bunlar açık tasarım gereksinimleridir; yeni taslaklar için beğeni/onay değildir.
+
+Uygulanan agent yorumları:4 S dere iç şekli;13 ev silueti ve kapı biçimli2×3 grup;16 bahçe tacı + iki izole meyve adası. Statik erişim/footprint ve sprite incelemesi var, oynanış ölçümü yok. Öğreticinin aktif yolu sahne bağlantısından doğrulandı: sabit level adımları; eski TutorialManager kapalı. Yalnız dosya içindeki bir sınıfa bakarak aktif akış varsayma. Ayrıntı/yedek/PNG: `Batches/Early-Ad-Mechanics-004-013-016/`.
+
 ## 235 — yeniden düşünme ve katmanlı yapı isteği · kullanıcı · 2026-11-07
 
 **Kaynak:** “şimdi 235 üzerinde çok düşünerek değerlendir. katmanlı yapı kullanabilirsin”. Bu tur yalnız235 ele alındı; BatteryBox/Omega geçici kullanım dışı tercihi sürer.

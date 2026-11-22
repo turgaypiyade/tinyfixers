@@ -21,10 +21,33 @@ using Firebase.Analytics;
 /// </summary>
 public static class GameAnalytics
 {
+    // Test builds must neither send production events nor consume production one-shot flags.
+    private static bool ProductionAnalyticsEnabled
+    {
+        get
+        {
+#if TF_FIREBASE_ANALYTICS
+            return !Application.isEditor && !Debug.isDebugBuild && !RuntimeSimulationSession.IsActive;
+#else
+            return false;
+#endif
+        }
+    }
+
+    // Called only after Firebase dependency checks and DefaultInstance initialization.
+    // Re-enable on a release build too: Firebase persists this setting across launches.
+    internal static void ConfigureCollection()
+    {
+#if TF_FIREBASE_ANALYTICS
+        FirebaseAnalytics.SetAnalyticsCollectionEnabled(ProductionAnalyticsEnabled);
+#endif
+    }
+
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void Bootstrap()
     {
-        if (RuntimeSimulationSession.IsActive) return;
+        if (!ProductionAnalyticsEnabled) return;
+        EnsureOnboardingHook(); // Replay persisted steps even if no new step occurs this session.
         LevelAttemptStats.OnAttemptStarted += (level, attempt) =>
         {
             SetCurrentLevel(level);
@@ -44,6 +67,7 @@ public static class GameAnalytics
                 ("continue_coins", r.ContinueCoinsSpent), ("ad_continues", r.AdContinues),
                 ("measurement_version", 2), ("ram_gb", RamGb), ("is_development", Debug.isDebugBuild ? 1 : 0));
             if (r.Won) SetCurrentLevel(r.Level + 1);
+            if (r.Won) LogLevel3Won(r.Level);
         };
         // Level yarıdayken uygulama arka plana gitti/kapandı. Ardından level_end gelmiyorsa oyuncu orada bıraktı.
         LevelAttemptStats.OnAttemptPaused += (level, attempt, seconds, movesUsed, movesTotal) =>
@@ -60,9 +84,23 @@ public static class GameAnalytics
     // yeniden kurulum = yeni kurulum. 1.0.9 yayılınca GA4 > Etkinlik oluştur'daki eski oyuna_basladi kuralı silinmeli.
     private const string KeyGameStartLogged = "ga_oyuna_basladi_logged";
 
+    // ── Google Ads dönüşümü (2026-11-21): kurulum başına bir kez L3 kazanıldı → "seviye3_kazanildi". oyuna_basladi
+    // L1'e başlayıp bırakanları da sayıyordu (20 Kas: silenlerin yarısı L1'i yarıda bıraktı); kampanya bunu hedefler.
+    // Bayrak cihaz yerelidir (cloud save'e girmez); Usta Ligi seviyeleri sayılmaz.
+    private const string KeyLevel3WonLogged = "ga_seviye3_kazanildi_logged";
+
+    private static void LogLevel3Won(int level)
+    {
+        if (!ProductionAnalyticsEnabled) return;
+        if (level != 3 || MasterLeague.IsPlaying || PlayerPrefs.GetInt(KeyLevel3WonLogged, 0) == 1) return;
+        PlayerPrefs.SetInt(KeyLevel3WonLogged, 1);
+        PlayerPrefs.Save();
+        Log("seviye3_kazanildi", ("ram_gb", RamGb), ("is_development", Debug.isDebugBuild ? 1 : 0));
+    }
+
     private static void LogFirstGameStart(int level, int attempt)
     {
-        if (RuntimeSimulationSession.IsActive) return;
+        if (!ProductionAnalyticsEnabled) return;
         if (PlayerPrefs.GetInt(KeyGameStartLogged, 0) == 1) return;
         // Eski kurulumlarda bu yeni bayrak yok. İlk levelin ilk denemesi dışındaki
         // başlangıçları işaretle ama yeni oyuncu dönüşümü olarak gönderme.
@@ -93,7 +131,7 @@ public static class GameAnalytics
 
     private static void SetDeviceProperties()
     {
-        if (RuntimeSimulationSession.IsActive) return;
+        if (!ProductionAnalyticsEnabled) return;
 #if TF_FIREBASE_ANALYTICS
         FirebaseAnalytics.SetUserProperty("device_ram_gb", RamGb.ToString());
         FirebaseAnalytics.SetUserProperty("device_tier", DeviceTier);
@@ -108,36 +146,57 @@ public static class GameAnalytics
     // ── İlk açılış hunisi (kullanıcı 2026-11-14: first_open 144, level_start 72 → yarısı level 1'e başlamadan
     // kayboluyor; hangi ekranda?) Her adım cihaz başına BİR KEZ gönderilir: 1 açıldı · 2 yükleme bitti · 3 kabul kutusu
     // · 4 kabul edildi · 5 ana menü · 6 seviye penceresi · 7 oyun tahtası. seconds = uygulama açılışından beri süre.
-    // Firebase hazır olana dek bellekte bekler (açılışın ilk saniyeleri).
+    // Firebase hazır olana dek cihazda kalır. SDK'ya teslim edilince kuyruktan çıkarılır.
     private const string OnboardingKey = "onboarding_step_sent";
-    private static readonly System.Collections.Generic.List<(int step, long seconds)> pendingSteps = new();
+    private const string OnboardingPendingPrefix = "onboarding_pending_step_v1_";
+    private const int LastOnboardingStep = 7;
     private static bool onboardingHooked;
 
     public static void OnboardingStep(int step)
     {
-        if (RuntimeSimulationSession.IsActive || step <= PlayerPrefs.GetInt(OnboardingKey, 0)) return;
-        PlayerPrefs.SetInt(OnboardingKey, step);
-        PlayerPrefs.Save();
-        pendingSteps.Add((step, (long)Time.realtimeSinceStartup));
+        if (!ProductionAnalyticsEnabled || step < 1 || step > LastOnboardingStep) return;
+        if (step > PlayerPrefs.GetInt(OnboardingKey, 0))
+        {
+            // Persist event and watermark together; old installations retain their existing watermark.
+            // Never reconstruct missing historical steps: their occurrence/time is unknown.
+            PlayerPrefs.SetString(OnboardingPendingPrefix + step,
+                ((long)Time.realtimeSinceStartup).ToString(System.Globalization.CultureInfo.InvariantCulture));
+            PlayerPrefs.SetInt(OnboardingKey, step);
+            PlayerPrefs.Save();
+        }
+        EnsureOnboardingHook();
+        if (FirebaseAuthService.IsReady) FlushOnboarding();
+    }
+
+    private static void EnsureOnboardingHook()
+    {
         if (!onboardingHooked)
         {
             onboardingHooked = true;
             FirebaseAuthService.OnReady += FlushOnboarding;   // hazırsa hemen çağrılır
         }
-        else if (FirebaseAuthService.IsReady) FlushOnboarding();
     }
 
     private static void FlushOnboarding()
     {
-        for (int i = 0; i < pendingSteps.Count; i++)
-            Log("onboarding_step", ("step", pendingSteps[i].step), ("seconds", pendingSteps[i].seconds),
-                ("ram_gb", RamGb), ("cores", SystemInfo.processorCount),
-                ("is_development", Debug.isDebugBuild ? 1 : 0));
-        pendingSteps.Clear();
+        if (!ProductionAnalyticsEnabled || !FirebaseAuthService.IsReady) return;
+        for (int step = 1; step <= LastOnboardingStep; step++)
+        {
+            string key = OnboardingPendingPrefix + step;
+            if (!PlayerPrefs.HasKey(key)) continue;
+            if (!long.TryParse(PlayerPrefs.GetString(key), System.Globalization.NumberStyles.Integer,
+                    System.Globalization.CultureInfo.InvariantCulture, out long seconds)) continue;
+            if (!Log("onboarding_step", ("step", step), ("seconds", seconds),
+                    ("ram_gb", RamGb), ("cores", SystemInfo.processorCount), ("is_development", 0)))
+                return; // SDK unavailable/failed: keep this and subsequent records for retry.
+            PlayerPrefs.DeleteKey(key);
+            PlayerPrefs.Save();
+        }
     }
 
     private static void SetCurrentLevel(int level)
     {
+        if (!ProductionAnalyticsEnabled) return;
         if (MasterLeague.IsPlaying) return;   // kullanıcı özelliği ana yol ilerlemesidir; lig seviyesi yazılmaz
 #if TF_FIREBASE_ANALYTICS
         FirebaseAnalytics.SetUserProperty("current_level", LevelText(level));
@@ -147,7 +206,7 @@ public static class GameAnalytics
     /// Yeni oyuncunun başladığı harika + ülkesi (yerel başlangıcın tutunmaya etkisi ölçülsün).
     public static void SetStartWonder(string wonderId, string country)
     {
-        if (RuntimeSimulationSession.IsActive) return;
+        if (!ProductionAnalyticsEnabled) return;
 #if TF_FIREBASE_ANALYTICS
         FirebaseAnalytics.SetUserProperty("start_wonder", wonderId);
         FirebaseAnalytics.SetUserProperty("device_country", country);
@@ -161,9 +220,9 @@ public static class GameAnalytics
         Log(eventName, parameters);
     }
 
-    private static void Log(string eventName, params (string name, long value)[] parameters)
+    private static bool Log(string eventName, params (string name, long value)[] parameters)
     {
-        if (RuntimeSimulationSession.IsActive) return;
+        if (!ProductionAnalyticsEnabled) return false;
 #if TF_FIREBASE_ANALYTICS
         parameters ??= System.Array.Empty<(string name, long value)>();
         bool isLevelEvent = eventName == "level_start" || eventName == "level_end" || eventName == "level_pause";
@@ -191,7 +250,11 @@ public static class GameAnalytics
                 ? new Parameter(item.name, item.value.ToString(System.Globalization.CultureInfo.InvariantCulture))
                 : new Parameter(item.name, item.value);
         }
-        FirebaseAnalytics.LogEvent(eventName, p);
+        try { FirebaseAnalytics.LogEvent(eventName, p); }
+        catch (System.Exception)
+        {
+            return false; // Durable callers retain their queue until a later SDK handoff.
+        }
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         if (isLevelEvent) LogLevelPayload(eventName, levelText, parameters);
 #endif
@@ -202,6 +265,7 @@ public static class GameAnalytics
                 Debug.LogWarning($"[Analytics] event={eventName} gönderilmedi: TF_FIREBASE_ANALYTICS sembolü bu platformda kapalı.");
         }
 #endif
+        return ProductionAnalyticsEnabled;
     }
 
     // GA4 boyutları metindir ve metin olarak sıralanır ("100" < "35"). Sıfır dolgulu 6 hane

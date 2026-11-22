@@ -21,6 +21,12 @@
       "nameEn": "Colorful Start"
     },
     {
+      "level": 4,
+      "levelKey": "LevelCL_004",
+      "name": "Kıvrımlı Dere",
+      "nameEn": "Winding Stream"
+    },
+    {
       "level": 5,
       "levelKey": "LevelCL_005",
       "name": "Ahşap Basamaklar",
@@ -149,14 +155,14 @@
     {
       "level": 27,
       "levelKey": "LevelCL_027",
-      "name": "Dört Renkli Depo",
-      "nameEn": "Four-Color Depot"
+      "name": "Kaygan Depo",
+      "nameEn": "Slick Warehouse"
     },
     {
       "level": 28,
       "levelKey": "LevelCL_028",
-      "name": "Kaygan Depo",
-      "nameEn": "Slick Warehouse"
+      "name": "Altın Kese",
+      "nameEn": "Gold Pouch"
     },
     {
       "level": 29,
@@ -173,8 +179,8 @@
     {
       "level": 31,
       "levelKey": "LevelCL_031",
-      "name": "Şapkalı Atölye",
-      "nameEn": "Hat Workshop"
+      "name": "Çekiçli Atölye",
+      "nameEn": "Hammer Workshop"
     },
     {
       "level": 32,
@@ -185,8 +191,8 @@
     {
       "level": 33,
       "levelKey": "LevelCL_033",
-      "name": "Çamurlu Enerji",
-      "nameEn": "Muddy Energy"
+      "name": "Çamurlu Çekiçler",
+      "nameEn": "Muddy Hammers"
     },
     {
       "level": 34,
@@ -197,8 +203,8 @@
     {
       "level": 35,
       "levelKey": "LevelCL_035",
-      "name": "Enerji Şöleni",
-      "nameEn": "Energy Feast"
+      "name": "Çekiç Şöleni",
+      "nameEn": "Hammer Feast"
     },
     {
       "level": 36,
@@ -227,20 +233,20 @@
     {
       "level": 40,
       "levelKey": "LevelCL_040",
-      "name": "Enerji Düellosu",
-      "nameEn": "Energy Duel"
+      "name": "Çekiç Düellosu",
+      "nameEn": "Hammer Duel"
     },
     {
       "level": 41,
       "levelKey": "LevelCL_041",
-      "name": "Boru Hattı",
-      "nameEn": "Pipeline"
+      "name": "Sütunu Yık",
+      "nameEn": "Topple the Column"
     },
     {
       "level": 42,
       "levelKey": "LevelCL_042",
-      "name": "Sandıklı Tesisat",
-      "nameEn": "Crated Plumbing"
+      "name": "Sandıklı Sütunlar",
+      "nameEn": "Crated Columns"
     },
     {
       "level": 43,
@@ -257,8 +263,8 @@
     {
       "level": 45,
       "levelKey": "LevelCL_045",
-      "name": "Boru Atölyesi",
-      "nameEn": "Pipe Workshop"
+      "name": "Sütun Atölyesi",
+      "nameEn": "Column Workshop"
     },
     {
       "level": 46,
@@ -305,8 +311,8 @@
     {
       "level": 53,
       "levelKey": "LevelCL_053",
-      "name": "Yüklü Boru Hattı",
-      "nameEn": "Loaded Pipeline"
+      "name": "Kargolu Sütunlar",
+      "nameEn": "Cargo Columns"
     },
     {
       "level": 54,
@@ -317,8 +323,8 @@
     {
       "level": 55,
       "levelKey": "LevelCL_055",
-      "name": "Yüklü Tesisat",
-      "nameEn": "Loaded Plumbing"
+      "name": "Yıkık Sütunlar",
+      "nameEn": "Fallen Columns"
     },
     {
       "level": 56,
@@ -539,8 +545,8 @@
     {
       "level": 92,
       "levelKey": "LevelCL_092",
-      "name": "Şapka Şeritleri",
-      "nameEn": "Hat Stripes"
+      "name": "Çekiç Şeritleri",
+      "nameEn": "Hammer Stripes"
     },
     {
       "level": 93,
@@ -623,8 +629,8 @@
     {
       "level": 107,
       "levelKey": "LevelCL_0107",
-      "name": "Deney Tüpü Rafı",
-      "nameEn": "Test Tube Rack"
+      "name": "Sütunlu Bahçe",
+      "nameEn": "Column Garden"
     },
     {
       "level": 108,
@@ -971,8 +977,8 @@
     {
       "level": 165,
       "levelKey": "LevelCL_0165",
-      "name": "Mor Tesisat",
-      "nameEn": "Purple Plumbing"
+      "name": "Mor Sütunlar",
+      "nameEn": "Purple Columns"
     },
     {
       "level": 166,
@@ -1109,8 +1115,8 @@
     {
       "level": 188,
       "levelKey": "LevelCL_0188",
-      "name": "Boru Orgu",
-      "nameEn": "Pipe Organ"
+      "name": "Sütunlu Salon",
+      "nameEn": "Column Hall"
     },
     {
       "level": 189,

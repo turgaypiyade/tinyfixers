@@ -18,11 +18,18 @@ public class BoardAudioDirector : MonoBehaviour
     private float suppressFallsUntil = -999f;
     private readonly List<ClipLoop> clipLoops = new List<ClipLoop>(2);
 
-    private sealed class ClipLoop : System.IDisposable
+    public sealed class ClipLoop : System.IDisposable
     {
         public BoardAudioDirector owner;
         public AudioClip clip;
-        public float volume;
+        internal float volume;
+        internal float pitch;
+        public float Volume
+        {
+            get => volume;
+            set { volume = Mathf.Clamp01(value); EventSfx.SetVolume(handle, volume); }
+        }
+        public bool IsDisposed => owner == null;
         public EventSfx.Handle handle;
         public void Dispose()
         {
@@ -32,12 +39,12 @@ public class BoardAudioDirector : MonoBehaviour
         }
     }
 
-    public System.IDisposable StartLoopClip(AudioClip clip, float volume = 1f)
+    public ClipLoop StartLoopClip(AudioClip clip, float volume = 1f, float pitch = 1f)
     {
         if (!isActiveAndEnabled || clip == null) return null;
-        var loop = new ClipLoop { owner = this, clip = clip, volume = Mathf.Clamp01(volume) };
+        var loop = new ClipLoop { owner = this, clip = clip, volume = Mathf.Clamp01(volume), pitch = Mathf.Clamp(pitch, 0.1f, 3f) };
         clipLoops.Add(loop);
-        if (GameSettings.SoundEnabled) loop.handle = EventSfx.PlayTrackedClip(clip, loop.volume, true);
+        if (GameSettings.SoundEnabled) loop.handle = EventSfx.PlayTrackedClip(clip, loop.volume, true, loop.pitch);
         return loop;
     }
 
@@ -47,7 +54,7 @@ public class BoardAudioDirector : MonoBehaviour
         for (int i = 0; i < clipLoops.Count; i++)
         {
             var loop = clipLoops[i];
-            if (!EventSfx.IsPlaying(loop.handle)) loop.handle = EventSfx.PlayTrackedClip(loop.clip, loop.volume, true);
+            if (!EventSfx.IsPlaying(loop.handle)) loop.handle = EventSfx.PlayTrackedClip(loop.clip, loop.volume, true, loop.pitch);
         }
     }
 
@@ -337,6 +344,15 @@ public class BoardAudioDirector : MonoBehaviour
                 r.familyKey = "pulse_pulse_charge";
                 r.source = accentSource != null ? accentSource : transientSource;
                 r.set = profile.pulsePulseCharge;
+                r.volumeMultiplier = 1f;
+                break;
+            }
+
+            case BoardSfxCue.PulsePulseChargeUp:
+            {
+                r.familyKey = "pulse_pulse_charge_up";
+                r.source = accentSource != null ? accentSource : transientSource;
+                r.set = profile.pulsePulseChargeUp;
                 r.volumeMultiplier = 1f;
                 break;
             }

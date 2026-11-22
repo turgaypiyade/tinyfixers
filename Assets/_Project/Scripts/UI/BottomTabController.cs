@@ -49,6 +49,19 @@ public sealed class BottomTabController : MonoBehaviour
              "event panelleri vb. HOME'a dönünce geri gelir.")]
     [SerializeField] private GameObject[] homeOnlyElements;
 
+    [Header("Arka plan kenar taşması")]
+    [Tooltip("Barın arka planı yanlardan (x, bar genişliğine oran) ve alttan (y, bar yüksekliğine oran) ekran dışına taşar: " +
+             "yan/alt çerçeve çizgileri hiçbir ekranda görünmez (kullanıcı 2026-11-22). Oran olduğu için görsel barla birlikte " +
+             "orantılı ölçeklenir → yivler sekme butonlarıyla hizalı kalır. Görsel bu taşmayı içerecek şekilde çizilir: " +
+             "bar bölgesi tuvalin (x, 0) noktasında; tuval = bar × (1 + 2x) genişlik, × (1 + y) yükseklik.")]
+    [SerializeField] private Vector2 backgroundBleed = new Vector2(0.12f, 0.48f);
+    [Tooltip("Dilimli arka planın çerçeve ölçeği (Image.pixelsPerUnitMultiplier). 1.4 → altın şerit ≈10 birim, PreLevel'deki " +
+             "yeşil butonun sarı çerçevesiyle aynı kalınlık (kullanıcı 2026-11-22). Küçük = kalın çerçeve.")]
+    [SerializeField, Min(0.1f)] private float backgroundFrameScale = 1.4f;
+    [Tooltip("Sekme aralarındaki yiv (Resources/UI/BottomBarDivider). Bar genişliğinin %20/%40/%60/%80'ine konur.")]
+    [SerializeField] private string dividerResource = "UI/BottomBarDivider";
+    [SerializeField, Min(0f)] private float dividerTopInset = 20f;   // altın çerçevenin altından başlasın
+
     // Her tab'ın sahnedeki "seçili değil" hâli (default) — Awake'te yakalanır.
     private readonly List<Vector2> iconBasePos = new();
     private readonly List<Vector3> iconBaseScale = new();
@@ -64,6 +77,7 @@ public sealed class BottomTabController : MonoBehaviour
 
     private void Awake()
     {
+        ApplyBackgroundBleed();
         for (int i = 0; i < tabs.Count; i++)
         {
             var t = tabs[i];
@@ -81,6 +95,56 @@ public sealed class BottomTabController : MonoBehaviour
             int captured = i;
             if (t.button != null)
                 t.button.onClick.AddListener(() => Select(captured));
+        }
+    }
+
+    // Barın kendi Image'ı kapatılır; aynı sprite, bar rect'inin oranla genişletilmiş hâlinde çizilir.
+    private void ApplyBackgroundBleed()
+    {
+        var own = GetComponent<Image>();
+        if (own == null || !own.enabled || own.sprite == null) return;
+        var barRt = (RectTransform)transform;
+
+        var rt = (RectTransform)new GameObject("BleedBackground", typeof(RectTransform)) { layer = gameObject.layer }.transform;
+        rt.SetParent(barRt, false);
+        rt.SetAsFirstSibling();
+        rt.anchorMin = new Vector2(-backgroundBleed.x, -backgroundBleed.y);
+        rt.anchorMax = new Vector2(1f + backgroundBleed.x, 1f);
+        rt.offsetMin = rt.offsetMax = Vector2.zero;
+
+        var img = rt.gameObject.AddComponent<Image>();
+        img.sprite = own.sprite;
+        img.color = own.color;
+        img.material = own.material;
+        img.raycastTarget = own.raycastTarget;   // bar alanı dokunuşu eskisi gibi yutsun
+        // Yivler artık ayrı → arka plan dilimli: köşe ve çerçeve kalınlığı sabit, yalnız orta uzar.
+        img.type = own.sprite.border.sqrMagnitude > 0f ? Image.Type.Sliced : Image.Type.Simple;
+        img.pixelsPerUnitMultiplier = backgroundFrameScale;
+        own.enabled = false;
+
+        BuildDividers(barRt, rt.GetSiblingIndex() + 1);
+    }
+
+    // Yivler sekmelerin arasına (sekmeler bar genişliğinin %10..%90'ında): arka planın hemen önünde, butonların arkasında.
+    private static readonly float[] DividerAnchors = { 0.2f, 0.4f, 0.6f, 0.8f };
+    private void BuildDividers(RectTransform barRt, int siblingIndex)
+    {
+        var sprite = Resources.Load<Sprite>(dividerResource);
+        if (sprite == null) return;
+        float width = sprite.rect.width / backgroundFrameScale;
+        for (int i = 0; i < DividerAnchors.Length; i++)
+        {
+            var d = (RectTransform)new GameObject("Divider" + i, typeof(RectTransform)) { layer = gameObject.layer }.transform;
+            d.SetParent(barRt, false);
+            d.SetSiblingIndex(siblingIndex + i);
+            d.anchorMin = new Vector2(DividerAnchors[i], 0f);
+            d.anchorMax = new Vector2(DividerAnchors[i], 1f);
+            d.pivot = new Vector2(0.5f, 1f);
+            d.sizeDelta = new Vector2(width, -dividerTopInset);
+            d.anchoredPosition = new Vector2(0f, -dividerTopInset);
+            var dimg = d.gameObject.AddComponent<Image>();
+            dimg.sprite = sprite;
+            dimg.raycastTarget = false;
         }
     }
 

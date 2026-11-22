@@ -94,6 +94,10 @@ public static class CloudSaveManifest
         "level_attempt_lives_spent",
         "level_attempt_carry_level",
         "level_attempt_carry_struggles",
+        "level_attempt_prev1_level",
+        "level_attempt_prev1_struggles",
+        "level_attempt_prev2_level",
+        "level_attempt_prev2_struggles",
         "mercy_has_rewarded_ad",
         "mercy_has_purchase",
         // Harika (wonder/event) ilerlemesi: en son tamamlanan event + model sürümü.

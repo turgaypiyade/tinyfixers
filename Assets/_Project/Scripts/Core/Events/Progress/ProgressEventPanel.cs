@@ -17,6 +17,13 @@ public class ProgressEventPanel : MonoBehaviour
     private ProgressBarView currentBar;
     private int             currentGoalIndex = -1;
 
+    // Ana menü şov sırası (kullanıcı 2026-11-22: "önce bar ilerlesin, hedefe ulaşınca taş büyüsün küçülsün, sonra hediye"):
+    // MainMenuRewardCollectFx her ödülü, kendi hedefinin barı dolup taşı nabız attıktan SONRA gösterir.
+    /// Bu menü girişinde ilerleme şovu sırada ya da sürüyor.
+    public static bool SessionPlaybackPending { get; private set; }
+    /// Şovda ödül anına gelen (bar doldu + taş nabız attı) hedef sayısı.
+    public static int RewardMomentsShown { get; private set; }
+
     // ── Lifecycle ────────────────────────────────────────────────
 
     private void Start()
@@ -27,18 +34,24 @@ public class ProgressEventPanel : MonoBehaviour
 
     private void OnEnable()
     {
+        GameLocalization.OnLanguageChanged += ResetTimerCache;
         if (currentBar != null) Show();
     }
 
+    private void ResetTimerCache() => lastTimerKey = long.MinValue;
+
     private void OnDisable()
     {
-        // Şov ortasında panel kapanırsa coroutine ölür — kilit asılı kalmasın.
+        GameLocalization.OnLanguageChanged -= ResetTimerCache;
+        // Şov ortasında panel kapanırsa coroutine ölür — kilit asılı kalmasın, ödüller beklemesin.
         sessionPlaybackRunning = false;
+        SessionPlaybackPending = false;
     }
 
     private void OnDestroy()
     {
         ProgressEventService.OnProgressGained -= OnProgressGained;
+        SessionPlaybackPending = false;
     }
 
     private void Update()
@@ -55,6 +68,13 @@ public class ProgressEventPanel : MonoBehaviour
         int activeIndex = FindActiveGoal(service);
         if (activeIndex < 0)
         {
+            // Son hedef bu oturumda bittiyse şov onun barını oynatıyor: paneli kapatma, sandık bayrağını düşürme.
+            // Şov bitince CoPlaySessionQueue paneli kendisi gizler.
+            if (sessionPlaybackRunning)
+            {
+                SetTimerText(service.TimeRemaining);
+                return;
+            }
             HideVisuals();
             return;
         }
@@ -64,10 +84,21 @@ public class ProgressEventPanel : MonoBehaviour
             || currentGoalIndex != activeIndex;
 
         SetVisualsActive(true);
-        timerText.text = FormatRemaining(service.TimeRemaining);
+        SetTimerText(service.TimeRemaining);
 
         if (!sessionPlaybackRunning && needsRefresh)
             Show();
+    }
+
+    // Süre metni dakika çözünürlüğünde: yalnız gösterilen dakika değişince yeniden üretilir (her kare string yok).
+    private long lastTimerKey = long.MinValue;
+
+    private void SetTimerText(System.TimeSpan remaining)
+    {
+        long key = remaining <= System.TimeSpan.Zero ? -1 : (long)remaining.TotalMinutes;
+        if (key == lastTimerKey) return;
+        lastTimerKey = key;
+        timerText.text = FormatRemaining(remaining);
     }
 
     private static string FormatRemaining(System.TimeSpan t)
@@ -111,9 +142,6 @@ public class ProgressEventPanel : MonoBehaviour
         SetVisualsActive(true);
         if (sessionPlaybackRunning) return;   // sıralı şov sürüyor — bar'ı ezme
 
-        int activeIndex = FindActiveGoal(service);
-        if (activeIndex < 0) { HideVisuals(); return; }
-
         // Session'da kazanım olan hedefler (sıralı): her biri için bar dolumu ayrı oynar —
         // aynı oturumda iki hedef bittiyse önce ilkinin barı dolar/ödül kutlanır,
         // sonra bar sıradaki hedefe geçip onunkini oynatır.
@@ -126,9 +154,17 @@ public class ProgressEventPanel : MonoBehaviour
 
         if (queue.Count > 0 && gameObject.activeInHierarchy)
         {
+            SessionPlaybackPending = true;
+            RewardMomentsShown = 0;
+            sessionPlaybackRunning = true;
             StartCoroutine(CoPlaySessionQueue(queue, service));
             return;
         }
+
+        // Aktif hedef aranması kuyruktan SONRA: son hedef de bittiyse (hepsi alındı) önce onun barı dolup
+        // taşı nabız atsın, sandık ondan sonra açılsın; panel şovdan sonra gizlenir (CoPlaySessionQueue sonu).
+        int activeIndex = FindActiveGoal(service);
+        if (activeIndex < 0) { HideVisuals(); return; }
 
         if (activeIndex != currentGoalIndex)
             SpawnBar(activeIndex, service);
@@ -140,6 +176,10 @@ public class ProgressEventPanel : MonoBehaviour
         System.Collections.Generic.List<SessionGainRecord> queue, IProgressEventService service)
     {
         sessionPlaybackRunning = true;
+
+        // Yükleme ekranının ARKASINDA oynamasın: oyuncu barın dolduğunu görsün.
+        while (LoadingScreenManager.IsVisible) yield return null;
+        yield return null;
 
         for (int q = 0; q < queue.Count; q++)
         {
@@ -159,12 +199,22 @@ public class ProgressEventPanel : MonoBehaviour
 
             yield return currentBar.PlaySessionAnimation(rec);
 
+            // Ödül anı: taş nabız attı → ödül uçuşu (MainMenuRewardCollectFx) başlar; bitene dek sıradaki bar beklesin.
+            if (rec.RewardGranted && rec.Reward != null)
+            {
+                RewardMomentsShown++;
+                yield return null;
+                yield return null;   // uçuş coroutine'u RewardFlying'i kursun (çalışma sırası farkı)
+                while (MainMenuRewardCollectFx.RewardFlying) yield return null;
+            }
+
             // Hedefler arası kısa nefes — oyuncu tamamlananı görsün.
             if (q < queue.Count - 1)
                 yield return new WaitForSecondsRealtime(0.5f);
         }
 
         sessionPlaybackRunning = false;
+        SessionPlaybackPending = false;
 
         // Şov bitti: aktif (sıradaki) hedefin barına geç.
         if (service.State != ProgressEventState.Active)
@@ -218,6 +268,7 @@ public class ProgressEventPanel : MonoBehaviour
         SetVisualsActive(true);
         if (!lockedBarFilled && currentBar != null) { currentBar.RefreshDisplay(); lockedBarFilled = true; }
         EventLockOverlay.Apply(gameObject, service.UnlockLevel, timerText, keepTexts: true);
+        lastTimerKey = long.MinValue;   // kilit metni süre yazısının yerini aldı: kilit kalkınca süre yeniden yazılsın
         return true;
     }
 
@@ -243,9 +294,11 @@ public class ProgressEventPanel : MonoBehaviour
     {
         if (timerText != null)
             timerText.text = "";
+        lastTimerKey = long.MinValue;
 
         SetVisualsActive(false);
         sessionPlaybackRunning = false;
+        SessionPlaybackPending = false;
     }
 
     private void SetVisualsActive(bool active)

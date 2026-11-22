@@ -92,12 +92,8 @@ public class LevelCompletionLogoAnimation : MonoBehaviour
     private Vector3 _animalHomeScale = Vector3.one;
     private bool _homeStateCaptured;
     private Canvas _canvas;
-    private readonly List<GameObject> spawnedFireworkVfx = new();
 
     private const float FireworkBurstDuration = 0.9f;
-    private static Sprite fireworkGlowSprite;
-    private static Sprite fireworkLineSprite;
-    private static Sprite fireworkSolidDotSprite;
 
     private float TargetOverlayAlpha => keepOverlayTransparent ? 0f : Mathf.Clamp01(overlayTargetAlpha);
 
@@ -107,6 +103,11 @@ public class LevelCompletionLogoAnimation : MonoBehaviour
         // diye). Play() cagrilana kadar hicbiri ekranda olmamali.
         SetLogoPiecesVisible(false);
         SetVfxRootVisible(false);
+        // Dokular + havuz sahne yuklenirken (yukleme ekrani arkasinda) hazirlanir: gosteri sirasinda
+        // GameObject olusturma / doku uretimi takilmasi olmasin (eski Android). Kapali kok altinda, Image'lar
+        // devre disi → oyun boyunca maliyetleri yok.
+        EnsureFxSprites();
+        PrewarmFxPool(FxPrewarmSlots);
     }
 
     private void Update()
@@ -490,101 +491,397 @@ public class LevelCompletionLogoAnimation : MonoBehaviour
     }
 
     // -------------------------------------------------------------------------
+    // HAVAI FISEK GOSTERISI (kullanici 2026-11-22: "daha gorsel ve saşaali"):
+    //   arka planda donen isik huzmeleri → 3 sirali fisek (dolgun / tas fisegi / cift halka) → konfeti yagmuru →
+    //   4 fisekli final yaylimi → yavasca suzulen altin kivilcimlar.
+    // PERFORMANS: tum parcaciklar HAVUZDAN (Image'lar bir kez olusur, oynatma sirasinda Instantiate/Destroy yok),
+    // TEK guncelleme dongusu (LateUpdate), tek doku atlasi (isin/nokta/parilti/konfeti/yildiz ayni doku → az draw call).
+    // Gizlenince parcaciklar yalniz Image.enabled=false ile birakilir (SetActive degil → hiyerarsi churn yok).
+
+    private enum FxKind : byte { Line, Flash, Sparkle, Gem, Confetti, Rocket }
+    private enum BurstStyle : byte { Normal, DoubleRing, Gem }
+
+    private struct Fx
+    {
+        public FxKind kind;
+        public int slot, headSlot;           // havuz indeksleri (headSlot: isin ucu noktasi / roket izi)
+        public Vector2 pos, vel, origin, target;
+        public float age, life, size, size2, gravity, drag, rot, rotVel, phase, maxDist, fadeStart;
+        public Color color;
+        public BurstStyle style;
+        public bool sound;
+    }
+
+    [Header("Fisek Gosterisi")]
+    [Tooltip("Tas fisegi: patlamada sacilan oyun taslari (sari/kirmizi/mavi/yesil).")]
+    [SerializeField] private Sprite[] gemSprites = new Sprite[0];
+    [SerializeField, Min(0)] private int confettiCount = 60;
+    [SerializeField, Range(0f, 1f)] private float raysMaxAlpha = 0.5f;
+    [SerializeField] private float raysSpinSpeed = 16f;
+
+    private const int MaxFx = 520, MaxSlots = 640;
+    private readonly Fx[] _fx = new Fx[MaxFx];
+    private int _fxCount;
+    private readonly List<Image> _poolImg = new();
+    private readonly List<RectTransform> _poolRt = new();
+    private readonly Stack<int> _freeSlots = new();
+    private Image _rays;
+    private float _raysAlpha, _raysTarget;
+
+    private static Texture2D s_fxAtlas;
+
+    /// Seviye sonu logo halesinin dönen ışın dokusu (prosedürel, bir kez üretilir). Pulse+Pulse şarj halesi de kullanır.
+    public static Sprite SharedRaysSprite
+    {
+        get { EnsureFxSprites(); return s_raysSprite; }
+    }
+    private static Sprite s_glow, s_dot, s_line, s_square, s_sparkle, s_raysSprite;
+
     private IEnumerator PlayFireworks()
     {
         if (vfxRoot == null)
             yield break;
 
-        yield return new WaitForSecondsRealtime(fireworkDelay);
+        EnsureFxSprites();
+        yield return WaitUnscaled(fireworkDelay);
+        if (_skipRequested) yield break;
 
-        int count = Mathf.Max(1, fireworkBurstCount);
+        StartRays();
+        FireworksStarted?.Invoke();
 
-        // Yatay seritler karistirilir: arka arkaya gelen fisekler ekranin farkli bolgelerinden cikar.
-        var lanes = new int[count];
-        for (int i = 0; i < count; i++)
-            lanes[i] = i;
-        for (int i = count - 1; i > 0; i--)
+        Rect area = vfxRoot.rect;
+        float halfW = area.width > 10f ? area.width * 0.5f : 540f;
+
+        // 1) Sirali fisekler: her biri farkli stil ve serit.
+        int sequential = Mathf.Max(1, fireworkBurstCount - 1);
+        float interval = Mathf.Max(0.35f, fireworkInterval * 0.8f);
+        var lanes = new[] { -0.75f, 0.75f, 0f, -0.35f };
+        for (int i = 0; i < sequential && !_skipRequested; i++)
         {
-            int j = Random.Range(0, i + 1);
-            (lanes[i], lanes[j]) = (lanes[j], lanes[i]);
+            var style = i == 1 && HasGemSprites() ? BurstStyle.Gem : (i % 2 == 0 ? BurstStyle.Normal : BurstStyle.DoubleRing);
+            float lane = lanes[i % lanes.Length];
+            var pos = new Vector2(Mathf.Clamp(lane * halfW * 0.62f, -halfW + 140f, halfW - 140f) + Random.Range(-30f, 31f),
+                                  style == BurstStyle.Gem ? 420f : Random.Range(240f, 500f));
+            LaunchRocket(pos, RandomVividColor(), style, sound: true);
+            if (i == 0) StartCoroutine(ConfettiRain(halfW, area.height > 10f ? area.height * 0.5f : 960f));
+            yield return WaitUnscaled(interval);
+        }
+        if (_skipRequested) yield break;
+
+        // 2) Final yaylimi: 4 fisek ayni anda (tek ses → sesler ust uste binmesin).
+        yield return WaitUnscaled(0.15f);
+        for (int k = 0; k < 4 && !_skipRequested; k++)
+        {
+            float x = Mathf.Lerp(-0.72f, 0.72f, k / 3f) * halfW + Random.Range(-25f, 26f);
+            var style = k == 1 || k == 2 ? BurstStyle.DoubleRing : BurstStyle.Normal;
+            LaunchRocket(new Vector2(x, Random.Range(300f, 520f)), RandomVividColor(), style, sound: k == 0,
+                         riseScale: 0.85f + 0.1f * k);
         }
 
-        int fired = 0;
-        for (int i = 0; i < count && !_skipRequested; i++)
-        {
-            float lane = count > 1 ? lanes[i] / (float)(count - 1) : 0.5f;
-            Vector2 pos = new Vector2(
-                Mathf.Lerp(-320f, 320f, lane) + Random.Range(-40f, 41f),
-                Random.Range(160f, 520f));
-            Color col = Color.HSVToRGB(Random.value, Random.Range(0.45f, 0.75f), 1f);
-
-            if (fired == 0)
-                FireworksStarted?.Invoke();
-
-            StartCoroutine(LaunchAndBurst(pos, col));
-            fired++;
-
-            // Sıradaki fisek, bunun patlama sesi bitince patlasin (yukselme suresi ikisinde de ayni).
-            if (i < count - 1)
-                yield return new WaitForSecondsRealtime(fireworkInterval);
-        }
-
-        if (fired > 0 && !_skipRequested)
-        {
-            yield return new WaitForSecondsRealtime(fireworkRiseDuration + FireworkBurstDuration);
+        // 3) Kivilcimlar suzulurken bekle (oyuncu tek dokunusla atlayabilir).
+        yield return WaitUnscaled(fireworkRiseDuration + 1.1f);
+        _raysTarget = 0f;   // huzmeler yumusakca soner
+        yield return WaitUnscaled(0.4f);
+        if (!_skipRequested)
             FireworksFinished?.Invoke();
+    }
+
+    private IEnumerator WaitUnscaled(float seconds)
+    {
+        for (float t = 0f; t < seconds && !_skipRequested; t += Time.unscaledDeltaTime)
+            yield return null;
+    }
+
+    private bool HasGemSprites()
+    {
+        if (gemSprites == null) return false;
+        for (int i = 0; i < gemSprites.Length; i++) if (gemSprites[i] != null) return true;
+        return false;
+    }
+
+    private static Color RandomVividColor() => Color.HSVToRGB(Random.value, Random.Range(0.55f, 0.8f), 1f);
+
+    // ── Isik huzmeleri (logonun arkasinda yavasca doner) ─────────────────────
+    private void StartRays()
+    {
+        if (frameImage == null) return;
+        if (_rays == null)
+        {
+            var go = new GameObject("FxRays", typeof(RectTransform), typeof(Image)) { layer = frameImage.gameObject.layer };
+            var rt = (RectTransform)go.transform;
+            rt.SetParent(frameImage.parent, false);
+            _rays = go.GetComponent<Image>();
+            _rays.sprite = s_raysSprite;
+            _rays.raycastTarget = false;
+        }
+        var rr = _rays.rectTransform;
+        rr.SetSiblingIndex(frameImage.GetSiblingIndex());   // cercevenin hemen arkasi
+        rr.anchorMin = frameImage.anchorMin;
+        rr.anchorMax = frameImage.anchorMax;
+        rr.anchoredPosition = frameImage.anchoredPosition;
+        float s = Mathf.Max(frameImage.rect.width, frameImage.rect.height) * 1.9f;
+        rr.sizeDelta = new Vector2(s, s);
+        rr.localRotation = Quaternion.identity;
+        _raysAlpha = 0f;
+        _raysTarget = raysMaxAlpha;
+        _rays.color = new Color(1f, 0.86f, 0.45f, 0f);
+        _rays.enabled = true;
+    }
+
+    // ── Spawn ───────────────────────────────────────────────────────────────
+    private void LaunchRocket(Vector2 target, Color color, BurstStyle style, bool sound, float riseScale = 1f)
+    {
+        var start = new Vector2(target.x + Random.Range(-60f, 61f), target.y - 640f);
+        int head = RentSlot(s_dot, 20f, Color.Lerp(color, Color.white, 0.8f), start);
+        int trail = RentSlot(s_line, 5f, Color.Lerp(color, Color.white, 0.55f), start);
+        if (head < 0 || trail < 0) { ReleaseSlot(head); ReleaseSlot(trail); return; }
+        AddFx(new Fx
+        {
+            kind = FxKind.Rocket, slot = head, headSlot = trail, origin = start, target = target, pos = start,
+            life = Mathf.Max(0.05f, fireworkRiseDuration * riseScale), color = color, style = style, sound = sound,
+        });
+    }
+
+    private void SpawnBurst(Vector2 center, Color color, BurstStyle style)
+    {
+        AddFlash(center, Color.Lerp(color, Color.white, 0.7f), style == BurstStyle.Gem ? 190f : 150f);
+
+        // Yuk korumasi: ekranda cok parcacik varken (final yaylimi) yeni patlamalar seyrelir.
+        float density = Mathf.Lerp(1f, 0.55f, Mathf.Clamp01(_fxCount / (MaxFx * 0.6f)));
+        int rays = Mathf.Max(12, Mathf.RoundToInt((style == BurstStyle.Gem ? 18 : Random.Range(26, 35)) * density));
+        SpawnRing(center, rays, 460f, 680f, 320f, 470f, style == BurstStyle.Gem ? new Color(1f, 0.92f, 0.6f) : color,
+                  perRayHue: style == BurstStyle.Normal);
+        if (style == BurstStyle.DoubleRing)
+            SpawnRing(center, Mathf.RoundToInt(16 * density), 250f, 330f, 170f, 240f, RandomVividColor(), perRayHue: false);
+        if (style == BurstStyle.Gem)
+            SpawnGems(center);
+
+        // Altin kivilcimlar (sogut fisegi): patlamadan sonra yavasca suzulur, isildar.
+        int sparks = Mathf.RoundToInt(Random.Range(10, 15) * density);
+        for (int i = 0; i < sparks; i++)
+        {
+            float a = Random.Range(0f, Mathf.PI * 2f);
+            var c = Color.Lerp(new Color(1f, 0.82f, 0.35f), Color.white, Random.Range(0f, 0.3f));
+            float size = Random.Range(14f, 22f);
+            int slot = RentSlot(s_sparkle, size, c, center);
+            if (slot < 0) break;
+            AddFx(new Fx
+            {
+                kind = FxKind.Sparkle, slot = slot, headSlot = -1, pos = center,
+                vel = new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * Random.Range(160f, 320f),
+                life = Random.Range(1.5f, 2.1f), size = size, gravity = 140f, drag = 1.7f,
+                phase = Random.Range(0f, 6.28f), color = c,
+            });
         }
     }
 
-    // Tek fisek: asagidan isikli izle yukselir (yavaslayarak), tepede patlar. Ses patlamadan
-    // fireworkSoundLead once tetiklenir → klibin tepe ani gorsel patlamaya denk gelir.
-    private IEnumerator LaunchAndBurst(Vector2 burstPos, Color color)
+    private void SpawnRing(Vector2 center, int count, float speedMin, float speedMax, float distMin, float distMax,
+                           Color color, bool perRayHue)
     {
-        float rise = Mathf.Max(0.05f, fireworkRiseDuration);
-        float soundAt = Mathf.Max(0f, rise - fireworkSoundLead);
-        bool soundPlayed = false;
-
-        Vector2 start = new Vector2(burstPos.x + Random.Range(-60f, 61f), burstPos.y - 620f);
-        Color trailColor = Color.Lerp(color, Color.white, 0.55f);
-        var trail = CreateDot(start, 5f, trailColor);
-        trail.GetComponent<Image>().sprite = GetFireworkLineSprite();
-        var rocket = CreateDot(start, 22f, Color.Lerp(color, Color.white, 0.8f));
-
-        float elapsed = 0f;
-        while (elapsed < rise && !_skipRequested)
+        float offset = Random.Range(0f, 360f);
+        for (int i = 0; i < count; i++)
         {
-            elapsed += Time.unscaledDeltaTime;
-            if (!soundPlayed && elapsed >= soundAt)
+            float ang = (offset + 360f / count * i + Random.Range(-5f, 5f)) * Mathf.Deg2Rad;
+            Color c = perRayHue
+                ? Color.Lerp(Color.HSVToRGB(Random.value, Random.Range(0.6f, 0.9f), 1f), Color.white, Random.Range(0.08f, 0.22f))
+                : Color.Lerp(color, Color.white, Random.Range(0.05f, 0.2f));
+            float headSize = Random.Range(11f, 16f);
+            int line = RentSlot(s_line, 4f, c, center);
+            int head = RentSlot(s_dot, headSize, c, center);
+            if (line < 0 || head < 0) { ReleaseSlot(line); ReleaseSlot(head); return; }
+            float maxDist = Random.Range(distMin, distMax);
+            AddFx(new Fx
             {
-                soundPlayed = true;
-                FireworkBurst?.Invoke();
-            }
-
-            float k = Mathf.Clamp01(elapsed / rise);
-            float e = 1f - (1f - k) * (1f - k);   // yukarida yavaslar
-            Vector2 head = Vector2.LerpUnclamped(start, burstPos, e);
-            Vector2 tail = Vector2.Lerp(start, head, Mathf.Max(0f, e - 0.28f) / Mathf.Max(0.0001f, e));
-            if (rocket != null) rocket.anchoredPosition = head;
-            if (trail != null) SetFireworkLine(trail, tail, head, Mathf.Lerp(5f, 3f, k));
-            yield return null;
+                kind = FxKind.Line, slot = line, headSlot = head, pos = center, origin = center,
+                vel = new Vector2(Mathf.Cos(ang), Mathf.Sin(ang)) * Random.Range(speedMin, speedMax),
+                life = FireworkBurstDuration, size = headSize, gravity = 30f, drag = 0.6f,
+                maxDist = maxDist, fadeStart = maxDist * Random.Range(0.45f, 0.6f), color = c,
+            });
         }
+    }
 
-        RemoveFirework(trail);
-        RemoveFirework(rocket);
-        if (_skipRequested)
-            yield break;
-        if (!soundPlayed)
-            FireworkBurst?.Invoke();
-
-        // Patlama 1-2 yakin ama ayri merkezden.
-        int centerCount = Random.Range(1, 3);
-        for (int center = 0; center < centerCount; center++)
+    private void SpawnGems(Vector2 center)
+    {
+        int count = Random.Range(10, 13);
+        for (int i = 0; i < count; i++)
         {
-            Vector2 clusterOffset = center == 0
-                ? Vector2.zero
-                : new Vector2(Random.Range(-72f, 73f), Random.Range(-38f, 39f));
-            StartCoroutine(BurstAt(burstPos + clusterOffset, color));
+            var sprite = gemSprites[i % gemSprites.Length];
+            if (sprite == null) continue;
+            float a = (360f / count * i + Random.Range(-10f, 10f)) * Mathf.Deg2Rad;
+            float size = Random.Range(62f, 84f);
+            int slot = RentSlot(sprite, size, Color.white, center);
+            if (slot < 0) return;
+            AddFx(new Fx
+            {
+                kind = FxKind.Gem, slot = slot, headSlot = -1, pos = center,
+                vel = new Vector2(Mathf.Cos(a), Mathf.Sin(a) + 0.35f) * Random.Range(360f, 540f),
+                life = Random.Range(1.3f, 1.6f), size = size, gravity = 620f, drag = 0.4f,
+                rotVel = Random.Range(-260f, 260f), color = Color.white,
+            });
         }
+    }
+
+    private void AddFlash(Vector2 center, Color color, float size)
+    {
+        int slot = RentSlot(s_glow, size, color, center);
+        if (slot < 0) return;
+        AddFx(new Fx { kind = FxKind.Flash, slot = slot, headSlot = -1, pos = center, life = 0.3f, size = size, color = color });
+    }
+
+    private IEnumerator ConfettiRain(float halfW, float halfH)
+    {
+        int batches = 6;
+        int per = Mathf.CeilToInt(confettiCount / (float)batches);
+        for (int b = 0; b < batches && !_skipRequested; b++)
+        {
+            for (int i = 0; i < per; i++)
+            {
+                var c = Color.HSVToRGB(Random.value, Random.Range(0.55f, 0.85f), 1f);
+                var p = new Vector2(Random.Range(-halfW, halfW), halfH + Random.Range(20f, 120f));
+                float w = Random.Range(12f, 18f);
+                int slot = RentSlot(s_square, w, c, p);
+                if (slot < 0) break;
+                AddFx(new Fx
+                {
+                    kind = FxKind.Confetti, slot = slot, headSlot = -1, pos = p,
+                    vel = new Vector2(Random.Range(-50f, 50f), -Random.Range(230f, 330f)),
+                    life = Random.Range(2.6f, 3.4f), size = w, size2 = w * Random.Range(1.5f, 2f),
+                    rot = Random.Range(0f, 360f), rotVel = Random.Range(-200f, 200f),
+                    phase = Random.Range(0f, 6.28f), color = c,
+                });
+            }
+            yield return WaitUnscaled(0.2f);
+        }
+    }
+
+    private void AddFx(in Fx fx)
+    {
+        if (_fxCount >= MaxFx) { ReleaseSlot(fx.slot); ReleaseSlot(fx.headSlot); return; }
+        _fx[_fxCount++] = fx;
+    }
+
+    // ── Tek guncelleme dongusu ───────────────────────────────────────────────
+    private void LateUpdate()
+    {
+        if (_fxCount == 0 && (_rays == null || !_rays.enabled)) return;
+        float dt = Mathf.Min(Time.unscaledDeltaTime, 0.05f);
+        StepRays(dt);
+
+        for (int i = _fxCount - 1; i >= 0; i--)
+        {
+            ref Fx f = ref _fx[i];
+            f.age += dt;
+            if (!StepFx(ref f, dt))
+            {
+                ReleaseSlot(f.slot);
+                ReleaseSlot(f.headSlot);
+                _fx[i] = _fx[--_fxCount];
+            }
+        }
+    }
+
+    private void StepRays(float dt)
+    {
+        if (_rays == null || !_rays.enabled) return;
+        _raysAlpha = Mathf.MoveTowards(_raysAlpha, _raysTarget, dt * 1.4f);
+        var c = _rays.color; c.a = _raysAlpha; _rays.color = c;
+        _rays.rectTransform.localRotation = Quaternion.Euler(0f, 0f, -raysSpinSpeed * Time.unscaledTime);
+        if (_raysTarget <= 0f && _raysAlpha <= 0f) _rays.enabled = false;
+    }
+
+    // false → parcacik bitti.
+    private bool StepFx(ref Fx f, float dt)
+    {
+        var rt = _poolRt[f.slot];
+        var img = _poolImg[f.slot];
+        switch (f.kind)
+        {
+            case FxKind.Rocket:
+            {
+                float k = Mathf.Clamp01(f.age / f.life);
+                if (f.sound && f.age >= f.life - fireworkSoundLead) { f.sound = false; FireworkBurst?.Invoke(); }
+                float e = 1f - (1f - k) * (1f - k);
+                Vector2 head = Vector2.LerpUnclamped(f.origin, f.target, e);
+                Vector2 tail = Vector2.Lerp(f.origin, head, Mathf.Max(0f, e - 0.28f) / Mathf.Max(0.0001f, e));
+                rt.anchoredPosition = head;
+                SetFireworkLine(_poolRt[f.headSlot], tail, head, Mathf.Lerp(5f, 3f, k));
+                if (k < 1f) return true;
+                if (f.sound) FireworkBurst?.Invoke();
+                SpawnBurst(f.target, f.color, f.style);
+                if (f.style != BurstStyle.Gem && _fxCount < MaxFx / 3 && Random.value < 0.5f)
+                    SpawnBurst(f.target + new Vector2(Random.Range(-70f, 71f), Random.Range(-40f, 41f)), RandomVividColor(),
+                               BurstStyle.Normal);
+                return false;
+            }
+            case FxKind.Line:
+            {
+                f.pos += f.vel * dt;
+                f.vel *= Mathf.Exp(-f.drag * dt);
+                f.vel.y -= f.gravity * dt;
+                float t = f.age / f.life;
+                float dist = Vector2.Distance(f.pos, f.origin);
+                float len = Mathf.Min(dist, Mathf.Lerp(240f, 150f, t));
+                Vector2 tail = f.pos - f.vel.normalized * len;
+                SetFireworkLine(rt, tail, f.pos, Mathf.Lerp(5f, 2.4f, t));
+                float alpha = 1f - Mathf.InverseLerp(f.fadeStart, f.maxDist, dist);
+                SetAlpha(img, f.color, alpha);
+                var head = _poolRt[f.headSlot];
+                head.anchoredPosition = f.pos;
+                head.localScale = Vector3.one * Mathf.Lerp(1f, 0.7f, t);
+                SetAlpha(_poolImg[f.headSlot], f.color, alpha);
+                return t < 1f && alpha > 0.01f;
+            }
+            case FxKind.Flash:
+            {
+                float t = f.age / f.life;
+                rt.localScale = Vector3.one * Mathf.Lerp(0.4f, 2.2f, Mathf.Clamp01(t * 2.5f));
+                SetAlpha(img, f.color, 1f - t);
+                return t < 1f;
+            }
+            case FxKind.Sparkle:
+            {
+                f.pos += f.vel * dt;
+                f.vel *= Mathf.Exp(-f.drag * dt);
+                f.vel.y -= f.gravity * dt;
+                rt.anchoredPosition = f.pos;
+                float t = f.age / f.life;
+                float twinkle = 0.55f + 0.45f * Mathf.Sin(f.age * 18f + f.phase);
+                SetAlpha(img, f.color, twinkle * (1f - t * t));
+                rt.localScale = Vector3.one * Mathf.Lerp(1f, 0.5f, t);
+                return t < 1f;
+            }
+            case FxKind.Gem:
+            {
+                f.pos += f.vel * dt;
+                f.vel *= Mathf.Exp(-f.drag * dt);
+                f.vel.y -= f.gravity * dt;
+                f.rot += f.rotVel * dt;
+                rt.anchoredPosition = f.pos;
+                rt.localRotation = Quaternion.Euler(0f, 0f, f.rot);
+                float t = f.age / f.life;
+                rt.localScale = Vector3.one * (t < 0.12f ? Mathf.Lerp(0.3f, 1f, t / 0.12f) : 1f);
+                SetAlpha(img, Color.white, 1f - Mathf.InverseLerp(0.7f, 1f, t));
+                return t < 1f;
+            }
+            case FxKind.Confetti:
+            {
+                f.pos += f.vel * dt;
+                f.rot += f.rotVel * dt;
+                rt.anchoredPosition = f.pos + new Vector2(Mathf.Sin(f.age * 3f + f.phase) * 26f, 0f);
+                rt.localRotation = Quaternion.Euler(0f, 0f, f.rot);
+                rt.localScale = new Vector3(Mathf.Cos(f.age * 7f + f.phase), 1f, 1f);   // kagit donerek parlar
+                float t = f.age / f.life;
+                SetAlpha(img, f.color, 1f - Mathf.InverseLerp(0.8f, 1f, t));
+                return t < 1f;
+            }
+        }
+        return false;
+    }
+
+    private static void SetAlpha(Image img, Color c, float a)
+    {
+        c.a = Mathf.Clamp01(a);
+        img.color = c;
     }
 
     private static void SetFireworkLine(RectTransform rt, Vector2 tail, Vector2 head, float width)
@@ -595,230 +892,161 @@ public class LevelCompletionLogoAnimation : MonoBehaviour
         rt.localRotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(delta.y, delta.x) * Mathf.Rad2Deg - 90f);
     }
 
-    private void RemoveFirework(RectTransform rt)
+    // ── Havuz ───────────────────────────────────────────────────────────────
+    // Onceden hazirlanan slot sayisi: tipik gosterinin tepe kullanimini karsilar; asarsa MaxSlots'a kadar tembel buyur.
+    private const int FxPrewarmSlots = 360;
+
+    /// Oyun sahnesi acilirken (LevelEndSimplePopupController, yukleme ekrani arkasinda) cagrilir. Panel sahnede
+    /// kapali basladigi icin Awake gosteri aninda calisir; isitma oraya kalirsa ilk fiseklerde takilma olur.
+    public void Prewarm()
     {
-        if (rt == null) return;
-        spawnedFireworkVfx.Remove(rt.gameObject);
-        Destroy(rt.gameObject);
+        EnsureFxSprites();
+        PrewarmFxPool(FxPrewarmSlots);
     }
 
-    private IEnumerator BurstAt(Vector2 center, Color baseColor)
+    private void PrewarmFxPool(int count)
     {
-        // Neredeyse duz ucus: yercekimi cok hafif, surtunme dusuk.
-        const float gravity = 20f;
-        const float drag = 0.55f;
-        int count = Random.Range(14, 21);
-        var flash = CreateDot(center, 70f, Color.Lerp(baseColor, Color.white, 0.75f));
-
-        var rts = new RectTransform[count];
-        var cgs = new CanvasGroup[count];
-        var headRts = new RectTransform[count];
-        var headCgs = new CanvasGroup[count];
-        var headSizes = new float[count];
-        var vels = new Vector2[count];
-        var positions = new Vector2[count];
-        var fadeStarts = new float[count];
-        var maxDistances = new float[count];
-
-        float angleOffset = Random.Range(0f, 360f);
-        for (int i = 0; i < count; i++)
+        if (vfxRoot == null) return;
+        count = Mathf.Min(count, MaxSlots);
+        while (_poolImg.Count < count)
         {
-            float angle = angleOffset + (360f / count) * i + Random.Range(-6f, 6f);
-            positions[i] = center;
-            float speed = Random.Range(430f, 620f);
-            vels[i] = new Vector2(
-                Mathf.Cos(angle * Mathf.Deg2Rad),
-                Mathf.Sin(angle * Mathf.Deg2Rad)) * speed;
-
-            // Her isin belirli bir mesafeden sonra sonmeye baslar ve menzil sonunda kaybolur.
-            maxDistances[i] = Random.Range(300f, 430f);
-            fadeStarts[i] = maxDistances[i] * Random.Range(0.45f, 0.6f);
-
-            // Her cizgi KENDI rastgele rengini alir (canli ton, hafif beyaz karisim).
-            Color c = Color.Lerp(
-                Color.HSVToRGB(Random.value, Random.Range(0.6f, 0.9f), 1f),
-                Color.white,
-                Random.Range(0.08f, 0.22f));
-
-            rts[i] = CreateDot(center, 2f, c);
-            rts[i].GetComponent<Image>().sprite = GetFireworkLineSprite();
-            cgs[i] = rts[i].GetComponent<CanvasGroup>();
-
-            // Isinin ucundaki dolu yuvarlak bas — cizgi inceldikce bas onu tasir.
-            headSizes[i] = Random.Range(9f, 14f);
-            headRts[i] = CreateDot(center, headSizes[i], c);
-            headRts[i].GetComponent<Image>().sprite = GetFireworkSolidDotSprite();
-            headCgs[i] = headRts[i].GetComponent<CanvasGroup>();
+            int slot = CreateSlot();
+            _poolImg[slot].enabled = false;
+            _freeSlots.Push(slot);
         }
-
-        float elapsed = 0f;
-        while (elapsed < FireworkBurstDuration && !_skipRequested)
-        {
-            elapsed += Time.unscaledDeltaTime;
-            float t = elapsed / FireworkBurstDuration;
-            if (flash != null)
-            {
-                flash.localScale = Vector3.one * Mathf.Lerp(0.4f, 1.8f, Mathf.Clamp01(t * 4f));
-                flash.GetComponent<CanvasGroup>().alpha = Mathf.Max(0f, 1f - t * 5f);
-            }
-
-            for (int i = 0; i < count; i++)
-            {
-                if (rts[i] == null)
-                    continue;
-
-                positions[i] += vels[i] * Time.unscaledDeltaTime;
-                Vector2 head = positions[i];
-                vels[i] *= Mathf.Exp(-drag * Time.unscaledDeltaTime);
-                vels[i].y -= gravity * Time.unscaledDeltaTime;
-
-                // Ince ve uzun iz: kalinlik sabit kalir, uzunluk merkezden uzaklastikca acilir.
-                float distance = Vector2.Distance(head, center);
-                float length = Mathf.Min(distance, Mathf.Lerp(240f, 150f, t));
-                Vector2 tail = head - vels[i].normalized * length;
-                SetFireworkLine(rts[i], tail, head, Mathf.Lerp(3.2f, 1.6f, t));
-
-                // Sonme mesafeye bagli: menzilin sonuna dogru alpha sifirlanir.
-                float alpha = 1f;
-                if (cgs[i] != null)
-                {
-                    float fade = Mathf.InverseLerp(fadeStarts[i], maxDistances[i], distance);
-                    alpha = 1f - fade;
-                    cgs[i].alpha = alpha;
-                }
-
-                if (headRts[i] != null)
-                {
-                    headRts[i].anchoredPosition = head;
-                    headRts[i].localScale = Vector3.one * Mathf.Lerp(1f, 0.72f, t);
-                    if (headCgs[i] != null)
-                        headCgs[i].alpha = alpha;
-                }
-            }
-
-            yield return null;
-        }
-
-        for (int i = 0; i < count; i++)
-        {
-            if (rts[i] != null)
-            {
-                spawnedFireworkVfx.Remove(rts[i].gameObject);
-                Destroy(rts[i].gameObject);
-            }
-
-            if (headRts[i] != null)
-            {
-                spawnedFireworkVfx.Remove(headRts[i].gameObject);
-                Destroy(headRts[i].gameObject);
-            }
-        }
-
-        RemoveFirework(flash);
-        spawnedFireworkVfx.RemoveAll(go => go == null);
     }
 
-    private RectTransform CreateDot(Vector2 pos, float size, Color color)
+    private int CreateSlot()
     {
-        var go = new GameObject("FwDot", typeof(RectTransform), typeof(Image), typeof(CanvasGroup));
-        spawnedFireworkVfx.Add(go);
-        go.layer = vfxRoot.gameObject.layer;
+        var go = new GameObject("Fx", typeof(RectTransform), typeof(Image)) { layer = vfxRoot.gameObject.layer };
+        var rtNew = (RectTransform)go.transform;
+        rtNew.SetParent(vfxRoot, false);
+        rtNew.anchorMin = rtNew.anchorMax = new Vector2(0.5f, 0.5f);
+        var imgNew = go.GetComponent<Image>();
+        imgNew.raycastTarget = false;
+        _poolImg.Add(imgNew);
+        _poolRt.Add(rtNew);
+        return _poolImg.Count - 1;
+    }
 
-        go.transform.SetParent(vfxRoot, false);
-        go.transform.localScale = Vector3.one;
-
-        var rt = go.GetComponent<RectTransform>();
-        rt.sizeDelta = new Vector2(size, size);
-        rt.anchoredPosition = pos;
-
-        var img = go.GetComponent<Image>();
-        img.sprite = GetFireworkGlowSprite();
+    private int RentSlot(Sprite sprite, float size, Color color, Vector2 pos)
+    {
+        int slot;
+        if (_freeSlots.Count > 0) slot = _freeSlots.Pop();
+        else
+        {
+            if (_poolImg.Count >= MaxSlots || vfxRoot == null) return -1;
+            slot = CreateSlot();
+        }
+        var img = _poolImg[slot];
+        var rt = _poolRt[slot];
+        img.sprite = sprite;
         img.color = color;
-        img.raycastTarget = false;
-
-        var cg = go.GetComponent<CanvasGroup>();
-        cg.blocksRaycasts = false;
-        cg.interactable = false;
-
-        return rt;
+        img.preserveAspect = false;
+        img.enabled = true;
+        rt.SetAsLastSibling();
+        rt.anchoredPosition = pos;
+        rt.sizeDelta = new Vector2(size, size);
+        rt.localScale = Vector3.one;
+        rt.localRotation = Quaternion.identity;
+        return slot;
     }
 
-    private static Sprite GetFireworkLineSprite()
+    private void ReleaseSlot(int slot)
     {
-        if (fireworkLineSprite != null) return fireworkLineSprite;
-        // A round glow squeezed into a narrow strip loses almost all its opacity.
-        // Give trails an opaque white core with soft edges and a fading tail.
-        const int width = 16, height = 64;
-        var texture = new Texture2D(width, height, TextureFormat.RGBA32, false);
-        texture.name = "FireworkBrightTrail";
-        texture.wrapMode = TextureWrapMode.Clamp;
-        var pixels = new Color[width * height];
-        for (int y = 0; y < height; y++)
-            for (int x = 0; x < width; x++)
-            {
-                float across = Mathf.Abs((x + 0.5f) / width * 2f - 1f);
-                float edge = 1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.55f, 1f, across));
-                float tail = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((y + 0.5f) / height * 4f));
-                pixels[y * width + x] = new Color(1f, 1f, 1f, edge * tail);
-            }
-        texture.SetPixels(pixels);
-        texture.Apply(false, true);
-        fireworkLineSprite = Sprite.Create(texture, new Rect(0, 0, width, height), new Vector2(0.5f, 0.5f));
-        return fireworkLineSprite;
-    }
-
-    // Isin ucundaki DOLU yuvarlak: merkezi tam opak, yalniz kenarda 1-2px yumusama (AA).
-    private static Sprite GetFireworkSolidDotSprite()
-    {
-        if (fireworkSolidDotSprite != null) return fireworkSolidDotSprite;
-        const int size = 32;
-        var texture = new Texture2D(size, size, TextureFormat.RGBA32, false);
-        texture.name = "FireworkSolidDot";
-        texture.wrapMode = TextureWrapMode.Clamp;
-        var pixels = new Color[size * size];
-        for (int y = 0; y < size; y++)
-            for (int x = 0; x < size; x++)
-            {
-                float radius = new Vector2((x + 0.5f) / size * 2f - 1f, (y + 0.5f) / size * 2f - 1f).magnitude;
-                float alpha = Mathf.Clamp01((1f - radius) / (2f / size));   // ~1px kenar yumusamasi
-                pixels[y * size + x] = new Color(1f, 1f, 1f, alpha);
-            }
-        texture.SetPixels(pixels);
-        texture.Apply(false, true);
-        fireworkSolidDotSprite = Sprite.Create(texture, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f));
-        return fireworkSolidDotSprite;
-    }
-
-    private static Sprite GetFireworkGlowSprite()
-    {
-        if (fireworkGlowSprite != null) return fireworkGlowSprite;
-        const int size = 32;
-        var texture = new Texture2D(size, size, TextureFormat.RGBA32, false);
-        texture.name = "FireworkSoftGlow";
-        texture.wrapMode = TextureWrapMode.Clamp;
-        var pixels = new Color[size * size];
-        for (int y = 0; y < size; y++)
-            for (int x = 0; x < size; x++)
-            {
-                float radius = new Vector2((x + 0.5f) / size * 2f - 1f, (y + 0.5f) / size * 2f - 1f).magnitude;
-                float alpha = Mathf.Clamp01(1f - radius);
-                pixels[y * size + x] = new Color(1f, 1f, 1f, alpha * alpha);
-            }
-        texture.SetPixels(pixels);
-        texture.Apply(false, true);
-        fireworkGlowSprite = Sprite.Create(texture, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f));
-        return fireworkGlowSprite;
+        if (slot < 0 || slot >= _poolImg.Count) return;
+        var img = _poolImg[slot];
+        if (img == null || !img.enabled) return;
+        img.enabled = false;
+        _freeSlots.Push(slot);
     }
 
     private void ClearSpawnedFireworks()
     {
-        for (int i = 0; i < spawnedFireworkVfx.Count; i++)
+        for (int i = 0; i < _fxCount; i++)
         {
-            if (spawnedFireworkVfx[i] != null)
-                Destroy(spawnedFireworkVfx[i]);
+            ReleaseSlot(_fx[i].slot);
+            ReleaseSlot(_fx[i].headSlot);
         }
+        _fxCount = 0;
+        if (_rays != null)
+        {
+            _raysTarget = 0f;
+            _raysAlpha = 0f;
+            _rays.enabled = false;
+        }
+    }
 
-        spawnedFireworkVfx.Clear();
+    // ── Prosedurel dokular (bir kez, statik) ────────────────────────────────
+    // Atlas 128x64: [0,0] yumusak parilti 32² · [32,0] dolu nokta 32² · [64,0] isin izi 16x64 ·
+    // [80,0] konfeti karesi 16² · [96,0] 4 kollu yildiz 32². Isik huzmeleri ayri 256² doku.
+    private static void EnsureFxSprites()
+    {
+        if (s_fxAtlas != null) return;
+        const int W = 128, H = 64;
+        s_fxAtlas = new Texture2D(W, H, TextureFormat.RGBA32, false) { name = "FireworkAtlas", wrapMode = TextureWrapMode.Clamp };
+        var px = new Color32[W * H];
+        for (int y = 0; y < H; y++)
+        for (int x = 0; x < W; x++)
+        {
+            float a = 0f;
+            if (x < 32 && y < 32)
+            {
+                float r = new Vector2((x + 0.5f) / 16f - 1f, (y + 0.5f) / 16f - 1f).magnitude;
+                a = Mathf.Clamp01(1f - r); a *= a;
+            }
+            else if (x < 64 && y < 32)
+            {
+                float r = new Vector2((x - 32 + 0.5f) / 16f - 1f, (y + 0.5f) / 16f - 1f).magnitude;
+                a = Mathf.Clamp01((1f - r) * 16f);
+            }
+            else if (x < 80)
+            {
+                float across = Mathf.Abs((x - 64 + 0.5f) / 16f * 2f - 1f);
+                float edge = 1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.55f, 1f, across));
+                float tail = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((y + 0.5f) / H * 4f));
+                a = edge * tail;
+            }
+            else if (x < 96 && y < 16)
+            {
+                a = (x > 80 && x < 95 && y > 0 && y < 15) ? 1f : 0f;
+            }
+            else if (x >= 96 && y < 32)
+            {
+                float u = (x - 96 + 0.5f) / 16f - 1f, v = (y + 0.5f) / 16f - 1f;
+                float r = Mathf.Sqrt(u * u + v * v);
+                float star = Mathf.Max(Mathf.Exp(-u * u * 60f) * (1f - Mathf.Abs(v)), Mathf.Exp(-v * v * 60f) * (1f - Mathf.Abs(u)));
+                float core = Mathf.Clamp01(1f - r * 2.2f);
+                a = Mathf.Clamp01(star + core * core);
+            }
+            px[y * W + x] = new Color32(255, 255, 255, (byte)(a * 255f));
+        }
+        s_fxAtlas.SetPixels32(px);
+        s_fxAtlas.Apply(false, true);
+        var c = new Vector2(0.5f, 0.5f);
+        s_glow = Sprite.Create(s_fxAtlas, new Rect(0, 0, 32, 32), c);
+        s_dot = Sprite.Create(s_fxAtlas, new Rect(32, 0, 32, 32), c);
+        s_line = Sprite.Create(s_fxAtlas, new Rect(64, 0, 16, 64), c);
+        s_square = Sprite.Create(s_fxAtlas, new Rect(80, 0, 16, 16), c);
+        s_sparkle = Sprite.Create(s_fxAtlas, new Rect(96, 0, 32, 32), c);
+
+        const int R = 256;
+        var raysTex = new Texture2D(R, R, TextureFormat.RGBA32, false) { name = "FireworkRays", wrapMode = TextureWrapMode.Clamp };
+        var rpx = new Color32[R * R];
+        const int rayCount = 12;
+        for (int y = 0; y < R; y++)
+        for (int x = 0; x < R; x++)
+        {
+            float u = (x + 0.5f) / (R * 0.5f) - 1f, v = (y + 0.5f) / (R * 0.5f) - 1f;
+            float r = Mathf.Sqrt(u * u + v * v);
+            float ang = Mathf.Atan2(v, u);
+            float ray = Mathf.Pow(0.5f + 0.5f * Mathf.Cos(ang * rayCount), 3f);
+            float fall = Mathf.Clamp01(1f - r) * Mathf.Clamp01(r * 4f);   // merkez ve kenar yumusak
+            rpx[y * R + x] = new Color32(255, 255, 255, (byte)(Mathf.Clamp01(ray * fall * 1.4f) * 255f));
+        }
+        raysTex.SetPixels32(rpx);
+        raysTex.Apply(false, true);
+        s_raysSprite = Sprite.Create(raysTex, new Rect(0, 0, R, R), c);
     }
 
     // -------------------------------------------------------------------------

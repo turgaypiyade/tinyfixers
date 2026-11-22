@@ -63,7 +63,7 @@ public sealed class EggBirdHatchAction : BoardAction
         finally
         {
             if (flight != null)
-                Object.Destroy(flight.gameObject);
+                EggBirdFlightView.Release(flight);   // havuza (yok etmez)
             flightJob.Dispose();
             if (IsCurrentBoard(board, level))
                 board.RequestResolveAfterActionSequence();

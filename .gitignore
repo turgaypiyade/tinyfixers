@@ -128,3 +128,6 @@ Website/social/reels/*.mp4
 /Videos/
 mono_crash.*.json
 __pycache__/
+
+# Seviye önizleme dışa aktarımları (Tools/export_level_previews.py) — kullanılmıyor, repoya girmez (2026-11-22)
+Exports/LevelPreviews/

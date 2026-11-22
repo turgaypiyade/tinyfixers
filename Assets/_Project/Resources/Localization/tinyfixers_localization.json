@@ -1162,11 +1162,11 @@
         },
         {
           "key": "hint_obstacle_colorchest",
-          "value": "Renkli sandık. Her renk paneli için o rengi yanında eşleştir."
+          "value": "Elektrik kutusu. Renkli ampulleri kır: her ampulün rengini yanında eşleştir."
         },
         {
           "key": "hint_obstacle_colorchest_name",
-          "value": "Renkli Sandık"
+          "value": "Elektrik Kutusu"
         },
         {
           "key": "hint_obstacle_energycontainer",
@@ -1202,19 +1202,19 @@
         },
         {
           "key": "hint_obstacle_tube",
-          "value": "Boru açık uçtan küçülür. Açık ucuna yakın eşleştirme yap."
+          "value": "Sütunun yanında eşleştirme yap. Her vuruşta tepesinden bir parça yıkılır."
         },
         {
           "key": "hint_obstacle_tube_name",
-          "value": "Tüp"
+          "value": "Sütun"
         },
         {
           "key": "hint_obstacle_wardrobe",
-          "value": "Dolabı aç, içindeki parçaları yanında eşleştirerek tek tek çıkar."
+          "value": "Fındık dolabı. Dolabı aç, fındıkları topla: yanında eşleştirerek tek tek çıkar."
         },
         {
           "key": "hint_obstacle_wardrobe_name",
-          "value": "Dolap"
+          "value": "Fındık Dolabı"
         },
         {
           "key": "hint_obstacle_sculptingstone",
@@ -2479,6 +2479,10 @@
         {
           "key": "safari_reward_title",
           "value": "ZİRVE SENİN!"
+        },
+        {
+          "key": "rising_reward_wow",
+          "value": "HARİKA!"
         },
         {
           "key": "safari_reward_caption",
@@ -5035,11 +5039,11 @@
         },
         {
           "key": "hint_obstacle_colorchest",
-          "value": "Color chest. Match each color next to it to unlock its panels."
+          "value": "Electric box. Break the colored bulbs: match each bulb's color next to it."
         },
         {
           "key": "hint_obstacle_colorchest_name",
-          "value": "Color Chest"
+          "value": "Electric Box"
         },
         {
           "key": "hint_obstacle_energycontainer",
@@ -5075,19 +5079,19 @@
         },
         {
           "key": "hint_obstacle_tube",
-          "value": "The pipe shrinks from the open end. Match near the opening."
+          "value": "Match next to the column. Each hit knocks a piece off its top."
         },
         {
           "key": "hint_obstacle_tube_name",
-          "value": "Tube"
+          "value": "Column"
         },
         {
           "key": "hint_obstacle_wardrobe",
-          "value": "Open the wardrobe, then match nearby to remove the items inside one by one."
+          "value": "Nut cabinet. Open it and collect the hazelnuts: match nearby to take them out one by one."
         },
         {
           "key": "hint_obstacle_wardrobe_name",
-          "value": "Wardrobe"
+          "value": "Nut Cabinet"
         },
         {
           "key": "hint_obstacle_sculptingstone",
@@ -6360,6 +6364,10 @@
         {
           "key": "safari_reward_title",
           "value": "THE TOP IS YOURS!"
+        },
+        {
+          "key": "rising_reward_wow",
+          "value": "AMAZING!"
         },
         {
           "key": "safari_reward_caption",

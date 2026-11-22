@@ -136,7 +136,7 @@ MonoBehaviour:
   - id: 26
     iconOverride: {fileID: 21300000, guid: c4b70ff79b3b2489d88ab164e452b730, type: 3}
     titleLocKey: hint_obstacle_tube_name
-    fallbackTitle: Tube
+    fallbackTitle: Column
     locKey: hint_obstacle_tube
     fallbackText:
   - id: 27

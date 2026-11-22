@@ -2139,6 +2139,8 @@ public class TileView : MonoBehaviour,
         fuseSparkleView?.StartExternalFuse(target, sizeScale, intensity, duration, coroutineOwner);
     }
 
+    public void StopComboFuse(RectTransform target) => fuseSparkleView?.StopExternalFuse(target);
+
     private void StopSpecialCreationReveal()
     {
         if (specialCreationRevealRoutine != null)

@@ -55,6 +55,7 @@ public static class FirebaseAuthService
             try
             {
                 app = FirebaseApp.DefaultInstance;
+                GameAnalytics.ConfigureCollection();
                 auth = FirebaseAuth.GetAuth(app);
                 if (GameDiagnostics.Backend)
                     Debug.Log("[Firebase] Default app hazır; kimlik doğrulama başlıyor.");

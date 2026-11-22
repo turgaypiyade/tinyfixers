@@ -18,10 +18,36 @@ public sealed class GoldCoinCollectService : MonoBehaviour
     private void OnEnable()  => TrySubscribe();
     private void Start()     => TrySubscribe();   // board sahnede geç hazırlanırsa yakala
 
+    // Aynı karede temizlenen altınlar tek kazanca toplanır: 50 altınlık zincir = 1 AddCoins + 1 PlayerPrefs.Save
+    // (her parça için ayrı kayıt değil). Kare sonunda yazılır; kapanış/arka plana alınışta bekleyen hemen yazılır.
+    private int _pendingCoins;
+
     private void OnDisable()
     {
+        FlushPendingCoins();
         if (board != null) board.ObstacleVisualChanged -= HandleVisualChanged;
         _subscribed = false;
+    }
+
+    private void LateUpdate()
+    {
+        if (_pendingCoins > 0) FlushPendingCoins();
+    }
+
+    private void OnApplicationPause(bool paused)
+    {
+        if (paused) FlushPendingCoins();
+    }
+
+    private void FlushPendingCoins()
+    {
+        int amount = _pendingCoins;
+        if (amount <= 0) return;
+        _pendingCoins = 0;
+        int before = PlayerWallet.Coins;
+        PlayerWallet.AddCoins(amount);
+        int after = PlayerWallet.Coins;
+        CoinFlyToWalletAnimator.QueuePendingReward(amount, before, after);
     }
 
     private void TrySubscribe()
@@ -39,11 +65,6 @@ public sealed class GoldCoinCollectService : MonoBehaviour
     {
         // GoldMoney (bonus) ve Altın (hedef, ödül leveli): toplanan her parça cüzdana.
         if (change.cleared && (change.obstacleId == ObstacleId.GoldMoney || change.obstacleId == ObstacleId.GoldCoin))
-        {
-            int before = PlayerWallet.Coins;
-            PlayerWallet.AddCoins(coinsPerPiece);
-            int after = PlayerWallet.Coins;
-            CoinFlyToWalletAnimator.QueuePendingReward(coinsPerPiece, before, after);
-        }
+            _pendingCoins += coinsPerPiece;
     }
 }

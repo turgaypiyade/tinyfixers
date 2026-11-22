@@ -44,6 +44,9 @@ public sealed class ProfileUnlockTutorial : MonoBehaviour
         new GameObject("ProfileUnlockTutorial").AddComponent<ProfileUnlockTutorial>();
     }
 
+    /// Karartma ekranda (dokunuşu tutuyor). Bildirim izni popup'ı bu sürede açılmaz.
+    public static bool IsVisible { get; private set; }
+
     public static bool IsSeen() => PlayerPrefs.GetInt(SeenKey, 0) == 1;
 
     private static void MarkSeen()
@@ -116,6 +119,7 @@ public sealed class ProfileUnlockTutorial : MonoBehaviour
 
         MarkSeen();
         group.blocksRaycasts = false;   // isim yazılırken solan karartma dokunuşu yutmasın
+        IsVisible = false;
         yield return Fade(0f);
         Destroy(gameObject);
     }
@@ -160,7 +164,8 @@ public sealed class ProfileUnlockTutorial : MonoBehaviour
         LoadingScreenManager.IsVisible || CustomIntroLoadingManager.IsVisible
         || LegalConsent.NeedsAcceptance || LegalConsent.IsShowing
         || RuntimeChoicePopup.IsShowing || RewardChestRevealOverlay.IsShowing || ShopPurchaseCelebration.IsShowing
-        || AdService.IsShowing || FindAnyObjectByType<MainMenuRewardCollectFx>() != null;
+        || AdService.IsShowing || NotificationPermissionPrompt.IsShowing
+        || FindAnyObjectByType<MainMenuRewardCollectFx>() != null;
 
     // Profil sayfasını açan buton: onClick'inde ProfilePageController.Open kalıcı çağrısı olan, görünür buton.
     private void FindTargets()
@@ -313,6 +318,7 @@ public sealed class ProfileUnlockTutorial : MonoBehaviour
     private void SetVisible(bool visible)
     {
         group.blocksRaycasts = visible;
+        IsVisible = visible;
         if (!visible) { RestoreTargetScale(); group.alpha = 0f; target = null; }
     }
 
@@ -338,9 +344,14 @@ public sealed class ProfileUnlockTutorial : MonoBehaviour
         RestoreTargetScale();
         target = null;
         if (group != null) { group.alpha = 0f; group.blocksRaycasts = false; }
+        IsVisible = false;
     }
 
-    private void OnDestroy() => RestoreTargetScale();
+    private void OnDestroy()
+    {
+        IsVisible = false;
+        RestoreTargetScale();
+    }
 
     private void LateUpdate()
     {

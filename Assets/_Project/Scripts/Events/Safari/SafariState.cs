@@ -31,6 +31,9 @@ public static class SafariState
 
     private const string KeyRewardClaimed = "safari_reward_claimed";
     private const string KeyRunSeed      = "safari_run_seed";        // bot elemelerinin koşuya özgü seed'i
+    // Seviye sonunda kaydedilen, ana menüde haritada oynatılacak sonuç (SafariRoundOutcome) + düşüşün başladığı kat.
+    private const string KeyPendingOutcome = "safari_pending_outcome";
+    private const string KeyFallFrom       = "safari_fall_from";
 
     public static bool RewardClaimed => PlayerPrefs.GetInt(KeyRewardClaimed, 0) == 1;
 
@@ -87,9 +90,8 @@ public static class SafariState
     {
         LevelLossRegistry.Register("safari", () =>
         {
-            // Level bir safari turuysa (AwaitingResult) ve pitstop ilerlemesi varsa, vazgeçmek
-            // ilk-hakkı yakar → CurrentPitstop sıfırlanır. Elde var (gerçekleşti → checkmark).
-            if (RunStatus != SafariRunStatus.AwaitingResult || CurrentPitstop <= 0)
+            // Aktif koşuda kat ilerlemesi varsa, vazgeçmek onu yakar → CurrentPitstop sıfırlanır.
+            if (!IsRunActive || CurrentPitstop <= 0)
                 return null;
 
             string label = GameLocalization.Get("level_end_loss_safari");
@@ -99,9 +101,69 @@ public static class SafariState
             return new[] { new LevelLossItem(Config != null ? Config.lossIcon : null, label, CurrentPitstop, true) };
         });
 
-        // Safari turu olan level'dan vazgeçilirse düşüş ana menüdeki haritada oynatılır
-        // (SafariEventController AwaitingResult'u orada değerlendirir) → "Tekrar Dene" yerine ana menü.
-        LevelLossRegistry.RegisterResultScreen("safari", () => RunStatus == SafariRunStatus.AwaitingResult);
+        // Vazgeçilince düşüş ana menüdeki haritada oynatılır → "Tekrar Dene" yerine ana menü.
+        LevelLossRegistry.RegisterResultScreen("safari", () =>
+            PendingOutcome == SafariRoundOutcome.Fell || RunStatus == SafariRunStatus.AwaitingResult);
+
+        LevelAttemptStats.OnAttemptEnded += OnLevelAttemptEnded;
+    }
+
+    // ── Seviye sonucu (kullanıcı 2026-11-22) ─────────────────────
+    // Eskiden yalnız haritadaki "Devam" ile başlatılan level sayılıyordu: normal LEVEL butonu/başka event'ten
+    // oynanan kazanımlar ilerletmiyor, Devam sonrası pre-level popup kapatılınca takılı AwaitingResult kaybetmeden
+    // düşürüyordu. Artık katılmış ve koşusu süren oyuncuda HER level sonucu sayılır: kazanma +1 kat, vazgeçme düşüş.
+
+    /// Katıldı ve koşu sürüyor (düşmedi/bitmedi, eski sürümden kalan AwaitingResult değil).
+    public static bool IsRunActive => HasJoined && RunStatus == SafariRunStatus.Idle;
+
+    public static SafariRoundOutcome PendingOutcome =>
+        (SafariRoundOutcome)PlayerPrefs.GetInt(KeyPendingOutcome, (int)SafariRoundOutcome.None);
+
+    public static int PendingFallFrom => PlayerPrefs.GetInt(KeyFallFrom, -1);
+
+    public static void ClearPendingOutcome()
+    {
+        PlayerPrefs.SetInt(KeyPendingOutcome, (int)SafariRoundOutcome.None);
+        PlayerPrefs.SetInt(KeyFallFrom, -1);
+        PlayerPrefs.Save();
+    }
+
+    private static void OnLevelAttemptEnded(LevelAttemptResult result)
+    {
+        if (RuntimeSimulationSession.IsActive || MasterLeague.IsPlaying || !IsRunActive) return;
+        var config = Config;
+        if (config == null) return;
+        var now = DateTime.UtcNow;
+#if UNITY_EDITOR
+        bool active = config.debugForceAvailable || SafariSchedule.IsActiveNow(config, now);
+#else
+        bool active = SafariSchedule.IsActiveNow(config, now);
+#endif
+        if (!active || FallCooldownRemaining(now) > TimeSpan.Zero) return;
+
+        SafariRoundOutcome outcome;
+        if (result.Won)
+        {
+            int pit = CurrentPitstop + 1;
+            SetPitstop(pit);
+            if (pit >= config.pitstopCount)
+            {
+                StartFallCooldown(now, 30);
+                SetRunStatus(SafariRunStatus.Completed);
+                outcome = SafariRoundOutcome.Completed;
+            }
+            else outcome = SafariRoundOutcome.Advanced;
+        }
+        else
+        {
+            PlayerPrefs.SetInt(KeyFallFrom, CurrentPitstop);
+            SetPitstop(0);
+            SetRunStatus(SafariRunStatus.Fell);
+            StartFallCooldown(now, config.fallCooldownMinutes);
+            outcome = SafariRoundOutcome.Fell;
+        }
+        PlayerPrefs.SetInt(KeyPendingOutcome, (int)outcome);
+        PlayerPrefs.Save();
     }
 
     // ── Cycle ────────────────────────────────────────────────────
@@ -127,6 +189,8 @@ public static class SafariState
         PlayerPrefs.SetInt(KeyRunStatus, (int)SafariRunStatus.Idle);
         PlayerPrefs.SetInt(KeyLevelSnapshot, 0);
         PlayerPrefs.SetInt(KeyFailSnapshot, 0);
+        PlayerPrefs.SetInt(KeyPendingOutcome, (int)SafariRoundOutcome.None);
+        PlayerPrefs.SetInt(KeyFallFrom, -1);
         if (FallCooldownRemaining(utcNow) <= TimeSpan.Zero)
             PlayerPrefs.SetString(KeyFallUntil, "0");
         PlayerPrefs.Save();
@@ -226,7 +290,8 @@ public static class SafariState
     public static void DebugClearAll()
     {
         foreach (var k in new[] { KeyCycle, KeyJoined, KeyPitstop, KeyJoinTime,
-                                  KeyLastAsk, KeyRunStatus, KeyLevelSnapshot, KeyFailSnapshot, KeyFallUntil, KeyRewardClaimed, KeyRunSeed })
+                                  KeyLastAsk, KeyRunStatus, KeyLevelSnapshot, KeyFailSnapshot, KeyFallUntil, KeyRewardClaimed, KeyRunSeed,
+                                  KeyPendingOutcome, KeyFallFrom })
             PlayerPrefs.DeleteKey(k);
         PlayerPrefs.Save();
         OnChanged?.Invoke();

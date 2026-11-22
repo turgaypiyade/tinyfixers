@@ -1,6 +1,6 @@
 # Level isimleri — LevelCatalogProV1 (1–250)
 
-2026-10-28: Oyun `Settings/ProLevels/LevelCatalogProV1`'e geçti; numaralar YENİ sıradır. Boş seviyeler (4, 8, 106) henüz tasarlanmadığı için isimsizdir. Eski numaralı liste ve eşleşme: Masaüstü Wondi Paylaşım/LevelCatalogProV1_Plan.xlsx.
+2026-10-28: Oyun `Settings/ProLevels/LevelCatalogProV1`'e geçti; numaralar YENİ sıradır. Bu eski listede 4, 8 ve 106 isimsizdi; 4, 2026-11-20 revizyonunda Kıvrımlı Dere / Winding Stream adıyla kaydedildi. Eski numaralı liste ve eşleşme: Masaüstü Wondi Paylaşım/LevelCatalogProV1_Plan.xlsx.
 
 Tek kaynak: [LevelNames.json](../../Assets/_Project/Resources/LevelNames.json). 61 mevcut tasarım ismi korundu, 119 isimsiz levele mevcut hedef/engel ve board kayıtlarına göre isim verildi. Parantez içindeki zorluk/revizyon/tanıtım açıklamaları görünen isme katılmadı. Her kayıtta `name` (TR) ve `nameEn` (EN) vardır; oyun PreLevel popup'ında başlık plakasında 'LEVEL N' altında cihaz diline göre gösterir (`LevelNames.Get`, 2026-10-27). İngilizce karşılığı olmayan level İngilizce cihazda isimsiz görünür. Her kayıt gerçek katalogdaki `level` ve `levelKey` ile eşleşir; asset numarası kullanılmaz.
 
@@ -11,6 +11,7 @@ Yeni level tasarlarken aynı JSON'a TR + EN isim ekle, bu tabloyu ve ilgili not/
 | 1 | İlk Tamir |
 | 2 | İki Katlı İş |
 | 3 | Renkli Başlangıç |
+| 4 | Kıvrımlı Dere |
 | 5 | Ahşap Basamaklar |
 | 6 | Çamurlu Avlu |
 | 7 | Sandık Koridoru |
@@ -32,25 +33,25 @@ Yeni level tasarlarken aynı JSON'a TR + EN isim ekle, bu tabloyu ve ilgili not/
 | 24 | Kızıl Hat |
 | 25 | Çamurlu Sevkiyat |
 | 26 | Renkli Kilitler |
-| 27 | Dört Renkli Depo |
-| 28 | Kaygan Depo |
+| 27 | Kaygan Depo |
+| 28 | Altın Kese |
 | 29 | Sandık Meydanı |
 | 30 | İkinci Vardiya |
-| 31 | Şapkalı Atölye |
+| 31 | Çekiçli Atölye |
 | 32 | Depo Temizliği |
-| 33 | Çamurlu Enerji |
+| 33 | Çamurlu Çekiçler |
 | 34 | Kargo Adaları |
-| 35 | Enerji Şöleni |
+| 35 | Çekiç Şöleni |
 | 36 | Eşya Pazarı |
 | 37 | Kat Kat Onarım |
 | 38 | On Dolaplı Salon |
 | 39 | Renkli Ambar |
-| 40 | Enerji Düellosu |
-| 41 | Boru Hattı |
-| 42 | Sandıklı Tesisat |
+| 40 | Çekiç Düellosu |
+| 41 | Sütunu Yık |
+| 42 | Sandıklı Sütunlar |
 | 43 | Kargo Tüneli |
 | 44 | Mavi Geçiş |
-| 45 | Boru Atölyesi |
+| 45 | Sütun Atölyesi |
 | 46 | Porselen Kanal |
 | 47 | Beyaz Salon |
 | 48 | Porselen Vitrin |
@@ -58,9 +59,9 @@ Yeni level tasarlarken aynı JSON'a TR + EN isim ekle, bu tabloyu ve ilgili not/
 | 50 | Tamirci Arenası |
 | 51 | Heykeltıraşın Işığı |
 | 52 | Turuncu Kilit |
-| 53 | Yüklü Boru Hattı |
+| 53 | Kargolu Sütunlar |
 | 54 | Taş Ustası |
-| 55 | Yüklü Tesisat |
+| 55 | Yıkık Sütunlar |
 | 56 | Pusula Meydanı |
 | 57 | İkiz Malzeme |
 | 58 | Pusulanın Işığı |
@@ -97,7 +98,7 @@ Yeni level tasarlarken aynı JSON'a TR + EN isim ekle, bu tabloyu ve ilgili not/
 | 89 | Mor Bahçe |
 | 90 | Dalga Düellosu |
 | 91 | Çekim Bahçesi |
-| 92 | Şapka Şeritleri |
+| 92 | Çekiç Şeritleri |
 | 93 | Çekim Merkezi |
 | 94 | Bahçe Dolabı |
 | 95 | Çift Çekim |
@@ -111,7 +112,7 @@ Yeni level tasarlarken aynı JSON'a TR + EN isim ekle, bu tabloyu ve ilgili not/
 | 103 | Pusulalı Kasa |
 | 104 | Gizli Jel Bahçesi |
 | 105 | Fıçı İskelesi |
-| 107 | Deney Tüpü Rafı |
+| 107 | Sütunlu Bahçe |
 | 108 | Altın Kupa |
 | 109 | Üç Renkli Oyma |
 | 110 | Mor Düello |
@@ -169,7 +170,7 @@ Yeni level tasarlarken aynı JSON'a TR + EN isim ekle, bu tabloyu ve ilgili not/
 | 162 | Çiçekli Yonca |
 | 163 | Örtülü Surlar |
 | 164 | Kanal Adaları |
-| 165 | Mor Tesisat |
+| 165 | Mor Sütunlar |
 | 166 | Nilüfer Göleti |
 | 167 | Üç Atölye |
 | 168 | Renkli Onarım |
@@ -192,7 +193,7 @@ Yeni level tasarlarken aynı JSON'a TR + EN isim ekle, bu tabloyu ve ilgili not/
 | 185 | Mühürlü Vitray |
 | 186 | Fenerli Bent |
 | 187 | Çiçekli Pusula |
-| 188 | Boru Orgu |
+| 188 | Sütunlu Salon |
 | 189 | Dolaplı Geçit |
 | 190 | Kanyon Düellosu |
 | 191 | Işıklı Kapı |
@@ -255,3 +256,5 @@ Yeni level tasarlarken aynı JSON'a TR + EN isim ekle, bu tabloyu ve ilgili not/
 | 249 | Meyve Bahçesi |
 | 250 | Hasat Bayramı |
 | 251 | Kapadokya Sabahı |
+
+2026-11-22 (kullanıcı): HatLauncher artık Çekiç Kutusu, Tube görseli sütun → eski şapka/enerji/boru isimleri değişti: 31 Çekiçli Atölye, 33 Çamurlu Çekiçler, 35 Çekiç Şöleni, 40 Çekiç Düellosu, 92 Çekiç Şeritleri; 41 Sütunu Yık, 42 Sandıklı Sütunlar, 45 Sütun Atölyesi, 53 Kargolu Sütunlar, 55 Yıkık Sütunlar, 107 Sütunlu Bahçe, 165 Mor Sütunlar, 188 Sütunlu Salon.

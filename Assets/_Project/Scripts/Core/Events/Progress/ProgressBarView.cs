@@ -201,8 +201,9 @@ public class ProgressBarView : MonoBehaviour
 
         if (gain.RewardGranted)
         {
-            yield return new WaitForSeconds(0.15f);
-            yield return StartCoroutine(CoCelebrate());
+            yield return new WaitForSecondsRealtime(0.15f);
+            StartCoroutine(CoCelebrate());              // bar hafif zıplar
+            yield return CoPulseGoalIcon();             // hedef taşı büyüyüp küçülür → ardından ödül verilir
             RefreshDisplay();
         }
     }
@@ -270,6 +271,26 @@ public class ProgressBarView : MonoBehaviour
             yield return null;
         }
         if (rt != null) Destroy(rt.gameObject);
+    }
+
+    // Hedefe ulaşıldı: soldaki hedef taşı büyür, hafif geri sekip oturur (kullanıcı 2026-11-22).
+    private IEnumerator CoPulseGoalIcon()
+    {
+        if (goalIconImage == null) yield break;
+        var rt = goalIconImage.rectTransform;
+        var original = rt.localScale;
+        const float dur = 0.55f;
+        for (float t = 0f; t < dur; t += Time.unscaledDeltaTime)
+        {
+            if (rt == null) yield break;
+            float k = t / dur;
+            float s = k < 0.4f ? Mathf.Lerp(1f, 1.4f, Mathf.Sin(k / 0.4f * Mathf.PI * 0.5f))
+                    : k < 0.75f ? Mathf.Lerp(1.4f, 0.92f, (k - 0.4f) / 0.35f)
+                                : Mathf.Lerp(0.92f, 1f, (k - 0.75f) / 0.25f);
+            rt.localScale = original * s;
+            yield return null;
+        }
+        if (rt != null) rt.localScale = original;
     }
 
     private IEnumerator CoCelebrate()

@@ -52,6 +52,10 @@ MonoBehaviour:
   randomPool: 
   energyPerContainer: 10
   comboTutorial: 0
+  tutorialSteps:
+  - id: 13
+    fromCell: 0
+    toCell: -1
   musicClip: {fileID: 0}
   musicVolume: 1
   obstacleLibrary: {fileID: 11400000, guid: 542e279c729681244b475a353cdd0e8f, type: 2}

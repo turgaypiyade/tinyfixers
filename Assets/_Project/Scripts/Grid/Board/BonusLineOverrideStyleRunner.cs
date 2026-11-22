@@ -31,7 +31,33 @@ public static class BonusLineOverrideStyleRunner
             yield break;
 
         var lineCells = ExtractCells(activations);
+        yield return RunChain(board, new List<TileView>(), lineCells, hardSkipRequested);
+    }
 
+    /// <summary>
+    /// Bonus PulseCores no line reached: fired as ordinary chain seeds (same solo path as gameplay),
+    /// after the line wave has settled.
+    /// </summary>
+    public static IEnumerator RunSpecials(
+        BoardController board,
+        List<TileView> specials,
+        Func<bool> hardSkipRequested = null)
+    {
+        if (board == null || specials == null || specials.Count == 0)
+            yield break;
+
+        if (hardSkipRequested != null && hardSkipRequested())
+            yield break;
+
+        yield return RunChain(board, specials, null, hardSkipRequested);
+    }
+
+    private static IEnumerator RunChain(
+        BoardController board,
+        List<TileView> initialSpecials,
+        List<Vector2Int> lineCells,
+        Func<bool> hardSkipRequested)
+    {
         ActionSequencer sequencer = board.GetComponent<ActionSequencer>();
         if (sequencer == null)
             sequencer = board.gameObject.AddComponent<ActionSequencer>();
@@ -50,7 +76,7 @@ public static class BonusLineOverrideStyleRunner
         {
             var chain = new SpecialChainRunner(
                 board,
-                new List<TileView>(),
+                initialSpecials,
                 PulseChainAreaHalf,
                 board.PulseChainCatchOverlap,
                 services.ResolveOtherSpecialInline,

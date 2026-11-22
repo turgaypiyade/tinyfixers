@@ -55,6 +55,11 @@ public static class LevelAttemptStats
     // Zorlanılan seviyenin kazanılmasından SONRAKİ seviyeye taşınan zorlanma (rahatlama anı; RefillSpecialGuard).
     private const string KeyCarryLevel = "level_attempt_carry_level";
     private const string KeyCarryStruggles = "level_attempt_carry_struggles";
+    // Son iki kazanılan seviyenin zorlanması: erken oyun yardımı 3 seviyelik serinin toplamına bakar (LevelAssist).
+    private const string KeyPrev1Level = "level_attempt_prev1_level";
+    private const string KeyPrev1Struggles = "level_attempt_prev1_struggles";
+    private const string KeyPrev2Level = "level_attempt_prev2_level";
+    private const string KeyPrev2Struggles = "level_attempt_prev2_struggles";
 
     /// Tahta kuruldu, deneme başladı: (level, attempt).
     public static event Action<int, int> OnAttemptStarted;
@@ -119,6 +124,22 @@ public static class LevelAttemptStats
     /// yalnız o seviyenin hemen ardından gelen seviye için döner, o seviye kazanılınca silinir.
     public static int CarriedStrugglesFor(int level) =>
         level > 0 && PlayerPrefs.GetInt(KeyCarryLevel, 0) == level ? Mathf.Max(0, PlayerPrefs.GetInt(KeyCarryStruggles, 0)) : 0;
+
+    /// Bu seviye + hemen önceki iki seviyede hamle bitip kaybedilen deneme toplamı (kullanıcı 2026-11-21:
+    /// L29'da 4, L30'da 1 kayıp veren oyuncu L31'de sildi — tek seviyelik sayaç bu seriyi görmüyordu).
+    public static int StrugglesInSeries(int level)
+    {
+        if (level <= 0) return 0;
+        return StrugglesOn(level)
+            + PrevStruggles(KeyPrev1Level, KeyPrev1Struggles, level)
+            + PrevStruggles(KeyPrev2Level, KeyPrev2Struggles, level);
+    }
+
+    private static int PrevStruggles(string levelKey, string strugglesKey, int level)
+    {
+        int prev = PlayerPrefs.GetInt(levelKey, 0);
+        return prev > 0 && prev < level && prev >= level - 2 ? Mathf.Max(0, PlayerPrefs.GetInt(strugglesKey, 0)) : 0;
+    }
 
     public static int AttemptsOn(int level) =>
         PlayerPrefs.GetInt(KeyLevel, 0) == level ? PlayerPrefs.GetInt(KeyAttempts, 0) : 0;
@@ -206,6 +227,15 @@ public static class LevelAttemptStats
             {
                 PlayerPrefs.SetInt(KeyCarryLevel, 0);
                 PlayerPrefs.SetInt(KeyCarryStruggles, 0);
+            }
+
+            // Seri kaydı yalnız ana yol: lig seviyesi ana yol serisini silmesin.
+            if (!MasterLeague.IsPlaying)
+            {
+                PlayerPrefs.SetInt(KeyPrev2Level, PlayerPrefs.GetInt(KeyPrev1Level, 0));
+                PlayerPrefs.SetInt(KeyPrev2Struggles, PlayerPrefs.GetInt(KeyPrev1Struggles, 0));
+                PlayerPrefs.SetInt(KeyPrev1Level, level);
+                PlayerPrefs.SetInt(KeyPrev1Struggles, struggles);
             }
 
             // Explicit zeroes also clear stale counters in the merge-based cloud save.

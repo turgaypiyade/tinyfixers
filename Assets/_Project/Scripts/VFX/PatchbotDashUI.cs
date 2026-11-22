@@ -11,8 +11,41 @@ public class PatchbotDashUI : MonoBehaviour
     private const string ImpactFlashInnerPoolKey = "PatchbotDash.ImpactFlashInner";
     private const string AfterImagePoolKey = "PatchbotDash.AfterImage";
 
+    private readonly List<(string key, GameObject go)> rentedVisuals = new(32);
+    private readonly List<BoardAudioDirector.ClipLoop> flightLoops = new(2);
+    private BoardAudioDirector.ClipLoop legacyFlightLoop;
+
+    private GameObject RentVisual(string name, Transform parent, bool image = true)
+    {
+        string key = "PatchbotDash." + name;
+        var go = image ? UiVfxPool.RentImage(key, parent, name)?.gameObject
+                       : UiVfxPool.RentRect(key, parent, name);
+        if (go != null) rentedVisuals.Add((key, go));
+        return go;
+    }
+
+    private void ReleaseVisualTree(GameObject root)
+    {
+        if (root == null) return;
+        for (int i = rentedVisuals.Count - 1; i >= 0; i--)
+        {
+            var item = rentedVisuals[i];
+            if (item.go != null && item.go != root && !item.go.transform.IsChildOf(root.transform)) continue;
+            rentedVisuals.RemoveAt(i);
+            UiVfxPool.Return(item.key, item.go, 32);
+        }
+    }
+
     private void OnDisable()
     {
+        StopAllCoroutines();
+        co = null;
+        for (int i = flightLoops.Count - 1; i >= 0; i--) flightLoops[i]?.Dispose();
+        flightLoops.Clear();
+        legacyFlightLoop = null;
+        for (int i = rentedVisuals.Count - 1; i >= 0; i--)
+            UiVfxPool.Return(rentedVisuals[i].key, rentedVisuals[i].go, 32);
+        rentedVisuals.Clear();
         UiFxPool.ReleaseGhosts(transform);
         UiFxPool.ReleasePatchbotSparks(transform);
     }
@@ -189,6 +222,8 @@ public class PatchbotDashUI : MonoBehaviour
         EnsureHierarchyActive();
 
         if (co != null) StopCoroutine(co);
+        ReleaseFlightAudio(legacyFlightLoop);
+        legacyFlightLoop = null;
         co = StartCoroutine(DashRoutine(pathTiles));
     }
 
@@ -258,189 +293,200 @@ public class PatchbotDashUI : MonoBehaviour
     {
         req.onStart?.Invoke();
 
-        var go = new GameObject("PatchbotRunnerInstance", typeof(RectTransform), typeof(Image));
+        var go = RentVisual("PatchbotRunnerInstance", vfxRoot);
+        if (go == null) { onComplete?.Invoke(); yield break; }
         go.transform.SetParent(vfxRoot, false);
 
-        var img = go.GetComponent<Image>();
-        var rt = (RectTransform)go.transform;
-
-        img.sprite = sprite;
-        img.raycastTarget = false;
-        img.enabled = true;
-        img.color = Color.white;
-
-        rt.SetAsLastSibling();
-        rt.anchorMin = new Vector2(0.5f, 0.5f);
-        rt.anchorMax = new Vector2(0.5f, 0.5f);
-        rt.pivot = new Vector2(0.5f, 0.5f);
-
-        Vector2 size = new Vector2(90f, 90f);
-        if (runnerImage != null &&
-            runnerImage.rectTransform != null &&
-            runnerImage.rectTransform.sizeDelta.sqrMagnitude > 1f)
+        BoardAudioDirector.ClipLoop flightSource = null;
+        Coroutine spinCycler = null;
+        try
         {
-            size = runnerImage.rectTransform.sizeDelta;
-        }
-        rt.sizeDelta = size;
+            var img = go.GetComponent<Image>();
+            var rt = (RectTransform)go.transform;
 
-        GameObject propGo = null;
-        Image propImg = null;
-        PatchBotPropellerView propView = null;
+            img.sprite = sprite;
+            img.raycastTarget = false;
+            img.enabled = true;
+            img.color = Color.white;
 
-        // Kalkış pervanesi sprite'ı: PatchbotDashUI local öncelikli, yoksa board.
-        var propellerSprite = takeoffPropellerSprite != null ? takeoffPropellerSprite : board.PatchBotPropellerSprite;
-        if (propellerSprite != null)
-        {
-            propGo = new GameObject("PatchBotPropeller", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(PatchBotPropellerView));
-            propGo.transform.SetParent(rt, false);
+            rt.SetAsLastSibling();
+            rt.anchorMin = new Vector2(0.5f, 0.5f);
+            rt.anchorMax = new Vector2(0.5f, 0.5f);
+            rt.pivot = new Vector2(0.5f, 0.5f);
 
-            var propRt = propGo.GetComponent<RectTransform>();
-            propRt.anchorMin = new Vector2(0.5f, 0.5f);
-            propRt.anchorMax = new Vector2(0.5f, 0.5f);
-            propRt.pivot = new Vector2(0.5f, 0.5f);
-            propRt.sizeDelta = size;
-            propRt.anchoredPosition = Vector2.zero;
-
-            propImg = propGo.GetComponent<Image>();
-            propImg.sprite = propellerSprite;
-            propImg.preserveAspect = true;
-            propImg.raycastTarget = false;
-            propImg.color = Color.white;
-
-            propView = propGo.GetComponent<PatchBotPropellerView>();
-            // Uçan pervane de tile'daki gibi frame animasyonu kullansın (rotasyon değil).
-            // Öncelik: PatchbotDashUI local → board.PatchBotPropellerFrames → idle tile'ın son bilinen
-            // frame'leri (elle eşleme gerekmez → takeoff spin'i idle ile aynı olur). Hepsi boşsa rotasyon.
-            Sprite[] propFrames;
-            float propFps;
-            if (takeoffPropellerFrames != null && takeoffPropellerFrames.Length >= 2)
+            Vector2 size = new Vector2(90f, 90f);
+            if (runnerImage != null &&
+                runnerImage.rectTransform != null &&
+                runnerImage.rectTransform.sizeDelta.sqrMagnitude > 1f)
             {
-                propFrames = takeoffPropellerFrames;
-                propFps = takeoffPropellerFps;
+                size = runnerImage.rectTransform.sizeDelta;
             }
-            else if (board.PatchBotPropellerFrames != null && board.PatchBotPropellerFrames.Length >= 2)
+            rt.sizeDelta = size;
+
+            GameObject propGo = null;
+            Image propImg = null;
+            PatchBotPropellerView propView = null;
+
+            // Kalkış pervanesi sprite'ı: PatchbotDashUI local öncelikli, yoksa board.
+            var propellerSprite = takeoffPropellerSprite != null ? takeoffPropellerSprite : board.PatchBotPropellerSprite;
+            if (propellerSprite != null)
             {
-                propFrames = board.PatchBotPropellerFrames;
-                propFps = board.PatchBotPropellerFrameFps;
+                propGo = RentVisual("PatchBotPropeller", rt);
+                propGo.transform.SetParent(rt, false);
+
+                var propRt = propGo.GetComponent<RectTransform>();
+                propRt.anchorMin = new Vector2(0.5f, 0.5f);
+                propRt.anchorMax = new Vector2(0.5f, 0.5f);
+                propRt.pivot = new Vector2(0.5f, 0.5f);
+                propRt.sizeDelta = size;
+                propRt.anchoredPosition = Vector2.zero;
+
+                propImg = propGo.GetComponent<Image>();
+                propImg.sprite = propellerSprite;
+                propImg.preserveAspect = true;
+                propImg.raycastTarget = false;
+                propImg.color = Color.white;
+
+                propView = propGo.GetComponent<PatchBotPropellerView>();
+                if (propView == null) propView = propGo.AddComponent<PatchBotPropellerView>();
+                // Uçan pervane de tile'daki gibi frame animasyonu kullansın (rotasyon değil).
+                // Öncelik: PatchbotDashUI local → board.PatchBotPropellerFrames → idle tile'ın son bilinen
+                // frame'leri (elle eşleme gerekmez → takeoff spin'i idle ile aynı olur). Hepsi boşsa rotasyon.
+                Sprite[] propFrames;
+                float propFps;
+                if (takeoffPropellerFrames != null && takeoffPropellerFrames.Length >= 2)
+                {
+                    propFrames = takeoffPropellerFrames;
+                    propFps = takeoffPropellerFps;
+                }
+                else if (board.PatchBotPropellerFrames != null && board.PatchBotPropellerFrames.Length >= 2)
+                {
+                    propFrames = board.PatchBotPropellerFrames;
+                    propFps = board.PatchBotPropellerFrameFps;
+                }
+                else
+                {
+                    propFrames = PatchBotPropellerView.LastKnownSpinFrames;
+                    propFps = PatchBotPropellerView.LastKnownSpinFrameFps > 0f
+                        ? PatchBotPropellerView.LastKnownSpinFrameFps
+                        : takeoffPropellerFps;
+                }
+
+                propView.SetSpinFrames(propFrames, propFps);
+                propView.StartActivationSpin(5400f);
+            }
+
+            RectTransform carryRt = null;
+            Image carryImg = null;
+
+            if (req.orbitCarry && req.carriedSprite != null)
+            {
+                var carryGo = RentVisual("PatchbotCarrySpecial", rt);
+                carryGo.transform.SetParent(rt, false);
+
+                carryRt = carryGo.GetComponent<RectTransform>();
+                carryImg = carryGo.GetComponent<Image>();
+
+                carryRt.anchorMin = new Vector2(0.5f, 0.5f);
+                carryRt.anchorMax = new Vector2(0.5f, 0.5f);
+                carryRt.pivot = new Vector2(0.5f, 0.5f);
+                carryRt.sizeDelta = size * carrySizeFactor;
+                carryRt.anchoredPosition = Vector2.down * (Mathf.Min(size.x, size.y) * carryOrbitRadiusFactor);
+
+                carryImg.sprite = req.carriedSprite;
+                carryImg.preserveAspect = true;
+                carryImg.raycastTarget = false;
+                carryImg.color = Color.white;
+
+                carryRt.SetAsLastSibling();
+            }
+
+            flightSource = CreateFlightAudioSource(board);
+            StartFlightAudio(flightSource);
+
+            Vector3 fromWorld = board.GetCellWorldPosition(req.from.x, req.from.y);
+            Vector3 toWorld = AimWorldPosition(board, req.to.x, req.to.y);
+
+            Vector2 start = WorldToAnchoredIn(vfxRoot, fromWorld);
+            Vector2 target = WorldToAnchoredIn(vfxRoot, toWorld);
+            rt.anchoredPosition = start;
+
+            float totalDistance = Vector2.Distance(start, target);
+            float effectiveSpeed = Mathf.Max(1f, dashSpeed * Mathf.Max(0.01f, pikeSpeedMultiplier));
+
+            // Blade spinner YALNIZ solo patchbot'a özel. Special TAŞIYAN (combo) patchbot blade'e
+            // dönüşmez — pervane olarak kalır (kullanıcı kararı). Taşımada gövde-retreat da yok.
+            bool useSpinner = spinnerFrames != null && spinnerFrames.Length > 0 && !req.orbitCarry;
+
+            float takeoffDuration;
+            float hoverDuration;
+            float separationPhase;
+            float diveDuration;
+
+            if (syncDuration > 0f)
+            {
+                // Zincir/sync modunda toplam süre dışarıdan veriliyor; fazlara böl.
+                float travelDuration = Mathf.Max(0f, syncDuration * Mathf.Max(0.01f, syncedDurationMultiplier));
+                takeoffDuration = Mathf.Min(Mathf.Max(0f, takeoffBurstDuration), Mathf.Max(0f, travelDuration * 0.35f));
+                hoverDuration = Mathf.Min(Mathf.Max(0f, hoverHoldDuration), Mathf.Max(0f, travelDuration * 0.18f));
+                separationPhase = useSpinner ? Mathf.Min(Mathf.Max(0f, separationDuration), Mathf.Max(0f, travelDuration * 0.25f)) : 0f;
+                diveDuration = Mathf.Max(0.01f, travelDuration - takeoffDuration - hoverDuration - separationPhase);
             }
             else
             {
-                propFrames = PatchBotPropellerView.LastKnownSpinFrames;
-                propFps = PatchBotPropellerView.LastKnownSpinFrameFps > 0f
-                    ? PatchBotPropellerView.LastKnownSpinFrameFps
-                    : takeoffPropellerFps;
+                // Solo dash: takeoff (2.5x şarj) ve hover SABİT; dalış pike hızıyla kısa ve keskin.
+                takeoffDuration = Mathf.Max(0f, takeoffBurstDuration);
+                hoverDuration = Mathf.Max(0f, hoverHoldDuration);
+                separationPhase = useSpinner ? Mathf.Max(0f, separationDuration) : 0f;
+                diveDuration = totalDistance > arriveEps ? Mathf.Max(0.05f, totalDistance / effectiveSpeed) : 0.01f;
             }
 
-            if (propFrames != null && propFrames.Length >= 2)
-                propView.SetSpinFrames(propFrames, propFps);
-            propView.StartActivationSpin(5400f);
+            int side = ((req.from.x + req.from.y + req.to.x + req.to.y) & 1) == 0 ? -1 : 1;
+            Vector2 takeoff = start + new Vector2(
+                side * Mathf.Min(size.x, size.y) * takeoffLateralFactor,
+                Mathf.Min(size.x, size.y) * takeoffLiftFactor);
+
+            if (board != null && board.BoardFlowTraceEnabled)
+                {}
+
+            var motion = new DashMotionState();
+            yield return RunTakeoffBurst(rt, carryRt, size, sprite, start, takeoff, takeoffDuration, motion);
+            yield return RunHoverHold(rt, carryRt, size, sprite, takeoff, hoverDuration, motion);
+
+            // Ayrılma: gövde güvenli bölgeye süzülürken pervane bıçaklı spinner'a dönüşür.
+            Image spinnerImg = null;
+            if (useSpinner)
+                yield return RunSeparation(rt, img, sprite, size, propGo, propImg, propView, separationPhase, motion, s => spinnerImg = s);
+
+            var live = AcquireLiveTarget(req, board, target);
+
+            // Spinner uçuş boyunca frame'lerini hızlıca döngüler (pervane gibi dönme).
+            spinCycler = spinnerImg != null ? StartCoroutine(SpinnerFrameCycler(spinnerImg)) : null;
+
+            yield return RunDive(rt, carryRt, size, sprite, rt.anchoredPosition, live, diveDuration, effectiveSpeed, motion, spinnerImg);
+
+            if (spinCycler != null) StopCoroutine(spinCycler);
+
+            if (live.HasTarget) rt.anchoredPosition = live.target;
+            rt.localRotation = Quaternion.identity;
+            rt.localScale = Vector3.one;
+
+            if (carryRt != null)
+                carryRt.localRotation = Quaternion.identity;
+
+            if (live.HasTarget) SpawnImpactSparks(live.target, size, board, req.to);
+
+            req.onArrived?.Invoke();
+            yield return StopFlightAudioRoutine(flightSource);
+
         }
-
-        RectTransform carryRt = null;
-        Image carryImg = null;
-
-        if (req.orbitCarry && req.carriedSprite != null)
+        finally
         {
-            var carryGo = new GameObject("PatchbotCarrySpecial", typeof(RectTransform), typeof(Image));
-            carryGo.transform.SetParent(rt, false);
-
-            carryRt = carryGo.GetComponent<RectTransform>();
-            carryImg = carryGo.GetComponent<Image>();
-
-            carryRt.anchorMin = new Vector2(0.5f, 0.5f);
-            carryRt.anchorMax = new Vector2(0.5f, 0.5f);
-            carryRt.pivot = new Vector2(0.5f, 0.5f);
-            carryRt.sizeDelta = size * carrySizeFactor;
-            carryRt.anchoredPosition = Vector2.down * (Mathf.Min(size.x, size.y) * carryOrbitRadiusFactor);
-
-            carryImg.sprite = req.carriedSprite;
-            carryImg.preserveAspect = true;
-            carryImg.raycastTarget = false;
-            carryImg.color = Color.white;
-
-            carryRt.SetAsLastSibling();
+            if (spinCycler != null) StopCoroutine(spinCycler);
+            ReleaseFlightAudio(flightSource);
+            ReleaseVisualTree(go);
+            onComplete?.Invoke();
         }
-
-        AudioSource flightSource = CreateFlightAudioSource(rt);
-        StartFlightAudio(flightSource);
-
-        Vector3 fromWorld = board.GetCellWorldPosition(req.from.x, req.from.y);
-        Vector3 toWorld = AimWorldPosition(board, req.to.x, req.to.y);
-
-        Vector2 start = WorldToAnchoredIn(vfxRoot, fromWorld);
-        Vector2 target = WorldToAnchoredIn(vfxRoot, toWorld);
-        rt.anchoredPosition = start;
-
-        float totalDistance = Vector2.Distance(start, target);
-        float effectiveSpeed = Mathf.Max(1f, dashSpeed * Mathf.Max(0.01f, pikeSpeedMultiplier));
-
-        // Blade spinner YALNIZ solo patchbot'a özel. Special TAŞIYAN (combo) patchbot blade'e
-        // dönüşmez — pervane olarak kalır (kullanıcı kararı). Taşımada gövde-retreat da yok.
-        bool useSpinner = spinnerFrames != null && spinnerFrames.Length > 0 && !req.orbitCarry;
-
-        float takeoffDuration;
-        float hoverDuration;
-        float separationPhase;
-        float diveDuration;
-
-        if (syncDuration > 0f)
-        {
-            // Zincir/sync modunda toplam süre dışarıdan veriliyor; fazlara böl.
-            float travelDuration = Mathf.Max(0f, syncDuration * Mathf.Max(0.01f, syncedDurationMultiplier));
-            takeoffDuration = Mathf.Min(Mathf.Max(0f, takeoffBurstDuration), Mathf.Max(0f, travelDuration * 0.35f));
-            hoverDuration = Mathf.Min(Mathf.Max(0f, hoverHoldDuration), Mathf.Max(0f, travelDuration * 0.18f));
-            separationPhase = useSpinner ? Mathf.Min(Mathf.Max(0f, separationDuration), Mathf.Max(0f, travelDuration * 0.25f)) : 0f;
-            diveDuration = Mathf.Max(0.01f, travelDuration - takeoffDuration - hoverDuration - separationPhase);
-        }
-        else
-        {
-            // Solo dash: takeoff (2.5x şarj) ve hover SABİT; dalış pike hızıyla kısa ve keskin.
-            takeoffDuration = Mathf.Max(0f, takeoffBurstDuration);
-            hoverDuration = Mathf.Max(0f, hoverHoldDuration);
-            separationPhase = useSpinner ? Mathf.Max(0f, separationDuration) : 0f;
-            diveDuration = totalDistance > arriveEps ? Mathf.Max(0.05f, totalDistance / effectiveSpeed) : 0.01f;
-        }
-
-        int side = ((req.from.x + req.from.y + req.to.x + req.to.y) & 1) == 0 ? -1 : 1;
-        Vector2 takeoff = start + new Vector2(
-            side * Mathf.Min(size.x, size.y) * takeoffLateralFactor,
-            Mathf.Min(size.x, size.y) * takeoffLiftFactor);
-
-        if (board != null && board.BoardFlowTraceEnabled)
-            {}
-
-        var motion = new DashMotionState();
-        yield return RunTakeoffBurst(rt, carryRt, size, sprite, start, takeoff, takeoffDuration, motion);
-        yield return RunHoverHold(rt, carryRt, size, sprite, takeoff, hoverDuration, motion);
-
-        // Ayrılma: gövde güvenli bölgeye süzülürken pervane bıçaklı spinner'a dönüşür.
-        Image spinnerImg = null;
-        if (useSpinner)
-            yield return RunSeparation(rt, img, sprite, size, propGo, propImg, propView, separationPhase, motion, s => spinnerImg = s);
-
-        var live = AcquireLiveTarget(req, board, target);
-
-        // Spinner uçuş boyunca frame'lerini hızlıca döngüler (pervane gibi dönme).
-        Coroutine spinCycler = spinnerImg != null ? StartCoroutine(SpinnerFrameCycler(spinnerImg)) : null;
-
-        yield return RunDive(rt, carryRt, size, sprite, rt.anchoredPosition, live, diveDuration, effectiveSpeed, motion, spinnerImg);
-
-        if (spinCycler != null) StopCoroutine(spinCycler);
-
-        if (live.HasTarget) rt.anchoredPosition = live.target;
-        rt.localRotation = Quaternion.identity;
-        rt.localScale = Vector3.one;
-
-        if (carryRt != null)
-            carryRt.localRotation = Quaternion.identity;
-
-        if (live.HasTarget) SpawnImpactSparks(live.target, size, board, req.to);
-
-        req.onArrived?.Invoke();
-        yield return StopFlightAudioRoutine(flightSource);
-
-        Destroy(go);
-        onComplete?.Invoke();
     }
 
     // Görsel varış noktası. Hedef hücre çok-hücreli bir obstacle'a aitse (Safe NxN gibi)
@@ -710,7 +756,7 @@ public class PatchbotDashUI : MonoBehaviour
         // Frizbi tilt-holder: DÖNMEYEN parent, sabit dikey/yatay squash uygular (foreshorten).
         // Spinner bunun İÇİNDE Z'de döner → disk sabit bir elips olur, bıçaklar içinde döner
         // (elips titremez). Uçarken de eğim görünür kalır. squash = cos(tilt).
-        var tiltGo = new GameObject("PatchbotSpinnerTilt", typeof(RectTransform));
+        var tiltGo = RentVisual("PatchbotSpinnerTilt", rt, false);
         tiltGo.transform.SetParent(rt, false);
         var tiltRt = tiltGo.GetComponent<RectTransform>();
         tiltRt.anchorMin = tiltRt.anchorMax = tiltRt.pivot = new Vector2(0.5f, 0.5f);
@@ -723,7 +769,7 @@ public class PatchbotDashUI : MonoBehaviour
         tiltRt.SetAsLastSibling();
 
         // Bıçaklı spinner overlay'i (pervanenin dönüşeceği yapı), alfa 0'dan başlar.
-        var spinGo = new GameObject("PatchbotBladeSpinner", typeof(RectTransform), typeof(Image));
+        var spinGo = RentVisual("PatchbotBladeSpinner", tiltGo.transform);
         spinGo.transform.SetParent(tiltGo.transform, false);
 
         var spinRt = spinGo.GetComponent<RectTransform>();
@@ -782,7 +828,7 @@ public class PatchbotDashUI : MonoBehaviour
     {
         if (vfxRoot == null) return;
 
-        var go = new GameObject("PatchbotBodyRetreat", typeof(RectTransform), typeof(Image));
+        var go = RentVisual("PatchbotBodyRetreat", vfxRoot);
         go.transform.SetParent(vfxRoot, false);
 
         var brt = go.GetComponent<RectTransform>();
@@ -1151,7 +1197,7 @@ public class PatchbotDashUI : MonoBehaviour
             yield return null;
         }
 
-        if (go != null) Destroy(go);
+        if (go != null) ReleaseVisualTree(go);
     }
 
     // Spinner frame'lerini spinnerFps hızında döngüler; ayrıca opsiyonel sürekli transform
@@ -1242,41 +1288,48 @@ public class PatchbotDashUI : MonoBehaviour
         runnerImage.rectTransform.SetAsLastSibling();
         runnerImage.rectTransform.anchoredPosition = WorldToAnchoredIn(vfxRoot, path[0].position);
 
-        AudioSource flightSource = CreateFlightAudioSource(runnerImage.rectTransform);
+        var flightSource = legacyFlightLoop = CreateFlightAudioSource(GetComponentInParent<BoardController>());
         StartFlightAudio(flightSource);
-
-        float tAfter = 0f;
-
-        for (int i = 0; i < path.Count; i++)
+        try
         {
-            Vector2 target = WorldToAnchoredIn(vfxRoot, path[i].position);
+            float tAfter = 0f;
 
-            while (Vector2.Distance(runnerImage.rectTransform.anchoredPosition, target) > arriveEps)
+            for (int i = 0; i < path.Count; i++)
             {
-                runnerImage.rectTransform.anchoredPosition =
-                    Vector2.MoveTowards(runnerImage.rectTransform.anchoredPosition, target, dashSpeed * Time.deltaTime);
+                Vector2 target = WorldToAnchoredIn(vfxRoot, path[i].position);
 
-                tAfter += Time.deltaTime;
-                if (tAfter >= spawnEvery)
+                while (Vector2.Distance(runnerImage.rectTransform.anchoredPosition, target) > arriveEps)
                 {
-                    tAfter = 0f;
-                    SpawnAfterImageAt(runnerImage.rectTransform, runnerImage.sprite);
+                    runnerImage.rectTransform.anchoredPosition =
+                        Vector2.MoveTowards(runnerImage.rectTransform.anchoredPosition, target, dashSpeed * Time.deltaTime);
+
+                    tAfter += Time.deltaTime;
+                    if (tAfter >= spawnEvery)
+                    {
+                        tAfter = 0f;
+                        SpawnAfterImageAt(runnerImage.rectTransform, runnerImage.sprite);
+                    }
+
+                    yield return null;
                 }
-
-                yield return null;
             }
+
+            var rt = runnerImage.rectTransform;
+            Vector3 baseScale = rt.localScale;
+            rt.localScale = baseScale * 1.15f;
+            yield return new WaitForSeconds(0.06f);
+            rt.localScale = baseScale;
+
+            yield return StopFlightAudioRoutine(flightSource);
+
+            runnerImage.enabled = false;
+            co = null;
         }
-
-        var rt = runnerImage.rectTransform;
-        Vector3 baseScale = rt.localScale;
-        rt.localScale = baseScale * 1.15f;
-        yield return new WaitForSeconds(0.06f);
-        rt.localScale = baseScale;
-
-        yield return StopFlightAudioRoutine(flightSource);
-
-        runnerImage.enabled = false;
-        co = null;
+        finally
+        {
+            ReleaseFlightAudio(flightSource);
+            if (legacyFlightLoop == flightSource) legacyFlightLoop = null;
+        }
     }
 
     private void SpawnAfterImageAt(RectTransform source, Sprite sprite)
@@ -1329,100 +1382,56 @@ public class PatchbotDashUI : MonoBehaviour
         return takeoff + hover + sep + dive;
     }
 
-    private AudioSource CreateFlightAudioSource(RectTransform attachTo)
+    private BoardAudioDirector.ClipLoop CreateFlightAudioSource(BoardController board)
     {
-        if (attachTo == null || flightLoopClip == null)
-            return null;
-
-        var go = new GameObject("PatchbotFlightAudio", typeof(AudioSource));
-        go.transform.SetParent(attachTo, false);
-        go.transform.localPosition = Vector3.zero;
-        go.transform.localRotation = Quaternion.identity;
-        go.transform.localScale = Vector3.one;
-
-        var source = go.GetComponent<AudioSource>();
-        source.playOnAwake = false;
-        source.loop = true;
-        source.clip = flightLoopClip;
-        source.spatialBlend = 0f;
-        source.dopplerLevel = 0f;
-        source.volume = Mathf.Max(0f, flightLoopVolume + Random.Range(-flightVolumeJitter, flightVolumeJitter));
-        source.pitch = Mathf.Max(0.01f, flightPitch + Random.Range(-flightPitchJitter, flightPitchJitter));
-        source.priority = 160;
-        return source;
+        // Reserve central voices for impacts/other effects during Override + PatchBot bursts.
+        if (board == null || board.Audio == null || flightLoopClip == null || flightLoops.Count >= 2) return null;
+        var loop = board.Audio.StartLoopClip(flightLoopClip,
+            Mathf.Max(0f, flightLoopVolume + Random.Range(-flightVolumeJitter, flightVolumeJitter)),
+            Mathf.Max(0.01f, flightPitch + Random.Range(-flightPitchJitter, flightPitchJitter)));
+        if (loop != null) flightLoops.Add(loop);
+        return loop;
     }
 
-    private void StartFlightAudio(AudioSource source)
+    private void ReleaseFlightAudio(BoardAudioDirector.ClipLoop loop)
     {
-        if (source == null || source.clip == null)
-            return;
+        if (loop == null) return;
+        loop.Dispose();
+        flightLoops.Remove(loop);
+    }
 
-        if (!GameSettings.SoundEnabled)
-            return;
-
-        float targetVolume = source.volume;
+    private void StartFlightAudio(BoardAudioDirector.ClipLoop source)
+    {
+        if (source == null) return;
+        float targetVolume = source.Volume;
         if (flightFadeIn > 0f)
-            source.volume = 0f;
-
-        source.Play();
-
-        if (flightFadeIn > 0f && targetVolume > 0f)
+        {
+            source.Volume = 0f;
             StartCoroutine(FadeAudioVolumeRoutine(source, targetVolume, flightFadeIn));
-    }
-
-    private IEnumerator StopFlightAudioRoutine(AudioSource source)
-    {
-        if (source == null)
-            yield break;
-
-        if (flightFadeOut <= 0f || !source.isPlaying)
-        {
-            source.Stop();
-            if (source.gameObject != null)
-                Destroy(source.gameObject);
-            yield break;
-        }
-
-        float startVolume = source.volume;
-        float elapsed = 0f;
-        while (elapsed < flightFadeOut && source != null)
-        {
-            elapsed += Time.deltaTime;
-            float t = Mathf.Clamp01(elapsed / Mathf.Max(0.0001f, flightFadeOut));
-            source.volume = Mathf.Lerp(startVolume, 0f, t);
-            yield return null;
-        }
-
-        if (source != null)
-        {
-            source.Stop();
-            if (source.gameObject != null)
-                Destroy(source.gameObject);
         }
     }
 
-    private IEnumerator FadeAudioVolumeRoutine(AudioSource source, float targetVolume, float duration)
+    private IEnumerator StopFlightAudioRoutine(BoardAudioDirector.ClipLoop source)
     {
-        if (source == null)
-            yield break;
-
-        if (duration <= 0f)
+        if (source == null) yield break;
+        if (!GameSettings.SoundEnabled) { ReleaseFlightAudio(source); yield break; }
+        float startVolume = source.Volume;
+        for (float elapsed = 0f; elapsed < flightFadeOut && !source.IsDisposed; elapsed += Time.deltaTime)
         {
-            source.volume = targetVolume;
-            yield break;
-        }
-
-        float elapsed = 0f;
-        while (elapsed < duration && source != null)
-        {
-            elapsed += Time.deltaTime;
-            float t = Mathf.Clamp01(elapsed / duration);
-            source.volume = Mathf.Lerp(0f, targetVolume, t);
+            source.Volume = Mathf.Lerp(startVolume, 0f, elapsed / flightFadeOut);
             yield return null;
         }
+        ReleaseFlightAudio(source);
+    }
 
-        if (source != null)
-            source.volume = targetVolume;
+    private IEnumerator FadeAudioVolumeRoutine(BoardAudioDirector.ClipLoop source, float targetVolume, float duration)
+    {
+        for (float elapsed = 0f; elapsed < duration && !source.IsDisposed; elapsed += Time.deltaTime)
+        {
+            source.Volume = Mathf.Lerp(0f, targetVolume, elapsed / duration);
+            yield return null;
+        }
+        if (!source.IsDisposed) source.Volume = targetVolume;
     }
 
 static Vector2 WorldToAnchoredIn(RectTransform targetSpace, Vector3 worldPos)

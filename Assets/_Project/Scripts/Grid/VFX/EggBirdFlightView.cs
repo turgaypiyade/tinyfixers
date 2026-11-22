@@ -45,9 +45,15 @@ public sealed class EggBirdFlightView : MonoBehaviour
     private RectTransform space;
     private List<Sprite> sprites;
     private ObstacleDef obstacleDef;
-    private AudioSource flightAudio;
-    private float flightAudioStartedAt;
+    private System.IDisposable flightLoop;
     private readonly List<Bird> birds = new List<Bird>(3);
+    // HAVUZ (performans): görünüm bitince yok edilmez, kapatılıp aynı VFX kökünde bekler. Kuşlar, tüyler ve
+    // patlama halkaları görünümün içinde yeniden kullanılır → tetikleme başına GameObject üretimi/çöp yok.
+    private static readonly List<EggBirdFlightView> s_free = new List<EggBirdFlightView>(4);
+    private readonly List<Bird> birdPool = new List<Bird>(3);
+    private readonly Stack<Image> featherPool = new Stack<Image>(32);
+    private readonly List<EggBirdBurstGraphic> bursts = new List<EggBirdBurstGraphic>(12);
+    private readonly HashSet<Transform> ownedChildren = new HashSet<Transform>();
     private readonly List<EggBirdBurstGraphic> targetRings = new List<EggBirdBurstGraphic>(3);
     private readonly List<Feather> feathers = new List<Feather>(32);
     private Vector2 source;
@@ -71,16 +77,31 @@ public sealed class EggBirdFlightView : MonoBehaviour
             return null;
         }
 
-        var go = new GameObject("EggBird_HatchSplitDive", typeof(RectTransform), typeof(EggBirdFlightView));
-        var root = (RectTransform)go.transform;
-        root.SetParent(parent, false);
-        root.anchorMin = Vector2.zero;
-        root.anchorMax = Vector2.one;
-        root.offsetMin = root.offsetMax = Vector2.zero;
+        var view = TakePooled(parent);
+        RectTransform root;
+        if (view != null)
+        {
+            root = (RectTransform)view.transform;
+            view.gameObject.SetActive(true);
+        }
+        else
+        {
+            var go = new GameObject("EggBird_HatchSplitDive", typeof(RectTransform), typeof(EggBirdFlightView));
+            root = (RectTransform)go.transform;
+            root.SetParent(parent, false);
+            root.anchorMin = Vector2.zero;
+            root.anchorMax = Vector2.one;
+            root.offsetMin = root.offsetMax = Vector2.zero;
+            view = go.GetComponent<EggBirdFlightView>();
+        }
         root.pivot = parent.pivot;
         root.SetAsLastSibling();
 
-        var view = go.GetComponent<EggBirdFlightView>();
+        view.birds.Clear();
+        view.targetRings.Clear();
+        view.elapsed = 0f;
+        view.impactTime = 0f;
+        view.diving = false;
         view.board = board;
         view.level = board.LevelData;
         view.space = root;
@@ -97,11 +118,57 @@ public sealed class EggBirdFlightView : MonoBehaviour
         view.apex = new Vector2(
             Mathf.Clamp(view.source.x, topLeft.x + margin, topRight.x - margin),
             Mathf.Min(view.source.y + view.tileSize * 2.15f, topLeft.y + view.tileSize * 0.85f));
-        view.birds.Add(view.CreateBird(0));
+        view.birds.Add(view.RentBird(0));
         view.birds[0].root.anchoredPosition = view.source;
         view.birds[0].root.localScale = Vector3.one * 0.68f;
         return view;
     }
+
+    private static EggBirdFlightView TakePooled(RectTransform parent)
+    {
+        for (int i = s_free.Count - 1; i >= 0; i--)
+        {
+            var v = s_free[i];
+            if (v == null) { s_free.RemoveAt(i); continue; }   // sahne kapandı: yok edilmiş görünüm
+            if (v.transform.parent != parent) continue;
+            s_free.RemoveAt(i);
+            return v;
+        }
+        return null;
+    }
+
+    /// Uçuş bitti (EggBirdHatchAction finally): görünümü kapatıp havuza bırakır; tahta gittiyse yok eder.
+    public static void Release(EggBirdFlightView view)
+    {
+        if (view == null) return;
+        if (view.board == null)
+        {
+            Destroy(view.gameObject);
+            return;
+        }
+        view.StopFlightSound();
+        for (int i = 0; i < view.birdPool.Count; i++)
+            if (view.birdPool[i].root != null) view.birdPool[i].root.gameObject.SetActive(false);
+        for (int i = view.feathers.Count - 1; i >= 0; i--)
+            view.ReleaseFeather(view.feathers[i].image);
+        view.feathers.Clear();
+        for (int i = 0; i < view.bursts.Count; i++)
+            if (view.bursts[i] != null) view.bursts[i].Release();
+        view.birds.Clear();
+        view.targetRings.Clear();
+        // Yedek çarpma patlaması (RocketProjectileFlight.PlayImpactExplosion) kendi nesnelerini bu köke kurar;
+        // görünüm kapanınca coroutine'i durur → yarım kalan nesneler sonraki kullanımda belirmesin.
+        var tr = view.transform;
+        for (int i = tr.childCount - 1; i >= 0; i--)
+        {
+            var child = tr.GetChild(i);
+            if (!view.ownedChildren.Contains(child)) Destroy(child.gameObject);
+        }
+        view.gameObject.SetActive(false);
+        if (!s_free.Contains(view)) s_free.Add(view);
+    }
+
+    private void OnDestroy() => s_free.Remove(this);
 
     public IEnumerator RiseAndSplit()
     {
@@ -168,8 +235,8 @@ public sealed class EggBirdFlightView : MonoBehaviour
         Burst(splitOrigin, tileSize * 3.5f, new Color(0.7f, 0.43f, 1f), 0.56f);
         Burst(splitOrigin, tileSize * 2.15f, new Color(1f, 0.83f, 0.3f), 0.34f);
         SpawnFeathers(splitOrigin, 12, 2.6f, 0.56f);
-        birds.Add(CreateBird(1));
-        birds.Add(CreateBird(2));
+        birds.Add(RentBird(1));
+        birds.Add(RentBird(2));
         for (int i = 0; i < birds.Count; i++)
         {
             birds[i].root.anchoredPosition = splitOrigin;
@@ -230,7 +297,7 @@ public sealed class EggBirdFlightView : MonoBehaviour
             ends[i] = CellPoint(targets[i]);
             float side = i == 1 ? -1f : i == 2 ? 1f : Mathf.Sign(ends[i].x - starts[i].x);
             controls[i] = starts[i] + new Vector2(side * tileSize * 0.75f, tileSize * 0.85f);
-            var ring = EggBirdBurstGraphic.Spawn(space, ends[i], tileSize * 1.05f,
+            var ring = SpawnBurst(ends[i], tileSize * 1.05f,
                 new Color(1f, 0.75f, 0.2f), DiveDuration + 0.1f, true);
             targetRings.Add(ring);
         }
@@ -265,7 +332,8 @@ public sealed class EggBirdFlightView : MonoBehaviour
         foreach (var bird in birds)
             if (bird.root != null) bird.root.gameObject.SetActive(false);
         foreach (var ring in targetRings)
-            if (ring != null) Destroy(ring.gameObject);
+            if (ring != null) ring.Release();
+        targetRings.Clear();
         var rocketFlame = board.GetComponent<RocketProjectileFlight>();
         foreach (var cell in new HashSet<Vector2Int>(targets))
         {
@@ -277,43 +345,24 @@ public sealed class EggBirdFlightView : MonoBehaviour
         }
         impactTime = Time.time;
         // The three birds arrive together: play one bomb cue without tripling its loudness.
-        // Use the board source so the 1-second tail survives this short-lived visual.
-        if (obstacleDef != null && obstacleDef.impactSound != null && GameSettings.SoundEnabled)
-            board.SfxSource?.PlayOneShot(obstacleDef.impactSound, obstacleDef.impactSoundVolume);
+        // Merkezi ses yolu (AGENTS): tahtanın ses yönetmeni; tahta kaynağında çalar → 1 sn kuyruk bu kısa görseli aşar.
+        if (obstacleDef != null && obstacleDef.impactSound != null && board.Audio != null)
+            board.Audio.PlayOneShotClip(obstacleDef.impactSound, obstacleDef.impactSoundVolume);
     }
 
+    // Uçuş döngüsü merkezi döngü API'sinden (ayar kapalıyken çalmaz/susar; efekt başına AudioSource açılmaz).
     private void StartFlightSound()
     {
-        if (flightAudio != null || obstacleDef == null || obstacleDef.flightLoopSound == null)
+        if (flightLoop != null || obstacleDef == null || obstacleDef.flightLoopSound == null || board.Audio == null)
             return;
-
-        flightAudio = gameObject.AddComponent<AudioSource>();
-        flightAudio.playOnAwake = false;
-        flightAudio.clip = obstacleDef.flightLoopSound;
-        flightAudio.loop = true;
-        flightAudio.spatialBlend = 0f;
-        flightAudio.dopplerLevel = 0f;
-        flightAudio.priority = 160;
-        flightAudio.volume = 0f;
-        if (board.SfxSource != null)
-            flightAudio.outputAudioMixerGroup = board.SfxSource.outputAudioMixerGroup;
-        flightAudio.mute = !GameSettings.SoundEnabled;
-        GameSettings.OnSoundChanged += HandleSoundChanged;
-        flightAudioStartedAt = Time.time;
-        flightAudio.Play();
-    }
-
-    private void HandleSoundChanged(bool enabled)
-    {
-        if (flightAudio != null)
-            flightAudio.mute = !enabled;
+        flightLoop = board.Audio.StartLoopClip(obstacleDef.flightLoopSound, obstacleDef.flightLoopSoundVolume);
     }
 
     private void StopFlightSound()
     {
-        GameSettings.OnSoundChanged -= HandleSoundChanged;
-        if (flightAudio != null)
-            flightAudio.Stop();
+        var loop = flightLoop;
+        flightLoop = null;
+        loop?.Dispose();
     }
 
     private void OnDisable() => StopFlightSound();
@@ -324,14 +373,30 @@ public sealed class EggBirdFlightView : MonoBehaviour
             yield return null;
     }
 
-    private Bird CreateBird(int index)
+    private Bird RentBird(int index)
     {
-        RectTransform root = CreateRect("Bird_" + index, space);
-        root.sizeDelta = Vector2.one * tileSize;
-        var bird = new Bird { root = root, phase = index * 0.8f };
-        bird.leftWing = CreateImage("LeftWing", root);
-        bird.rightWing = CreateImage("RightWing", root);
-        bird.body = CreateImage("Body", root);
+        Bird bird;
+        if (index < birdPool.Count)
+        {
+            bird = birdPool[index];
+            bird.root.gameObject.SetActive(true);
+        }
+        else
+        {
+            RectTransform root = CreateRect("Bird_" + index, space);
+            ownedChildren.Add(root);
+            bird = new Bird { root = root, phase = index * 0.8f };
+            bird.leftWing = CreateImage("LeftWing", root);
+            bird.rightWing = CreateImage("RightWing", root);
+            bird.body = CreateImage("Body", root);
+            birdPool.Add(bird);
+        }
+        bird.root.SetAsLastSibling();
+        bird.root.sizeDelta = Vector2.one * tileSize;   // tahta değişmiş olabilir
+        bird.root.localRotation = Quaternion.identity;
+        bird.root.localScale = Vector3.one;
+        SetOpacity(bird, 1f);
+        bird.view = -1;                                  // SetView boyutları yeni tileSize ile yeniden kursun
         SetView(bird, 0, false);
         return bird;
     }
@@ -378,12 +443,6 @@ public sealed class EggBirdFlightView : MonoBehaviour
             return;
         }
         elapsed += Time.deltaTime;
-        if (flightAudio != null && flightAudio.isPlaying)
-        {
-            float busVolume = board.SfxSource != null ? board.SfxSource.volume : 1f;
-            flightAudio.volume = obstacleDef.flightLoopSoundVolume * busVolume
-                * Mathf.Clamp01((Time.time - flightAudioStartedAt) / 0.06f);
-        }
         UpdateFeathers();
         foreach (Bird bird in birds)
         {
@@ -409,13 +468,48 @@ public sealed class EggBirdFlightView : MonoBehaviour
         => space.InverseTransformPoint(board.GetCellWorldCenterPosition(cell.x, cell.y));
 
     private void Burst(Vector2 position, float size, Color color, float lifetime)
-        => EggBirdBurstGraphic.Spawn(space, position, size, color, lifetime, false);
+        => SpawnBurst(position, size, color, lifetime, false);
+
+    private EggBirdBurstGraphic SpawnBurst(Vector2 position, float size, Color color, float lifetime, bool target)
+    {
+        for (int i = 0; i < bursts.Count; i++)
+        {
+            var b = bursts[i];
+            if (b != null && b.IsFree)
+            {
+                b.Restart(position, size, color, lifetime, target);
+                return b;
+            }
+        }
+        var created = EggBirdBurstGraphic.Spawn(space, position, size, color, lifetime, target);
+        bursts.Add(created);
+        ownedChildren.Add(created.transform);
+        return created;
+    }
+
+    private void ReleaseFeather(Image image)
+    {
+        if (image == null) return;
+        image.enabled = false;
+        featherPool.Push(image);
+    }
 
     private void SpawnFeathers(Vector2 position, int count, float speed, float lifetime)
     {
         for (int i = 0; i < count; i++)
         {
-            var image = CreateImage("EggBird_Feather", space);
+            Image image;
+            if (featherPool.Count > 0)
+            {
+                image = featherPool.Pop();
+                image.enabled = true;
+                image.rectTransform.localScale = Vector3.one;
+            }
+            else
+            {
+                image = CreateImage("EggBird_Feather", space);
+                ownedChildren.Add(image.transform);
+            }
             image.sprite = sprites[i % 2 == 0 ? 12 : 15];
             image.rectTransform.anchoredPosition = position + Random.insideUnitCircle * tileSize * 0.12f;
             image.rectTransform.sizeDelta = new Vector2(0.17f, 0.14f) * tileSize;
@@ -439,7 +533,7 @@ public sealed class EggBirdFlightView : MonoBehaviour
             feather.age += Time.deltaTime;
             if (feather.image == null || feather.age >= feather.lifetime)
             {
-                if (feather.image != null) Destroy(feather.image.gameObject);
+                ReleaseFeather(feather.image);
                 feathers.RemoveAt(i);
                 continue;
             }

@@ -73,6 +73,7 @@ public sealed class ButtonFrameBacking : MonoBehaviour
         slot.localScale = new Vector3(outerScale, outerScale, 1f);
         rt.localScale = ButtonScale;   // buton çerçevenin içine küçülür
         if (TryGetComponent(out ButtonShine shine)) shine.SetBaseScale(rt.localScale);   // nefes alma bu ölçekten
+        if (TryGetComponent(out PressScaleButton press)) press.SetNormalScale(rt.localScale);   // basınca bu ölçekten küçülür
         Sync();
         slot.gameObject.SetActive(isActiveAndEnabled);
     }

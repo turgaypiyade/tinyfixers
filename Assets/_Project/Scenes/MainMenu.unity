@@ -4412,8 +4412,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0}
   m_AnchorMax: {x: 0.5, y: 0}
-  m_AnchoredPosition: {x: 250, y: 0}
-  m_SizeDelta: {x: 425, y: 150}
+  m_AnchoredPosition: {x: 245, y: 20}
+  m_SizeDelta: {x: 467.5, y: 165}
   m_Pivot: {x: 0.5, y: 0}
 --- !u!114 &89437021
 MonoBehaviour:
@@ -4526,6 +4526,9 @@ MonoBehaviour:
   workshop: {fileID: 1692631015}
   notificationDot: {fileID: 0}
   hideWhenCompleted: 0
+  buttonFrameSprite: {fileID: 21300000, guid: 432793548bdd6412cafaebf420341c94, type: 3}
+  buttonSprite: {fileID: 21300000, guid: cee5236173c444e48f09ee5585155556, type: 3}
+  wrenchIcon: {fileID: 21300000, guid: 35d9ead0298c4d4db0af655e2e1849b2, type: 3}
 --- !u!114 &89437025
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -30308,8 +30311,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Button
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: af5dedf535e914a95b9338f201a87125, type: 2}
-  m_sharedMaterial: {fileID: 3959975710503819313, guid: af5dedf535e914a95b9338f201a87125, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 020a75041a4a04fb28f301a2fa0a06db, type: 2}
+  m_sharedMaterial: {fileID: 2100000, guid: 98cf87f8353942be9a53674346d10a78, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -30333,13 +30336,13 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 50
+  m_fontSize: 64
   m_fontSizeBase: 50
   m_fontWeight: 400
-  m_enableAutoSizing: 0
-  m_fontSizeMin: 18
-  m_fontSizeMax: 72
-  m_fontStyle: 1
+  m_enableAutoSizing: 1
+  m_fontSizeMin: 40
+  m_fontSizeMax: 64
+  m_fontStyle: 0
   m_HorizontalAlignment: 2
   m_VerticalAlignment: 512
   m_textAlignment: 65535
@@ -54498,6 +54501,10 @@ MonoBehaviour:
   headerHeight: 58
   headerFontSize: 46
   headerItemSpacing: 10
+  starChipBackground: {fileID: 21300000, guid: 224406fd4d4ea40ce9fda003a5fc990b, type: 3}
+  starChipIcon: {fileID: 21300000, guid: 3777501fcbb794f35a8cee09ef4e7973, type: 3}
+  starChipFont: {fileID: 11400000, guid: af5dedf535e914a95b9338f201a87125, type: 2}
+  starChipMaterial: {fileID: 3959975710503819313, guid: af5dedf535e914a95b9338f201a87125, type: 2}
 --- !u!225 &1192824597
 CanvasGroup:
   m_ObjectHideFlags: 0
@@ -80854,15 +80861,15 @@ MonoBehaviour:
       m_Calls: []
   m_text: MISSIONS
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: af5dedf535e914a95b9338f201a87125, type: 2}
-  m_sharedMaterial: {fileID: 3959975710503819313, guid: af5dedf535e914a95b9338f201a87125, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 020a75041a4a04fb28f301a2fa0a06db, type: 2}
+  m_sharedMaterial: {fileID: 2100000, guid: 98cf87f8353942be9a53674346d10a78, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4278190080
-  m_fontColor: {r: 0, g: 0, b: 0, a: 1}
+    rgba: 4294967295
+  m_fontColor: {r: 1, g: 1, b: 1, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -80879,13 +80886,13 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 50
+  m_fontSize: 64
   m_fontSizeBase: 50
   m_fontWeight: 400
-  m_enableAutoSizing: 0
-  m_fontSizeMin: 18
-  m_fontSizeMax: 72
-  m_fontStyle: 1
+  m_enableAutoSizing: 1
+  m_fontSizeMin: 40
+  m_fontSizeMax: 64
+  m_fontStyle: 0
   m_HorizontalAlignment: 2
   m_VerticalAlignment: 512
   m_textAlignment: 65535
@@ -92574,7 +92581,7 @@ MonoBehaviour:
   lift: {fileID: 254774458}
   restLift: {fileID: 812721441}
   liftAnchor: {fileID: 1777732627}
-  liftAvatarOffsetY: -27
+  liftAvatarOffsetY: -37
   liftDeckOffsetY: -30
   liftMaxHeightUI: 900
   liftTileSize: 217.3913
@@ -94193,8 +94200,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0}
   m_AnchorMax: {x: 0.5, y: 0}
-  m_AnchoredPosition: {x: -250, y: 0}
-  m_SizeDelta: {x: 425, y: 150}
+  m_AnchoredPosition: {x: -245, y: 20}
+  m_SizeDelta: {x: 467.5, y: 165}
   m_Pivot: {x: 0.5, y: 0}
 --- !u!114 &2123982242
 MonoBehaviour:
@@ -94310,15 +94317,20 @@ MonoBehaviour:
   levelCatalog: {fileID: 11400000, guid: 6791aed5a9bc44f4af246ccebce32906, type: 2}
   livesDisplay: {fileID: 0}
   initialCoins: 500
-  difficultyTitleLift: 16
+  difficultyTitleLift: 20
   difficultyTagOffsetY: -36
-  difficultyTagFontSize: 26
+  difficultyTagFontSize: 32
   hardButtonDarken: 0.2
   veryHardButtonDarken: 0.36
   hardTagColor: {r: 1, g: 0.8, b: 0.62, a: 1}
   veryHardTagColor: {r: 1, g: 0.66, b: 0.66, a: 1}
   enableDebugLevelSelector: 1
   debugLongPressSeconds: 3
+  normalButtonSprite: {fileID: 21300000, guid: 31a3eec15ec7e4edebed2e4bd6c22218, type: 3}
+  hardButtonSprite: {fileID: 21300000, guid: 5319f735a23c477f94a010231e050f4b, type: 3}
+  veryHardButtonSprite: {fileID: 21300000, guid: 2aba65b2287241558be463c27ecd0e74, type: 3}
+  buttonFrameSprite: {fileID: 21300000, guid: 432793548bdd6412cafaebf420341c94, type: 3}
+  greenTextMaterial: {fileID: 2100000, guid: 98cf87f8353942be9a53674346d10a78, type: 2}
 --- !u!114 &2123982246
 MonoBehaviour:
   m_ObjectHideFlags: 0

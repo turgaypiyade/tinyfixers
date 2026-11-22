@@ -58,8 +58,25 @@ public sealed class CoinFlyToWalletAnimator : MonoBehaviour
     private Vector3 targetBaseScale = Vector3.one;
     private bool hasTargetBaseScale;
 
+    private static CoinFlyToWalletAnimator s_active;
+
+    /// Sahne açılışı dışında bekleyen altın ödülünü hemen uçurur (ör. Tırmanış ödülü, menüde kalınırken).
+    /// Sahnede animatör yoksa ödül zaten cüzdanda; bekleyen kayıt sonraki menü açılışında oynar.
+    public static bool PlayPendingNow()
+    {
+        if (s_active == null || !s_active.isActiveAndEnabled) return false;
+        s_active.StartCoroutine(s_active.CoPlayPendingRewardAfterLayout());
+        return true;
+    }
+
+    private void OnDestroy()
+    {
+        if (s_active == this) s_active = null;
+    }
+
     private void Awake()
     {
+        s_active = this;
         ResolveReferences();
         RefreshWalletTextBeforePendingReward();
     }

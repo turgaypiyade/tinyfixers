@@ -9,9 +9,10 @@ public sealed class SafariRewardView : MonoBehaviour
 {
     private RectTransform design;
     private TMP_FontAsset font;
-    private AudioSource audioSource;
     private bool claimed;
     private static Sprite glowSprite;
+    private static Material s_wowFront, s_wowShadow;
+    private const float WowSize = 150f;
     private static readonly Color Gold = new Color(1f, 0.83f, 0.25f);
     private static readonly Color Cream = new Color(1f, 0.97f, 0.84f);
     private const float AmountY = -240f;   // "+N" satırı; düşen altınlar buraya iner
@@ -31,9 +32,11 @@ public sealed class SafariRewardView : MonoBehaviour
         return go.AddComponent<SafariRewardView>();
     }
 
+    /// <param name="winnerAvatar">Oyuncunun kalabalıktaki avatarı: kopyası ortada "kazanan" görseli olur (yoksa altın).</param>
     public IEnumerator Present(int share, int prizePool, int winners, Sprite coinSprite,
         Sprite ribbonSprite, Sprite buttonSprite, TMP_FontAsset displayFont,
-        AudioClip collectSfx, AudioMixerGroup mixer, float countDuration, Material eventLabelMaterial = null)
+        AudioClip collectSfx, AudioMixerGroup mixer, float countDuration, Material eventLabelMaterial = null,
+        RectTransform winnerAvatar = null)
     {
         font = displayFont;
         claimed = false;
@@ -51,13 +54,25 @@ public sealed class SafariRewardView : MonoBehaviour
         // Kurdele görseli 1187x493 (≈2.41): kutu bu orana göre → preserveAspect yüksekliğe takılıp
         // küçültmez. Başlık kurdelenin sarkmasını izlesin diye -15° yayla bükülür.
         Picture("VictoryRibbon", design, ribbonSprite, new Vector2(960f, 398f), new Vector2(0f, 420f));
-        var eventLabel = Label("Event", GameLocalization.Get("safari_reward_event"), 40, new Vector2(820f, 80f), new Vector2(0f, 715f), Cream);
+        // HARİKA (kullanıcı 2026-11-22): kaldırılan ilk-taş sahnesinin başlık sistemi — krem yüz, bordo kontur,
+        // altın dış halka, altında bordo gölge; ezilip büyüyerek doğar. Etkinlik satırı başlığın altına iner.
+        var wow = BuildWowTitle(GameLocalization.GetOr("rising_reward_wow", "HARİKA!"));
+        wow.anchoredPosition = new Vector2(0f, 760f);
+        wow.localScale = Vector3.zero;
+        var eventLabel = Label("Event", GameLocalization.Get("safari_reward_event"), 40, new Vector2(820f, 80f), new Vector2(0f, 628f), Cream);
         // Kalın sarı outline + etrafında yumuşak gölge (Fonts/Materials/Inter_ExtraBold_GoldOutlineGlow).
         if (eventLabelMaterial != null)
             eventLabel.fontSharedMaterial = eventLabelMaterial;
         var title = Label("Title", GameLocalization.Get("safari_reward_title"), 92, new Vector2(700f, 150f), new Vector2(0f, 405f), Cream, true);
         title.gameObject.AddComponent<TMPArcText>().arcDegrees = -15f;
-        var hero = Picture("GoldReward", design, coinSprite, new Vector2(270f, 270f), new Vector2(0f, 45f));
+        title.rectTransform.localScale = Vector3.zero;
+        // Kazanan görseli: oyuncunun kendi avatarı ortada, altın kesesi sağ altında rozet gibi. Avatar yoksa eski düzen.
+        RectTransform winner = CloneAvatar(winnerAvatar, design, 300f, new Vector2(0f, 60f));
+        var hero = winner != null
+            ? Picture("GoldReward", design, coinSprite, new Vector2(150f, 150f), new Vector2(135f, -45f))
+            : Picture("GoldReward", design, coinSprite, new Vector2(270f, 270f), new Vector2(0f, 45f));
+        if (winner != null) winner.localScale = Vector3.zero;
+        hero.rectTransform.localScale = Vector3.zero;
         Label("RewardCaption", GameLocalization.Get("safari_reward_caption"), 36, new Vector2(780f, 60f), new Vector2(0f, -132f), Cream);
         var amount = Label("Amount", "+0", 150, new Vector2(850f, 190f), new Vector2(0f, AmountY), Gold, true);
         Label("Pool", GameLocalization.GetFormat("safari_reward_pool", prizePool), 42,
@@ -78,11 +93,6 @@ public sealed class SafariRewardView : MonoBehaviour
         var hint = Label("Hint", GameLocalization.Get("safari_reward_hint_wait"), 30,
             new Vector2(820f, 55f), new Vector2(0f, -785f), Cream);
 
-        audioSource = gameObject.AddComponent<AudioSource>();
-        audioSource.playOnAwake = false;
-        audioSource.spatialBlend = 0f;
-        audioSource.outputAudioMixerGroup = mixer;
-
         float intro = 0f;
         while (intro < 0.38f)
         {
@@ -94,6 +104,13 @@ public sealed class SafariRewardView : MonoBehaviour
         }
         group.alpha = 1f;
         design.localScale = Vector3.one * fit;
+
+        // Sıra: HARİKA ezilip büyür → ZİRVE SENİN! aynı hareketle → kazanan avatar + altın rozeti.
+        StartCoroutine(SquashGrow(wow, 0f));
+        StartCoroutine(SquashGrow(title.rectTransform, 0.28f));
+        if (winner != null) StartCoroutine(SquashGrow(winner, 0.5f));
+        var heroIntro = StartCoroutine(SquashGrow(hero.rectTransform, winner != null ? 0.68f : 0.5f));
+        yield return heroIntro; // Complete scale ownership before the idle/counting animation takes over.
 
         // Visual coin count is capped; each arrival represents an exact portion of the award.
         int count = Mathf.Clamp(share, 1, 40);
@@ -136,14 +153,13 @@ public sealed class SafariRewardView : MonoBehaviour
                 coins[i].gameObject.SetActive(false);
                 amount.text = $"+{(long)share * landed / count:N0}";
                 lastArrival = elapsed;
+                // Merkezi ses havuzu (EventSfx): ayar kapalıysa çalmaz; görünüm başına AudioSource açılmaz.
                 if (collectSfx != null && GameSettings.SoundEnabled && elapsed - lastSound >= Mathf.Max(0.1f, collectSfx.length * 0.45f))
                 {
-                    audioSource.pitch = Mathf.Lerp(0.94f, 1.14f, landed / (float)count);
-                    audioSource.PlayOneShot(collectSfx, 0.25f);
+                    EventSfx.PlayTrackedClip(collectSfx, 0.25f, false, Mathf.Lerp(0.94f, 1.14f, landed / (float)count));
                     lastSound = elapsed;
                 }
             }
-            audioSource.mute = !GameSettings.SoundEnabled;
             amount.rectTransform.localScale = Vector3.one * (1f + 0.075f * Mathf.Exp(-12f * Mathf.Max(0f, elapsed - lastArrival)));
             hero.rectTransform.localScale = Vector3.one * (1f + Mathf.Sin(elapsed * 3.2f) * 0.035f);
             halo.rectTransform.localScale = Vector3.one * (1f + Mathf.Sin(elapsed * 1.7f) * 0.06f);
@@ -162,7 +178,7 @@ public sealed class SafariRewardView : MonoBehaviour
         while (!claimed)
         {
             idle += Time.unscaledDeltaTime;
-            audioSource.mute = !GameSettings.SoundEnabled;
+            if (winner != null) winner.localScale = Vector3.one * (1f + Mathf.Sin(idle * 2.4f + 1f) * 0.03f);
             hero.rectTransform.localScale = Vector3.one * (1f + Mathf.Sin(idle * 2.4f) * 0.025f);
             buttonImage.rectTransform.localScale = Vector3.one * (1f + Mathf.Sin(idle * 3f) * 0.015f);
             yield return null;
@@ -170,9 +186,132 @@ public sealed class SafariRewardView : MonoBehaviour
         button.interactable = false;
     }
 
-    private void OnDisable()
+    // Ezilip büyüyerek doğuş: önce yatay basık, sonra dikey uzar, küçük sekmeyle oturur (kullanıcı 2026-11-22).
+    private static IEnumerator SquashGrow(RectTransform rt, float delay)
     {
-        if (audioSource != null) audioSource.Stop();
+        if (rt == null) yield break;
+        if (delay > 0f) yield return new WaitForSecondsRealtime(delay);
+        const float duration = 0.62f;
+        for (float t = 0f; t < duration; t += Time.unscaledDeltaTime)
+        {
+            if (rt == null) yield break;
+            rt.localScale = SquashGrowScale(t / duration);
+            yield return null;
+        }
+        if (rt != null) rt.localScale = Vector3.one;
+    }
+
+    private static Vector3 SquashGrowScale(float k)
+    {
+        // Anahtar kareler (x, y): 0 → basık geniş → dar uzun → hafif basık → 1.
+        if (k < 0.35f) return Seg(new Vector2(0.15f, 0.08f), new Vector2(1.42f, 0.5f), k / 0.35f);
+        if (k < 0.6f) return Seg(new Vector2(1.42f, 0.5f), new Vector2(0.84f, 1.24f), (k - 0.35f) / 0.25f);
+        if (k < 0.8f) return Seg(new Vector2(0.84f, 1.24f), new Vector2(1.07f, 0.95f), (k - 0.6f) / 0.2f);
+        return Seg(new Vector2(1.07f, 0.95f), Vector2.one, (k - 0.8f) / 0.2f);
+    }
+
+    private static Vector3 Seg(Vector2 a, Vector2 b, float t)
+    {
+        t = Mathf.Clamp01(t);
+        t = t * t * (3f - 2f * t);
+        var v = Vector2.LerpUnclamped(a, b, t);
+        return new Vector3(v.x, v.y, 1f);
+    }
+
+    private RectTransform CloneAvatar(RectTransform source, Transform parent, float size, Vector2 position)
+    {
+        if (source == null) return null;
+        var copy = Instantiate(source.gameObject, parent, false);
+        copy.name = "WinnerAvatar";
+        copy.SetActive(true);
+        var rt = (RectTransform)copy.transform;
+        rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.localRotation = Quaternion.identity;
+        rt.anchoredPosition = position;
+        Vector2 s = source.rect.size;
+        float longest = Mathf.Max(1f, Mathf.Max(s.x, s.y));
+        // Kalabalıktaki ölçek/şeffaflık taşınmasın: tam görünür.
+        foreach (var g in copy.GetComponentsInChildren<Graphic>(true))
+        {
+            var c = g.color; c.a = 1f; g.color = c;
+            g.raycastTarget = false;
+        }
+        foreach (var cg in copy.GetComponentsInChildren<CanvasGroup>(true)) cg.alpha = 1f;
+        // Çocuklar avatarın eski boyutuna göre konumlu: kopyayı boyutla değil ölçekle büyüt.
+        rt.sizeDelta = s;
+        var holder = CreateRect("WinnerHolder", parent, s * (size / longest), position);
+        rt.SetParent(holder, false);
+        rt.anchoredPosition = Vector2.zero;
+        rt.localScale = Vector3.one * (size / longest);
+        var glow = Picture("WinnerGlow", holder, Glow(), Vector2.one * size * 1.9f, Vector2.zero);
+        glow.color = new Color(1f, 0.85f, 0.35f, 0.75f);
+        glow.transform.SetAsFirstSibling();
+        return holder;
+    }
+
+    private RectTransform BuildWowTitle(string text)
+    {
+        var holder = CreateRect("WowTitle", design, new Vector2(1000f, 240f), Vector2.zero);
+        var skin = CommonPopupSkin.Shared;
+        var titleFont = skin != null && skin.celebrationFont != null ? skin.celebrationFont : font;
+        var shadow = WowText("Shadow", holder, text, titleFont);
+        shadow.rectTransform.anchoredPosition = new Vector2(0f, -14f);
+        var front = WowText("Front", holder, text, titleFont);
+        EnsureWowMaterials(front);
+        if (s_wowShadow != null) shadow.fontSharedMaterial = s_wowShadow;
+        if (s_wowFront != null) front.fontSharedMaterial = s_wowFront;
+        front.enableVertexGradient = true;
+        front.colorGradient = new VertexGradient(new Color(1f, 0.98f, 0.9f), new Color(1f, 0.98f, 0.9f),
+            new Color(1f, 0.92f, 0.72f), new Color(1f, 0.92f, 0.72f));
+        foreach (var t in new[] { shadow, front })
+        {
+            t.extraPadding = true;
+            t.UpdateMeshPadding();
+        }
+        return holder;
+    }
+
+    private TextMeshProUGUI WowText(string name, RectTransform parent, string value, TMP_FontAsset f)
+    {
+        var rt = CreateRect(name, parent, parent.sizeDelta, Vector2.zero);
+        var t = rt.gameObject.AddComponent<TextMeshProUGUI>();
+        if (f != null) t.font = f;
+        t.text = value;
+        t.fontSize = t.fontSizeMax = WowSize;
+        t.fontSizeMin = WowSize * 0.6f;
+        t.enableAutoSizing = true;
+        t.alignment = TextAlignmentOptions.Center;
+        t.textWrappingMode = TextWrappingModes.NoWrap;
+        t.color = Color.white;
+        t.raycastTarget = false;
+        return t;
+    }
+
+    // Malzemeler bir kez (statik), font atlası değişirse yeniden: ilk-taş sahnesindeki başlık değerleri.
+    private static void EnsureWowMaterials(TMP_Text sample)
+    {
+        if (sample.font == null || sample.font.material == null) return;
+        if (s_wowFront != null && s_wowFront.mainTexture == sample.font.material.mainTexture) return;
+
+        var maroon = new Color(0.45f, 0.04f, 0.04f);
+        s_wowFront = new Material(sample.font.material) { name = "RisingWow_TitleFront" };
+        s_wowFront.SetColor(ShaderUtilities.ID_FaceColor, Color.white);
+        s_wowFront.SetColor(ShaderUtilities.ID_OutlineColor, maroon);
+        s_wowFront.SetFloat(ShaderUtilities.ID_OutlineWidth, 0.2f);
+        s_wowFront.SetFloat(ShaderUtilities.ID_OutlineSoftness, 0f);
+        s_wowFront.EnableKeyword(ShaderUtilities.Keyword_Outline);
+        s_wowFront.EnableKeyword(ShaderUtilities.Keyword_Underlay);
+        s_wowFront.SetColor(ShaderUtilities.ID_UnderlayColor, new Color(1f, 0.74f, 0.08f));   // altın dış halka
+        s_wowFront.SetFloat(ShaderUtilities.ID_UnderlayOffsetX, 0f);
+        s_wowFront.SetFloat(ShaderUtilities.ID_UnderlayOffsetY, 0f);
+        s_wowFront.SetFloat(ShaderUtilities.ID_UnderlayDilate, 0.7f);
+        s_wowFront.SetFloat(ShaderUtilities.ID_UnderlaySoftness, 0f);
+        ShaderUtilities.UpdateShaderRatios(s_wowFront);
+
+        s_wowShadow = new Material(s_wowFront) { name = "RisingWow_TitleShadow" };
+        s_wowShadow.SetColor(ShaderUtilities.ID_FaceColor, maroon);
+        s_wowShadow.SetColor(ShaderUtilities.ID_UnderlayColor, maroon);
+        ShaderUtilities.UpdateShaderRatios(s_wowShadow);
     }
 
     private RectTransform CreateRect(string name, Transform parent, Vector2 size, Vector2 position)

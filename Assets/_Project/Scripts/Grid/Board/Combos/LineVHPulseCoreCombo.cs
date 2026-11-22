@@ -811,167 +811,182 @@ public sealed class LineVHPulseCoreComboAction : BoardAction
             ? board.WorldToAnchoredIn(parent, board.GetCellWorldCenterPosition(orbitCenterCell.Value.x, orbitCenterCell.Value.y))
             : pulseStart;
 
-        var orbitGo = new GameObject("LinePulseYOrbitIntroGhost", typeof(RectTransform), typeof(CanvasGroup));
-        var orbitRt = orbitGo.GetComponent<RectTransform>();
-        orbitRt.SetParent(parent, false);
-        orbitRt.SetAsLastSibling();
-        orbitRt.anchorMin = new Vector2(0.5f, 0.5f);
-        orbitRt.anchorMax = new Vector2(0.5f, 0.5f);
-        orbitRt.pivot = new Vector2(0.5f, 0.5f);
-        orbitRt.sizeDelta = new Vector2(board.TileSize * 3.80f, board.TileSize * 3.80f);
-        orbitRt.anchoredPosition = center;
-        orbitRt.localScale = Vector3.one;
-        orbitRt.localRotation = Quaternion.identity;
-
-        var cg = orbitGo.GetComponent<CanvasGroup>();
-        cg.alpha = 1f;
-        cg.blocksRaycasts = false;
-        cg.interactable = false;
-
-        float iconSize = ResolveOrbitIconSize();
-        float orbitRadius = iconSize + OrbitGapPixels;
-
-        var lightningSegments = CreateLightningSegments(orbitRt, 4);
-        var pulseImage = CreateOrbitGhostImage(orbitRt, "PulseCoreGhost", pulseSprite, iconSize);
-        var emitterImage = CreateOrbitGhostImage(orbitRt, "EmitterGhost", emitterSprite, iconSize);
-
-        Vector2 pulseLocalStart = pulseStart - center;   // merkez Pulse'ın hücresiyse sıfır
-        pulseImage.rectTransform.anchoredPosition = pulseLocalStart;
-        emitterImage.rectTransform.anchoredPosition = Vector2.right * orbitRadius;
-
-        // Combo pulse ghost'una idle fitili ÖLÇEKLİ bas: doğru koordinat = fuseLocalOffset * (iconSize/TileSize).
-        // Ghost pulse döndükçe fitil onunla döner (child).
-        orbitPulseTile?.StartComboFuse(pulseImage.rectTransform, iconSize / Mathf.Max(1f, board.TileSize), 3.1f, 0f);
-
-        // Gerçek tile root'larını oynatma; sadece ghost ikonları oynat.
-        // Böylece beyaz tile/background karesi görünmez.
-        HideTileCanvasGroup(orbitLineTile);
-        HideTileCanvasGroup(orbitPulseTile);
-
-        // Kısa sahneye alma: PulseCore merkezine taşınıp biraz yukarı alınır.
-        float t = 0f;
-        Vector2 sceneStart = center;
-        Vector2 sceneEnd = center + new Vector2(0f, OrbitRiseHeight);
-        Vector2 emitterLocalStart = emitterStart - center;
-        if (emitterLocalStart.sqrMagnitude < 0.0001f)
-            emitterLocalStart = Vector2.right * orbitRadius;
-
-        while (t < OrbitRiseDuration)
+        var orbitGo = UiVfxPool.RentRect("LinePulse.OrbitIntro", parent, "LinePulseYOrbitIntroGhost");
+        if (orbitGo == null) yield break;
+        UnityEngine.UI.Image pulseImage = null;
+        try
         {
-            t += Time.unscaledDeltaTime;
-            float k = Mathf.Clamp01(t / Mathf.Max(0.0001f, OrbitRiseDuration));
-            float eased = EaseInOut(k);
+            var orbitRt = orbitGo.GetComponent<RectTransform>();
+            orbitRt.SetParent(parent, false);
+            orbitRt.SetAsLastSibling();
+            orbitRt.anchorMin = new Vector2(0.5f, 0.5f);
+            orbitRt.anchorMax = new Vector2(0.5f, 0.5f);
+            orbitRt.pivot = new Vector2(0.5f, 0.5f);
+            orbitRt.sizeDelta = new Vector2(board.TileSize * 3.80f, board.TileSize * 3.80f);
+            orbitRt.anchoredPosition = center;
+            orbitRt.localScale = Vector3.one;
+            orbitRt.localRotation = Quaternion.identity;
 
-            orbitRt.anchoredPosition = Vector2.LerpUnclamped(sceneStart, sceneEnd, eased);
-            orbitRt.localScale = Vector3.one * Mathf.LerpUnclamped(0.96f, 1.04f, eased);
+            var cg = orbitGo.GetComponent<CanvasGroup>();
+            if (cg == null) cg = orbitGo.AddComponent<CanvasGroup>();
+            cg.alpha = 1f;
+            cg.blocksRaycasts = false;
+            cg.interactable = false;
 
-            Vector2 emitterPos = Vector2.LerpUnclamped(emitterLocalStart, Vector2.right * orbitRadius, eased);
-            Vector2 pulsePos = Vector2.LerpUnclamped(pulseLocalStart, Vector2.zero, eased);
-            pulseImage.rectTransform.anchoredPosition = pulsePos;
-            emitterImage.rectTransform.anchoredPosition = emitterPos;
-            UpdateLightningSegments(lightningSegments, pulsePos, emitterPos, 1f, 0f);
+            float iconSize = ResolveOrbitIconSize();
+            float orbitRadius = iconSize + OrbitGapPixels;
 
-            yield return null;
-        }
+            var lightningSegments = CreateLightningSegments(orbitRt, 4);
+            pulseImage = CreateOrbitGhostImage(orbitRt, "PulseCoreGhost", pulseSprite, iconSize);
+            var emitterImage = CreateOrbitGhostImage(orbitRt, "EmitterGhost", emitterSprite, iconSize);
 
-        orbitRt.anchoredPosition = sceneEnd;
-        orbitRt.localScale = Vector3.one;
+            Vector2 pulseLocalStart = pulseStart - center;   // merkez Pulse'ın hücresiyse sıfır
+            pulseImage.rectTransform.anchoredPosition = pulseLocalStart;
+            emitterImage.rectTransform.anchoredPosition = Vector2.right * orbitRadius;
 
-        // Ana 2 saniyelik animasyon:
-        // 1) PulseCore merkezde kalır ve kendi merkezinde döner.
-        // 2) Emitter, PulseCore etrafında Y eksenli orbit yapar.
-        //    Y ekseni hissi için ekranda sağ-sol hareket + öne/arkaya scale/alpha kullanılır.
-        // 3) Emitter orbit yaparken kendi merkezinde de döner.
-        // 4) PulseCore ve emitter arasındaki 3 px boşluk korunur; aralarında kırıklı lightning bağ kalır.
-        t = 0f;
-        float twoPi = Mathf.PI * 2f;
-        while (t < orbitSpinDuration)
-        {
-            t += Time.unscaledDeltaTime;
-            float k = Mathf.Clamp01(t / Mathf.Max(0.0001f, orbitSpinDuration));
-            float linear = k;
+            // Combo pulse ghost'una idle fitili ÖLÇEKLİ bas: doğru koordinat = fuseLocalOffset * (iconSize/TileSize).
+            // Ghost pulse döndükçe fitil onunla döner (child).
+            orbitPulseTile?.StartComboFuse(pulseImage.rectTransform, iconSize / Mathf.Max(1f, board.TileSize), 3.1f, 0f);
 
-            float emitterOrbitAngle = linear * EmitterOrbitTurns * twoPi;
-            float x = Mathf.Cos(emitterOrbitAngle) * orbitRadius;
-            float depth = Mathf.Sin(emitterOrbitAngle); // +1: önde, -1: arkada
+            // Gerçek tile root'larını oynatma; sadece ghost ikonları oynat.
+            // Böylece beyaz tile/background karesi görünmez.
+            HideTileCanvasGroup(orbitLineTile);
+            HideTileCanvasGroup(orbitPulseTile);
 
-            Vector2 emitterPos = new Vector2(x, 0f);
-            emitterImage.rectTransform.anchoredPosition = emitterPos;
+            // Kısa sahneye alma: PulseCore merkezine taşınıp biraz yukarı alınır.
+            float t = 0f;
+            Vector2 sceneStart = center;
+            Vector2 sceneEnd = center + new Vector2(0f, OrbitRiseHeight);
+            Vector2 emitterLocalStart = emitterStart - center;
+            if (emitterLocalStart.sqrMagnitude < 0.0001f)
+                emitterLocalStart = Vector2.right * orbitRadius;
+
+            while (t < OrbitRiseDuration)
+            {
+                t += Time.unscaledDeltaTime;
+                float k = Mathf.Clamp01(t / Mathf.Max(0.0001f, OrbitRiseDuration));
+                float eased = EaseInOut(k);
+
+                orbitRt.anchoredPosition = Vector2.LerpUnclamped(sceneStart, sceneEnd, eased);
+                orbitRt.localScale = Vector3.one * Mathf.LerpUnclamped(0.96f, 1.04f, eased);
+
+                Vector2 emitterPos = Vector2.LerpUnclamped(emitterLocalStart, Vector2.right * orbitRadius, eased);
+                Vector2 pulsePos = Vector2.LerpUnclamped(pulseLocalStart, Vector2.zero, eased);
+                pulseImage.rectTransform.anchoredPosition = pulsePos;
+                emitterImage.rectTransform.anchoredPosition = emitterPos;
+                UpdateLightningSegments(lightningSegments, pulsePos, emitterPos, 1f, 0f);
+
+                yield return null;
+            }
+
+            orbitRt.anchoredPosition = sceneEnd;
+            orbitRt.localScale = Vector3.one;
+
+            // Ana 2 saniyelik animasyon:
+            // 1) PulseCore merkezde kalır ve kendi merkezinde döner.
+            // 2) Emitter, PulseCore etrafında Y eksenli orbit yapar.
+            //    Y ekseni hissi için ekranda sağ-sol hareket + öne/arkaya scale/alpha kullanılır.
+            // 3) Emitter orbit yaparken kendi merkezinde de döner.
+            // 4) PulseCore ve emitter arasındaki 3 px boşluk korunur; aralarında kırıklı lightning bağ kalır.
+            t = 0f;
+            float twoPi = Mathf.PI * 2f;
+            while (t < orbitSpinDuration)
+            {
+                t += Time.unscaledDeltaTime;
+                float k = Mathf.Clamp01(t / Mathf.Max(0.0001f, orbitSpinDuration));
+                float linear = k;
+
+                float emitterOrbitAngle = linear * EmitterOrbitTurns * twoPi;
+                float x = Mathf.Cos(emitterOrbitAngle) * orbitRadius;
+                float depth = Mathf.Sin(emitterOrbitAngle); // +1: önde, -1: arkada
+
+                Vector2 emitterPos = new Vector2(x, 0f);
+                emitterImage.rectTransform.anchoredPosition = emitterPos;
+                pulseImage.rectTransform.anchoredPosition = Vector2.zero;
+
+                float pulseSelfZ = -linear * PulseCoreSelfSpinTurns * 360f;
+                float emitterSelfZ = linear * EmitterSelfSpinTurns * 360f;
+
+                pulseImage.rectTransform.localRotation = Quaternion.Euler(0f, 0f, pulseSelfZ);
+                emitterImage.rectTransform.localRotation = Quaternion.Euler(0f, 0f, emitterSelfZ);
+
+                float depth01 = (depth + 1f) * 0.5f;
+                float emitterScale = Mathf.LerpUnclamped(0.72f, 1.12f, depth01);
+                float emitterAlpha = Mathf.LerpUnclamped(0.42f, 1f, depth01);
+
+                emitterImage.rectTransform.localScale = Vector3.one * emitterScale;
+                SetImageAlpha(emitterImage, emitterAlpha);
+
+                float pulsePunch = 1f + Mathf.Sin(linear * Mathf.PI * 4f) * 0.035f;
+                pulseImage.rectTransform.localScale = Vector3.one * pulsePunch;
+                SetImageAlpha(pulseImage, 1f);
+
+                UpdateLightningSegments(lightningSegments, Vector2.zero, emitterPos, Mathf.LerpUnclamped(0.55f, 1f, depth01), linear);
+
+                // Emitter arkaya geçtiğinde PulseCore'un arkasında görünsün,
+                // öne geldiğinde üstte görünsün. Lightning her zaman ikonların arasında kalsın.
+                if (depth < 0f)
+                {
+                    foreach (var segment in lightningSegments)
+                        if (segment != null) segment.rectTransform.SetSiblingIndex(0);
+                    emitterImage.rectTransform.SetSiblingIndex(1);
+                    pulseImage.rectTransform.SetAsLastSibling();
+                }
+                else
+                {
+                    pulseImage.rectTransform.SetSiblingIndex(0);
+                    foreach (var segment in lightningSegments)
+                        if (segment != null) segment.rectTransform.SetAsLastSibling();
+                    emitterImage.rectTransform.SetAsLastSibling();
+                }
+
+                yield return null;
+            }
+
             pulseImage.rectTransform.anchoredPosition = Vector2.zero;
-
-            float pulseSelfZ = -linear * PulseCoreSelfSpinTurns * 360f;
-            float emitterSelfZ = linear * EmitterSelfSpinTurns * 360f;
-
-            pulseImage.rectTransform.localRotation = Quaternion.Euler(0f, 0f, pulseSelfZ);
-            emitterImage.rectTransform.localRotation = Quaternion.Euler(0f, 0f, emitterSelfZ);
-
-            float depth01 = (depth + 1f) * 0.5f;
-            float emitterScale = Mathf.LerpUnclamped(0.72f, 1.12f, depth01);
-            float emitterAlpha = Mathf.LerpUnclamped(0.42f, 1f, depth01);
-
-            emitterImage.rectTransform.localScale = Vector3.one * emitterScale;
-            SetImageAlpha(emitterImage, emitterAlpha);
-
-            float pulsePunch = 1f + Mathf.Sin(linear * Mathf.PI * 4f) * 0.035f;
-            pulseImage.rectTransform.localScale = Vector3.one * pulsePunch;
+            pulseImage.rectTransform.localRotation = Quaternion.identity;
+            pulseImage.rectTransform.localScale = Vector3.one;
             SetImageAlpha(pulseImage, 1f);
 
-            UpdateLightningSegments(lightningSegments, Vector2.zero, emitterPos, Mathf.LerpUnclamped(0.55f, 1f, depth01), linear);
+            emitterImage.rectTransform.anchoredPosition = Vector2.right * orbitRadius;
+            emitterImage.rectTransform.localRotation = Quaternion.identity;
+            emitterImage.rectTransform.localScale = Vector3.one;
+            SetImageAlpha(emitterImage, 1f);
+            UpdateLightningSegments(lightningSegments, Vector2.zero, Vector2.right * orbitRadius, 1f, 0f);
 
-            // Emitter arkaya geçtiğinde PulseCore'un arkasında görünsün,
-            // öne geldiğinde üstte görünsün. Lightning her zaman ikonların arasında kalsın.
-            if (depth < 0f)
+            // Çok kısa kapanış; bundan sonra mevcut LineV/H tetiklenir.
+            // Settle hedefi: PulseCore'un yeni (swap sonrası) konumu — comboCenterCell değil,
+            // çünkü comboCenterCell her zaman PulseCore hücresi olmayabilir (Line sürüklenirse a=Line).
+            const float settleDuration = 0.08f;
+            Vector2 endCenter = pulseStart;
+            Vector2 settleStart = orbitRt.anchoredPosition;
+
+            t = 0f;
+            while (t < settleDuration)
             {
-                foreach (var segment in lightningSegments)
-                    if (segment != null) segment.rectTransform.SetSiblingIndex(0);
-                emitterImage.rectTransform.SetSiblingIndex(1);
-                pulseImage.rectTransform.SetAsLastSibling();
-            }
-            else
-            {
-                pulseImage.rectTransform.SetSiblingIndex(0);
-                foreach (var segment in lightningSegments)
-                    if (segment != null) segment.rectTransform.SetAsLastSibling();
-                emitterImage.rectTransform.SetAsLastSibling();
+                t += Time.unscaledDeltaTime;
+                float k = Mathf.Clamp01(t / Mathf.Max(0.0001f, settleDuration));
+                float eased = EaseInOut(k);
+
+                orbitRt.anchoredPosition = Vector2.LerpUnclamped(settleStart, endCenter, eased);
+                orbitRt.localScale = Vector3.one * Mathf.LerpUnclamped(1f, 0.90f, eased);
+                cg.alpha = Mathf.LerpUnclamped(1f, 0f, eased);
+
+                yield return null;
             }
 
-            yield return null;
         }
-
-        pulseImage.rectTransform.anchoredPosition = Vector2.zero;
-        pulseImage.rectTransform.localRotation = Quaternion.identity;
-        pulseImage.rectTransform.localScale = Vector3.one;
-        SetImageAlpha(pulseImage, 1f);
-
-        emitterImage.rectTransform.anchoredPosition = Vector2.right * orbitRadius;
-        emitterImage.rectTransform.localRotation = Quaternion.identity;
-        emitterImage.rectTransform.localScale = Vector3.one;
-        SetImageAlpha(emitterImage, 1f);
-        UpdateLightningSegments(lightningSegments, Vector2.zero, Vector2.right * orbitRadius, 1f, 0f);
-
-        // Çok kısa kapanış; bundan sonra mevcut LineV/H tetiklenir.
-        // Settle hedefi: PulseCore'un yeni (swap sonrası) konumu — comboCenterCell değil,
-        // çünkü comboCenterCell her zaman PulseCore hücresi olmayabilir (Line sürüklenirse a=Line).
-        const float settleDuration = 0.08f;
-        Vector2 endCenter = pulseStart;
-        Vector2 settleStart = orbitRt.anchoredPosition;
-
-        t = 0f;
-        while (t < settleDuration)
+        finally
         {
-            t += Time.unscaledDeltaTime;
-            float k = Mathf.Clamp01(t / Mathf.Max(0.0001f, settleDuration));
-            float eased = EaseInOut(k);
-
-            orbitRt.anchoredPosition = Vector2.LerpUnclamped(settleStart, endCenter, eased);
-            orbitRt.localScale = Vector3.one * Mathf.LerpUnclamped(1f, 0.90f, eased);
-            cg.alpha = Mathf.LerpUnclamped(1f, 0f, eased);
-
-            yield return null;
+            if (pulseImage != null)
+            {
+                orbitPulseTile?.StopComboFuse(pulseImage.rectTransform);
+                // A retired tile may no longer own the emitter; keep its sparks inactive on reuse.
+                for (int i = 0; i < pulseImage.transform.childCount; i++)
+                    pulseImage.transform.GetChild(i).gameObject.SetActive(false);
+            }
+            UiVfxPool.Return("LinePulse.OrbitIntro", orbitGo, 8);
         }
-
-        if (orbitRt != null)
-            UnityEngine.Object.Destroy(orbitRt.gameObject);
     }
 
     private static List<UnityEngine.UI.Image> CreateLightningSegments(RectTransform parent, int count)
@@ -979,7 +994,9 @@ public sealed class LineVHPulseCoreComboAction : BoardAction
         var segments = new List<UnityEngine.UI.Image>();
         for (int i = 0; i < count; i++)
         {
-            var go = new GameObject($"LightningLink_{i}", typeof(RectTransform), typeof(CanvasRenderer), typeof(UnityEngine.UI.Image));
+            var existing = parent.Find($"LightningLink_{i}");
+            var go = existing != null ? existing.gameObject
+                : new GameObject($"LightningLink_{i}", typeof(RectTransform), typeof(CanvasRenderer), typeof(UnityEngine.UI.Image));
             var rt = go.GetComponent<RectTransform>();
             rt.SetParent(parent, false);
             rt.anchorMin = new Vector2(0.5f, 0.5f);
@@ -1156,7 +1173,9 @@ public sealed class LineVHPulseCoreComboAction : BoardAction
         Sprite sprite,
         float size)
     {
-        var go = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(UnityEngine.UI.Image));
+        var existing = parent.Find(name);
+        var go = existing != null ? existing.gameObject
+            : new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(UnityEngine.UI.Image));
         var rt = go.GetComponent<RectTransform>();
         rt.SetParent(parent, false);
         rt.anchorMin = new Vector2(0.5f, 0.5f);

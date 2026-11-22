@@ -17,20 +17,40 @@ public sealed class EggBirdBurstGraphic : MaskableGraphic
         rect.SetParent(parent, false);
         rect.anchorMin = rect.anchorMax = parent.pivot;
         rect.pivot = Vector2.one * 0.5f;
+        var graphic = go.GetComponent<EggBirdBurstGraphic>();
+        graphic.raycastTarget = false;
+        graphic.Restart(position, size, tint, lifetime, target);
+        return graphic;
+    }
+
+    /// Süresi bitti, yeniden kullanılabilir (EggBirdFlightView havuzu). Kapalı Graphic çizilmez, Update çalışmaz.
+    public bool IsFree { get; private set; }
+
+    public void Restart(Vector2 position, float size, Color tint, float lifetime, bool target)
+    {
+        var rect = rectTransform;
         rect.anchoredPosition = position;
         rect.sizeDelta = Vector2.one * size;
-        var graphic = go.GetComponent<EggBirdBurstGraphic>();
-        graphic.color = tint;
-        graphic.raycastTarget = false;
-        graphic.lifetime = Mathf.Max(0.05f, lifetime);
-        graphic.target = target;
-        return graphic;
+        rect.SetAsLastSibling();
+        color = tint;
+        this.lifetime = Mathf.Max(0.05f, lifetime);
+        this.target = target;
+        elapsed = 0f;
+        IsFree = false;
+        enabled = true;
+        SetVerticesDirty();
+    }
+
+    public void Release()
+    {
+        IsFree = true;
+        enabled = false;
     }
 
     private void Update()
     {
         elapsed += Time.deltaTime;
-        if (elapsed >= lifetime) Destroy(gameObject);
+        if (elapsed >= lifetime) Release();
         else SetVerticesDirty();
     }
 

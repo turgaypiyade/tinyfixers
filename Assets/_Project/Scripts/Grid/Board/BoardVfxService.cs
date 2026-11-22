@@ -142,6 +142,10 @@ public class BoardVfxService
         vfx.PlayAt(localMid, boardSize);
     }
 
+    // Pulse+Pulse şarj örnekleri HAVUZDA: şarj bitince kendini kapatır, burada yeniden kullanılır
+    // (dinamik girdide iki şarj üst üste binebilir → küçük liste). Önceden her kombo yeni kök bırakıyordu.
+    private readonly List<GameObject> _pulsePulsePool = new List<GameObject>(2);
+
     public GameObject PlayPulsePulseExplosionVfxAtCell(GameObject prefab, RectTransform vfxSpace, float lifetime, int x, int y, float scale = 1f)
     {
         if (prefab == null || vfxSpace == null) return null;
@@ -151,8 +155,20 @@ public class BoardVfxService
         Vector3 worldMid = ResolveWorldCenterForCell(x, y);
         Vector2 localMid = board.WorldToAnchoredIn(vfxSpace, worldMid);
 
-        var go = Object.Instantiate(prefab, vfxSpace);
+        GameObject go = null;
+        for (int i = _pulsePulsePool.Count - 1; i >= 0; i--)
+        {
+            var pooled = _pulsePulsePool[i];
+            if (pooled == null) { _pulsePulsePool.RemoveAt(i); continue; }
+            if (!pooled.activeSelf && pooled.transform.parent == vfxSpace) { go = pooled; break; }
+        }
+        if (go == null)
+        {
+            go = Object.Instantiate(prefab, vfxSpace);
+            _pulsePulsePool.Add(go);
+        }
         go.SetActive(true);
+        go.transform.SetAsLastSibling();
 
         var rt = go.GetComponent<RectTransform>();
         if (rt != null)
@@ -164,6 +180,18 @@ public class BoardVfxService
         else
         {
             go.transform.position = worldMid;
+        }
+
+        // Pulse+Pulse şarjı tahta ölçeğinde büyür (≥5x5) ve 7x7 hale çizer: hücre boyu VFX'in yerel biriminde.
+        var charge = go.GetComponent<PulsePulseExplosionVfx>();
+        if (charge != null)
+        {
+            Vector2 c0 = board.WorldToAnchoredIn(vfxSpace, board.GetCellWorldCenterPosition(x, y));
+            Vector2 c1 = board.WorldToAnchoredIn(vfxSpace, board.GetCellWorldCenterPosition(x + 1, y));
+            float cellInSpace = Vector2.Distance(c0, c1);
+            if (cellInSpace < 1f) cellInSpace = board.TileSize;
+            charge.SetCellSize(cellInSpace / Mathf.Max(0.01f, scale));
+            charge.Play();
         }
 
         // DISARI DAN destroy ETME

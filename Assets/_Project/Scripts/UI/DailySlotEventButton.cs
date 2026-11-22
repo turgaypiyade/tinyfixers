@@ -24,6 +24,8 @@ public class DailySlotEventButton : MonoBehaviour
     private void OnEnable()
     {
         RefreshBadge();
+        // Sekme değişimiyle yarıda kalan "sakin olunca aç" beklemesi Ana Menü'ye dönünce sürer.
+        if (retryWhenCalm && AutoOpenEligible()) StartCoroutine(AutoOpenRoutine(holdPriority: false));
     }
 
     // ── Günün ilk ana menü ziyaretinde çark kendiliğinden açılır — AÇILIŞIN İLK PENCERESİ ─────────────────────────────
@@ -49,37 +51,84 @@ public class DailySlotEventButton : MonoBehaviour
 
     private IEnumerator Start()
     {
-        if (fortuneWheel == null || !FortuneWheelController.HasAvailableSpin()) yield break;
-        if (CurrentLevel.Global < AutoOpenFromLevel || MasterLeague.IsPlaying) yield break;
+        if (!AutoOpenEligible()) yield break;
+        yield return AutoOpenRoutine(holdPriority: true);
+    }
+
+    // Günlük kurallar: hak var, level ≥6, Usta Ligi değil, günde ≤3, iki açılış arası ≥3 dk.
+    private bool AutoOpenEligible()
+    {
+        if (fortuneWheel == null || !FortuneWheelController.HasAvailableSpin() || FortuneWheelController.IsOpen) return false;
+        if (CurrentLevel.Global < AutoOpenFromLevel || MasterLeague.IsPlaying) return false;
         string today = DateTime.Now.ToString("yyyyMMdd");
         int countToday = PlayerPrefs.GetString(KeyAutoOpenDay, "") == today ? PlayerPrefs.GetInt(KeyAutoOpenCount, 1) : 0;
-        if (countToday >= AutoOpenMaxPerDay) yield break;
+        if (countToday >= AutoOpenMaxPerDay) return false;
         double now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-        if (countToday > 0 && now - double.Parse(PlayerPrefs.GetString(KeyAutoOpenLast, "0")) < AutoOpenMinGapSeconds) yield break;
+        return countToday == 0 || now - double.Parse(PlayerPrefs.GetString(KeyAutoOpenLast, "0")) >= AutoOpenMinGapSeconds;
+    }
 
-        s_autoOpenPending = true;
-        try
+    // Kullanıcı 2026-11-22 (kuzen: hak vardı, çark açılmadı): eskiden 8 sn içinde menü sakinleşmezse ya da ekranda
+    // pencere varsa o ziyaret için VAZGEÇİLİYORDU. Artık önce öncelikli denenir (eski davranış); olmazsa öncelik bırakılır
+    // (öğreticiler/davetler çarkı beklerken çark da onları beklemesin → kilitlenme yok) ve menü sakinleşince açılır.
+    // Sekme değişip panel gizlenirse coroutine durur; Ana Menü'ye dönülünce OnEnable kaldığı yerden sürdürür.
+    private bool retryWhenCalm;
+    private const float CalmPollSeconds = 0.5f;   // bekleme sırasında popup taraması seyrek (FindObjectsByType)
+
+    private IEnumerator AutoOpenRoutine(bool holdPriority)
+    {
+        if (holdPriority)
         {
-            yield return new WaitForSecondsRealtime(AutoOpenDelaySeconds);
-            // Yalnız gerçek engeller beklenir (yükleme ekranı, şartlar kabulü, ödül uçuşu, satın alma/sandık penceresi).
-            float deadline = Time.unscaledTime + AutoOpenMaxWaitSeconds;
-            while (ProfileUnlockTutorial.IsMenuBusyCore())
+            s_autoOpenPending = true;
+            try
             {
-                if (this == null || !isActiveAndEnabled || Time.unscaledTime > deadline) yield break;
-                yield return new WaitForSecondsRealtime(0.2f);
+                yield return new WaitForSecondsRealtime(AutoOpenDelaySeconds);
+                // Yalnız gerçek engeller beklenir (yükleme ekranı, şartlar kabulü, ödül uçuşu, satın alma/sandık penceresi).
+                float deadline = Time.unscaledTime + AutoOpenMaxWaitSeconds;
+                while (ProfileUnlockTutorial.IsMenuBusyCore() && Time.unscaledTime <= deadline)
+                {
+                    if (this == null || !isActiveAndEnabled) yield break;
+                    yield return new WaitForSecondsRealtime(0.2f);
+                }
+                if (this == null || !isActiveAndEnabled) yield break;
+                if (!ProfileUnlockTutorial.IsMenuBusyCore() && !AnyPopupVisible())
+                {
+                    TryOpenNow();
+                    yield break;
+                }
             }
-            if (this == null || !isActiveAndEnabled) yield break;
-            // Oyuncu bu arada seviye penceresi vb. açtıysa (kullanıcı 2026-11-18: PreLevel'ın üstüne çark açıldı) açılmaz.
-            if (AnyPopupVisible() || !FortuneWheelController.HasAvailableSpin()) yield break;
-
-            PlayerPrefs.SetString(KeyAutoOpenDay, today);
-            PlayerPrefs.SetInt(KeyAutoOpenCount, countToday + 1);
-            PlayerPrefs.SetString(KeyAutoOpenLast, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString());
-            PlayerPrefs.Save();
-            fortuneWheel.Open();
-            RefreshBadge();
+            finally { s_autoOpenPending = false; }
         }
-        finally { s_autoOpenPending = false; }
+
+        // Önceliksiz bekleme: menü sakin + pencere yok → aç. Kurallar her turda yeniden kontrol edilir.
+        retryWhenCalm = true;
+        while (retryWhenCalm)
+        {
+            if (this == null || !isActiveAndEnabled) yield break;
+            if (!AutoOpenEligible()) { retryWhenCalm = false; yield break; }
+            if (!ProfileUnlockTutorial.IsMenuBusyCore() && !AnyPopupVisible() && !WheelBlockedByOthers())
+            {
+                retryWhenCalm = false;
+                TryOpenNow();
+                yield break;
+            }
+            yield return new WaitForSecondsRealtime(CalmPollSeconds);
+        }
+    }
+
+    // Çark önceliği bıraktıktan sonra başlayan öğretici/overlay'in üstüne açılmasın.
+    private static bool WheelBlockedByOthers() => FindFirstObjectByType<TutorialOverlayController>() != null;
+
+    private void TryOpenNow()
+    {
+        if (!AutoOpenEligible()) return;
+        string today = DateTime.Now.ToString("yyyyMMdd");
+        int countToday = PlayerPrefs.GetString(KeyAutoOpenDay, "") == today ? PlayerPrefs.GetInt(KeyAutoOpenCount, 1) : 0;
+        PlayerPrefs.SetString(KeyAutoOpenDay, today);
+        PlayerPrefs.SetInt(KeyAutoOpenCount, countToday + 1);
+        PlayerPrefs.SetString(KeyAutoOpenLast, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString());
+        PlayerPrefs.Save();
+        fortuneWheel.Open();
+        RefreshBadge();
     }
 
     private void OnDestroy() => s_autoOpenPending = false;

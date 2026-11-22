@@ -38,6 +38,8 @@ public class BoardSfxProfile : ScriptableObject
 
     [Header("Pulse Combo")]
     public VariantSet pulsePulseCharge;
+    [Tooltip("Pulse+Pulse şarj animasyonu boyunca çalan yükselen ses (şarj başında tetiklenir).")]
+    public VariantSet pulsePulseChargeUp;
 
     [Header("Combo - Line")]
     public VariantSet comboLineLine;

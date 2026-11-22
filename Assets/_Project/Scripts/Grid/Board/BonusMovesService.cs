@@ -23,6 +23,9 @@ public class BonusMovesService : MonoBehaviour
     [SerializeField] private float preTriggerPause = 0.18f; // pause before mass trigger
     [SerializeField] private float drainMoveDelay = 0.04f;  // when no cells available
     [SerializeField, Min(0.5f)] private float boardSettleTimeout = 6f;
+    // Her N. kalan hamle roket yerine PulseCore olur (kullanıcı 2026-11-21: "daha görsel"); 0 = yalnız roket.
+    // PatchBot bilerek yok (uçuş süresi turu uzatır, zincir riski).
+    [SerializeField, Min(0)] private int pulseEvery = 4;
 
     [Header("Comet Visual")]
     [SerializeField] private int trailDots = 7;
@@ -73,7 +76,8 @@ public class BonusMovesService : MonoBehaviour
                 break;
 
             bool isH = Random.value > 0.5f;
-            placements.Add(new BoardController.BonusLinePlacement(cell.Value.x, cell.Value.y, isH));
+            bool isPulse = pulseEvery > 0 && (i + 1) % pulseEvery == 0;
+            placements.Add(new BoardController.BonusLinePlacement(cell.Value.x, cell.Value.y, isH, isPulse));
             usedCells.Add(cell.Value);
         }
 
@@ -171,7 +175,10 @@ public class BonusMovesService : MonoBehaviour
 
         // Phase 2: trigger all placed specials together using the same queued
         // LineV/LineH activation path as OverrideSpecialized line batches.
+        // PulseCores are not seeds: a line reaching one detonates it on arrival (normal chain);
+        // the ones no line reached explode afterwards as a final wave (Phase 3).
         var validPlacements = new List<BoardController.BonusLinePlacement>(placed);
+        var pulses = new List<(TileView tile, int lifetime)>();
         foreach (var p in placements)
         {
             if (_hardSkipRequested)
@@ -187,6 +194,8 @@ public class BonusMovesService : MonoBehaviour
             var sp = tile.GetSpecial();
             if (sp == TileSpecial.LineH || sp == TileSpecial.LineV)
                 validPlacements.Add(p);
+            else if (sp == TileSpecial.PulseCore && p.isPulse)
+                pulses.Add((tile, tile.LifetimeVersion));
         }
 
 
@@ -201,6 +210,28 @@ public class BonusMovesService : MonoBehaviour
                 () => _hardSkipRequested);
 
             yield return StartCoroutine(WaitBoardSettleOrTimeout("after_bonus_lines"));
+        }
+
+        if (_hardSkipRequested)
+            yield break;
+
+        // Phase 3: PulseCores no line reached. Same TileView + lifetime = still the placed bomb
+        // (it may have fallen to another cell); a consumed/pooled tile has a new lifetime.
+        if (pulses.Count > 0)
+        {
+            var leftover = new List<TileView>(pulses.Count);
+            for (int i = 0; i < pulses.Count; i++)
+            {
+                var (tile, lifetime) = pulses[i];
+                if (tile != null && tile && tile.LifetimeVersion == lifetime && tile.GetSpecial() == TileSpecial.PulseCore)
+                    leftover.Add(tile);
+            }
+
+            if (leftover.Count > 0)
+            {
+                yield return BonusLineOverrideStyleRunner.RunSpecials(board, leftover, () => _hardSkipRequested);
+                yield return StartCoroutine(WaitBoardSettleOrTimeout("after_bonus_pulses"));
+            }
         }
 
         if (_hardSkipRequested)
@@ -245,7 +276,7 @@ public class BonusMovesService : MonoBehaviour
         var tileView = board.GetTileViewAt(p.x, p.y);
         if (tileView != null && tileView.GetSpecial() == TileSpecial.None)
         {
-            var specialType = p.isHorizontal ? TileSpecial.LineH : TileSpecial.LineV;
+            var specialType = p.Special;
             tileView.SetSpecial(specialType);
             SpecialCellUtils.SyncAfterSpecialChange(board, tileView);
         }
@@ -284,7 +315,7 @@ public class BonusMovesService : MonoBehaviour
         tileView = board.GetTileViewAt(p.x, p.y);
         if (tileView != null && tileView.GetSpecial() == TileSpecial.None)
         {
-            var specialType = p.isHorizontal ? TileSpecial.LineH : TileSpecial.LineV;
+            var specialType = p.Special;
             tileView.SetSpecial(specialType);
             SpecialCellUtils.SyncAfterSpecialChange(board, tileView);
             tileView.PlaySpecialCreationReveal(specialType, board.TileSize);
@@ -625,7 +656,7 @@ public class BonusMovesService : MonoBehaviour
             return false;
 
         var special = tile.GetSpecial();
-        return special == TileSpecial.LineH || special == TileSpecial.LineV;
+        return special == TileSpecial.LineH || special == TileSpecial.LineV || special == TileSpecial.PulseCore;
     }
 
     private static Vector2 WorldToLocalIn(RectTransform root, RectTransform other)

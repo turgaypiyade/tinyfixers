@@ -31,6 +31,15 @@ public class MainMenuLevelButtonController : MonoBehaviour, IPointerDownHandler,
     [Tooltip("Oyunu ilk kez açan kullanıcıya verilecek altın miktarı.")]
     [SerializeField] private int initialCoins = 500;
 
+    [Header("Buton rengi (kullanıcı 2026-11-22: normal yeşil, zor kırmızı, çok zor koyu kırmızı; etrafında sarı çerçeve)")]
+    [SerializeField] private Sprite normalButtonSprite;
+    [SerializeField] private Sprite hardButtonSprite;
+    [SerializeField] private Sprite veryHardButtonSprite;
+    [Tooltip("Popup butonlarındaki sarı çerçeve (ButtonFrameBacking, oransal 9-slice).")]
+    [SerializeField] private Sprite buttonFrameSprite;
+    [Tooltip("Seviye yazısı: kalın çok koyu yeşil kontur + gölge (kullanıcı 2026-11-22). Yeşil ve kırmızı zeminde aynı.")]
+    [SerializeField] private Material greenTextMaterial;
+
     [Header("Zorluk Etiketi (LevelDifficultyTag)")]
     [Tooltip("Etiket görünürken SEVİYE yazısı bu kadar yukarı kayar; etiket ortalanmış olarak altında durur.")]
     [SerializeField] private float difficultyTitleLift = 16f;
@@ -112,7 +121,71 @@ public class MainMenuLevelButtonController : MonoBehaviour, IPointerDownHandler,
         levelText.text = league
             ? GameLocalization.GetFormat("master_league_title_lap", MasterLeague.LevelNumber)
             : GameLocalization.GetFormat("prelevel_popup_title_level", currentLevel);
+        isLeague = league;
         ApplyDifficultyTag(league ? LevelDifficulty.Normal : LevelDifficultyTag.For(currentLevel));
+    }
+
+    private bool isLeague;
+    private LevelDifficulty lastTier;
+    private Material redTextMaterial;
+    private bool frameAttached;
+
+    /// ChapterThemeApplier buton görselini tema ile değiştirdikten sonra çağırır: zorluk rengini geri uygular.
+    public void RefreshButtonSkin() => ApplyButtonSkin(lastTier);
+
+    // Tema/sahne görseli (Usta Ligi'nde metal): yeşil/kırmızı görsel üstüne yazıldıysa ligde geri konur.
+    private Sprite baseSprite;
+    private Image.Type baseType;
+    private float baseMultiplier = 1f;
+
+    // Usta Ligi kendi (metal) görselinde kalır; ana yolda zorluğa göre yeşil/kırmızı/koyu kırmızı.
+    // Lig bilgisi burada TAZE okunur: tema uygulayıcı UpdateVisual'dan önce çağırabilir (başlangıç sırası).
+    private void ApplyButtonSkin(LevelDifficulty tier)
+    {
+        if (buttonImage == null) TryGetComponent(out buttonImage);
+        if (buttonImage == null) return;
+        var cur = buttonImage.sprite;
+        if (cur != null && cur != normalButtonSprite && cur != hardButtonSprite && cur != veryHardButtonSprite)
+        {
+            baseSprite = cur;
+            baseType = buttonImage.type;
+            baseMultiplier = buttonImage.pixelsPerUnitMultiplier;
+        }
+        isLeague = MasterLeague.IsUnlocked(levelCatalog);
+        if (isLeague)
+        {
+            if (baseSprite != null && buttonImage.sprite != baseSprite)
+            {
+                buttonImage.sprite = baseSprite;
+                buttonImage.type = baseType;
+                buttonImage.pixelsPerUnitMultiplier = baseMultiplier;
+                if (levelText != null && redTextMaterial != null) levelText.fontSharedMaterial = redTextMaterial;
+            }
+            return;
+        }
+        var sprite = tier == LevelDifficulty.VeryHard ? veryHardButtonSprite
+            : tier == LevelDifficulty.Hard ? hardButtonSprite : normalButtonSprite;
+        if (sprite == null) return;
+        buttonImage.sprite = sprite;
+        buttonImage.type = sprite.border.sqrMagnitude > 0f ? Image.Type.Sliced : Image.Type.Simple;
+        // PreLevel'deki buton Simple: kenar eğimi yüksekliğin ~%34'ü. Dilimli çizimde aynı oran için kenarı yüksekliğe ölçekle.
+        var rt = (RectTransform)transform;
+        if (buttonImage.type == Image.Type.Sliced && rt.rect.height > 1f)
+            buttonImage.pixelsPerUnitMultiplier = sprite.rect.height / rt.rect.height;
+
+        if (levelText != null)
+        {
+            if (redTextMaterial == null) redTextMaterial = levelText.fontSharedMaterial;
+            var mat = greenTextMaterial != null ? greenTextMaterial : redTextMaterial;
+            if (mat != null) levelText.fontSharedMaterial = mat;
+            if (difficultyTag != null && mat != null) difficultyTag.fontSharedMaterial = mat;
+        }
+
+        if (!frameAttached && buttonFrameSprite != null && TryGetComponent(out Button button))
+        {
+            frameAttached = true;
+            ButtonFrameBacking.Attach(button, buttonFrameSprite);
+        }
     }
 
     private TextMeshProUGUI difficultyTag;
@@ -146,7 +219,11 @@ public class MainMenuLevelButtonController : MonoBehaviour, IPointerDownHandler,
                 difficultyTag.color = veryHard ? veryHardTagColor : hardTagColor;
             }
         }
-        ApplyButtonDarken(tier == LevelDifficulty.VeryHard ? veryHardButtonDarken
+        lastTier = tier;
+        bool skinned = !isLeague && normalButtonSprite != null;
+        ApplyButtonSkin(tier);
+        // Renk artık görselle (yeşil/kırmızı/koyu kırmızı); eski koyulaştırma shader'ı yalnız görsel atanmamışsa.
+        ApplyButtonDarken(skinned ? 0f : tier == LevelDifficulty.VeryHard ? veryHardButtonDarken
             : tier == LevelDifficulty.Hard ? hardButtonDarken : 0f);
     }
 

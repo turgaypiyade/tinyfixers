@@ -42,15 +42,17 @@ public sealed class MainMenuRewardCollectFx : MonoBehaviour
         var fx = root.AddComponent<MainMenuRewardCollectFx>();
         fx._rewards = rewards ?? new List<DailySlotReward>();
         fx._chest = chest;
-        ChestPending = hasChest;
+        ChestPending = true;   // ödül şovu bitene dek altın uçuşu/çark beklesin
     }
 
-    /// Bu menü girişinde progress-event son sandığı açılacak/açık (altın uçuşu ve çark bunu bekler).
+    /// Bu menü girişinde progress-event ödül şovu (ödül uçuşları + son sandık) sürüyor: altın uçuşu ve çark bekler.
     public static bool ChestPending { get; private set; }
+    /// Tek bir ödül şu an ekranda/uçuşta (ProgressEventPanel sıradaki barı bunun bitmesini bekler).
+    public static bool RewardFlying { get; private set; }
 
     private List<DailySlotReward> _chest;
 
-    private void OnDestroy() => ChestPending = false;
+    private void OnDestroy() { ChestPending = false; RewardFlying = false; }
 
     // ── Instance ──────────────────────────────────────────────────────
 
@@ -85,27 +87,33 @@ public sealed class MainMenuRewardCollectFx : MonoBehaviour
             yield return null;
         yield return null;
 
-        // 1) Etkinlik tamamlandıysa: başlık (harf harf) → sandık sarsılıp patlar → ödüller dizilir → dokun.
+        RectTransform levelButton = FindLevelButton();
+        RectTransform heart = FindHeartIcon();
+
+        // 1) Her ödül KENDİ hedefinin barı dolup taşı nabız attıktan sonra (ProgressEventPanel şovu). Panel şov yapmıyorsa
+        // (başka sekme / panel kapalı) beklemeden gösterilir. Hedef ödül tipine göre: can → kalp ikonu; diğerleri → level butonu.
+        for (int i = 0; i < _rewards.Count; i++)
+        {
+            while (ProgressEventPanel.SessionPlaybackPending && ProgressEventPanel.RewardMomentsShown <= i)
+                yield return null;
+            var reward = _rewards[i];
+            // Altın sayaca akan ortak uçuşta gösterilir; sandıkta gösterilecek ödül burada uçmaz.
+            if (reward == null || reward.type == DailySlotRewardType.Coins || (_chest != null && _chest.Contains(reward))) continue;
+            var target = reward.type == DailySlotRewardType.Lives && heart != null ? heart : levelButton;
+            RewardFlying = true;
+            yield return CoCollectOne(reward, target);
+            RewardFlying = false;
+        }
+
+        // 2) Etkinlik tamamlandıysa EN SONDA (son hedefin barı dolduktan sonra): başlık → sandık patlar → ödüller → dokun.
         if (_chest != null && _chest.Count > 0)
         {
+            while (ProgressEventPanel.SessionPlaybackPending) yield return null;
             bool done = false;
             RewardChestRevealOverlay.Show(_chest, () => done = true, titleKey: "progress_chest_title");
             while (!done && RewardChestRevealOverlay.IsShowing) yield return null;
         }
         ChestPending = false;   // altın uçuşu (CoinFlyToWalletAnimator) şimdi başlar
-
-        RectTransform levelButton = FindLevelButton();
-        RectTransform heart = FindHeartIcon();
-
-        // Hedef ödül tipine göre: can (normal ya da süreli sonsuz can) → TopHUD kalp ikonu; diğerleri → level butonu.
-        for (int i = 0; i < _rewards.Count; i++)
-        {
-            var reward = _rewards[i];
-            // Altın sayaca akan ortak uçuşta gösterilir; sandıkta zaten gösterilen ödül ikinci kez uçmaz.
-            if (reward == null || reward.type == DailySlotRewardType.Coins || (_chest != null && _chest.Contains(reward))) continue;
-            var target = reward != null && reward.type == DailySlotRewardType.Lives && heart != null ? heart : levelButton;
-            yield return CoCollectOne(reward, target);
-        }
 
         Destroy(gameObject);
     }

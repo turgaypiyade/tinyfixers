@@ -32,6 +32,37 @@ public class PulsePulseExplosionVfx : MonoBehaviour
              "Geçiş smoothstep ile yumuşatılır (lineer değil).")]
     [SerializeField, Range(0f, 1f)] private float crackCrossfadePortion = 0.5f;
 
+    [Tooltip("Kareler ŞEKİL değiştiriyorsa (basık/uzun/yuvarlak şarj kareleri) açık: geçişin ikinci yarısında " +
+             "alttaki kare söner → eski siluet yenisinin arkasında hayalet gibi kalmaz. Çatlak kareleri için kapalı.")]
+    [SerializeField] private bool fadeBaseOnBlend;
+
+    [Header("Charge — Board-sized growth (kullanıcı 2026-11-22)")]
+    [Tooltip("Şarj sonunda fıçı GÖVDESİNİN kaç hücre genişliğe ulaşacağı (0 = eski peakScale davranışı). " +
+             "Büyüme şarj boyunca kesintisiz → tüm kareler büyürken görünür.")]
+    [SerializeField] private float growToCells = 5.2f;
+    [Tooltip("Şarj başında fıçı gövdesinin hücre genişliği (birleşen PulseCore boyuna yakın).")]
+    [SerializeField] private float startCells = 1.2f;
+    [Tooltip("Karede fıçı gövdesinin tuval genişliğine oranı (PC2 kareleri ≈ 0.79).")]
+    [SerializeField, Range(0.1f, 1f)] private float spriteBodyFill = 0.79f;
+
+    [Header("Charge — Halo (seviye sonu logo halesi gibi dönen ışınlar)")]
+    [Tooltip("Hale çapı hücre cinsinden: patlama alanı 7x7 → 7.")]
+    [SerializeField] private float haloCells = 7f;
+    [SerializeField, Range(0f, 1f)] private float haloMaxAlpha = 0.8f;
+    [SerializeField] private float haloSpinSpeed = 40f;
+    [SerializeField] private Color haloColor = new Color(1f, 0.86f, 0.45f, 1f);
+
+    [Header("Charge — Tingle (karıncalanma katmanı)")]
+    [Tooltip("Elektrik kıvılcımı döngü kareleri (saydam, yalnız kıvılcım). Bombanın üstünde döngüde oynar, " +
+             "bombayla birlikte esner. Boşsa katman yok.")]
+    [SerializeField] private Sprite[] tingleFrames;
+    [SerializeField, Min(1f)] private float tingleFps = 14f;
+    [Tooltip("Katmanın boyutu, bomba boyutuna oranla.")]
+    [SerializeField] private float tingleSizeMultiplier = 1.15f;
+    [Tooltip("Karıncalanmanın görünmeye başladığı ve tam görünür olduğu şarj oranları.")]
+    [SerializeField, Range(0f, 1f)] private float tingleStartProgress = 0.3f;
+    [SerializeField, Range(0f, 1f)] private float tingleFullProgress = 0.7f;
+
     [Header("Charge — Crack Fire Overlay")]
     [Tooltip("PCF_3 gibi yalnız alev/çatlak ışığı içeren overlay sprite. Bombanın üstünde ayrı büyür.")]
     [SerializeField] private Sprite crackFireOverlaySprite;
@@ -103,6 +134,8 @@ public class PulsePulseExplosionVfx : MonoBehaviour
     [SerializeField] private Color glowColorPeak = new Color(1f, 1f, 1f, 0.25f);
 
     [Header("Charge — Fuse Flame (Alev/Kıvılcım)")]
+    [Tooltip("Kodla üretilen fitil kıvılcımları. Kareler kendi fitil alevini çiziyorsa kapat (fitil ucu karede yer değiştirir).")]
+    [SerializeField] private bool emitFuseSparks = true;
     [Tooltip("Fitil kıvılcım sprite'ı (soft_circle). Atanmazsa soft circle halo kullanılır.")]
     [SerializeField] private Sprite sparkSprite;
     [Tooltip("Normal 100px tile'da fitil (10, 50) ofsetindedir (oran: x=0.10, y=0.50).")]
@@ -114,6 +147,14 @@ public class PulsePulseExplosionVfx : MonoBehaviour
     [SerializeField] private float sparkLifetime = 0.50f;
     [SerializeField] private Color sparkColorA = new Color(1.00f, 0.65f, 0.15f, 1f);
     [SerializeField] private Color sparkColorB = new Color(1.00f, 0.20f, 0.05f, 1f);
+
+    private float _cellSize = -1f;   // VFX yerel biriminde bir hücre (BoardVfxService verir)
+    private float _chargeProgress;
+    private float _growthEnd = 1f;   // 1 = büyüme modu kapalı
+    private bool GrowthMode => _growthEnd > 1f;
+
+    /// Spawn eden servis çağırır (Start'tan önce): hücre boyu VFX'in kendi yerel biriminde.
+    public void SetCellSize(float localCellSize) => _cellSize = localCellSize;
 
     private Animator animator;
     private RectTransform chargeContainer;
@@ -141,22 +182,56 @@ public class PulsePulseExplosionVfx : MonoBehaviour
         }
     }
 
+    // HAVUZ (BoardVfxService): örnek yok edilmez; şarj bitince kapanır, sonraki kombo Play() ile yeniden kullanır.
+    private bool _played;
+    private float _authoredBombBaseSize = -1f;
+    private Image _haloGlow, _haloRay, _haloRay2;
+
     private void Start()
     {
+        if (!_played) Play();   // havuz dışı (eski) kullanım: Instantiate edilince kendiliğinden oynar
+    }
+
+    /// Şarjı baştan oynatır. Servis konum/ölçek/hücre boyunu ayarladıktan SONRA çağırır.
+    public void Play()
+    {
+        _played = true;
+        StopAllCoroutines();
+        CleanupCharge();
+        if (_authoredBombBaseSize < 0f) _authoredBombBaseSize = bombBaseSize;
+        bombBaseSize = _authoredBombBaseSize;   // büyüme modu her oynatmada yeniden hesaplar
+        _growthEnd = 1f;
+        _chargeProgress = 0f;
+
         // Inspector-kayıtlı sarı glow değerlerini eziyoruz — sadece beyaz düşük alpha glow istiyoruz.
         glowColorStart = new Color(0.7f, 0.85f, 1f, 0f);
         glowColorPeak  = new Color(1f, 1f, 1f, 0.25f);
         glowSizeMultiplier = 2.2f;
 
-        StartCoroutine(CoCharge());
+        StartCoroutine(CoChargeThenRelease());
+    }
+
+    private IEnumerator CoChargeThenRelease()
+    {
+        yield return CoCharge();
+        CleanupCharge();
+        gameObject.SetActive(false);   // boşa çıktı → havuza döner (önceden kök nesne hiç yok edilmiyordu)
+    }
+
+    private void CleanupCharge()
+    {
+        UiFxPool.ReleaseChargeSparks(transform);
+        if (chargeContainer != null) chargeContainer.gameObject.SetActive(false);
+        if (_haloGlow != null) _haloGlow.gameObject.SetActive(false);
+        if (_haloRay != null) _haloRay.gameObject.SetActive(false);
+        if (_haloRay2 != null) _haloRay2.gameObject.SetActive(false);
+        _haloGlow = _haloRay = _haloRay2 = null;
     }
 
     private void OnDisable()
     {
         StopAllCoroutines();
-        UiFxPool.ReleaseChargeSparks(transform);
-        if (chargeContainer != null) Destroy(chargeContainer.gameObject);
-        chargeContainer = null;
+        CleanupCharge();
     }
 
     public void PlayStreaks()
@@ -172,11 +247,21 @@ public class PulsePulseExplosionVfx : MonoBehaviour
         var parent = transform as RectTransform;
         if (!parent) yield break;
 
+        // Tahta ölçeğinde büyüme: fıçı ~1 hücreden growToCells hücreye kesintisiz büyür; hale tam patlama alanı.
+        if (_cellSize > 0f && growToCells > 0f && startCells > 0f)
+        {
+            bombBaseSize = startCells * _cellSize / spriteBodyFill;
+            _growthEnd = Mathf.Max(1.01f, growToCells / startCells);
+        }
+        Sprite raysSprite = GrowthMode ? LevelCompletionLogoAnimation.SharedRaysSprite : null;
+        if (raysSprite != null)
+            StartCoroutine(CoHalo(parent, raysSprite, chargeDuration));
+
         var container = chargeContainer = CreateContainer(parent);
 
-        // Glow (arkada)
+        // Glow (arkada) — hale varken düz yuvarlak parıltı kullanılmaz (kullanıcı: "çok düz")
         Image glowImg = null;
-        if (glowSprite)
+        if (glowSprite && raysSprite == null)
         {
             float glowSize = bombBaseSize * glowSizeMultiplier;
             glowImg = CreateUIImage("ChargeGlow", container, glowSprite, glowSize);
@@ -227,9 +312,19 @@ public class PulsePulseExplosionVfx : MonoBehaviour
 
         // Fitil Alevi: doğrudan bombRt'nin child'ı olarak çalışır.
         // Bomba nefes aldıkça (squash/stretch/wobble/tilt), fitil ucuyla %100 senkron hareket eder.
-        if (bombRt != null)
+        if (bombRt != null && emitFuseSparks)
         {
             StartCoroutine(CoEmitFuseSparks(bombRt, chargeDuration));
+        }
+
+        // Karıncalanma: bombanın child'ı (esnemeyi miras alır), kareler döngüde; alfa şarjla artar.
+        if (bombRt != null && tingleFrames != null && tingleFrames.Length > 0 && tingleFrames[0] != null)
+        {
+            var tingleImg = CreateUIImage("ChargeTingle", bombRt, tingleFrames[0], bombBaseSize * tingleSizeMultiplier);
+            tingleImg.preserveAspect = true;
+            tingleImg.color = new Color(1f, 1f, 1f, 0f);
+            tingleImg.rectTransform.SetAsLastSibling();
+            StartCoroutine(CoTingle(tingleImg, chargeDuration));
         }
 
         // Evre süreleri — ratio'lar 1'e toplanmayabilir, normalize et
@@ -273,7 +368,7 @@ public class PulsePulseExplosionVfx : MonoBehaviour
 
         // ─── 3) WOBBLE — şişip inen + yamuk salınımlı büyüme ───
         Vector3 wobbleStart = stretchTarget;
-        Vector3 wobbleEnd = Vector3.one * peakScale;
+        Vector3 wobbleEnd = Vector3.one * (GrowthMode ? 1f : peakScale);
         float wobbleElapsed = 0f;
         yield return AnimatePhase(tWobble, (k, dt) =>
         {
@@ -325,8 +420,73 @@ public class PulsePulseExplosionVfx : MonoBehaviour
         });
 
         UiFxPool.ReleaseChargeSparks(transform);
-        Destroy(container.gameObject);
-        chargeContainer = null;
+        container.gameObject.SetActive(false);
+    }
+
+    private float GrowthAt(float p)
+    {
+        if (!GrowthMode) return 1f;
+        p = Mathf.Clamp01(p);
+        return Mathf.Lerp(1f, _growthEnd, p * p * (3f - 2f * p));
+    }
+
+    private float HaloScaleAt(float p) => GrowthMode ? GrowthAt(p) / _growthEnd : 1f;
+
+    // Fıçının arkasında, patlama alanı (haloCells x hücre) çapında dönen ışın halesi + sıcak parıltı.
+    // Sarsıntıdan etkilenmez (container dışında); şarjla açılır, büyür, hızlanır; şarj bitince kaldırılır.
+    private IEnumerator CoHalo(RectTransform parent, Sprite rays, float duration)
+    {
+        float full = haloCells * _cellSize;
+        var glow = _haloGlow = glowSprite != null ? CreateUIImage("ChargeHaloGlow", parent, glowSprite, full * 1.05f) : null;
+        var ray = _haloRay = CreateUIImage("ChargeHaloRays", parent, rays, full);
+        var ray2 = _haloRay2 = CreateUIImage("ChargeHaloRays2", parent, rays, full * 0.8f);
+        if (glow != null) glow.rectTransform.SetAsFirstSibling();
+        ray.rectTransform.SetSiblingIndex(glow != null ? 1 : 0);
+        ray2.rectTransform.SetSiblingIndex(ray.rectTransform.GetSiblingIndex() + 1);
+        float t = 0f, angle = 0f;
+        while (t < duration && ray != null)
+        {
+            float dt = Time.unscaledDeltaTime;
+            t += dt;
+            float p = Mathf.Clamp01(t / duration);
+            float open = Mathf.Clamp01(p / 0.35f);
+            float a = haloMaxAlpha * open * open * (3f - 2f * open);
+            // Hale fıçıyla AYNI oranda büyür (ApplyScale'deki büyüme eğrisi): bitişte tam haloCells, başta orantılı küçük.
+            float s = HaloScaleAt(_chargeProgress);   // fıçının o kareki ilerlemesiyle birebir senkron
+            angle += haloSpinSpeed * (0.6f + 1.4f * p) * dt;   // şarj ilerledikçe hızlanır
+            ray.rectTransform.localScale = Vector3.one * s;
+            ray.rectTransform.localRotation = Quaternion.Euler(0f, 0f, -angle);
+            ray.color = new Color(haloColor.r, haloColor.g, haloColor.b, a);
+            ray2.rectTransform.localScale = Vector3.one * s;
+            ray2.rectTransform.localRotation = Quaternion.Euler(0f, 0f, angle * 0.7f + 15f);
+            ray2.color = new Color(1f, 0.97f, 0.85f, a * 0.55f);
+            if (glow != null)
+            {
+                glow.rectTransform.localScale = Vector3.one * s;
+                glow.color = new Color(haloColor.r, haloColor.g * 0.9f, haloColor.b * 0.6f, a * 0.45f);
+            }
+            yield return null;
+        }
+        if (glow != null) glow.gameObject.SetActive(false);
+        if (ray != null) ray.gameObject.SetActive(false);
+        if (ray2 != null) ray2.gameObject.SetActive(false);
+        _haloGlow = _haloRay = _haloRay2 = null;
+    }
+
+    private IEnumerator CoTingle(Image img, float duration)
+    {
+        float t = 0f;
+        int last = -1;
+        float span = Mathf.Max(0.01f, tingleFullProgress - tingleStartProgress);
+        while (t < duration && img != null)
+        {
+            t += Time.unscaledDeltaTime;
+            int idx = (int)(t * tingleFps) % tingleFrames.Length;
+            if (idx != last && tingleFrames[idx] != null) { img.sprite = tingleFrames[idx]; last = idx; }
+            float k = Mathf.Clamp01((t / duration - tingleStartProgress) / span);
+            img.color = new Color(1f, 1f, 1f, k);
+            yield return null;
+        }
     }
 
     // ────────────────────────────────────────────────
@@ -355,7 +515,9 @@ public class PulsePulseExplosionVfx : MonoBehaviour
     {
         // Container uniform: ortalama büyüme (glow da orantılı büyür)
         float uniform = (nonUniform.x + nonUniform.y) * 0.5f;
-        container.localScale = Vector3.one * uniform;
+        // Tahta ölçeğinde büyüme: şarj boyunca yumuşak-kesintisiz (S eğrisi) 1 → _growthEnd.
+        float growth = GrowthAt(_chargeProgress);
+        container.localScale = Vector3.one * uniform * growth;
 
         // Bomb non-uniform üstüne binecek — container zaten uniform büyüttü,
         // yani bomb'un kendi local scale'i sadece "oran farkını" vermeli:
@@ -372,6 +534,7 @@ public class PulsePulseExplosionVfx : MonoBehaviour
     // Zarf: chargeShakeStartProgress'ten sonra 0→1, chargeShakeRamp ile son anlarda sertçe patlar.
     private void ApplyChargeShake(RectTransform container, float progress01, float elapsed)
     {
+        _chargeProgress = Mathf.Clamp01(progress01);
         if (container == null) return;
 
         if (chargeShakeMaxAmplitude <= 0f)
@@ -435,6 +598,12 @@ public class PulsePulseExplosionVfx : MonoBehaviour
         // Overlay RGB = base RGB (glow flash/bleach ile tutarlı), alfa = blend.
         var bc = baseImg.color;
         overlayImg.color = new Color(bc.r, bc.g, bc.b, Mathf.Clamp01(blend));
+        if (fadeBaseOnBlend)
+        {
+            // Alttaki kare yalnız geçişin son %30'unda söner: hayalet siluet kalmaz, toplam opaklık da düşmez (yanıp sönme yok).
+            bc.a = 1f - Mathf.Clamp01((blend - 0.7f) / 0.3f);
+            baseImg.color = bc;
+        }
     }
 
     private void GetCrackFrameBlend(float progress01, out int baseIdx, out int nextIdx, out float blend)
@@ -702,6 +871,10 @@ public class PulsePulseExplosionVfx : MonoBehaviour
         sparkRt.anchoredPosition = basePos + Random.insideUnitCircle * (spreadRadius * sizeBoost);
         sparkRt.localScale = Vector3.one;
 
+        img.enabled = true;
+        img.color = Color.white;
+        img.canvasRenderer.SetAlpha(1f);
+        img.preserveAspect = false;
         img.sprite = sprite;
         img.raycastTarget = false;
 
@@ -719,11 +892,22 @@ public class PulsePulseExplosionVfx : MonoBehaviour
     // ────────────────────────────────────────────────
     //  Utility
     // ────────────────────────────────────────────────
+    private static void HideChildren(Transform parent)
+    {
+        for (int i = 0; i < parent.childCount; i++) parent.GetChild(i).gameObject.SetActive(false);
+    }
+
     private RectTransform CreateContainer(RectTransform parent)
     {
-        var go = new GameObject("ChargeContainer", typeof(RectTransform));
+        var go = chargeContainer != null ? chargeContainer.gameObject
+            : new GameObject("ChargeContainer", typeof(RectTransform));
+        go.SetActive(true);
+        HideChildren(go.transform);
         var rt = go.GetComponent<RectTransform>();
         rt.SetParent(parent, false);
+        rt.localScale = Vector3.one;
+        rt.localRotation = Quaternion.identity;
+        rt.SetAsLastSibling();
         rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
         rt.pivot = new Vector2(0.5f, 0.5f);
         rt.anchoredPosition = Vector2.zero;
@@ -733,15 +917,26 @@ public class PulsePulseExplosionVfx : MonoBehaviour
 
     private Image CreateUIImage(string name, RectTransform parent, Sprite sprite, float size)
     {
-        var go = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        var existing = parent.Find(name);
+        var go = existing != null ? existing.gameObject
+            : new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        go.SetActive(true);
+        HideChildren(go.transform);
         var rt = go.GetComponent<RectTransform>();
         rt.SetParent(parent, false);
+        rt.localScale = Vector3.one;
+        rt.localRotation = Quaternion.identity;
+        rt.SetAsLastSibling();
         rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
         rt.pivot = new Vector2(0.5f, 0.5f);
         rt.anchoredPosition = Vector2.zero;
         rt.sizeDelta = new Vector2(size, size);
 
         var img = go.GetComponent<Image>();
+        img.enabled = true;
+        img.color = Color.white;
+        img.canvasRenderer.SetAlpha(1f);
+        img.preserveAspect = false;
         img.sprite = sprite;
         img.raycastTarget = false;
         return img;

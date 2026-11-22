@@ -114,6 +114,34 @@ public sealed class BoardIdleHintAndComboGlowController : MonoBehaviour
             if (foundBoards[i] != null && foundBoards[i].isActiveAndEnabled)
                 boards.Add(foundBoards[i]);
         }
+        PruneDestroyedBoards();
+    }
+
+    // Bu nesne sahneler arası yaşar (DontDestroyOnLoad): kapanan sahnenin tahtası (Unity-null anahtar) ve onun
+    // taş referansları sözlükte kalmasın; yarım kalan ipucu coroutine'i de durur. Ayrılan liste yeniden kullanılır.
+    private readonly List<BoardController> deadBoards = new();
+
+    private void PruneDestroyedBoards()
+    {
+        if (states.Count == 0) return;
+        deadBoards.Clear();
+        foreach (var kv in states)
+            if (kv.Key == null) deadBoards.Add(kv.Key);
+        for (int i = 0; i < deadBoards.Count; i++)
+        {
+            var key = deadBoards[i];
+            if (states.TryGetValue(key, out var state))
+            {
+                if (state.hintRoutine != null) StopCoroutine(state.hintRoutine);
+                state.hintRoutine = null;
+                state.hintedTile = null;
+                state.hintedOtherTile = null;
+                state.glowingTiles.Clear();
+                state.nextGlowingTiles.Clear();
+            }
+            states.Remove(key);
+        }
+        deadBoards.Clear();
     }
 
     private BoardFxState GetState(BoardController board)

@@ -5,6 +5,7 @@ using UnityEngine;
 /// Mercy only chooses more helpful NORMAL colors for newly refilling stones.
 /// Ad/purchase players qualify after 9 actual lives spent on this level (12/15 raise the tier).
 /// Non-monetized players qualify only on returning after 72 inactive hours, until that level is won.
+/// Early game (levels 1-75): anyone qualifies after 5 confirmed losses across this level + the previous two.
 /// Existing tiles are never converted, and no starting special or extra move is granted.
 /// Specials may form through the ordinary match resolver after the stones land.
 /// </summary>
@@ -16,6 +17,9 @@ public static class LevelAssist
     private const float Tier1RefillBias = 0.15f;
     private const float Tier2RefillBias = 0.30f;
     private const float Tier3RefillBias = 0.45f;
+    // Erken oyun (kullanıcı 2026-11-21): oyuncuyu ilk 75'te tutmak için reklam/satın alma şartı aranmaz.
+    private const int EarlyHelpMaxLevel = 75;
+    private const int EarlyHelpSeriesStruggles = 5;
 
     internal const string RewardedAdKey = "mercy_has_rewarded_ad";
     internal const string PurchaseKey = "mercy_has_purchase";
@@ -35,9 +39,13 @@ public static class LevelAssist
     private static bool HasReturnHelp(int level) => level > 0
         && PlayerPrefs.GetInt(ReturnLevelKey, 0) == level;
 
+    private static bool HasEarlyHelp(int level) => level <= EarlyHelpMaxLevel
+        && LevelAttemptStats.StrugglesInSeries(level) >= EarlyHelpSeriesStruggles;
+
     // Usta Ligi yarıştır: gizli yardım ligde KAPALI (haftalık sıralama adil kalsın).
     private static bool IsEligible(int level) => !RuntimeSimulationSession.IsActive && level > 0 && !MasterLeague.IsPlaying
-        && (HasAdOrPurchase ? LevelAttemptStats.LivesSpentOn(level) >= Tier1Lives : HasReturnHelp(level));
+        && (HasEarlyHelp(level)
+            || (HasAdOrPurchase ? LevelAttemptStats.LivesSpentOn(level) >= Tier1Lives : HasReturnHelp(level)));
 
     public static int TierFor(int level)
     {

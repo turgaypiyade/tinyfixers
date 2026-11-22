@@ -2098,7 +2098,10 @@ public class BoardController : MonoBehaviour
     {
         public int x, y;
         public bool isHorizontal;
-        public BonusLinePlacement(int x, int y, bool isHorizontal) { this.x = x; this.y = y; this.isHorizontal = isHorizontal; }
+        public bool isPulse;   // bonus turunda LineH/V yerine PulseCore (BonusMovesService.pulseEvery)
+        public BonusLinePlacement(int x, int y, bool isHorizontal, bool isPulse = false)
+        { this.x = x; this.y = y; this.isHorizontal = isHorizontal; this.isPulse = isPulse; }
+        public TileSpecial Special => isPulse ? TileSpecial.PulseCore : isHorizontal ? TileSpecial.LineH : TileSpecial.LineV;
     }
 
     private void OnDisable() => Haptics.EndBoard();
@@ -4354,6 +4357,8 @@ public class BoardController : MonoBehaviour
                 SpecialVisualService.HideTileVisualForCombo(b);
 
                 PlayPulsePulseExplosionVfxAtCell(chargeX, chargeY);
+                // Şarj sesi animasyonla birlikte başlar (merkezi ses yolu; ayar kapalıysa çalmaz).
+                if (audioDirector != null) audioDirector.Emit(BoardSfxRequest.PulsePulseChargeUp());
                 
                 yield return new WaitForSeconds(pulsePulseChargeDuration);
 

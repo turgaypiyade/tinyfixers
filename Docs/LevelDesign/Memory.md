@@ -1,5 +1,15 @@
 # TinyFixers level tasarım hafızası
 
+## V1 4 / 13 / 16 — erken reklam mekanikleri · 2026-11-20 · manuel deneme bekliyor
+
+Kullanıcı yedek alarak yalnız bu üç levelı yeniden tasarlamamızı açıkça istedi. Son görsel ipuçları: erken kare tahtalarda da okunabilir iç şekil; su kanalı mutlaka alt kenardan çıksın; kuş evleri en az 2×3 toplu veya kenar L; elmalar sinekler ulaştığı için tamamen ayrı adacıklarda olabilir. Bu talep, 13'ün eski onayını ve eski başlangıç engel havuzu kısıtını yalnız bu kapsamda revize eder.
+
+Uygulama (agent tasarımı, henüz kullanıcı onayı değil): **4 — 9×9 karede S kanal, 32 hamle, 1 kanal/kaynak+12 hücre/alt çıkış. 13 — 8×9 ev-çatı maskesi, 30 hamle, altta 2×3 kuş evi/12 kuş hedefi. 16 — 9×9 bahçe tacı, 30 hamle, 1 adet2×2 sinek kutusu ve iki bağımsız2×2 elma/2 meyve hedefi.** 4'ün eksik TR/EN adı Kıvrımlı Dere/Winding Stream olarak eklendi; 13/16 mevcut isimler korundu. Katalog/GUID/levelKey aynı; diğer levellar ve öğreticiler korunur. Plastik ilk tanıtımı mevcut17'ye geçer;11–20 dört aileye çıkar, açık erken tanıtım talebinin kapsamıdır.
+
+Aktif öğreticiler **ScriptedTutorial + level.tutorialSteps**:1 temel,3 roket,5 PulseCore,7 PatchBot,8 Override,9 combo,12 çekiç,14 satır. Eski fırsat tarayan TutorialManager oyun sahnesinde kapalıdır. 4/13/16 adımları boş; önceki incelemedeki fırsat-temelli sistem iddiası yanlıştı, tasarıma esas alınmadı.
+
+Yedekler/önceki çalışma alanı hashleri, tasarımlar, author.py --verify, validation.json, gerçek sprite PNG'ler ve not: `Batches/Early-Ad-Mechanics-004-013-016/`. 3409 diğer oyun veri/kod/sahne dosyası aynı. Normal yuvalar80/80,60/60,47/47 dikey beslenir; pin/hazır special yok. Kanal alt çıkış, kuş yan erişimi, meyve izolasyonu ve kutu:elma1:2 doğrulandı. Statik ve görsel inceleme var; oyun dengesi ölçülmedi. Unity UI/Play/build/sim/remote yayın/release baseline/commit yok. Sonraki adım kullanıcının bu üç levelı denemesi; başka levelı değiştirme.
+
 ## 29 hamle 27→30 — canlı oyuncu verisi · 2026-11-16
 
 Kaynak: GA4 level_end (1–15 Kas, canlı Android). En ileri giden iki gerçek oyuncu (23108RN04Y, CPH2325) 29'da 4'er kayıpla durdu, 29'u kazanan yok; bu noktada geri gelmediler. Kullanıcı: **“29 evet zor muş onu artıralım bence”**. Yalnız `LevelV1_00000290` moves 27→30 (hedef 16× obstacle 21, 8×11). Maske/engel/hedef/isim/GUID/katalog aynı. Sonu9 = Super Hard rolü korunur; amaç duvarı yumuşatmak. Sim/bot ölçümü yok, yeni denge doğrulanmadı; 2 oyunculuk veri. Asset değişikliği bir sonraki build'le ya da kullanıcının açıkça isteyeceği uzak level yayınıyla canlıya gider.

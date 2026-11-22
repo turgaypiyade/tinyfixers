@@ -146,11 +146,24 @@ public sealed class SafariEventController : MonoBehaviour
         eventButton?.SetVisible(available, LockGate);
         if (!available) return;
 
-        // Level'den yeni döndüysek sonucu değerlendir ve haritayı animasyonla aç.
+        // Level'den yeni döndüysek sonucu haritada animasyonla göster. Sonuç seviye bitince SafariState'te zaten
+        // kaydedildi (hangi butondan başlatılmış olursa olsun); burası yalnız sunum.
         // Tutorial/overlay ekrandayken AÇMA — üstüne binip input'u kilitler. Temizlenince aç.
+        var pending = SafariState.PendingOutcome;
+        if (pending == SafariRoundOutcome.Advanced || pending == SafariRoundOutcome.Fell)
+        {
+            FallFromPitstop = SafariState.PendingFallFrom;
+            SafariState.ClearPendingOutcome();
+            StartCoroutine(RunWhenClear(() => OpenMap(pending)));
+            return;
+        }
+        if (pending == SafariRoundOutcome.Completed) SafariState.ClearPendingOutcome();   // aşağıdaki Completed dalı gösterir
+
+        // Eski sürümden kalan "Devam" turu (AwaitingResult): bir kez değerlendir.
         if (SafariState.RunStatus == SafariRunStatus.AwaitingResult)
         {
             var outcome = EvaluateReturn();
+            if (outcome == SafariRoundOutcome.None) return;
             StartCoroutine(RunWhenClear(() => OpenMap(outcome)));
             return;
         }
@@ -329,10 +342,7 @@ public sealed class SafariEventController : MonoBehaviour
         }
 
         if (!SafariState.HasJoined) SafariState.MarkJoined(UtcNow);
-
-        // Tur snapshot: dönüşte "ilk-hakta kazandı mı" = (CurrentLevel arttı) VE (fail sayacı artmadı).
-        SafariState.SnapshotAttempt(CurrentLevel.Global, PlayerStats.LevelFailCount);
-        SafariState.SetRunStatus(SafariRunStatus.AwaitingResult);
+        // Sonuç artık seviye bitince SafariState tarafından kaydedilir (OnLevelAttemptEnded); burada tur açılmaz.
 
         // Safari UI'ını kapat: yoksa level başlatmanın açtığı pre-level popup / loading ekranı
         // safari harita overlay'inin ARKASINDA kalır ve "hiçbir şey olmuyor" gibi görünür.
@@ -345,10 +355,8 @@ public sealed class SafariEventController : MonoBehaviour
             return;
         }
 
-        // Başlamadı → turu GERİ AL, aksi halde oyuncu menüde kalır ve sonraki kazanç bu tura yazılır.
         if (GameDiagnostics.CriticalErrors)
-            Debug.LogWarning($"[Safari] Devam → level başlamadı ({result}); tur geri alındı.");
-        SafariState.SetRunStatus(SafariRunStatus.Idle);
+            Debug.LogWarning($"[Safari] Devam → level başlamadı ({result}).");
 
         // Can yoksa can/reklam akışı ekranda: üstüne harita açma. Diğer hallerde haritaya dön.
         if (result != LevelStartResult.NoLives)
@@ -365,6 +373,13 @@ public sealed class SafariEventController : MonoBehaviour
         bool won = CurrentLevel.Global > SafariState.LevelSnapshot;
         bool failedDuringAttempt = PlayerStats.LevelFailCount > SafariState.FailSnapshot;
         bool firstTryWin = won && !failedDuringAttempt;
+
+        // Ne kazandı ne kaybetti (pre-level popup kapatıldı / uygulama kapandı): düşürme, koşuya dön.
+        if (!won && !failedDuringAttempt)
+        {
+            SafariState.SetRunStatus(SafariRunStatus.Idle);
+            return SafariRoundOutcome.None;
+        }
 
         if (!firstTryWin)
         {

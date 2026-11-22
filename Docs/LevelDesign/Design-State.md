@@ -1,5 +1,15 @@
 # Level tasarım çalışma durumu
 
+## V1 4 / 13 / 16 — erken reklam mekanikleri · 2026-11-20 · manuel deneme bekliyor
+
+Kullanıcı yedek alarak yalnız bu üç levelı yeniden tasarlamamızı açıkça istedi. Son görsel ipuçları: erken kare tahtalarda da okunabilir iç şekil; su kanalı mutlaka alt kenardan çıksın; kuş evleri en az 2×3 toplu veya kenar L; elmalar sinekler ulaştığı için tamamen ayrı adacıklarda olabilir. Bu talep, 13'ün eski onayını ve eski başlangıç engel havuzu kısıtını yalnız bu kapsamda revize eder.
+
+Uygulama (agent tasarımı, henüz kullanıcı onayı değil): **4 — 9×9 karede S kanal, 32 hamle, 1 kanal/kaynak+12 hücre/alt çıkış. 13 — 8×9 ev-çatı maskesi, 30 hamle, altta 2×3 kuş evi/12 kuş hedefi. 16 — 9×9 bahçe tacı, 30 hamle, 1 adet2×2 sinek kutusu ve iki bağımsız2×2 elma/2 meyve hedefi.** 4'ün eksik TR/EN adı Kıvrımlı Dere/Winding Stream olarak eklendi; 13/16 mevcut isimler korundu. Katalog/GUID/levelKey aynı; diğer levellar ve öğreticiler korunur. Plastik ilk tanıtımı mevcut17'ye geçer;11–20 dört aileye çıkar, açık erken tanıtım talebinin kapsamıdır.
+
+Aktif öğreticiler **ScriptedTutorial + level.tutorialSteps**:1 temel,3 roket,5 PulseCore,7 PatchBot,8 Override,9 combo,12 çekiç,14 satır. Eski fırsat tarayan TutorialManager oyun sahnesinde kapalıdır. 4/13/16 adımları boş; önceki incelemedeki fırsat-temelli sistem iddiası yanlıştı, tasarıma esas alınmadı.
+
+Yedekler/önceki çalışma alanı hashleri, tasarımlar, author.py --verify, validation.json, gerçek sprite PNG'ler ve not: `Batches/Early-Ad-Mechanics-004-013-016/`. 3409 diğer oyun veri/kod/sahne dosyası aynı. Normal yuvalar80/80,60/60,47/47 dikey beslenir; pin/hazır special yok. Kanal alt çıkış, kuş yan erişimi, meyve izolasyonu ve kutu:elma1:2 doğrulandı. Statik ve görsel inceleme var; oyun dengesi ölçülmedi. Unity UI/Play/build/sim/remote yayın/release baseline/commit yok. Sonraki adım kullanıcının bu üç levelı denemesi; başka levelı değiştirme.
+
 ## 251 Kapadokya Sabahı — Sıcak Hava Balonu tanıtımı · 2026-11-09 · kullanıcı denemesi bekliyor
 
 Kullanıcı: “level 251 i tasarlarmısın.. şekilli olsun ama sol ve sağ köşelerde balonlar olsun … alt tarafı `__XXXXXXXXX__` gibi konumlandırabilirsin”. Yorum (agent): tahta 9 geniş olduğundan `__` = alt köşelerde 2×2 balonlar, `X` = aradaki 5 hücrelik taban sırası. Yeni ekleme: `LevelV1_00002510.asset` / `LevelCL_0251` / GUID `d0d755ef8c224c99a96aee1c2f0b278b`, katalogda chapter 11 (tema yoksa son temaya düşer). 1–250 dokunulmadı. Batch: `Batches/251-Balloon/` (author.py, render.py, design-251.json, Level251.png, Before/).
@@ -528,3 +538,8 @@ Son güncelleme: 2026-10-23.
 - **Doğrulama:** 173–180 mask/footprint/hedef/katman/refill/tanıtım/GUID ve görsel kontrolü geçti; Unity YAML ayrıştırıldı. 1.843 önceki ayar/script dosyası korundu. Unity Play/build veya bot/kaskat simülasyonu yapılmadı. Performans/iptal sınırları ortak inceleme notunda.
 - **Geri alma:** `Batches/173-180/manifest.json` ve önceki katalog/çalışma kaydı mevcut. `rollback.py` varsayılan dry-run; 181 eklendiği için eski katalog hash kontrolü artık duracaktır. 181 korunmadan eski gruba `--apply` uygulanmaz; kullanıcı geri alma isterse sonraki katalog ekleri hesaba katılır. 181 öncesi katalog/snapshot `Batches/181/` içinde. İsim kataloğu taslak rollback kapsamı dışında korunur. Henüz geri alma uygulanmadı.
 - **Skill:** `.agents/skills/tinyfixers-level-design` kaynak `Skills/tinyfixers-level-design` klasörüne bağlıdır; AGENTS yönlendirmesi de var. Bu dosyadan devam et; onaylı levelları tekrar tasarlama.
+
+## 2026-11-21 · 27/28 değişimi + 28 Altın Kese (kullanıcı isteği)
+- Kullanıcı: "L27 kalksın, oraya L28 gelsin; 28 yerine altın şöleni". Katalog 27 → eski L28 asset (`LevelV1_00000280`, Kaygan Depo), karıştırma joker öğretici adımı (id 13) bu assete eklendi (joker kilidi kodda 27). Eski L27 (`LevelV1_00000270`, Dört Renkli Depo, pinli hamlesiz açılış) katalogdan çıktı, asset silinmedi (yedek).
+- **28 Altın Kese / Gold Pouch** (`LevelV1_00000281`, yeni GUID): 9×10 para kesesi silüeti (66 aktif, delikli), altın (GoldCoin 77) yalnız x=1,4,7 sütunlarında (22 başlangıç), `movableSpawnColumns` aynı sütunlar → altın akar. Hedef 80 altın, 28 hamle, 3 renk (L71 gibi). Elektrik kutusu denendi ve bırakıldı: 4 renk ister, dar şeritlerde açılamazdı. İlk altın karşılaşması → standart ipucu kartı, zorunlu öğretici yok.
+- Oynanmadı; hedef/hamle tahmin (ölçülmedi). Unity Play/build/sim yok.

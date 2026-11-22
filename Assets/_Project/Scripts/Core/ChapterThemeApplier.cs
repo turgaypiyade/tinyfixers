@@ -73,7 +73,12 @@ public class ChapterThemeApplier : MonoBehaviour
             SetSprite(topHudImage,        theme.menuTopHud);
             SetSprite(bottomAreaImage,    theme.menuBottomArea);
             SetSprite(levelSelectorBtnImage, theme.menuLevelSelectorBtn);
+            // Seviye butonu zorluğa göre renk alır (yeşil/kırmızı): tema görselinden sonra yeniden uygulanır.
+            if (levelSelectorBtnImage != null && levelSelectorBtnImage.TryGetComponent(out MainMenuLevelButtonController levelBtn))
+                levelBtn.RefreshButtonSkin();
             SetSprite(repairBtnImage,        theme.menuRepairBtn);
+            if (repairBtnImage != null && repairBtnImage.TryGetComponent(out MainMenuRepairButton repairBtn))
+                repairBtn.RefreshSkin();
         }
 
         ApplyBoardBorder(theme);

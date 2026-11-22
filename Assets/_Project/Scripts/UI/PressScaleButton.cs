@@ -19,6 +19,15 @@ public class PressScaleButton : MonoBehaviour, IPointerDownHandler, IPointerUpHa
         normalScale = transform.localScale;
     }
 
+    /// Butonun "basılmamış" ölçeği sonradan değişirse (ör. ButtonFrameBacking butonu çerçevenin içine küçültür).
+    public void SetNormalScale(Vector3 scale)
+    {
+        if (button == null) button = GetComponent<Button>();
+        normalScale = scale;
+        if (anim != null) { StopCoroutine(anim); anim = null; }
+        transform.localScale = scale;
+    }
+
     public void OnPointerDown(PointerEventData _)
     {
         if (!button.interactable) return;

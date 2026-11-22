@@ -74,6 +74,22 @@ public sealed class RegionUnlockListPanel : MonoBehaviour
     [SerializeField, Min(0f)] private float headerItemSpacing = 10f;
     private readonly List<GameObject> headers = new();
 
+    [Header("Yıldız Bakiyesi (panel açıkken sağ üst)")]
+    // Panel açılınca üst bar gizleniyor; oyuncu kaç yıldızı olduğunu görsün (kullanıcı 2026-11-22, level sonu
+    // altın kutusuyla aynı görünüm: ikon kutunun soluna biner, kutu sayıya göre uzar).
+    [SerializeField] private Sprite starChipBackground;
+    [SerializeField] private Sprite starChipIcon;
+    [SerializeField] private TMP_FontAsset starChipFont;
+    [SerializeField] private Material starChipMaterial;
+    [SerializeField] private Vector2 starChipPosition = new Vector2(-40f, -170f);   // panel kökünün sağ üstüne göre
+    [SerializeField, Min(1f)] private float starChipHeight = 76f;
+    [SerializeField, Min(1f)] private float starChipIconSize = 96f;
+    [SerializeField, Min(0f)] private float starChipIconOverlap = 34f;
+    private RectTransform starChip;
+    private RectTransform starChipBox;
+    private TextMeshProUGUI starChipText;
+    private bool starChipSubscribed;
+
     // ─── Lifecycle ──────────────────────────────────────────────────────────
 
     private void Awake()
@@ -103,6 +119,7 @@ public sealed class RegionUnlockListPanel : MonoBehaviour
         if (panelGroup != null) panelGroup.alpha = 0f;
 
         RebuildItemsInstant();
+        ShowStarChip(true);
         if (!WonderMode) worldMap.FocusNextLocked(instant: true);   // boş ekranda açma — sıradaki pine
         StartCoroutine(FadePanel(0f, 1f, panelFadeDuration));
     }
@@ -117,8 +134,99 @@ public sealed class RegionUnlockListPanel : MonoBehaviour
     {
         yield return FadePanel(panelGroup != null ? panelGroup.alpha : 1f, 0f, panelFadeDuration);
         if (panelRoot != null) panelRoot.SetActive(false);
+        ShowStarChip(false);
         SetMainMenuElementsVisible(true);
         inViewMode = false;
+    }
+
+    private void OnDisable() => ShowStarChip(false);
+
+    private void ShowStarChip(bool visible)
+    {
+        if (visible && starChip == null) BuildStarChip();
+        if (starChip == null) return;
+        starChip.gameObject.SetActive(visible);
+        if (visible && !starChipSubscribed)
+        {
+            PlayerWallet.OnTotalStarsChanged += RefreshStarChip;
+            starChipSubscribed = true;
+        }
+        else if (!visible && starChipSubscribed)
+        {
+            PlayerWallet.OnTotalStarsChanged -= RefreshStarChip;
+            starChipSubscribed = false;
+        }
+        if (visible)
+        {
+            starChip.SetAsLastSibling();
+            RefreshStarChip(PlayerWallet.TotalStars);
+        }
+    }
+
+    private void BuildStarChip()
+    {
+        var parent = panelRoot != null ? panelRoot.transform : transform;
+        starChip = NewChipRect("StarBalance", parent);
+        starChip.anchorMin = starChip.anchorMax = new Vector2(1f, 1f);
+        starChip.pivot = new Vector2(1f, 0.5f);
+        starChip.anchoredPosition = starChipPosition;
+
+        starChipBox = NewChipRect("Box", starChip);
+        var box = starChipBox.gameObject.AddComponent<Image>();
+        box.sprite = starChipBackground;
+        box.enabled = starChipBackground != null;
+        box.raycastTarget = false;
+        box.type = starChipBackground != null && starChipBackground.border.sqrMagnitude > 0f ? Image.Type.Sliced : Image.Type.Simple;
+        starChipBox.anchorMin = starChipBox.anchorMax = starChipBox.pivot = new Vector2(1f, 0.5f);
+
+        var textRt = NewChipRect("Amount", starChipBox);
+        textRt.anchorMin = Vector2.zero;
+        textRt.anchorMax = Vector2.one;
+        textRt.offsetMin = new Vector2(starChipIconOverlap + 8f, 8f);
+        textRt.offsetMax = new Vector2(-20f, -8f);
+        starChipText = textRt.gameObject.AddComponent<TextMeshProUGUI>();
+        if (starChipFont != null) starChipText.font = starChipFont;
+        if (starChipMaterial != null) starChipText.fontSharedMaterial = starChipMaterial;
+        starChipText.alignment = TextAlignmentOptions.Center;
+        starChipText.enableAutoSizing = true;
+        starChipText.fontSizeMax = 46f;
+        starChipText.fontSizeMin = 22f;
+        starChipText.fontStyle = FontStyles.Bold;
+        starChipText.textWrappingMode = TextWrappingModes.NoWrap;
+        starChipText.color = Color.white;
+        starChipText.raycastTarget = false;
+
+        var iconRt = NewChipRect("StarIcon", starChip);
+        var icon = iconRt.gameObject.AddComponent<Image>();
+        icon.sprite = starChipIcon;
+        icon.enabled = starChipIcon != null;
+        icon.preserveAspect = true;
+        icon.raycastTarget = false;
+        iconRt.anchorMin = iconRt.anchorMax = iconRt.pivot = new Vector2(0f, 0.5f);
+        iconRt.sizeDelta = Vector2.one * starChipIconSize;
+    }
+
+    private void RefreshStarChip(int amount)
+    {
+        if (starChipText == null) return;
+        starChipText.text = amount.ToString();
+        // Kutu sayının uzunluğuna göre uzar; ikon kutunun soluna biner.
+        float h = starChipHeight;
+        float minW = starChipBackground != null && starChipBackground.rect.height > 0f
+            ? h * starChipBackground.rect.width / starChipBackground.rect.height : h * 2.4f;
+        float w = Mathf.Max(minW, starChipIconOverlap + 8f + 20f
+            + starChipText.GetPreferredValues(starChipText.text, float.PositiveInfinity, h).x);
+        starChipBox.sizeDelta = new Vector2(w, h);
+        starChipBox.anchoredPosition = Vector2.zero;
+        starChip.sizeDelta = new Vector2(w + starChipIconSize - starChipIconOverlap, Mathf.Max(h, starChipIconSize));
+    }
+
+    private static RectTransform NewChipRect(string name, Transform parent)
+    {
+        var go = new GameObject(name, typeof(RectTransform)) { layer = 5 };
+        var rt = (RectTransform)go.transform;
+        rt.SetParent(parent, false);
+        return rt;
     }
 
     private void SetMainMenuElementsVisible(bool visible)
@@ -354,16 +462,18 @@ public sealed class RegionUnlockListPanel : MonoBehaviour
             top -= (itemHeight + headerItemSpacing) * scale;
 
             string title = w.GetTaskName(row.stage);
+            int cost = wonderCatalog.GetStarCost(row.eventIndex, row.stage);
+            bool affordable = PlayerWallet.HasEnoughStars(cost);   // yetmiyorsa sıradaki görevin butonu pasif görünür
 
             if (w.HasExplicitTaskIcon(row.stage))
-                item.BindTask(title, w.GetTaskIcon(row.stage), wonderCatalog.GetStarCost(row.eventIndex, row.stage),
-                              this, isActive: row.isEventNext, wonderEventIndex: row.eventIndex);
+                item.BindTask(title, w.GetTaskIcon(row.stage), cost,
+                              this, isActive: row.isEventNext, wonderEventIndex: row.eventIndex, affordable: affordable);
             else
             {
                 // İkon yok → harika imajının (stage+1)/toplam kadar kaynaklanmış mini önizlemesi
                 float reveal = w.TaskCount > 0 ? (row.stage + 1f) / w.TaskCount : 1f;
-                item.BindTaskRevealIcon(title, w.backgroundSprite, reveal, wonderCatalog.GetStarCost(row.eventIndex, row.stage),
-                                        this, isActive: row.isEventNext, wonderEventIndex: row.eventIndex);
+                item.BindTaskRevealIcon(title, w.backgroundSprite, reveal, cost,
+                                        this, isActive: row.isEventNext, wonderEventIndex: row.eventIndex, affordable: affordable);
             }
 
             items.Add(item);

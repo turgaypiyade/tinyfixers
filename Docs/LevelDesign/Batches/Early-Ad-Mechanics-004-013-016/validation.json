@@ -1,0 +1,60 @@
+{
+  "levels": [
+    {
+      "level": 4,
+      "active": 81,
+      "normalSlots": 80,
+      "verticallyFed": 80,
+      "goals": [
+        [
+          1,
+          76,
+          1
+        ]
+      ],
+      "moves": 32,
+      "channelBottomExit": true,
+      "manualPlayTested": false
+    },
+    {
+      "level": 13,
+      "active": 66,
+      "normalSlots": 60,
+      "verticallyFed": 60,
+      "goals": [
+        [
+          2,
+          3,
+          12
+        ]
+      ],
+      "moves": 30,
+      "channelBottomExit": false,
+      "manualPlayTested": false
+    },
+    {
+      "level": 16,
+      "active": 59,
+      "normalSlots": 47,
+      "verticallyFed": 47,
+      "goals": [
+        [
+          1,
+          102,
+          2
+        ]
+      ],
+      "moves": 30,
+      "channelBottomExit": false,
+      "manualPlayTested": false
+    }
+  ],
+  "changedAssets": [
+    "Assets/_Project/Settings/ProLevels/LevelV1_00000130.asset",
+    "Assets/_Project/Settings/ProLevels/LevelV1_00000040.asset",
+    "Assets/_Project/Settings/ProLevels/LevelV1_00000160.asset",
+    "Assets/_Project/Resources/LevelNames.json"
+  ],
+  "protectedUnchanged": 3409,
+  "validation": "Static data/footprint/feed checks only; no play/build/simulation."
+}

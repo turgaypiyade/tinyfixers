@@ -92,3 +92,8 @@ MonoBehaviour:
     - {fileID: 8300000, guid: 4b8e364de9f604921897adf964198c39, type: 3}
     volume: 1
     minInterval: 0.05
+  pulsePulseChargeUp:
+    clips:
+    - {fileID: 8300000, guid: 63bfdf5c8a5949d792700c57b99e9a8d, type: 3}
+    volume: 1
+    minInterval: 0.05

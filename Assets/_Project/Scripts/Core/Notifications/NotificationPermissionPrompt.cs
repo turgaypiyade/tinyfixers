@@ -23,6 +23,9 @@ public sealed class NotificationPermissionPrompt : MonoBehaviour
     /// Bu oturumda popup açıldı/açılacak — diğer ana menü pencereleri (mağaza değerlendirmesi) üst üste binmesin.
     public static bool WillShowThisSession => s_scheduledThisSession;
 
+    /// Popup ekranda (kurulmuş). Ana menü öğreticileri bu sürede başlamaz (ProfileUnlockTutorial.IsMenuBusyCore).
+    public static bool IsShowing { get; private set; }
+
     /// Ana menü açılışında çağrılır; koşullar uygunsa kısa bir gecikmeyle popup'ı açar.
     public static void TryShow(Component anyMainMenuUi)
     {
@@ -47,14 +50,20 @@ public sealed class NotificationPermissionPrompt : MonoBehaviour
         yield return new WaitForSecondsRealtime(ShowDelaySeconds);
         // Günlük çark açılıştaki ilk pencere (kullanıcı 2026-11-18): çark kapanana dek bekle.
         while (DailySlotEventButton.WheelHasPriority) yield return new WaitForSecondsRealtime(0.25f);
+        // Profil öğreticisi ekrandaysa üstüne açılma: karartma popup'ın butonlarını örter, oyuncu kilitlenir
+        // (2026-11-22, level atlayarak görüldü). Öğretici bitince sorulur.
+        while (ProfileUnlockTutorial.IsVisible) yield return new WaitForSecondsRealtime(0.25f);
         if (LocalNotificationService.Consent != LocalNotificationService.ConsentState.NotAsked)
         {
             Destroy(gameObject);
             yield break;
         }
         Build();
+        IsShowing = true;
         transform.SetAsLastSibling();
     }
+
+    private void OnDestroy() => IsShowing = false;
 
     private void Answer(bool accepted)
     {
