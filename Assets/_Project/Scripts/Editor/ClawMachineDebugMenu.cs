@@ -22,8 +22,16 @@ public static class ClawMachineDebugMenu
     [MenuItem(Root + "Durumu Sıfırla")]
     private static void ResetState() => ClawMachineState.DebugReset();
 
+    [MenuItem(Root + "Koleksiyonu Son Peluşa Kadar Doldur")]
+    private static void FillToLast() => ClawMachineState.DebugFillToLastPlush();
+
+    [MenuItem(Root + "Makineyi Şimdi Aç (kapalı gün + mola atla)")]
+    private static void OpenNow() => ClawMachineState.DebugOpenNow();
+
     [MenuItem(Root + "Etkinliği Zorla Aç (debugForceAvailable)", true)]
     [MenuItem(Root + "+5 Jeton", true)]
     [MenuItem(Root + "Durumu Sıfırla", true)]
+    [MenuItem(Root + "Koleksiyonu Son Peluşa Kadar Doldur", true)]
+    [MenuItem(Root + "Makineyi Şimdi Aç (kapalı gün + mola atla)", true)]
     private static bool Validate() => Application.isPlaying;
 }

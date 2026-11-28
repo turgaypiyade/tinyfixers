@@ -303,6 +303,39 @@ internal static class ProgressiveEventBuild
         catch { Restore(); throw; }
     }
 
+    /// Klonda (görselleri sökülmüş) yapılan görsel dışı değişiklikleri yazılmış kaynağa aktarır. Klonda boş olan ama
+    /// kaynakta görsel olan referans = söküm → atlanır. Değişen yollar konsola yazılır.
+    private static void MergeEditsIntoSource(ScriptableObject clone, ScriptableObject authored)
+    {
+        var from = new SerializedObject(clone);
+        var to = new SerializedObject(authored);
+        var changed = new List<string>();
+        var it = from.GetIterator();
+        bool enter = true;
+        while (it.Next(enter))
+        {
+            enter = true;
+            if (it.propertyPath == "m_Script" || it.propertyPath == "m_Name") { enter = false; continue; }
+            var dst = to.FindProperty(it.propertyPath);
+            if (dst == null) { enter = false; continue; }
+            if (it.propertyType == SerializedPropertyType.ObjectReference)
+            {
+                enter = false;   // referansın gizli alt alanlarına (m_FileID…) inme
+                if (it.objectReferenceValue == null && Artwork(dst.objectReferenceValue)) continue;   // sökülmüş görsel
+                if (dst.objectReferenceValue != it.objectReferenceValue) { dst.objectReferenceValue = it.objectReferenceValue; changed.Add(it.propertyPath); }
+                continue;
+            }
+            if (it.hasVisibleChildren && it.propertyType == SerializedPropertyType.Generic) continue;   // içine in
+            if (!SerializedProperty.DataEquals(it, dst)) { to.CopyFromSerializedProperty(it); changed.Add(it.propertyPath); }
+            enter = false;
+        }
+        if (changed.Count == 0) return;
+        to.ApplyModifiedPropertiesWithoutUndo();
+        EditorUtility.SetDirty(authored);
+        AssetDatabase.SaveAssetIfDirty(authored);
+        Debug.Log("[ProgressiveEventBuild] Etkin moddaki düzenlemeler kaynağa taşındı (" + authored.name + "): " + string.Join(", ", changed));
+    }
+
     internal static void Restore()
     {
         if (!Active) return;
@@ -341,6 +374,11 @@ internal static class ProgressiveEventBuild
             {
                 if (string.IsNullOrEmpty(copy.cloneGuid) || AssetDatabase.AssetPathToGUID(copy.originalPath) != copy.cloneGuid)
                     throw new BuildFailedException("Refusing to replace an unrelated config: " + copy.originalPath);
+                // Etkin moddayken Resources'taki KLON düzenlenmiş olabilir (2026-11-28: pençe ayarları bu yüzden kayboldu).
+                // Silmeden önce görsel dışı değişiklikleri kaynağa taşı; sökülmüş görsel alanları atlanır.
+                var clone = AssetDatabase.LoadAssetAtPath<ScriptableObject>(copy.originalPath);
+                var authored = AssetDatabase.LoadAssetAtPath<ScriptableObject>(source);
+                if (clone != null && authored != null) MergeEditsIntoSource(clone, authored);
                 AssetDatabase.DeleteAsset(copy.originalPath);
             }
             string error = AssetDatabase.MoveAsset(source, copy.originalPath);

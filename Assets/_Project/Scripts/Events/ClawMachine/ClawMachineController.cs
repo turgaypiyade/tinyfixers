@@ -12,7 +12,7 @@ using UnityEngine.UI;
 public sealed class ClawMachineController : MonoBehaviour
 {
     private const string PanelName = "RightEventPanel";
-    private static readonly Color PlateColor = new Color(0.86f, 0.30f, 0.62f);
+    private static readonly Color PlateColor = new Color(0.16f, 0.28f, 0.68f);   // 2026-11-28: pembe → lacivert (logo diskiyle aynı)
     private ClawMachineConfig cfg;
     private RectTransform canvasRoot, icon;
     private GameObject badge;
@@ -94,8 +94,8 @@ public sealed class ClawMachineController : MonoBehaviour
         if (icon != null) Destroy(icon.gameObject);
         if (screen != null) Destroy(screen.gameObject);
     }
-    private void OnApplicationFocus(bool value) => focused = value;
-    private void OnApplicationPause(bool paused) => focused = !paused;
+    private void OnApplicationFocus(bool value) { focused = value; menuReadyAt = clearSince = -1f; }
+    private void OnApplicationPause(bool paused) { focused = !paused; menuReadyAt = clearSince = -1f; }
 
     private void Update()
     {
@@ -103,6 +103,47 @@ public sealed class ClawMachineController : MonoBehaviour
         nextCheck = Time.unscaledTime + 1f;
         ClawMachineState.Sync(cfg, DateTime.UtcNow);
         Refresh();
+        TryShowSeasonSummary();
+    }
+
+    // ── Sezon sonu özeti: menü sakinken bir kez (Hediye Şenliği davet kuralları) ──
+    private float menuReadyAt = -1f, clearSince = -1f;
+
+    private void TryShowSeasonSummary()
+    {
+        if (RuntimeSimulationSession.IsActive || !ClawMachineState.Data.summaryPending) return;
+        if (!FirebaseCloudSaveService.RestoreResolved || LoadingScreenManager.IsVisible || CustomIntroLoadingManager.IsVisible)
+        { menuReadyAt = clearSince = -1f; return; }
+        if (menuReadyAt < 0f) menuReadyAt = Time.unscaledTime;
+        if (Time.unscaledTime - menuReadyAt < 4f) return;
+        if (IsMenuBusy()) { clearSince = -1f; return; }
+        if (clearSince < 0f) { clearSince = Time.unscaledTime; return; }
+        if (Time.unscaledTime - clearSince < 1f) return;
+        if (!ClawMachineState.TryTakeSummary(out int plush, out int tokens)) return;
+        string body = string.Format(ClawMachineUI.L("end_body", "{0}/{1} peluş topladın."), plush, ClawMachineConfig.PlushCount);
+        if (tokens > 0) body += "\n" + string.Format(ClawMachineUI.L("end_tokens", "Kullanılmayan {0} jeton silindi."), tokens);
+        body += "\n" + ClawMachineUI.L("end_next", "Yeni sezon yakında başlıyor!");
+        RuntimeChoicePopup.Show(ClawMachineUI.L("end_title", "Pençe Makinesi Bitti"), body);
+    }
+
+    private readonly System.Collections.Generic.List<PopupEntranceAnimator> popupBuffer = new(16);
+
+    private bool IsMenuBusy()
+    {
+        if (ContentDownloadOverlay.IsVisible || (screen != null && screen.gameObject.activeInHierarchy)
+            || RuntimeChoicePopup.IsShowing || RewardChestRevealOverlay.IsShowing
+            || ShopPurchaseCelebration.IsShowing || MarketNavigator.IsMenuMarketOpen()) return true;
+        if (FindFirstObjectByType<TutorialOverlayController>() != null
+            || WorkshopRepairButtonTutorial.BlocksOpeningPopups()
+            || DailySlotEventButton.WheelHasPriority
+            || FindFirstObjectByType<EventScreenIris>() != null
+            || FindFirstObjectByType<RisingIntroOverlay>() != null) return true;
+        canvasRoot.GetComponentsInChildren(false, popupBuffer);
+        bool busy = false;
+        for (int i = 0; i < popupBuffer.Count; i++)
+            if (popupBuffer[i].IsVisible) { busy = true; break; }
+        popupBuffer.Clear();
+        return busy;
     }
 
     private void Refresh()
@@ -117,18 +158,18 @@ public sealed class ClawMachineController : MonoBehaviour
             badge.SetActive(false);
             return;
         }
-        bool live = ClawMachineState.IsLive(cfg, now);
-        if (!live)
+        // Kapalı gün / sezon arası / mola: gizlemek yerine gri "YAKINDA"; dokununca açılışa kalan süre.
+        if (!ClawMachineState.CanGrab(cfg, now))
         {
-            // Ara dönem: gizlemek yerine gri "YAKINDA" (kullanıcı 2026-11-28); dokununca başlamasına kalan süre.
-            var window = ClawMachineState.Window(cfg, now);
-            EventLockOverlay.ApplyWaiting(icon.gameObject, window.NextStart, countdown);
+            EventLockOverlay.ApplyWaiting(icon.gameObject, ClawMachineState.NextOpen(cfg, now), countdown);
             badge.SetActive(false);
             return;
         }
         EventLockOverlay.Release(icon.gameObject);
         if (!icon.gameObject.activeSelf) icon.gameObject.SetActive(true);
-        countdown.text = TimeFormat.Countdown(ClawMachineState.Window(cfg, now).End - now);
+        // Oturum sürüyorsa kalan oyun, yoksa bugünün kapanışına kalan süre.
+        var session = ClawMachineState.SessionLeft(cfg, now);
+        countdown.text = TimeFormat.Countdown(session > TimeSpan.Zero ? session : ClawMachineState.OpenDayEnd(cfg, now) - now);
         int tokens = ClawMachineState.Tokens;
         badge.SetActive(ClawMachineState.HasJoined && tokens > 0);
         tokenCount.text = tokens.ToString();

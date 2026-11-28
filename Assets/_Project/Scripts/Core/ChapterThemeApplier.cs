@@ -63,20 +63,20 @@ public class ChapterThemeApplier : MonoBehaviour
         {
             SetSprite(backgroundImage,    theme.gameBackground);
             MatchAspectFitter(backgroundImage);
-            SetSprite(topHudImage,        theme.gameTopHud);
-            SetSprite(bottomAreaImage,    theme.gameBottomArea);
+            SetSprite(topHudImage,        theme.gameTopHud != null ? theme.gameTopHud : themeLibrary.gameTopHud);
+            SetSprite(bottomAreaImage,    theme.gameBottomArea != null ? theme.gameBottomArea : themeLibrary.gameBottomArea);
         }
         else
         {
             SetSprite(backgroundImage,    theme.menuBackground);
             MatchAspectFitter(backgroundImage);
-            SetSprite(topHudImage,        theme.menuTopHud);
-            SetSprite(bottomAreaImage,    theme.menuBottomArea);
-            SetSprite(levelSelectorBtnImage, theme.menuLevelSelectorBtn);
+            SetSprite(topHudImage,        theme.menuTopHud != null ? theme.menuTopHud : themeLibrary.menuTopHud);
+            SetSprite(bottomAreaImage,    theme.menuBottomArea != null ? theme.menuBottomArea : themeLibrary.menuBottomArea);
+            SetSprite(levelSelectorBtnImage, theme.menuLevelSelectorBtn != null ? theme.menuLevelSelectorBtn : themeLibrary.menuLevelSelectorBtn);
             // Seviye butonu zorluğa göre renk alır (yeşil/kırmızı): tema görselinden sonra yeniden uygulanır.
             if (levelSelectorBtnImage != null && levelSelectorBtnImage.TryGetComponent(out MainMenuLevelButtonController levelBtn))
                 levelBtn.RefreshButtonSkin();
-            SetSprite(repairBtnImage,        theme.menuRepairBtn);
+            SetSprite(repairBtnImage,        theme.menuRepairBtn != null ? theme.menuRepairBtn : themeLibrary.menuRepairBtn);
             if (repairBtnImage != null && repairBtnImage.TryGetComponent(out MainMenuRepairButton repairBtn))
                 repairBtn.RefreshSkin();
         }

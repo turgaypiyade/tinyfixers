@@ -21,6 +21,13 @@ public class ChapterThemeLibrary : ScriptableObject
     [Header("Themes (one per chapter, any order)")]
     [SerializeField] private List<ChapterTheme> themes = new();
 
+    [Header("Ortak arayüz (tüm bölümlerde aynı — YEREL)")]
+    [Tooltip("Bölüm teması bu alanı boş bırakırsa bu kullanılır. 2026-11-28: bölüm temalarında aynı görseller 51+ " +
+             "paketlerine kopyalanıyordu (fazla boyut + GÖREV butonu kimlik karşılaştırması bozuldu). Sabit görseller " +
+             "burada yerelde durur; tema yalnız gerçekten farklı olanı taşır (ör. Usta Ligi).")]
+    public Sprite menuTopHud;
+    public Sprite menuBottomArea, menuLevelSelectorBtn, menuRepairBtn, gameTopHud, gameBottomArea;
+
     [Header("Usta Ligi")]
     [Tooltip("Ana yol bitince (current_level > katalogdaki son seviye) bölüm teması yerine bu tema kullanılır. " +
              "Yeni seviyeler gelince kendiliğinden bölüm temasına döner.")]

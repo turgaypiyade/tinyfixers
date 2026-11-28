@@ -25,6 +25,12 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 9f21f5d0af044b039f1805b8af3d65a6, type: 2}
   - {fileID: 11400000, guid: a3060ef43fc0418997aec97dc4c9f0bd, type: 2}
   - {fileID: 11400000, guid: 4433002ff7cd472888ff3d800f3e6a3d, type: 2}
+  menuTopHud: {fileID: 21300000, guid: ecd5971b231564baeb9a49ca052b5a88, type: 3}
+  menuBottomArea: {fileID: 21300000, guid: 8f47d89b0f7fe4435b5e176a1f531f13, type: 3}
+  menuLevelSelectorBtn: {fileID: 21300000, guid: 31a3eec15ec7e4edebed2e4bd6c22218, type: 3}
+  menuRepairBtn: {fileID: 21300000, guid: cee5236173c444e48f09ee5585155556, type: 3}
+  gameTopHud: {fileID: 21300000, guid: a613c7faccef449fc85b7943d52d4deb, type: 3}
+  gameBottomArea: {fileID: 21300000, guid: 43e44e3d560a74958bf1278d0c4e96a1, type: 3}
   masterLeagueTheme: {fileID: 11400000, guid: 83117925ac1a4c5db07656a472bd5c11, type: 2}
   levelCatalog: {fileID: 11400000, guid: 6791aed5a9bc44f4af246ccebce32906, type: 2}
   remoteThemes: []

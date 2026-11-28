@@ -29,8 +29,17 @@ public static class ClawMachineState
         public int attempts, misses, sinceBig; // sezon denemesi, art arda kaçırış, büyük ödülden beri deneme
         public int rng;
         public int[] items = Array.Empty<int>();
+        // Kapsülün içindeki ödül (cfg.prizes indeksi; peluşta -1). Önceden belli ve görünür (2026-11-28: sürpriz
+        // kapsül kalktı — oyuncu hedefini seçer, altınla alınan jeton rastgele ödüle gitmez).
+        public int[] itemPrize = Array.Empty<int>();
         public int buyDay = -1, buysToday;
         public bool tutorialDone;               // ömür boyu
+        // Sezon sonu (2026-11-28): kalan jeton sessizce silinmez — özet bir kez gösterilir.
+        public bool endSummaryDone, summaryPending;
+        // Açık günde oyun oturumu (kullanıcı 2026-11-28): ilk denemeyle 30 dk başlar, bitince 2 sa mola.
+        public long sessionStartTicks, cooldownUntilTicks;
+        public int winsTowardToken;   // normal seviye kazanışları (winsPerToken'da 1 jeton)
+        public int summaryPlush, summaryTokens;
         public int delivered;
         public DailySlotReward[] delivery = Array.Empty<DailySlotReward>();
     }
@@ -58,6 +67,8 @@ public static class ClawMachineState
     public static int Misses => Data.misses;
     public static bool TutorialDone => Data.tutorialDone;
     public static IReadOnlyList<int> Items => Data.items;
+    /// Yuvadaki kapsülün ödülü (cfg.prizes indeksi) — peluş/geçersizse -1.
+    public static int PrizeAt(int slot) => Data.itemPrize != null && slot >= 0 && slot < Data.itemPrize.Length ? Data.itemPrize[slot] : -1;
     public static bool HasPlush(int id) => (Data.collectionMask & (1 << id)) != 0;
     public static int CollectedCount { get { int n = 0; for (int i = 0; i < ClawMachineConfig.PlushCount; i++) if (HasPlush(i)) n++; return n; } }
 
@@ -75,7 +86,50 @@ public static class ClawMachineState
         if (cfg == null || Data.anchorTicks <= 0 || Data.anchorTicks > DateTime.MaxValue.Ticks) return default;
         return GiftFestivalRules.GetWindow(new DateTime(Data.anchorTicks, DateTimeKind.Utc), now, cfg.activeHours, cfg.restHours);
     }
-    public static bool IsLive(ClawMachineConfig cfg, DateTime now) => IsUnlocked(cfg) && Window(cfg, now).Active;
+    /// Sezon aktif (jeton birikir; kapalı günlerde de). Haftalık sezon + kısa ara (config activeHours/restHours).
+    public static bool IsSeasonActive(ClawMachineConfig cfg, DateTime now) => IsUnlocked(cfg) && Window(cfg, now).Active;
+
+    /// Makine bugün açık mı: sezon içinde gün aşırı (sezon başlangıcından sayılan çift günler).
+    public static bool IsOpenDay(ClawMachineConfig cfg, DateTime now)
+    {
+        if (!IsSeasonActive(cfg, now)) return false;
+        if (!cfg.everyOtherDay) return true;
+        return DayInSeason(cfg, now) % 2 == 0;
+    }
+    private static long DayInSeason(ClawMachineConfig cfg, DateTime now) => (now - Window(cfg, now).Start).Ticks / TimeSpan.TicksPerDay;
+
+    /// Ekran/katılım/altınla alım: açık gün. Deneme ayrıca molaya bakar (CanGrab).
+    public static bool IsLive(ClawMachineConfig cfg, DateTime now) => IsOpenDay(cfg, now);
+    public static bool InCooldown(DateTime now) => Data.cooldownUntilTicks > now.Ticks;
+    public static DateTime CooldownUntil => new DateTime(Math.Max(0, Data.cooldownUntilTicks), DateTimeKind.Utc);
+    public static bool CanGrab(ClawMachineConfig cfg, DateTime now) => IsLive(cfg, now) && !InCooldown(now);
+
+    /// Süren oturumun kalan süresi (oturum yoksa sıfır).
+    public static TimeSpan SessionLeft(ClawMachineConfig cfg, DateTime now)
+    {
+        if (cfg == null || Data.sessionStartTicks <= 0) return TimeSpan.Zero;
+        var left = new DateTime(Data.sessionStartTicks, DateTimeKind.Utc).AddMinutes(cfg.sessionMinutes) - now;
+        return left > TimeSpan.Zero ? left : TimeSpan.Zero;
+    }
+
+    /// Açık günün bitişi (bugün kapanış) — sezon bitişinden önceyse o.
+    public static DateTime OpenDayEnd(ClawMachineConfig cfg, DateTime now)
+    {
+        var w = Window(cfg, now);
+        var end = w.Start.AddDays(DayInSeason(cfg, now) + 1);
+        return end < w.End ? end : w.End;
+    }
+
+    /// Makinenin bir sonraki açılışı: molada mola sonu, kapalı günde sıradaki açık gün, ara dönemde yeni sezon.
+    public static DateTime NextOpen(ClawMachineConfig cfg, DateTime now)
+    {
+        if (cfg == null) return DateTime.MinValue;
+        var w = Window(cfg, now);
+        if (!w.Active) return w.NextStart;
+        if (IsOpenDay(cfg, now)) return InCooldown(now) ? CooldownUntil : now;
+        var next = w.Start.AddDays(DayInSeason(cfg, now) + 1);
+        return next < w.End ? next : w.NextStart;
+    }
 
     /// Sıradaki denemede pençe güçlü mü (Pençe Gücü dolu ya da öğretici denemesi). Yakalamayı garanti etmez:
     /// kenar bölgesi de tutar, nişan yine şart (2026-11-28, beceri tabanlı).
@@ -85,7 +139,6 @@ public static class ClawMachineState
     public static bool IsTutorialAttempt => !Data.tutorialDone;
     /// Sezonun ilk untimedAttempts denemesi süresiz; sonrası süre sınırlı.
     public static bool NextIsTimed(ClawMachineConfig cfg) => cfg != null && Data.attempts >= cfg.untimedAttempts;
-    public static int AttemptsToBig(ClawMachineConfig cfg) => cfg == null ? 0 : Math.Max(1, cfg.bigGuaranteeEvery - Data.sinceBig);
     public static int BuysLeftToday(ClawMachineConfig cfg, DateTime now)
         => cfg == null ? 0 : Math.Max(0, cfg.coinTokensPerDay - (Data.buyDay == DayIndex(now) ? Data.buysToday : 0));
 
@@ -98,6 +151,8 @@ public static class ClawMachineState
         Deliver();
         if (!IsUnlocked(cfg)) { if (restored) OnChanged?.Invoke(); return; }
         bool changed = EnsureCycle(cfg, now);
+        changed |= CloseEndedSeason(cfg, now);
+        changed |= CloseSession(cfg, now);
         changed |= EnsureItems(cfg);
         if (changed) Save();
         if (changed || restored) OnChanged?.Invoke();
@@ -119,19 +174,65 @@ public static class ClawMachineState
             Data.collectionMask = 0; Data.collectionRewarded = false;
             Data.attempts = Data.misses = Data.sinceBig = 0;
             Data.items = Array.Empty<int>();
+            Data.endSummaryDone = false;   // bekleyen (gösterilmemiş) eski özet korunur
+            Data.sessionStartTicks = Data.cooldownUntilTicks = 0;
             changed = true;
         }
         return changed;
     }
 
+    /// Oturum süresi dolduysa mola başlar (oturum başı + süre + mola). Kapalı güne geçince oturum da kapanır.
+    private static bool CloseSession(ClawMachineConfig cfg, DateTime now)
+    {
+        if (Data.sessionStartTicks <= 0) return false;
+        var end = new DateTime(Data.sessionStartTicks, DateTimeKind.Utc).AddMinutes(cfg.sessionMinutes);
+        if (now < end && IsOpenDay(cfg, now)) return false;
+        Data.cooldownUntilTicks = end.AddMinutes(cfg.sessionRestMinutes).Ticks;
+        Data.sessionStartTicks = 0;
+        return true;
+    }
+
+    /// Sezon bitti (ara dönem başladı): kalan jetonlar silinir, özet ana menüde bir kez gösterilmek üzere saklanır.
+    private static bool CloseEndedSeason(ClawMachineConfig cfg, DateTime now)
+    {
+        if (!Data.joined || Data.endSummaryDone || Data.cycle < 0 || Window(cfg, now).Active) return false;
+        Data.endSummaryDone = true;
+        Data.summaryPending = true;
+        Data.summaryPlush = CollectedCount;
+        Data.summaryTokens = Data.tokens;
+        Data.tokens = 0;
+        return true;
+    }
+
+    /// Bekleyen sezon sonu özetini bir kez verir (gösterildi sayılır).
+    public static bool TryTakeSummary(out int plush, out int tokens)
+    {
+        plush = tokens = 0;
+        if (!Data.summaryPending) return false;
+        plush = Data.summaryPlush; tokens = Data.summaryTokens;
+        Data.summaryPending = false;
+        Save();
+        return true;
+    }
+
     private static bool EnsureItems(ClawMachineConfig cfg)
     {
         int count = cfg.ItemCount;
-        if (Data.items != null && Data.items.Length == count) return false;
+        if (Data.items != null && Data.items.Length == count)
+        {
+            // Eski kayıt (ödülsüz kapsüller): içerikleri bir kez çekilip görünür yapılır.
+            if (Data.itemPrize != null && Data.itemPrize.Length == count) return false;
+            Data.itemPrize = new int[count];
+            for (int i = 0; i < count; i++) Data.itemPrize[i] = Data.items[i] < CapsuleBase ? -1 : PickPrize(cfg, -1);
+            EnsureBigVisible(cfg, -1);
+            return true;
+        }
         if (Data.rng == 0) { Data.rng = Guid.NewGuid().GetHashCode(); if (Data.rng == 0) Data.rng = 7; }
         Data.items = new int[count];
-        for (int i = 0; i < count; i++) Data.items[i] = RollItem(cfg);
+        Data.itemPrize = new int[count];
+        for (int i = 0; i < count; i++) RollSlot(cfg, i);
         EnsurePlush(cfg, -1);
+        EnsureBigVisible(cfg, -1);
         return true;
     }
 
@@ -144,9 +245,32 @@ public static class ClawMachineState
         int min = Mathf.Clamp(cfg.minPlushVisible, 0, count);
         if (plush >= min) return;
         if (preferSlot >= 0 && preferSlot < count && Data.items[preferSlot] >= CapsuleBase)
-        { Data.items[preferSlot] = ClawMachineRules.Next(ref Data.rng) % ClawMachineConfig.PlushCount; plush++; }
+        { Data.items[preferSlot] = ClawMachineRules.Next(ref Data.rng) % ClawMachineConfig.PlushCount; Data.itemPrize[preferSlot] = -1; plush++; }
         for (int i = 0; plush < min && i < count; i++)
-            if (Data.items[i] >= CapsuleBase) { Data.items[i] = ClawMachineRules.Next(ref Data.rng) % ClawMachineConfig.PlushCount; plush++; }
+            if (Data.items[i] >= CapsuleBase) { Data.items[i] = ClawMachineRules.Next(ref Data.rng) % ClawMachineConfig.PlushCount; Data.itemPrize[i] = -1; plush++; }
+    }
+
+    /// Yuvaya yeni oyuncak: peluş ya da kapsül + içindeki ödül (önceden belli).
+    private static void RollSlot(ClawMachineConfig cfg, int slot)
+    {
+        int item = RollItem(cfg);
+        Data.items[slot] = item;
+        Data.itemPrize[slot] = item < CapsuleBase ? -1 : PickPrize(cfg, -1);
+    }
+
+    /// Makinede her an en az bir büyük ödüllü kapsül görünür (eski "N. denemede büyük ödül" garantisinin dürüst
+    /// karşılığı: oyuncu görür ve hedefler). preferSlot: yeni yenilenen yuva önce denenir; peluşlara dokunulmaz.
+    private static void EnsureBigVisible(ClawMachineConfig cfg, int preferSlot)
+    {
+        int count = Data.items.Length;
+        for (int i = 0; i < count; i++)
+        {
+            var p = cfg.Prize(Data.itemPrize[i]);
+            if (p != null && p.big) return;
+        }
+        int target = preferSlot >= 0 && preferSlot < count && Data.items[preferSlot] >= CapsuleBase ? preferSlot : -1;
+        for (int i = 0; target < 0 && i < count; i++) if (Data.items[i] >= CapsuleBase) target = i;
+        if (target >= 0) Data.itemPrize[target] = PickPrize(cfg, 1);
     }
 
     private static int RollItem(ClawMachineConfig cfg)
@@ -195,7 +319,8 @@ public static class ClawMachineState
         attempt = default;
         if (RuntimeSimulationSession.IsActive || delivering) return false;
         Sync(cfg, now);
-        if (!IsLive(cfg, now) || !HasJoined || Data.tokens <= 0 || Data.items.Length == 0) return false;
+        if (!CanGrab(cfg, now) || !HasJoined || Data.tokens <= 0 || Data.items.Length == 0) return false;
+        if (Data.sessionStartTicks <= 0) Data.sessionStartTicks = now.Ticks;   // oturum ilk denemeyle başlar
 
         int count = Data.items.Length;
         bool tutorial = !Data.tutorialDone;
@@ -203,8 +328,6 @@ public static class ClawMachineState
         int slot = ClawMachineRules.Nearest(Mathf.Clamp01(clawU), Mathf.Clamp01(clawW), count,
             cfg.itemHalfWidth * tolerance, cfg.itemHalfDepth * tolerance, out float accuracy);
         if (slot < 0) return false;
-        bool first = Data.attempts == 0;
-        bool bigDue = Data.sinceBig >= cfg.bigGuaranteeEvery - 1;   // yalnız kapsül İÇERİĞİ
         bool strong = tutorial || Data.misses >= cfg.missesForPower;
         bool plushItem = Data.items[slot] < CapsuleBase;
         var outcome = ClawMachineRules.Resolve(accuracy,
@@ -235,12 +358,13 @@ public static class ClawMachineState
             else
             {
                 // İlk deneme küçük kapsül, büyük sırası büyük kapsül; aksi halde ağırlıklı çekiliş.
-                prizeIndex = PickPrize(cfg, first ? 0 : bigDue ? 1 : -1);
+                prizeIndex = PrizeAt(slot) >= 0 ? PrizeAt(slot) : PickPrize(cfg, -1);   // görünen ödül
                 var prize = cfg.Prize(prizeIndex);
                 if (prize != null) { gotBig = prize.big; rewards.Add(prize.reward); }
             }
-            Data.items[slot] = RollItem(cfg);
+            RollSlot(cfg, slot);
             EnsurePlush(cfg, slot);
+            EnsureBigVisible(cfg, slot);
             newItem = Data.items[slot];
         }
         else Data.misses++;
@@ -261,6 +385,19 @@ public static class ClawMachineState
         return true;
     }
 
+    // Oyuncunun henüz açmadığı joker kapsüle konmaz (L16'da açılır; jokerler 12/14/22/27/32'de).
+    private static bool Unlocked(DailySlotReward r)
+    {
+        if (r == null) return false;
+        int index = r.type switch
+        {
+            DailySlotRewardType.Booster_Hammer => 0, DailySlotRewardType.Booster_Row => 1,
+            DailySlotRewardType.Booster_Column => 2, DailySlotRewardType.Booster_Shuffle => 3,
+            DailySlotRewardType.Booster_PaintBucket => 4, _ => -1,
+        };
+        return index < 0 || BoosterAccessService.IsUnlocked(index);
+    }
+
     // tier: 0 = yalnız küçük, 1 = yalnız büyük, -1 = hepsi.
     private static int PickPrize(ClawMachineConfig cfg, int tier)
     {
@@ -270,7 +407,7 @@ public static class ClawMachineState
         for (int i = 0; i < weights.Length; i++)
         {
             var p = cfg.prizes[i];
-            bool ok = p != null && (tier < 0 || p.big == (tier == 1));
+            bool ok = p != null && (tier < 0 || p.big == (tier == 1)) && Unlocked(p.reward);
             weights[i] = ok ? Math.Max(0, p.weight) : 0;
             any |= weights[i] > 0;
         }
@@ -289,6 +426,7 @@ public static class ClawMachineState
         data.tokens = Mathf.Max(0, data.tokens);
         data.collectionMask &= (1 << ClawMachineConfig.PlushCount) - 1;
         data.items ??= Array.Empty<int>();
+        data.itemPrize ??= Array.Empty<int>();
         data.delivery ??= Array.Empty<DailySlotReward>();
         data.delivered = Mathf.Clamp(data.delivered, 0, data.delivery.Length);
         return true;
@@ -339,8 +477,11 @@ public static class ClawMachineState
         LevelLossRegistry.Register("clawmachine", Loss);
     }
 
+    // 2026-11-28 (ekonomi): normal seviyede her winsPerToken kazanışta 1 jeton, zor seviyede hemen tokensPerHardWin.
+    private static bool IsHard(int level) => LevelDifficultyTag.For(level) != LevelDifficulty.Normal;
     private static int TokensForWin(ClawMachineConfig cfg, int level)
-        => LevelDifficultyTag.For(level) == LevelDifficulty.Normal ? cfg.tokensPerWin : cfg.tokensPerHardWin;
+        => IsHard(level) ? cfg.tokensPerHardWin
+            : Data.winsTowardToken + 1 >= Math.Max(1, cfg.winsPerToken) ? 1 : 0;
 
     private static IEnumerable<LevelLossItem> Loss()
     {
@@ -348,7 +489,7 @@ public static class ClawMachineState
         DateTime now = DateTime.UtcNow;
         if (!IsUnlocked(cfg)) return null;
         Sync(cfg, now);
-        if (!HasJoined || !IsLive(cfg, now) || CurrentLevel.Global <= Data.lastWinLevel || Data.tokens >= cfg.tokenCap) return null;
+        if (!HasJoined || !IsSeasonActive(cfg, now) || CurrentLevel.Global <= Data.lastWinLevel || Data.tokens >= cfg.tokenCap) return null;
         int amount = Math.Min(TokensForWin(cfg, CurrentLevel.Global), cfg.tokenCap - Data.tokens);
         return amount > 0 ? new[] { new LevelLossItem(cfg.menuIcon, GameLocalization.GetOr("claw_token", "Jeton"), amount, false) } : null;
     }
@@ -366,7 +507,9 @@ public static class ClawMachineState
         if (HasJoined && Window(cfg, now).Active && CurrentLevel.Global > Data.lastWinLevel)
         {
             Data.lastWinLevel = CurrentLevel.Global;
-            Data.tokens = Math.Min(cfg.tokenCap, Math.Max(Data.tokens, Data.tokens + TokensForWin(cfg, CurrentLevel.Global)));
+            int earned = TokensForWin(cfg, CurrentLevel.Global);
+            if (!IsHard(CurrentLevel.Global)) Data.winsTowardToken = earned > 0 ? 0 : Data.winsTowardToken + 1;
+            Data.tokens = Math.Min(cfg.tokenCap, Math.Max(Data.tokens, Data.tokens + earned));
             changed = true;
         }
         if (changed) { Save(); OnChanged?.Invoke(); }
@@ -379,6 +522,32 @@ public static class ClawMachineState
         Data.tokens = Math.Max(0, Data.tokens + count);
         Save(); OnChanged?.Invoke();
     }
+    /// Koleksiyonun 5/6'sı işaretlenir, eksik peluş makinenin ön sırasına konur (şöleni tek yakalamayla görmek için).
+    public static void DebugFillToLastPlush()
+    {
+        var cfg = ClawMachineConfig.Shared;
+        Sync(cfg, DateTime.UtcNow);
+        if (!HasJoined) { Data.joined = true; Data.tokens = Math.Max(Data.tokens, 3); }
+        int last = ClawMachineConfig.PlushCount - 1;
+        Data.collectionMask = ((1 << ClawMachineConfig.PlushCount) - 1) & ~(1 << last);
+        Data.collectionRewarded = false;
+        if (Data.items.Length > 0) { Data.items[0] = last; Data.itemPrize[0] = -1; }   // slot 0 = ön sıra, sol
+        Data.tokens = Math.Max(Data.tokens, 1);
+        Save(); OnChanged?.Invoke();
+    }
+
+    /// Kapalı günü ve molayı atlar: sezon şimdi başlar (bugün açık gün), oturum/mola sıfırlanır.
+    public static void DebugOpenNow()
+    {
+        var now = DateTime.UtcNow;
+        Sync(ClawMachineConfig.Shared, now);
+        long cycleTicks = Window(ClawMachineConfig.Shared, now).Start.Ticks;
+        long shift = now.Ticks - cycleTicks;   // çapayı kaydırıp bugünü sezonun 1. günü yap (koleksiyon korunur)
+        Data.anchorTicks += shift;
+        Data.sessionStartTicks = Data.cooldownUntilTicks = 0;
+        Save(); OnChanged?.Invoke();
+    }
+
     public static void DebugReset()
     {
         PlayerPrefs.DeleteKey(SaveKey); PlayerPrefs.Save(); data = null; lastJson = null;

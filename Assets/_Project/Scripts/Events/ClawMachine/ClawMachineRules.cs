@@ -11,22 +11,28 @@ public static class ClawMachineRules
 {
     public enum Outcome { Empty, Slip, Catch }
 
-    public const int Rows = 3;
+    // 2026-11-28: perspektifli zemin (ClawInterior) → 4 sıra; sıralar yatayda farklı kaydırılır (iç içe yığın).
+    public const int Rows = 4;
+    private static readonly float[] Depths = { 0.1f, 0.37f, 0.63f, 0.9f };
+    private static readonly float[] Shifts = { 0f, 0.5f, 0.25f, 0.75f };
+    public const float FrontRowMaxU = 0.6f;
 
-    /// Oyuncak yuvasının konumu: u (yatay) ve w (derinlik; 0 = ön, 1 = arka). Sıra = slot % 3 (0 ön, 1 orta,
-    /// 2 arka); sıralar yatayda kaydırılır (iç içe) — her bölgede yakalanacak bir şey olur.
+    /// Oyuncak yuvasının konumu: u (yatay) ve w (derinlik; 0 = ön, 1 = arka). Sıra = slot % Rows (0 en ön);
+    /// sıralar yatayda kaydırılır (iç içe) — her bölgede yakalanacak bir şey olur.
     public static void Slot(int slot, int count, out float u, out float w)
     {
         int row = Row(slot);
         int cols = Math.Max(1, (count + Rows - 1) / Rows);
         int col = slot / Rows;
-        const float margin = 0.1f;
-        float shift = row == 1 ? 0.5f : row == 2 ? 0.25f : 0f;
-        u = cols <= 1 ? 0.5f : margin + (1f - 2f * margin) * (col + shift) / (cols - 1 + 0.5f);
+        const float margin = 0.05f;
+        // En ön sıra bacanın önünde durmaz (baca halının sağ-önünde): yalnız sol bölümde dağılır. Arka sıralar
+        // halının tamamına yayılır (bacanın arkasına kadar) — kullanıcı 2026-11-28: "hepsi bir yere sıkışmış".
+        float hi = row == 0 ? FrontRowMaxU : 1f - margin;
+        u = cols <= 1 ? 0.5f : margin + (hi - margin) * (col + Shifts[row]) / (cols - 1 + 0.75f);
         w = RowDepth(row);
     }
     public static int Row(int slot) => slot % Rows;
-    public static float RowDepth(int row) => row == 0 ? 0.12f : row == 1 ? 0.5f : 0.88f;
+    public static float RowDepth(int row) => Depths[Math.Max(0, Math.Min(Rows - 1, row))];
 
     /// İndirilen noktaya en yakın yuva ve isabet (1 = tam merkez, 0 = yarıçap sınırı/dışı). Elips mesafe:
     /// halfU yatay, halfW derinlik yarıçapı. Eşitlikte öndeki (pençeye ilk değen) kazanır.

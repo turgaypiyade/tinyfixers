@@ -12,27 +12,49 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ef420bba254544608932c3321d3f6463, type: 3}
   m_Name: ClawMachineConfig
   m_EditorClassIdentifier: Assembly-CSharp::ClawMachineConfig
-  unlockLevel: 70
-  activeHours: 96
-  restHours: 72
+  unlockLevel: 16
+  activeHours: 156
+  restHours: 12
+  everyOtherDay: 1
+  sessionMinutes: 30
+  sessionRestMinutes: 120
   debugForceAvailable: 0
   joinTokens: 3
   tokensPerWin: 1
-  tokensPerHardWin: 2
+  winsPerToken: 2
+  tokensPerHardWin: 1
   tokenCap: 10
   coinTokenPrice: 300
   coinTokensPerDay: 3
   duplicatePlushTokens: 1
-  gripChance: 0.6
-  plushGripChance: 0.4
-  slipAccuracy: 0.35
+  itemHalfWidth: 0.093
+  itemHalfDepth: 0.22
+  coreAccuracy: 0.5
+  plushCoreAccuracy: 0.62
+  slipAccuracy: 0.25
+  edgeGrip: 0.35
+  plushEdgeGrip: 0.2
   missesForPower: 3
-  bigGuaranteeEvery: 5
-  itemHalfWidth: 0.075
-  itemCount: 9
-  minPlushVisible: 1
-  plushWeight: 17
+  tutorialTolerance: 1.8
+  moveSpeed: 0.45
+  depthSpeed: 0.55
+  swayAmplitude: 0.025
+  swaySettle: 0.8
+  untimedAttempts: 3
+  moveSeconds: 12
+  itemCount: 20
+  minPlushVisible: 4
+  plushWeight: 30
   prizes:
+  - reward:
+      type: 0
+      amount: 5
+      durationMinutes: 0
+      icon: {fileID: 0}
+      nameLocalizationKey: 
+      fallbackName: 
+    big: 0
+    weight: 45
   - reward:
       type: 0
       amount: 25
@@ -41,7 +63,7 @@ MonoBehaviour:
       nameLocalizationKey: 
       fallbackName: 
     big: 0
-    weight: 30
+    weight: 15
   - reward:
       type: 20
       amount: 1
@@ -70,14 +92,14 @@ MonoBehaviour:
     big: 0
     weight: 6
   - reward:
-      type: 0
-      amount: 60
+      type: 20
+      amount: 1
       durationMinutes: 0
       icon: {fileID: 0}
       nameLocalizationKey: 
       fallbackName: 
     big: 1
-    weight: 10
+    weight: 8
   - reward:
       type: 13
       amount: 1
@@ -182,12 +204,18 @@ MonoBehaviour:
   - {fileID: 21300000, guid: e4674f36c9204d78b3b7f455430c4fe5, type: 3}
   closeIcon: {fileID: 21300000, guid: 8fb720f1c5fe84fceaa7533ae6712d06, type: 3}
   tokenIcon: {fileID: 21300000, guid: da5172359fae47008bb2a456f29f5606, type: 3}
-  background: {fileID: 0}
+  background: {fileID: 21300000, guid: 4492a10683f145f7bb61e4570fbf7420, type: 3}
   font: {fileID: 11400000, guid: af5dedf535e914a95b9338f201a87125, type: 2}
   bodyFont: {fileID: 11400000, guid: a83eccbac88584b79b72932e2527695a, type: 2}
-  shelf: {fileID: 21300000, guid: b09ef00b6832485c9efc9a1218b09e0b, type: 3}
+  introFont: {fileID: 11400000, guid: ac4355f13452b44afb3bcab168126b78, type: 2}
+  introTitleMaterial: {fileID: 2100000, guid: 8d3588b6256b54c48b06f9364fdcac49, type: 2}
+  shelf: {fileID: 0}
   controlPanel: {fileID: 21300000, guid: 57b2c141e30543fbaa2f4a7861afb1d4, type: 3}
   chuteBack: {fileID: 21300000, guid: 972d9e7b01ae45788de3b76ad6ab6990, type: 3}
   chuteFront: {fileID: 21300000, guid: 3a928268bf274ba198891f2168ffb0c8, type: 3}
+  gantry: {fileID: 21300000, guid: dc327446e0d8415b9df13acf367f2581, type: 3}
+  arrowIcon: {fileID: 21300000, guid: a2427f928a314c7d9861db1b0575a65e, type: 3}
+  topHud: {fileID: 21300000, guid: 55bd85faca6242caa2cbf298790554b6, type: 3}
+  interior: {fileID: 21300000, guid: 3fa357c62eec4ff58c014af2e5655bdc, type: 3}
   backgroundTop: {r: 0.3, g: 0.12, b: 0.36, a: 1}
   backgroundBottom: {r: 0.1, g: 0.04, b: 0.14, a: 1}

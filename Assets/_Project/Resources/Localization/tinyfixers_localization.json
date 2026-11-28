@@ -3926,7 +3926,7 @@
         },
         {
           "key": "claw_intro_body",
-          "value": "Seviye kazan, jeton kazan (zor seviye: {0}).\nJoystick ile pençeyi sağa ve geriye götür,\nortasına dokun: pençe iner!\n6 peluşu topla, büyük sandığı aç.\nEtkinlik bitince kalan jetonlar silinir."
+          "value": "Her {0} seviyede 1 jeton, zor seviyede hemen 1 jeton.\nOklarla pençeyi sağa ve geriye götür,\nİNDİR'e bas: pençe iner!\n6 peluşu topla, büyük sandığı aç.\nEtkinlik bitince kalan jetonlar silinir."
         },
         {
           "key": "claw_start",
@@ -3938,7 +3938,7 @@
         },
         {
           "key": "claw_hint",
-          "value": "Sağa ve geriye götür, ortasına dokun!"
+          "value": "Okları basılı tut, sonra İNDİR!"
         },
         {
           "key": "claw_no_tokens",
@@ -3982,7 +3982,7 @@
         },
         {
           "key": "claw_tutorial",
-          "value": "Pençeyi oyuncağın tam üstüne getir, ortasına dokun!"
+          "value": "Oklarla pençeyi oyuncağın tam üstüne getir, İNDİR'e bas!"
         },
         {
           "key": "claw_time_left",
@@ -3993,8 +3993,64 @@
           "value": "İNDİR"
         },
         {
+          "key": "claw_session_left",
+          "value": "Kalan oyun {0}"
+        },
+        {
+          "key": "claw_resting",
+          "value": "Makine dinleniyor: {0}"
+        },
+        {
+          "key": "claw_tut_right",
+          "value": "Sağ tuşu basılı tut: pençe sağa gider."
+        },
+        {
+          "key": "claw_tut_back",
+          "value": "Şimdi yukarı tuşla pençeyi geriye götür."
+        },
+        {
+          "key": "claw_tut_drop",
+          "value": "Oyuncağın üstündeyken İNDİR'e bas!"
+        },
+        {
+          "key": "claw_buy_today",
+          "value": "Bugün kalan hak: {0}/{1}"
+        },
+        {
+          "key": "claw_one_token",
+          "value": "1 JETON"
+        },
+        {
+          "key": "claw_bought",
+          "value": "+1 JETON"
+        },
+        {
+          "key": "claw_intro_eyebrow",
+          "value": "YENİ ETKİNLİK"
+        },
+        {
+          "key": "claw_tap_start",
+          "value": "Başlamak için dokun (+{0} jeton)"
+        },
+        {
+          "key": "claw_end_title",
+          "value": "Pençe Makinesi Bitti"
+        },
+        {
+          "key": "claw_end_body",
+          "value": "{0}/{1} peluş topladın."
+        },
+        {
+          "key": "claw_end_tokens",
+          "value": "Kullanılmayan {0} jeton silindi."
+        },
+        {
+          "key": "claw_end_next",
+          "value": "Yeni sezon yakında başlıyor!"
+        },
+        {
           "key": "claw_power",
-          "value": "PENÇE GÜCÜ  •  BÜYÜK ÖDÜLE {0}"
+          "value": "PENÇE GÜCÜ"
         },
         {
           "key": "claw_slip",
@@ -7979,7 +8035,7 @@
         },
         {
           "key": "claw_intro_body",
-          "value": "Win levels to earn tokens (hard level: {0}).\nMove the claw right and back with the joystick,\ntap its center to drop!\nCollect all 6 plushies to open the big chest.\nUnused tokens expire when the event ends."
+          "value": "1 token every {0} levels, hard levels give 1 right away.\nMove the claw right and back with the arrows,\npress DROP to grab!\nCollect all 6 plushies to open the big chest.\nUnused tokens expire when the event ends."
         },
         {
           "key": "claw_start",
@@ -7991,7 +8047,7 @@
         },
         {
           "key": "claw_hint",
-          "value": "Move right and back, tap the center!"
+          "value": "Hold the arrows, then DROP!"
         },
         {
           "key": "claw_no_tokens",
@@ -8035,7 +8091,7 @@
         },
         {
           "key": "claw_tutorial",
-          "value": "Put the claw right above a toy, tap the center!"
+          "value": "Use the arrows to put the claw right above a toy, then press DROP!"
         },
         {
           "key": "claw_time_left",
@@ -8046,8 +8102,64 @@
           "value": "DROP"
         },
         {
+          "key": "claw_session_left",
+          "value": "Play time {0}"
+        },
+        {
+          "key": "claw_resting",
+          "value": "Machine is resting: {0}"
+        },
+        {
+          "key": "claw_tut_right",
+          "value": "Hold the right button: the claw moves right."
+        },
+        {
+          "key": "claw_tut_back",
+          "value": "Now hold the up button to move it back."
+        },
+        {
+          "key": "claw_tut_drop",
+          "value": "Above the toy? Press DROP!"
+        },
+        {
+          "key": "claw_buy_today",
+          "value": "Left today: {0}/{1}"
+        },
+        {
+          "key": "claw_one_token",
+          "value": "1 TOKEN"
+        },
+        {
+          "key": "claw_bought",
+          "value": "+1 TOKEN"
+        },
+        {
+          "key": "claw_intro_eyebrow",
+          "value": "NEW EVENT"
+        },
+        {
+          "key": "claw_tap_start",
+          "value": "Tap to start (+{0} tokens)"
+        },
+        {
+          "key": "claw_end_title",
+          "value": "Claw Machine Ended"
+        },
+        {
+          "key": "claw_end_body",
+          "value": "You collected {0}/{1} plushies."
+        },
+        {
+          "key": "claw_end_tokens",
+          "value": "{0} unused tokens expired."
+        },
+        {
+          "key": "claw_end_next",
+          "value": "A new season starts soon!"
+        },
+        {
           "key": "claw_power",
-          "value": "CLAW POWER  •  BIG PRIZE IN {0}"
+          "value": "CLAW POWER"
         },
         {
           "key": "claw_slip",
