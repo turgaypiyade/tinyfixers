@@ -14,7 +14,7 @@ public sealed class HarvestConfig : ScriptableObject
 
     private static HarvestConfig s_shared;
     public static HarvestConfig Shared =>
-        s_shared != null ? s_shared : (s_shared = Resources.Load<HarvestConfig>(ResourcePath));
+        s_shared != null ? s_shared : (s_shared = ProgressiveContent.EventSourceConfig<HarvestConfig>(ResourcePath));
 
     [Header("Takvim & kapı")]
     [Tooltip("Oynanacak level bu sayıya ulaşınca açılır (49. seviye bitince = 50).")]

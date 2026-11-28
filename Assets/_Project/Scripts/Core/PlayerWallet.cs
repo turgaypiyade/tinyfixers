@@ -167,8 +167,13 @@ public static class PlayerWallet
         PlayerPrefs.GetString(KeyWeeklyScoreWeek, "") == FirebaseLeaderboardService.CurrentWeekId
             ? PlayerPrefs.GetInt(KeyWeeklyScore, 0) : 0;
 
+    /// Kayıtlı haftalık puan ve ait olduğu hafta (geçmiş hafta olabilir) — haftalık ödül devri okur.
+    internal static (string week, int score) StoredWeekly =>
+        (PlayerPrefs.GetString(KeyWeeklyScoreWeek, ""), PlayerPrefs.GetInt(KeyWeeklyScore, 0));
+
     private static void AddWeeklyScore(int gained)
     {
+        WeeklyRaceRewards.RollWeek();   // geçen haftanın puanı yeni haftanın ilk kazancıyla ezilmesin (bekleyen ödül)
         string week = FirebaseLeaderboardService.CurrentWeekId;
         PlayerPrefs.SetInt(KeyWeeklyScore, WeeklyScore + gained);   // WeeklyScore eski haftada 0 döner
         PlayerPrefs.SetString(KeyWeeklyScoreWeek, week);

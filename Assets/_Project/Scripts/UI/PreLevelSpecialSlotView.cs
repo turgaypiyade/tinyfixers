@@ -122,6 +122,7 @@ public class PreLevelSpecialSlotView : MonoBehaviour
         theme = chapterTheme;
         isUnlocked = unlocked;
         isFreeSession = freeSession && unlocked;
+        if (numberBG != null) numberBG.overrideSprite = null;
 
         if (iconImage != null && iconImage.sprite == null && icon != null)
             iconImage.sprite = icon;
@@ -194,6 +195,15 @@ public class PreLevelSpecialSlotView : MonoBehaviour
         ApplySelectionVisual(false);
     }
 
+    private bool adAvailable;
+    private Sprite adIcon;
+
+    public void SetAdAvailable(bool available)
+    {
+        adAvailable = available;
+        RefreshCount();
+    }
+
     public void RefreshCount()
     {
         if (countText == null)
@@ -204,7 +214,11 @@ public class PreLevelSpecialSlotView : MonoBehaviour
             return;
 
         int count = PreLevelSpecialInventory.GetCount(special);
-        countText.text = GameLocalization.GetFormat("prelevel_special_count_format", count);
+        bool showAd = adAvailable && isUnlocked && !IsTimedActive && count == 0;
+        if (showAd && adIcon == null) adIcon = Resources.Load<Sprite>("UIButtons/Ad_PlayButton");
+        if (numberBG != null) numberBG.overrideSprite = showAd ? adIcon : null;
+        countText.text = showAd && numberBG != null && adIcon != null
+            ? string.Empty : GameLocalization.GetFormat("prelevel_special_count_format", count);
     }
 
     public void SetSelected(bool selected, bool animate = true)
@@ -311,11 +325,6 @@ public class PreLevelSpecialSlotView : MonoBehaviour
     private void HandleClick()
     {
         if (!isUnlocked) return;
-
-        // Kilitli değil ama elimizde hiç joker kalmadıysa seçime izin verme.
-        // Free oyunda hak gerekmez — seçim serbest.
-        if (!isFreeSession && PreLevelSpecialInventory.GetCount(special) <= 0 && !IsTimedActive && !isSelected)
-            return; // Sınırsız kullanımı durdur!
 
         Clicked?.Invoke(this);
     }

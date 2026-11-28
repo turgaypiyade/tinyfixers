@@ -8,7 +8,7 @@ using UnityEngine.UI;
 /// </summary>
 public static class UiButtons
 {
-    public enum Kind { Orange, Green, Blue, Red, Purple, SquareRed, SquareGreen, GreenPlain, GrayPlain }
+    public enum Kind { Orange, Green, Blue, Red, Purple, SquareRed, SquareGreen, GreenPlain, GrayPlain, RedPlain, BluePlain, NavyPlain, PillBlue, PillNavy }
 
     private static Sprite Load(string name) => Resources.Load<Sprite>("UIButtons/" + name);
 
@@ -25,6 +25,14 @@ public static class UiButtons
         Kind.GreenPlain  => CommonPopupSkin.Shared.continueButton,
         // GreenPlain'in açık gri eşi (aynı 9-slice): kullanılamaz/bekleyen buton (ör. kilitli "Can İste").
         Kind.GrayPlain   => Load("Btn_GrayPlain"),
+        // GreenPlain'in kırmızı eşi (RedButonwoStroke, aynı 9-slice): Yok Say / Reddet.
+        Kind.RedPlain    => Load("Btn_RedPlain"),
+        // Alt-seçim hapları (Dünya/Türkiye, Liste/Ekle): seçili mavi, seçili değil koyu lacivert (RM düzeni, 2026-11-25).
+        Kind.BluePlain   => Load("Btn_BluePlain"),
+        Kind.NavyPlain   => Load("Btn_NavyPlain"),
+        // Geniş alt-seçim hapı (BuyButton'dan; yatay esnemeye uygun 9-slice): seçili mavi / seçili değil lacivert.
+        Kind.PillBlue    => Load("Btn_PillBlue"),
+        Kind.PillNavy    => Load("Btn_PillNavy"),
         _ => null,
     };
 
@@ -33,8 +41,9 @@ public static class UiButtons
     {
         Kind.Orange      => new Color(0.55f, 0.22f, 0.02f),
         Kind.Green or Kind.SquareGreen or Kind.GreenPlain => new Color(0.10f, 0.35f, 0.05f),
-        Kind.Blue        => new Color(0.05f, 0.18f, 0.55f),
-        Kind.Red or Kind.SquareRed     => new Color(0.50f, 0.04f, 0.08f),
+        Kind.Blue or Kind.BluePlain or Kind.PillBlue => new Color(0.05f, 0.18f, 0.55f),
+        Kind.NavyPlain or Kind.PillNavy => new Color(0.04f, 0.07f, 0.18f),
+        Kind.Red or Kind.SquareRed or Kind.RedPlain => new Color(0.50f, 0.04f, 0.08f),
         Kind.Purple      => new Color(0.30f, 0.08f, 0.50f),
         Kind.GrayPlain   => new Color(0.36f, 0.38f, 0.42f),
         _ => Color.black,
@@ -111,8 +120,9 @@ public static class UiButtons
     {
         Kind.Orange => TextSurfaceStyle.Base(TextSurface.Orange),
         Kind.Green or Kind.SquareGreen or Kind.GreenPlain => TextSurfaceStyle.Base(TextSurface.Green),
-        Kind.Blue => TextSurfaceStyle.Base(TextSurface.Blue),
-        Kind.Red or Kind.SquareRed => TextSurfaceStyle.Base(TextSurface.Red),
+        Kind.Blue or Kind.BluePlain or Kind.PillBlue => TextSurfaceStyle.Base(TextSurface.Blue),
+        Kind.NavyPlain or Kind.PillNavy => new Color(0.10f, 0.16f, 0.32f),
+        Kind.Red or Kind.SquareRed or Kind.RedPlain => TextSurfaceStyle.Base(TextSurface.Red),
         Kind.Purple => TextSurfaceStyle.Base(TextSurface.Purple),
         Kind.GrayPlain => new Color(0.56f, 0.58f, 0.63f),
         _ => TextSurfaceStyle.Base(TextSurface.Maroon),

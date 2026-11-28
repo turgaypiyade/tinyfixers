@@ -55,6 +55,25 @@ public sealed class BridgeRepairController : MonoBehaviour
     public RectTransform IconRect => eventButton != null ? eventButton.IconRect : null;
     private static DateTime UtcNow => DateTime.UtcNow;
 
+    // Seviye açık ama takvimde kapalıyken ikon gizlenmez, gri "YAKINDA" kalır (kullanıcı 2026-11-28: seviyeye gelince
+    // kaybolması aldatıcıydı). Sıradaki başlangıç önbellekte: yalnız geçince ya da 10 dk'da bir yeniden hesaplanır.
+    private DateTime nextStartCache = DateTime.MinValue, nextStartCheckedAt = DateTime.MinValue;
+
+    private void PushVisibility(bool available)
+    {
+        DateTime? waiting = null;
+        if (!available && config != null && CurrentLevel.Global >= config.minLevelGate) waiting = NextStart();
+        eventButton?.SetVisible(available, LockGate, waiting);
+    }
+
+    private DateTime NextStart()
+    {
+        var now = UtcNow;
+        bool stale = nextStartCache == DateTime.MinValue ? (now - nextStartCheckedAt).TotalMinutes >= 10 : now >= nextStartCache;
+        if (stale) { nextStartCache = BridgeRepairSchedule.GetNextStart(config, now); nextStartCheckedAt = now; }
+        return nextStartCache;
+    }
+
     public DateTime WindowEnd
     {
         get
@@ -112,7 +131,7 @@ public sealed class BridgeRepairController : MonoBehaviour
 
         BridgeRepairState.SyncCycle(config, UtcNow);
         bool available = IsEventAvailable;
-        eventButton?.SetVisible(available, LockGate);
+        PushVisibility(available);
         if (!available) return;
 
         if (BridgeRepairState.HasJoined)
@@ -122,7 +141,7 @@ public sealed class BridgeRepairController : MonoBehaviour
             return;
         }
 
-        if (config.autoShowJoinPopup && BridgeRepairState.LastAskUtc == DateTime.MinValue)
+        if (config.autoShowJoinPopup && !ProgressiveContent.EventPromptDismissed(EventContentPolicy.Bridge) && BridgeRepairState.LastAskUtc == DateTime.MinValue)
             StartCoroutine(RunWhenClear(() =>
             {
                 if (IsEventAvailable && !BridgeRepairState.HasJoined) ShowJoinPopup();
@@ -134,7 +153,7 @@ public sealed class BridgeRepairController : MonoBehaviour
         // Pencere oyun açıkken biterse ikon kaybolsun (saniyede bir kontrol).
         if (config == null || Time.unscaledTime < nextVisibilityCheck) return;
         nextVisibilityCheck = Time.unscaledTime + 1f;
-        eventButton?.SetVisible(IsEventAvailable, LockGate);
+        PushVisibility(IsEventAvailable);
     }
 
     private bool NeedsPresentation()
@@ -165,6 +184,8 @@ public sealed class BridgeRepairController : MonoBehaviour
 
     private void ShowJoinPopup()
     {
+        if (ProgressiveContent.GateEvent(this, EventContentPolicy.Bridge, ShowJoinPopup, () => CanJoinNow)) return;
+        if (!CanJoinNow) return;
         BridgeRepairState.MarkAsked(UtcNow);
         if (joinPopup == null)
         {
@@ -178,7 +199,8 @@ public sealed class BridgeRepairController : MonoBehaviour
 
     private void OnJoinAccepted()
     {
-        if (!IsEventAvailable) return;
+        if (ProgressiveContent.GateEvent(this, EventContentPolicy.Bridge, OnJoinAccepted, () => CanJoinNow)) return;
+        if (!CanJoinNow) return;
         BridgeRepairState.BeginRun(UtcNow, BridgeRepairRace.GenerateBotNames(config));
         if (BridgeRepairState.HowToShownThisCycle) { OpenMap(animate: false); return; }
         BridgeRepairState.MarkHowToShown();
@@ -187,6 +209,7 @@ public sealed class BridgeRepairController : MonoBehaviour
 
     public void ShowHowToPlay(Action then)
     {
+        if (ProgressiveContent.GateEvent(this, EventContentPolicy.Bridge, () => ShowHowToPlay(then), () => IsEventAvailable)) return;
         howToPlay = BridgeRepairHowToPlay.Show(overlayParent, new BridgeRepairHowToPlay.Art
         {
             config = config,
@@ -202,9 +225,23 @@ public sealed class BridgeRepairController : MonoBehaviour
 
     // ── Yarış ekranı ─────────────────────────────────────────────
 
+#if UNITY_EDITOR
+    public void OpenDebugPreview()
+    {
+        if (mapScreen == null || config == null)
+        {
+            Debug.LogWarning("[BridgeRepairDebug] Yarış ekranı veya config bağlı değil.", this);
+            return;
+        }
+        if (ProgressiveContent.GateEvent(this, EventContentPolicy.Bridge, OpenDebugPreview, () => this != null)) return;
+        mapScreen.OpenPreview(this);
+    }
+#endif
+
     private void OpenMap(bool animate)
     {
-        if (mapScreen == null) return;
+        if (ProgressiveContent.GateEvent(this, EventContentPolicy.Bridge, () => OpenMap(animate), () => IsEventAvailable)) return;
+        if (mapScreen == null || !IsEventAvailable) return;
         if (pendingMapOpen != null) StopCoroutine(pendingMapOpen);
         pendingMapOpen = StartCoroutine(OpenMapWhenVisible(animate));
     }
@@ -219,7 +256,7 @@ public sealed class BridgeRepairController : MonoBehaviour
         yield return null;
         while (IsPresentationBlocked) yield return null;
         pendingMapOpen = null;
-        if (mapScreen != null) mapScreen.Open(this, animate);
+        if (mapScreen != null && IsEventAvailable) mapScreen.Open(this, animate);
     }
 
     private void OnEnable() => PreLevelEventPromoRegistry.Register(PromoKey, BuildPromo);
@@ -227,6 +264,7 @@ public sealed class BridgeRepairController : MonoBehaviour
     private void OnDisable()
     {
         PreLevelEventPromoRegistry.Unregister(PromoKey);
+        ProgressiveContent.CancelEvent(this);
         StopAllCoroutines();
         pendingMapOpen = null;
     }
@@ -270,6 +308,7 @@ public sealed class BridgeRepairController : MonoBehaviour
     /// <summary>Şeritteki "Katıl": katılım popup'ı atlanır (oyuncu zaten karar verdi) → doğrudan katıl.</summary>
     public void JoinFromPromo()
     {
+        if (ProgressiveContent.GateEvent(this, EventContentPolicy.Bridge, JoinFromPromo, () => CanJoinNow)) return;
         if (!CanJoinNow) return;
         BridgeRepairState.MarkAsked(UtcNow);
         OnJoinAccepted();
@@ -296,7 +335,8 @@ public sealed class BridgeRepairController : MonoBehaviour
     /// Harita ilerlemeyi oynattıktan sonra: bitiş töreni veya eleme bandı (her biri bir kez).
     public void OnMapPresented(BridgeRepairMapScreen map)
     {
-        if (BridgeRepairState.EndPresented) return;
+        if (ProgressiveContent.GateEvent(this, EventContentPolicy.Bridge, () => OnMapPresented(map), () => IsEventAvailable && map != null)) return;
+        if (!IsEventAvailable || BridgeRepairState.EndPresented) return;
 
         if (BridgeRepairState.IsFinished)
         {
@@ -319,6 +359,7 @@ public sealed class BridgeRepairController : MonoBehaviour
     /// Kazanma ekranı + sandık töreni. Ödül burada VERİLMEZ (kazanma anında verildi) → önizleme güvenli.
     public void ShowVictory(int rank)
     {
+        if (ProgressiveContent.GateEvent(this, EventContentPolicy.Bridge, () => ShowVictory(rank), () => IsEventAvailable)) return;
         var rewards = config.RewardsForRank(rank);
         if (!showVictoryIntro)
         {
@@ -357,6 +398,7 @@ public sealed class BridgeRepairController : MonoBehaviour
 
     private static bool IsTutorialBlocking()
     {
+        if (ContentDownloadOverlay.IsVisible) return true;
         if (FindFirstObjectByType<TutorialOverlayController>() != null) return true;
         if (WorkshopRepairButtonTutorial.BlocksOpeningPopups()) return true;
         if (DailySlotEventButton.WheelHasPriority) return true;   // günlük çark açılışta önce gelir

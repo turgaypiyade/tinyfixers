@@ -27,11 +27,11 @@ MonoBehaviour:
   botMaxFinishHours: 30
   rank1Rewards:
   - type: 0
-    amount: 1000
+    amount: 500
     durationMinutes: 0
     icon: {fileID: 0}
     nameLocalizationKey: 
-    fallbackName: "1000 Alt\u0131n"
+    fallbackName: "500 Alt\u0131n"
     weight: 10
   - type: 20
     amount: 1
@@ -55,11 +55,11 @@ MonoBehaviour:
     weight: 0
   rank2Rewards:
   - type: 0
-    amount: 500
+    amount: 250
     durationMinutes: 0
     icon: {fileID: 0}
     nameLocalizationKey: 
-    fallbackName: "500 Alt\u0131n"
+    fallbackName: "250 Alt\u0131n"
     weight: 10
   - type: 20
     amount: 1
@@ -76,11 +76,11 @@ MonoBehaviour:
     weight: 0
   rank3Rewards:
   - type: 0
-    amount: 250
+    amount: 125
     durationMinutes: 0
     icon: {fileID: 0}
     nameLocalizationKey: 
-    fallbackName: "250 Alt\u0131n"
+    fallbackName: "125 Alt\u0131n"
     weight: 10
   - type: 2
     amount: 5

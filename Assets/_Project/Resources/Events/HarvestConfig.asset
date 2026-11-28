@@ -58,7 +58,7 @@ MonoBehaviour:
       origin: {x: 0, y: 4}
     rewards:
     - type: 0
-      amount: 200
+      amount: 100
       icon: {fileID: 0}
       nameLocalizationKey: 
       fallbackName: 
@@ -84,7 +84,7 @@ MonoBehaviour:
       fallbackName: 
       weight: 10
     - type: 0
-      amount: 250
+      amount: 125
       icon: {fileID: 0}
       nameLocalizationKey: 
       fallbackName: 
@@ -112,7 +112,7 @@ MonoBehaviour:
       fallbackName: 
       weight: 10
     - type: 0
-      amount: 300
+      amount: 150
       icon: {fileID: 0}
       nameLocalizationKey: 
       fallbackName: 
@@ -136,7 +136,7 @@ MonoBehaviour:
       origin: {x: 2, y: 2}
     rewards:
     - type: 0
-      amount: 400
+      amount: 200
       icon: {fileID: 0}
       nameLocalizationKey: 
       fallbackName: 
@@ -168,7 +168,7 @@ MonoBehaviour:
       origin: {x: 0, y: 1}
     rewards:
     - type: 0
-      amount: 600
+      amount: 300
       icon: {fileID: 0}
       nameLocalizationKey: 
       fallbackName: 

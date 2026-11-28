@@ -68,7 +68,23 @@ public sealed class BridgeLaneView : MonoBehaviour
     private BridgeLaneMetrics metrics;
     private BridgeContestant contestant;
     private RectTransform deck, walkers, badgeRoot;
+    private Image leftPiece, rightPiece;
     private Image[] segments;
+
+#if UNITY_EDITOR
+    public void SetPreviewPaint(Material material, Color color)
+    {
+        void Paint(Image part)
+        {
+            part.material = material;
+            part.color = color;
+        }
+
+        Paint(leftPiece);
+        Paint(rightPiece);
+        foreach (var segment in segments) Paint(segment);
+    }
+#endif
     private float segLen;           // bir dilimin (esnetilmiş) güverte uzunluğu
     private float length;           // güverte boşluğu uzunluğu (P0→P1)
     private float revealed;         // açılmış uzunluk
@@ -81,7 +97,7 @@ public sealed class BridgeLaneView : MonoBehaviour
 
     public static BridgeLaneView Create(RectTransform parent, RectTransform tagsLayer, BridgeRepairConfig config,
         BridgeLaneMetrics metrics, BridgeContestant contestant, Vector2 leftAnchor, Vector2 rightAnchor,
-        Vector2 tagLeftAnchor, Sprite leftSprite, Sprite rightSprite, Sprite segmentSprite)
+        Vector2 tagLeftAnchor, Sprite leftSprite, Sprite rightSprite, Sprite segmentSprite, bool previewLayout = false)
     {
         var root = BridgeRepairUI.Rect($"Lane{contestant.lane}", parent, Vector2.zero, Vector2.zero);
         root.localPosition = Vector3.zero;
@@ -89,12 +105,12 @@ public sealed class BridgeLaneView : MonoBehaviour
         lane.config = config;
         lane.metrics = metrics;
         lane.contestant = contestant;
-        lane.Build(tagsLayer, leftAnchor, rightAnchor, tagLeftAnchor, leftSprite, rightSprite, segmentSprite);
+        lane.Build(tagsLayer, leftAnchor, rightAnchor, tagLeftAnchor, leftSprite, rightSprite, segmentSprite, previewLayout);
         return lane;
     }
 
     private void Build(RectTransform tagsLayer, Vector2 leftAnchor, Vector2 rightAnchor, Vector2 tagLeftAnchor,
-        Sprite leftSprite, Sprite rightSprite, Sprite segmentSprite)
+        Sprite leftSprite, Sprite rightSprite, Sprite segmentSprite, bool previewLayout = false)
     {
         float a = Mathf.Max(1f, metrics.deckHeight) / DeckThickness;   // parça pikseli → arka plan pikseli
         leftAnchor.y += metrics.pieceOffsetY;
@@ -111,9 +127,9 @@ public sealed class BridgeLaneView : MonoBehaviour
         // Çizim sırası: önce köprü (sol uç → güverte → sağ uç), karakterler EN ÖNDE.
         // Uç parçalar güverte açısıyla döner; iç kenarları segmentin biraz altına girer.
         Vector2 along = dir / length;
-        Piece("BridgeLeft", leftSprite, LeftEnd, p0 + along * metrics.endOverlap, angle, a);
+        leftPiece = Piece("BridgeLeft", leftSprite, LeftEnd, p0 + along * metrics.endOverlap, angle, a);
         deck = Strip("Deck", p0, angle);
-        Piece("BridgeRight", rightSprite, RightEnd, p1 - along * metrics.endOverlap, angle, a);
+        rightPiece = Piece("BridgeRight", rightSprite, RightEnd, p1 - along * metrics.endOverlap, angle, a);
         walkers = Strip("Walkers", p0, angle);
 
         // Tam sayıda dilim: boşluk en yakın dilim sayısına bölünür, genişlik o kadar esner (en fazla ~%15).
@@ -143,7 +159,10 @@ public sealed class BridgeLaneView : MonoBehaviour
 
         // Etiket bir üst şeridin güverte başlangıcına göre: eski "alttaki" konumu = bu karakterin üstü.
         tagLeftAnchor.y += metrics.pieceOffsetY;
-        BuildTag(tagsLayer, tagLeftAnchor + deckFromAnchor);
+        Vector2 labelCenter = previewLayout
+            ? new Vector2(p1.x + 88f, p1.y + 64f)
+            : tagLeftAnchor + deckFromAnchor + metrics.tagOffset;
+        BuildTag(tagsLayer, labelCenter, previewLayout);
     }
 
     private BridgeCharacterDef CharacterDef()
@@ -172,19 +191,20 @@ public sealed class BridgeLaneView : MonoBehaviour
         return img;
     }
 
-    private void BuildTag(RectTransform tagsLayer, Vector2 p0)
+    private void BuildTag(RectTransform tagsLayer, Vector2 center, bool previewLayout)
     {
         var parent = tagsLayer != null ? tagsLayer : (RectTransform)transform;
         Vector2 local = tagsLayer != null
-            ? (Vector2)tagsLayer.InverseTransformPoint(transform.TransformPoint(p0 + metrics.tagOffset))
-            : p0 + metrics.tagOffset;
+            ? (Vector2)tagsLayer.InverseTransformPoint(transform.TransformPoint(center))
+            : center;
 
         bool me = contestant.isPlayer;
         // Etiket büyütüldü (230x62 → 270x76); SOL kenar aynı yerde kalsın diye merkez sağa kayar
         // (karakterin başıyla çakışmasın).
         const float tagW = 270f, tagH = 76f;
         var pill = BridgeRepairUI.Rect($"Tag{contestant.lane}", parent, new Vector2(tagW, tagH), Vector2.zero);
-        pill.localPosition = local + new Vector2((tagW - 230f) * 0.5f, 0f);
+        pill.localPosition = previewLayout ? local : local + new Vector2((tagW - 230f) * 0.5f, 0f);
+        if (previewLayout) pill.localScale = Vector3.one * 0.75f;
         var bg = pill.gameObject.AddComponent<Image>();
         bg.sprite = BridgeRepairUI.Pill();
         bg.type = Image.Type.Sliced;
@@ -192,7 +212,10 @@ public sealed class BridgeLaneView : MonoBehaviour
         bg.color = new Color(0.06f, 0.16f, 0.3f, 0.88f);
         bg.raycastTarget = false;
 
-        BridgeRepairUI.Avatar("Avatar", pill, contestant.avatar, 70f, new Vector2(-tagW * 0.5f + 42f, 0f),
+        Sprite portrait = contestant.avatar;
+        if (previewLayout && !me)
+            portrait = PlayerAvatarProvider.ForCharacter(CharacterDef()?.id) ?? portrait;
+        BridgeRepairUI.Avatar("Avatar", pill, portrait, 70f, new Vector2(-tagW * 0.5f + 42f, 0f),
             new Color(0.85f, 0.9f, 1f));
 
         float textX = -tagW * 0.5f + 84f + 92f;   // avatarın sağından başlayan 184px'lik yazı kutusunun merkezi

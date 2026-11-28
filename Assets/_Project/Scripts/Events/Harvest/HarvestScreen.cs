@@ -103,16 +103,18 @@ public sealed class HarvestScreen : MonoBehaviour, IPointerClickHandler
     }
 
     private void OnEnable()  => HarvestState.OnChanged += RefreshHud;
-    private void OnDisable() => HarvestState.OnChanged -= RefreshHud;
+    private void OnDisable() { HarvestState.OnChanged -= RefreshHud; ProgressiveContent.CancelEvent(this); }
 
     public void Open() => Open(null);
 
     /// from: tıklanan ikon — ekran o noktadan büyüyen daireyle açılır (null → ekran ortası).
     public void Open(RectTransform from)
     {
+        if (ProgressiveContent.GateEvent(this, EventContentPolicy.Harvest, () => Open(from), () => HarvestConfig.Shared != null && HarvestState.IsLive(HarvestConfig.Shared, System.DateTime.UtcNow))) return;
         cfg = HarvestConfig.Shared;
         if (cfg == null) { if (GameDiagnostics.CriticalErrors)
             Debug.LogWarning("[Harvest] HarvestConfig yok (Resources/Events)."); return; }
+        if (!HarvestState.IsLive(cfg, System.DateTime.UtcNow)) return;
         HarvestState.SyncCycle(cfg, System.DateTime.UtcNow);
         gameObject.SetActive(true);
         if (root != null) root.SetActive(true);

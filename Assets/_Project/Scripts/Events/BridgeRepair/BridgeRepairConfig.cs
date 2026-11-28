@@ -109,5 +109,5 @@ public sealed class BridgeRepairConfig : ScriptableObject
 
     private static BridgeRepairConfig s_shared;
     public static BridgeRepairConfig Shared =>
-        s_shared != null ? s_shared : (s_shared = Resources.Load<BridgeRepairConfig>(ResourcePath));
+        s_shared != null ? s_shared : (s_shared = ProgressiveContent.EventSourceConfig<BridgeRepairConfig>(ResourcePath));
 }

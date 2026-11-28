@@ -79,7 +79,7 @@ public sealed class PatchBotCombo
             // SENKRON solo fırlatma: dash'ler hemen enqueue olur, dönen initialClearAction'lar
             // (pompa) sequencer'a girer → İLK MatchClearAction çalışınca BoardAnimator TÜM dash
             // buffer'ını tek PlayDashParallel ile tüketir → 3 bot neredeyse aynı anda uçar.
-            var launchActions = PatchBotSpecial.LaunchGroupSolo(rt.Board, launchCells, rt.BuildPatchBotRuntime);
+            var launchActions = PatchBotSpecial.LaunchGroupSolo(rt.Board, launchCells, rt.BuildPatchBotRuntime, diveFlourish: true);
             if (launchActions != null && launchActions.Count > 0)
                 result.Actions.AddRange(launchActions);
         }

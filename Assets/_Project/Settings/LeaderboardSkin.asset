@@ -36,6 +36,12 @@ MonoBehaviour:
   giftTier1: {fileID: 21300000, guid: bb16f926302314d70a4c1c84d80d0fbe, type: 3}
   giftTier2: {fileID: 21300000, guid: 2da17fdccfb524a009821e8a1d5e6987, type: 3}
   giftTier3: {fileID: 21300000, guid: de34a60528e624244800dffeedef3c5c, type: 3}
+  weeklyStageBackground: {fileID: 21300000, guid: 6a518f50416244a4be179772984c7d06, type: 3}
+  podiumCardGold: {fileID: 21300000, guid: 9c8499f14f8242fd8d28d3b62ed57541, type: 3}
+  podiumCardSilver: {fileID: 21300000, guid: 85100697d00448c2b6f876d25e7895d0, type: 3}
+  podiumCardBronze: {fileID: 21300000, guid: c5ee3e9b94af41e591920f78110139ea, type: 3}
+  weeklyRaceBanner: {fileID: 21300000, guid: ed0f05cf4cd54ad19c06c9f2e3d831c5, type: 3}
+  infoButton: {fileID: 21300000, guid: edbfdf491f804399a46100ff7ceb64a3, type: 3}
   defaultRowBanner: {fileID: 0}
   titleTopOffset: 70
   timerChipPos: {x: 16, y: -6}
@@ -53,7 +59,7 @@ MonoBehaviour:
   selectedTabRaise: 8
   listTopOffset: 300
   listBottomOffset: 130
-  togglePillSize: {x: 400, y: 80}
+  togglePillSize: {x: 410, y: 88}
   togglePillSpread: 215
   togglePillFontSize: 38
   rowHeight: 132

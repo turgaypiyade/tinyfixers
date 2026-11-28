@@ -16,6 +16,9 @@ public sealed class LeaderboardEntry
     public Sprite bannerArt;    // satırın sağındaki dekoratif art (opsiyonel)
     public bool isSelf;
 
+    // Eşit puanda KALICI sıra anahtarı (ödül hesabıyla aynı): gerçek oyuncu "u:"+uid, bot "b:"+indeks. Boşsa isim.
+    public string tieKey;
+
     // Oyuncu satırları: bulunduğu bölüm ("Bölüm 4401"). 0 = gösterme.
     public int chapter;
 

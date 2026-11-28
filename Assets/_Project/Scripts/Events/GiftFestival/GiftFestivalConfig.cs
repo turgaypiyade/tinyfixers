@@ -40,6 +40,9 @@ public sealed class GiftFestivalConfig : ScriptableObject
     [Header("Main menu invitation")]
     public bool autoShowJoinPopup = true;
     [Range(1f, 5f)] public float introSeconds = 2.6f;
+    public Sprite menuLogo;
+    public TMPro.TMP_FontAsset menuFont;
+    public Material menuFontMaterial;
     // Load the texture references only after the event is unlocked, never for early-level win hooks.
     public GiftFestivalArt Art => GiftFestivalArt.Shared;
 

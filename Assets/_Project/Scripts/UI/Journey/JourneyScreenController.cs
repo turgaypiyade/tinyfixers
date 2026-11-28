@@ -75,10 +75,15 @@ public sealed class JourneyScreenController : MonoBehaviour
     {
         WonderProgress.OnBackgroundChanged += RefreshUseButtons;
         ScreenTitleStyle.ApplyToScreen(transform, theme != null ? theme.headingFont : null);   // Journey / Ranks / Team başlıkları aynı font + konum
+        if (worldMap != null && ProgressiveContent.GateEvent(this, EventContentPolicy.MissionMap, Build)) return;
         Build();
     }
 
-    private void OnDisable() => WonderProgress.OnBackgroundChanged -= RefreshUseButtons;
+    private void OnDisable()
+    {
+        WonderProgress.OnBackgroundChanged -= RefreshUseButtons;
+        ProgressiveContent.CancelEvent(this);
+    }
 
     private WorldTourMap tourMap;
 

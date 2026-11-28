@@ -47,16 +47,21 @@ public static class TextSurfaceStyle
 
     // ── Çalışma anı: koddan kurulan yazılar (buton etiketleri, event başlıkları) ─────────────────
     // Zemin rengi başına TEK paylaşılan materyal (yazı başına kopya yok).
-    private static readonly Dictionary<Color32, Material> runtimeMaterials = new();
+    // Anahtar: (font, zemin) — aynı renk farklı fontta farklı atlas materyali ister.
+    private static readonly Dictionary<(int, Color32), Material> runtimeMaterials = new();
 
     public static void Apply(TMP_Text text, TextSurface surface) => Apply(text, Base(surface));
 
     /// <summary>Yazıyı kurala geçirir: TinyFixers Pop, beyaz yüz, kontur/gölge = verilen zeminin koyusu.
     /// Font değişirse punto büyük harf yüksekliği oranında korunur. Pop yüklü değilse dokunmaz.</summary>
-    public static void Apply(TMP_Text text, Color surface)
+    public static void Apply(TMP_Text text, Color surface) => Apply(text, surface, CommonPopupSkin.Shared.titleFont);
+
+    /// Aynı kural (beyaz yüz + zeminin koyusu kontur/gölge), verilen fontla. Ekranın kendi fontu olan yerler için
+    /// (Pençe Makinesi: Inter, kullanıcı 2026-11-28). font boşsa TinyFixers Pop.
+    public static void Apply(TMP_Text text, Color surface, TMP_FontAsset font)
     {
         if (text == null) return;
-        var font = CommonPopupSkin.Shared.titleFont;
+        if (font == null) font = CommonPopupSkin.Shared.titleFont;
         if (font == null || font.material == null) return;
         if (text.font != font)
         {
@@ -67,7 +72,7 @@ public static class TextSurfaceStyle
             text.fontSizeMin *= ratio;
         }
         text.fontSharedMaterial = MaterialFor(font, surface);
-        text.fontStyle &= ~FontStyles.Bold;   // Pop zaten kalın
+        text.fontStyle &= ~FontStyles.Bold;   // kalın ağırlıklı asset'e faux-bold harf aralığını açar
         text.enableVertexGradient = false;
         text.color = Face;
         text.extraPadding = true;
@@ -79,9 +84,9 @@ public static class TextSurfaceStyle
 
     private static Material MaterialFor(TMP_FontAsset font, Color surface)
     {
-        Color32 key = surface;
+        var key = (font.GetInstanceID(), (Color32)surface);
         if (runtimeMaterials.TryGetValue(key, out var mat) && mat != null) return mat;
-        mat = new Material(font.material) { name = "TinyFixersPop_OnRuntime_" + ColorUtility.ToHtmlStringRGB(surface) };
+        mat = new Material(font.material) { name = font.name + "_OnRuntime_" + ColorUtility.ToHtmlStringRGB(surface) };
         mat.SetColor(ShaderUtilities.ID_FaceColor, Face);
         mat.SetColor(ShaderUtilities.ID_OutlineColor, Outline(surface));
         mat.SetFloat(ShaderUtilities.ID_OutlineWidth, OutlineWidth);

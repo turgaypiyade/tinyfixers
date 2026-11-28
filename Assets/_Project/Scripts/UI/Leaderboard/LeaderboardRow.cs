@@ -191,6 +191,17 @@ public sealed class LeaderboardRow : MonoBehaviour
         float w = Mathf.Max(120f, rowW - infoXCurrent - right);
         foreach (var t in new[] { chapterText, nameText, subtitleText })
             if (t != null) t.rectTransform.sizeDelta = new Vector2(w, t.rectTransform.sizeDelta.y);
+
+        // Dar isim alanı (Takım kürsüsü: büyük amblem + kapasite + puan; kullanıcı 2026-11-25 "kartalala…" okunmuyordu):
+        // tek satıra minik sığdırmak yerine iki satıra kırılır, okunur boyda kalır.
+        if (nameText != null)
+        {
+            bool narrow = w < 300f;
+            nameText.textWrappingMode = narrow ? TextWrappingModes.Normal : TextWrappingModes.NoWrap;
+            nameText.overflowMode = TextOverflowModes.Ellipsis;
+            nameText.rectTransform.sizeDelta = new Vector2(w, narrow ? 96f : 50f);
+            if (narrow) nameText.fontSizeMin = Mathf.Max(nameText.fontSizeMin, nameText.fontSizeMax * 0.55f);
+        }
     }
 
     // İsim bloğunun dikey dizilimi: hangi satırlar görünürse ona göre ortalanır.
@@ -216,7 +227,8 @@ public sealed class LeaderboardRow : MonoBehaviour
         bool weeklyTop3     = tab == LeaderboardTab.Weekly && e.rank <= 3;
         bool weeklyTop3Gift = weeklyTop3;
         // Kürsü: Haftalık + Oyuncular + Takım sekmelerinde ilk 3 belirgin büyük (Arkadaşlar kısa liste → normal).
-        bool podium = e.rank <= 3 && tab != LeaderboardTab.Friends;
+        // Takım sekmesi RM gibi sade (kullanıcı 2026-11-25): eşit satırlar, küçük madalya, büyük isim, "Puan" + sayı.
+        bool podium = e.rank <= 3 && tab != LeaderboardTab.Friends && tab != LeaderboardTab.Team;
         var le = GetComponent<UnityEngine.UI.LayoutElement>();
         if (le != null && skin != null)
             le.preferredHeight = podium ? PodiumHeight(e, skin) : skin.rowHeight;
@@ -272,7 +284,8 @@ public sealed class LeaderboardRow : MonoBehaviour
                 rankText.fontSizeMax = rankText.fontSize;
                 rankText.enableAutoSizing = true;
             }
-            rankText.fontSizeMin = Mathf.Max(12f, rankText.fontSizeMax * 0.4f);
+            // 5 haneli sıra (12601) kutuya sığsın: uzun sırada alt sınır daha küçük (kullanıcı 2026-11-24 taşma).
+            rankText.fontSizeMin = Mathf.Max(12f, rankText.fontSizeMax * (longRank ? 0.25f : 0.4f));
             rankText.textWrappingMode = TextWrappingModes.NoWrap;
             rankText.overflowMode = TextOverflowModes.Overflow;
             rankText.alignment = TextAlignmentOptions.Center;
@@ -283,7 +296,7 @@ public sealed class LeaderboardRow : MonoBehaviour
             if (longRank)
             {
                 // Halka yok → rozet kutusunun biraz dışına da taşabilir (avatara kadar boşluk var).
-                rt.offsetMin = new Vector2(-8f, 0f);
+                rt.offsetMin = new Vector2(0f, 0f);   // ekran kenarına taşmasın (sabit satır kenara yapışık)
                 rt.offsetMax = new Vector2(8f, 0f);
             }
             else
@@ -363,7 +376,8 @@ public sealed class LeaderboardRow : MonoBehaviour
         }
 
         // ── Sağ blok: kapasite (takım) + puan ──
-        bool isTeamRow = e.capacityMax > 0;
+        // Takım satırında kapasite çipi gösterilmez (sade düzen; doluluk takım ekranında).
+        bool isTeamRow = e.capacityMax > 0 && tab != LeaderboardTab.Team;
         if (capacityRoot != null) capacityRoot.SetActive(isTeamRow);
         if (isTeamRow)
         {
@@ -392,7 +406,7 @@ public sealed class LeaderboardRow : MonoBehaviour
         }
 
         // Kupa varsa (puan sekmeleri): [kupa][sayı] — "Puan" etiketi yerine ikon (RM). Yoksa etiket + sayı.
-        bool useTrophy = trophyImage != null && showRight && !friendsTab;
+        bool useTrophy = trophyImage != null && showRight && !friendsTab && tab != LeaderboardTab.Team;
         if (trophyImage != null) trophyImage.gameObject.SetActive(useTrophy);
         if (layoutApplied && skin != null && scoreText != null)
         {
@@ -461,6 +475,6 @@ public sealed class LeaderboardRow : MonoBehaviour
         foreach (var t in new[] { nameText, chapterText, subtitleText, scoreText, scoreLabel, capacityLabel, capacityText, rankText })
             CrispTextMaterial.Apply(t);
 
-        FitInfoWidth(skin, e.capacityMax > 0, giftIcon != null && giftIcon.enabled);
+        FitInfoWidth(skin, isTeamRow, giftIcon != null && giftIcon.enabled);
     }
 }

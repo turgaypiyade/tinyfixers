@@ -700,6 +700,8 @@ public class LevelData : ScriptableObject
     public int width = 9;
     public int height = 9;
     public int moves = 25;
+    [Tooltip("Açılış için üretilen geçerli tahtalardan daha fazla dörtlü eşleşme fırsatı sunanı tercih eder.")]
+    public bool favorOpeningSpecialMatches;
     [Min(0)] public int baseCoinReward = 100;
     public LevelGoalDefinition[] goals;
 

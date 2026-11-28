@@ -276,6 +276,7 @@ public class GridSpawner : MonoBehaviour
 
     private IEnumerator Start()
     {
+        yield return ProgressiveContent.RequireCurrent();
         // SafeAreaFitter applies after the first frame. Build the board after that so it
         // appears directly in its final TopHUD/BottomBar-centered slot instead of shifting.
         yield return new WaitForEndOfFrame();
@@ -2366,8 +2367,9 @@ public class GridSpawner : MonoBehaviour
 
     private void DrawAncientSealObstacles()
     {
-        if (!AncientSealView.HasArt) return;
         if (resolvedLevel?.ancientSeals == null || resolvedLevel.ancientSeals.Length == 0) return;
+        var definition = resolvedLevel.obstacleLibrary?.Get(ObstacleId.AncientSeal);
+        if (definition?.ViewSprite("SealBody") == null) return;
         if (ancientSealService == null) ancientSealService = FindFirstObjectByType<AncientSealService>();
         if (ancientSealService == null) return;
 
@@ -2383,7 +2385,7 @@ public class GridSpawner : MonoBehaviour
             int ox = origin % W, oy = origin / W;
             int w = Mathf.Max(1, entry.width), h = Mathf.Max(1, entry.height);
 
-            var view = AncientSealView.Create(root);
+            var view = AncientSealView.Create(root, definition);
             var rt = (RectTransform)view.transform;
             rt.anchorMin = rt.anchorMax = new Vector2(0f, 1f);   // top-left, tile'larla aynı
             rt.pivot = new Vector2(0f, 1f);
@@ -4207,7 +4209,7 @@ public class GridSpawner : MonoBehaviour
         // Rodos heykeli: Image aşamanın tabanını gösterir; kılıç + kalkan RhodesStatueView child'ları.
         if (def.id == ObstacleId.RhodesStatue && board != null)
         {
-            RhodesStatueView.Ensure(img, ResolveObstacleViewRemainingHits(def, x, y));
+            RhodesStatueView.Ensure(img, ResolveObstacleViewRemainingHits(def, x, y), def);
         }
 
         // Sıcak hava balonu: taban saydam; dolap + balon HotAirBalloonView child'ları (tam 2x2, taşma yok).
@@ -4516,6 +4518,8 @@ public class GridSpawner : MonoBehaviour
         if (change.cleared)
         {
             StopObstacleHitShake(change.originIndex, image.rectTransform);
+            if (BoardController.IsWaterTank(change.obstacleId) && TryGetComponent(out WaterTankLeakSystem leak))
+                leak.Stop(change.originIndex);
 
             if (change.obstacleId == ObstacleId.EnergyContainer)
             {
@@ -4644,22 +4648,27 @@ public class GridSpawner : MonoBehaviour
 
         // Su deposu: çatlak kareleri (Bidon → Bidon2 → Bidon3) oynar + gövdeden parça sıçrar.
         if (BoardController.IsWaterTank(change.obstacleId))
-            PlayWaterTankCrack(image, change.sprite);
+            PlayWaterTankCrack(change.originIndex, image, change.sprite);
     }
 
-    private void PlayWaterTankCrack(Image image, Sprite stageSprite)
+    private void PlayWaterTankCrack(int originIndex, Image image, Sprite stageSprite)
     {
         var config = WaterTankConfig.Load();
         StartCoroutine(WaterTankFx.PlayCrackFrames(image, config, stageSprite != null ? stageSprite : image.sprite));
 
         int shardCount = config != null ? config.crackShardCount : 4;
         var root = board != null && board.BoardVfxPlayer != null ? board.BoardVfxPlayer.VfxRoot : null;
-        if (shardCount > 0 && root != null
+        // Çatlaklardan su sızar — depo kırılana kadar sürekli (ortak tek Update, havuzlu damlalar).
+        if (root != null)
+            WaterTankLeakSystem.Ensure(gameObject)?.Begin(originIndex, image, root);
+
+        if (root != null
             && WaterTankFx.TryGetLocalCenterAndWidth(image.rectTransform, root, out var center, out float width))
         {
             // Çatlarken yalnız birkaç küçük parça: menzil/boy deponun yarısı kadar.
-            WaterTankFx.SpawnShards(this, root, center, width * 0.6f,
-                stageSprite != null ? stageSprite : image.sprite, shardCount);
+            if (shardCount > 0)
+                WaterTankFx.SpawnShards(this, root, center, width * 0.6f,
+                    stageSprite != null ? stageSprite : image.sprite, shardCount);
         }
     }
 

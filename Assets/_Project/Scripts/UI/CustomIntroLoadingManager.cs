@@ -133,6 +133,7 @@ public sealed class CustomIntroLoadingManager : MonoBehaviour
         }
 
         // Sahneyi arkada yüklemeye başla ama biz hazır deyene kadar aktive etme.
+        yield return ProgressiveContent.RequireCurrent();
         AsyncOperation op = SceneManager.LoadSceneAsync(_sceneName);
         op.allowSceneActivation = false;
 

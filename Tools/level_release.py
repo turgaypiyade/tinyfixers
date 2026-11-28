@@ -146,7 +146,7 @@ def inventory(root):
     entries = catalog.get("entries") or []
     paths = []
     for entry in entries:
-        guid = entry.get("levelData", {}).get("guid")
+        guid = entry.get("remoteGuid") or entry.get("bundledLevelData", entry.get("levelData", {})).get("guid")
         if guid not in assets:
             raise ReleaseError(f"Katalogdaki level asset'i bulunamadı: {entry.get('level')}")
         paths.append(assets[guid])

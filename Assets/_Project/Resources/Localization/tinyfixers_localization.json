@@ -5,6 +5,22 @@
       "code": "tr",
       "entries": [
         {
+          "key": "content_retry",
+          "value": "Tekrar Dene"
+        },
+        {
+          "key": "content_download_failed",
+          "value": "İndirme tamamlanamadı. İnternet bağlantını ve boş depolama alanını kontrol edip tekrar dene."
+        },
+        {
+          "key": "content_preparing_local",
+          "value": "İçerik hazırlanıyor…"
+        },
+        {
+          "key": "content_downloading",
+          "value": "İçerik indiriliyor…\n%{0} · {1:0.0} MB"
+        },
+        {
           "key": "hint_obstacle_rhodes_statue_name",
           "value": "Rodos Heykeli"
         },
@@ -623,6 +639,18 @@
         {
           "key": "event_locked_level",
           "value": "SEVİYE {0}"
+        },
+        {
+          "key": "event_soon",
+          "value": "YAKINDA"
+        },
+        {
+          "key": "event_soon_body",
+          "value": "Bu etkinlik yakında başlıyor."
+        },
+        {
+          "key": "event_starts_in",
+          "value": "Başlamasına {0}"
         },
         {
           "key": "level_end_exit_title",
@@ -2093,6 +2121,30 @@
           "value": "Sen"
         },
         {
+          "key": "leaderboard_weekly_race",
+          "value": "Haftalık Yarış"
+        },
+        {
+          "key": "leaderboard_players_podium",
+          "value": "En İyi Ustalar"
+        },
+        {
+          "key": "weekly_race_reward_title_1",
+          "value": "Şampiyon!"
+        },
+        {
+          "key": "weekly_race_reward_title",
+          "value": "Tebrikler!"
+        },
+        {
+          "key": "weekly_race_reward_subtitle",
+          "value": "Haftalık Yarış'ı {0}. sırada bitirdin!"
+        },
+        {
+          "key": "leaderboard_weekly_info",
+          "value": "Bu hafta kazandığın her seviye puan getirir. Hafta bitince ilk 3 ödül kazanır:\n1. 500 altın + her jokerden 1 + 3 booster + 1 saat sınırsız can\n2. 300 altın + 3 joker + 2 booster + 30 dk sınırsız can\n3. 150 altın + 2 joker + 1 booster"
+        },
+        {
           "key": "leaderboard_your_team",
           "value": "Senin takımın"
         },
@@ -2115,6 +2167,10 @@
         {
           "key": "friend_add",
           "value": "Ekle"
+        },
+        {
+          "key": "friend_dismiss",
+          "value": "Yok Say"
         },
         {
           "key": "friend_added",
@@ -3857,6 +3913,118 @@
           "value": "+{0} HAMLE"
         },
         {
+          "key": "ad_continue_bonus",
+          "value": " + HEDİYE"
+        },
+        {
+          "key": "claw_title",
+          "value": "PENÇE MAKİNESİ"
+        },
+        {
+          "key": "claw_intro_title",
+          "value": "PENÇE MAKİNESİ"
+        },
+        {
+          "key": "claw_intro_body",
+          "value": "Seviye kazan, jeton kazan (zor seviye: {0}).\nJoystick ile pençeyi sağa ve geriye götür,\nortasına dokun: pençe iner!\n6 peluşu topla, büyük sandığı aç.\nEtkinlik bitince kalan jetonlar silinir."
+        },
+        {
+          "key": "claw_start",
+          "value": "BAŞLA (+{0} JETON)"
+        },
+        {
+          "key": "claw_tokens",
+          "value": "JETON {0}"
+        },
+        {
+          "key": "claw_hint",
+          "value": "Sağa ve geriye götür, ortasına dokun!"
+        },
+        {
+          "key": "claw_no_tokens",
+          "value": "Jeton yok! Seviye kazan ya da altınla al."
+        },
+        {
+          "key": "claw_buy_title",
+          "value": "Jeton Al"
+        },
+        {
+          "key": "claw_buy_body",
+          "value": "1 jeton = {0} altın\nBugün {1} alım hakkın kaldı."
+        },
+        {
+          "key": "claw_buy_button",
+          "value": "{0} ALTIN"
+        },
+        {
+          "key": "claw_cancel",
+          "value": "VAZGEÇ"
+        },
+        {
+          "key": "claw_buy_failed",
+          "value": "Yeterli altın yok."
+        },
+        {
+          "key": "claw_buy_limit",
+          "value": "Bugünlük alım hakkın bitti."
+        },
+        {
+          "key": "claw_cap",
+          "value": "Jeton dolu ({0})"
+        },
+        {
+          "key": "claw_guaranteed",
+          "value": "SIRADAKİ GARANTİ!"
+        },
+        {
+          "key": "claw_strong",
+          "value": "PENÇE GÜÇLÜ! İyi nişan al."
+        },
+        {
+          "key": "claw_tutorial",
+          "value": "Pençeyi oyuncağın tam üstüne getir, ortasına dokun!"
+        },
+        {
+          "key": "claw_time_left",
+          "value": "Süre: {0}"
+        },
+        {
+          "key": "claw_drop",
+          "value": "İNDİR"
+        },
+        {
+          "key": "claw_power",
+          "value": "PENÇE GÜCÜ  •  BÜYÜK ÖDÜLE {0}"
+        },
+        {
+          "key": "claw_slip",
+          "value": "Kaydı! Pençe Gücü doluyor."
+        },
+        {
+          "key": "claw_empty",
+          "value": "Kaçtı! Pençe Gücü doluyor."
+        },
+        {
+          "key": "claw_new_plush",
+          "value": "YENİ PELUŞ!"
+        },
+        {
+          "key": "claw_duplicate",
+          "value": "+{0} JETON"
+        },
+        {
+          "key": "claw_complete_title",
+          "value": "Koleksiyon Tamam!"
+        },
+        {
+          "key": "claw_complete_sub",
+          "value": "6 peluşun hepsini topladın!"
+        },
+        {
+          "key": "claw_token",
+          "value": "Jeton"
+        },
+        {
           "key": "level_end_fail_get_gold",
           "value": "Altın Al"
         },
@@ -3889,6 +4057,22 @@
     {
       "code": "en",
       "entries": [
+        {
+          "key": "content_retry",
+          "value": "Retry"
+        },
+        {
+          "key": "content_download_failed",
+          "value": "Download could not finish. Check your connection and free storage, then try again."
+        },
+        {
+          "key": "content_preparing_local",
+          "value": "Preparing content…"
+        },
+        {
+          "key": "content_downloading",
+          "value": "Downloading content…\n{0}% · {1:0.0} MB"
+        },
         {
           "key": "hint_obstacle_rhodes_statue_name",
           "value": "Rhodes Statue"
@@ -4508,6 +4692,18 @@
         {
           "key": "event_locked_level",
           "value": "LEVEL {0}"
+        },
+        {
+          "key": "event_soon",
+          "value": "SOON"
+        },
+        {
+          "key": "event_soon_body",
+          "value": "This event starts soon."
+        },
+        {
+          "key": "event_starts_in",
+          "value": "Starts in {0}"
         },
         {
           "key": "level_end_exit_title",
@@ -5978,6 +6174,30 @@
           "value": "You"
         },
         {
+          "key": "leaderboard_weekly_race",
+          "value": "Weekly Race"
+        },
+        {
+          "key": "leaderboard_players_podium",
+          "value": "Top Fixers"
+        },
+        {
+          "key": "weekly_race_reward_title_1",
+          "value": "Champion!"
+        },
+        {
+          "key": "weekly_race_reward_title",
+          "value": "Congratulations!"
+        },
+        {
+          "key": "weekly_race_reward_subtitle",
+          "value": "You finished the Weekly Race in place {0}!"
+        },
+        {
+          "key": "leaderboard_weekly_info",
+          "value": "Every level you win this week earns points. When the week ends, the top 3 win prizes:\n1st: 500 coins + 1 of every joker + 3 boosters + 1 hour unlimited lives\n2nd: 300 coins + 3 jokers + 2 boosters + 30 min unlimited lives\n3rd: 150 coins + 2 jokers + 1 booster"
+        },
+        {
           "key": "leaderboard_your_team",
           "value": "Your team"
         },
@@ -6000,6 +6220,10 @@
         {
           "key": "friend_add",
           "value": "Add"
+        },
+        {
+          "key": "friend_dismiss",
+          "value": "Ignore"
         },
         {
           "key": "friend_added",
@@ -7740,6 +7964,118 @@
         {
           "key": "ad_continue_ribbon",
           "value": "+{0} MOVES"
+        },
+        {
+          "key": "ad_continue_bonus",
+          "value": " + GIFT"
+        },
+        {
+          "key": "claw_title",
+          "value": "CLAW MACHINE"
+        },
+        {
+          "key": "claw_intro_title",
+          "value": "CLAW MACHINE"
+        },
+        {
+          "key": "claw_intro_body",
+          "value": "Win levels to earn tokens (hard level: {0}).\nMove the claw right and back with the joystick,\ntap its center to drop!\nCollect all 6 plushies to open the big chest.\nUnused tokens expire when the event ends."
+        },
+        {
+          "key": "claw_start",
+          "value": "START (+{0} TOKENS)"
+        },
+        {
+          "key": "claw_tokens",
+          "value": "TOKENS {0}"
+        },
+        {
+          "key": "claw_hint",
+          "value": "Move right and back, tap the center!"
+        },
+        {
+          "key": "claw_no_tokens",
+          "value": "No tokens! Win a level or buy with coins."
+        },
+        {
+          "key": "claw_buy_title",
+          "value": "Buy Token"
+        },
+        {
+          "key": "claw_buy_body",
+          "value": "1 token = {0} coins\n{1} purchases left today."
+        },
+        {
+          "key": "claw_buy_button",
+          "value": "{0} COINS"
+        },
+        {
+          "key": "claw_cancel",
+          "value": "CANCEL"
+        },
+        {
+          "key": "claw_buy_failed",
+          "value": "Not enough coins."
+        },
+        {
+          "key": "claw_buy_limit",
+          "value": "No purchases left today."
+        },
+        {
+          "key": "claw_cap",
+          "value": "Tokens full ({0})"
+        },
+        {
+          "key": "claw_guaranteed",
+          "value": "NEXT ONE IS GUARANTEED!"
+        },
+        {
+          "key": "claw_strong",
+          "value": "CLAW IS STRONG! Aim well."
+        },
+        {
+          "key": "claw_tutorial",
+          "value": "Put the claw right above a toy, tap the center!"
+        },
+        {
+          "key": "claw_time_left",
+          "value": "Time: {0}"
+        },
+        {
+          "key": "claw_drop",
+          "value": "DROP"
+        },
+        {
+          "key": "claw_power",
+          "value": "CLAW POWER  •  BIG PRIZE IN {0}"
+        },
+        {
+          "key": "claw_slip",
+          "value": "Slipped! Claw Power is charging."
+        },
+        {
+          "key": "claw_empty",
+          "value": "Missed! Claw Power is charging."
+        },
+        {
+          "key": "claw_new_plush",
+          "value": "NEW PLUSH!"
+        },
+        {
+          "key": "claw_duplicate",
+          "value": "+{0} TOKENS"
+        },
+        {
+          "key": "claw_complete_title",
+          "value": "Collection Complete!"
+        },
+        {
+          "key": "claw_complete_sub",
+          "value": "You collected all 6 plushies!"
+        },
+        {
+          "key": "claw_token",
+          "value": "Token"
         },
         {
           "key": "level_end_fail_get_gold",

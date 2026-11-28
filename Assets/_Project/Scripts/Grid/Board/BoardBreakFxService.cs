@@ -192,6 +192,7 @@ public class BoardBreakFxService
             || change.obstacleId == ObstacleId.Wardrobe // whole item throws and four empty-cabinet chunks replace generic particles
             || change.obstacleId == ObstacleId.KeyGenerator
             || change.obstacleId == ObstacleId.BirdHouse   // kapak/kuş animasyonu BirdHouseService'te
+            || change.obstacleId == ObstacleId.WaterChannel // WaterChannelService owns the opening and water flow.
             || change.obstacleId == ObstacleId.Windmill    // kanat savrulması + gövde parçalanması WindmillService'te
             || change.obstacleId == ObstacleId.FlourSack   // çuval parçalanması + un bulutu WindmillService'te
             || change.obstacleId == ObstacleId.FlourSackV

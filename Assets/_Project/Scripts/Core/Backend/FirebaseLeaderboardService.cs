@@ -179,6 +179,7 @@ public sealed class FirebaseLeaderboardService : ILeaderboardService
             // Haftalık sekme yalnız bu haftanın puanını yarıştırır (botlar da haftalık puanla gelir).
             score = tab == LeaderboardTab.Weekly ? PlayerWallet.WeeklyScore : PlayerWallet.TotalScore,
             isSelf = true,
+            tieKey = RealKey(FirebaseAuthService.UserId),
             chapter = PlayerPrefs.GetInt("current_level", 1),
         });
         return list;
@@ -200,6 +201,7 @@ public sealed class FirebaseLeaderboardService : ILeaderboardService
                 playerName = NamePool.PlayerAt(MasterBotBase + i),
                 subtitle = "",
                 score = score,
+                tieKey = BotKey(MasterBotBase + i),
             });
         }
         list.Add(new LeaderboardEntry
@@ -208,6 +210,7 @@ public sealed class FirebaseLeaderboardService : ILeaderboardService
             subtitle = GameLocalization.Get("leaderboard_you"),
             score = MasterLeague.WeeklyPoints,
             isSelf = true,
+            tieKey = RealKey(FirebaseAuthService.UserId),
         });
         return list;
     }
@@ -224,7 +227,13 @@ public sealed class FirebaseLeaderboardService : ILeaderboardService
     // Skora göre sırala, rank ata, top-N al (kendi satırın top dışındaysa sona ekle).
     private static List<LeaderboardEntry> Rank(List<LeaderboardEntry> list)
     {
-        list.Sort((a, b) => b.score.CompareTo(a.score));
+        // Eşitlik kuralı OYUNCUDAN BAĞIMSIZ ve KALICI (haftalık + Usta Ligi ödülleriyle AYNI, KeyAbove): eşit puanda
+        // tieKey (uid / bot indeksi; bot isimleri açılışta karışır, kullanılmaz). Herkes aynı sırayı görür.
+        list.Sort((a, b) =>
+        {
+            int c = b.score.CompareTo(a.score);
+            return c != 0 ? c : string.CompareOrdinal(a.tieKey ?? a.playerName, b.tieKey ?? b.playerName);
+        });
         for (int i = 0; i < list.Count; i++) list[i].rank = i + 1;
 
         if (list.Count <= TopCount) return list;
@@ -243,7 +252,7 @@ public sealed class FirebaseLeaderboardService : ILeaderboardService
             if (doc.Id == FirebaseAuthService.UserId) continue;   // kendi satırını yerelden ekliyoruz
             string name = doc.ContainsField("name") ? doc.GetValue<string>("name") : "Oyuncu";
             long score  = doc.ContainsField("score") ? doc.GetValue<long>("score") : 0;
-            list.Add(new LeaderboardEntry { playerName = name, subtitle = "", score = (int)score });
+            list.Add(new LeaderboardEntry { playerName = name, subtitle = "", score = (int)score, tieKey = RealKey(doc.Id) });
         }
 
         // Görülen gerçek oyuncu sayısı bot evrenini otomatik küçültür (launch kuralı).
@@ -267,6 +276,7 @@ public sealed class FirebaseLeaderboardService : ILeaderboardService
                 playerName = NamePool.PlayerAt(baseIndex + i),
                 subtitle = "",
                 score = BotProgression.WeeklyScore(baseIndex + i),
+                tieKey = BotKey(baseIndex + i),
             });
         }
         return list;
@@ -359,6 +369,7 @@ public sealed class FirebaseLeaderboardService : ILeaderboardService
     /// <summary>Publish on profile/score changes and retry from the shared save tick, even if ranks is never opened.</summary>
     public static void PublishOwnScoreIfChanged()
     {
+        if (EditorBackendGuard.BlockPublicWrites) return;   // editör testi herkese açık tabloya yazmaz
         if (RuntimeSimulationSession.IsActive || !FirebaseAuthService.IsReady
             || !FirebaseCloudSaveService.RestoreResolved || FirebaseCloudSaveService.SuspendForDeletion || publishing) return;
         string uid = FirebaseAuthService.UserId, name = PlayerProfile.PlayerName;
@@ -418,28 +429,98 @@ public sealed class FirebaseLeaderboardService : ILeaderboardService
     public static void FetchMasterFinalRank(string weekId, int points, Action<int> done)
     {
         if (!FirebaseAuthService.IsReady || string.IsNullOrEmpty(weekId)) { done(-1); return; }
+        string owner = FirebaseAuthService.UserId, myKey = RealKey(owner);
         int botsAbove = 0;
         int botCount = Mathf.Clamp(BotPopulation.ActiveCount / 30, 120, 500);
         for (int i = 0; i < botCount; i++)
-            if (BotProgression.MasterFinalScore(MasterBotBase + i, weekId) > points) botsAbove++;
+        {
+            int sc = BotProgression.MasterFinalScore(MasterBotBase + i, weekId);
+            if (sc > points || (sc == points && KeyAbove(BotKey(MasterBotBase + i), myKey))) botsAbove++;
+        }
+        CountRealAbove($"leaderboards/master_{weekId}/scores", points, myKey, owner,
+            MasterLeagueRewards.RewardedRankLimit + 10, int.MaxValue,
+            realAbove => done(realAbove < 0 ? -1 : 1 + botsAbove + realAbove));
+    }
 
-        string owner = FirebaseAuthService.UserId;
-        Db.Collection($"leaderboards/master_{weekId}/scores").WhereGreaterThan("score", points)
-            .Limit(MasterLeagueRewards.RewardedRankLimit + 10).GetSnapshotAsync()
-            .ContinueWithOnMainThread(task =>
+    // Kalıcı eşitlik anahtarları (Rank() + ödül hesabı aynı).
+    internal static string RealKey(string uid) => "u:" + (uid ?? "");
+    internal static string BotKey(int seed) => "b:" + seed.ToString("D6");
+
+    /// Eşit puanlı rakip (key) kendi (myKey) satırımın ÜSTÜNDE mi? Rank() ile aynı kural.
+    private static bool KeyAbove(string key, string myKey) => string.CompareOrdinal(key ?? "", myKey ?? "") < 0;
+
+    // Haftalık yarış: makul üst sınır — bunu aşan kayıt (hile/bozuk veri) sıradan sayılmaz, gerçek oyuncunun ödülünü
+    // alamaz. Gerçek en yüksek ~13-15 bin (2026-11); günde yüzlerce seviye bile bu sınırın altında kalır.
+    private const int WeeklyPlausibleMax = 150000;
+
+    /// Geçmiş haftanın KESİN haftalık sırası (Haftalık sekmesi Dünya görünümüyle aynı evren: gerçek kayıtlar + bölge 0
+    /// botları). Yalnız ilk 3 ödüllü olduğundan üstteki ilk birkaç kayıt yeter. Hata/çevrimdışı → -1.
+    public static void FetchWeeklyFinalRank(string weekId, int points, Action<int> done)
+    {
+        if (!FirebaseAuthService.IsReady || string.IsNullOrEmpty(weekId) || points <= 0) { done(-1); return; }
+        string owner = FirebaseAuthService.UserId, myKey = RealKey(owner);
+        int limit = WeeklyRaceRewards.RewardedRankLimit;
+
+        // Botlar: hafta bir kez çözülür; puan bot üst sınırını aşıyorsa hiçbiri üstte değil (döngü yok). Sonuç önbellekli.
+        int botsAbove = WeeklyBotsAbove(weekId, points, myKey, limit);
+        CountRealAbove($"leaderboards/{weekId}/scores", points, myKey, owner, limit + 10, WeeklyPlausibleMax,
+            realAbove => done(realAbove < 0 ? -1 : 1 + botsAbove + realAbove));
+    }
+
+    private static string s_botCacheWeek;
+    private static int s_botCachePoints = -1, s_botCacheResult;
+
+    private static int WeeklyBotsAbove(string weekId, int points, string myKey, int limit)
+    {
+        if (s_botCacheWeek == weekId && s_botCachePoints == points) return s_botCacheResult;
+        int botsAbove = 0;
+        int ws = BotProgression.WeekSeedOf(weekId);
+        if (ws >= 0 && points <= BotProgression.WeeklyScoreCeiling)
+        {
+            int botCount = BotPopulation.ActiveCount;
+            for (int i = 0; i < botCount && botsAbove <= limit; i++)
             {
-                if (FirebaseAuthService.UserId != owner || task.IsFaulted || task.IsCanceled)
+                int sc = BotProgression.WeeklyFinalScore(i, ws);
+                if (sc > points || (sc == points && KeyAbove(BotKey(i), myKey))) botsAbove++;
+            }
+        }
+        s_botCacheWeek = weekId; s_botCachePoints = points; s_botCacheResult = botsAbove;
+        return botsAbove;
+    }
+
+    /// Ödül sırası yalnız SUNUCUDAN (Source.Server): çevrimdışı önbellek eksik rakip listesiyle yanlış ödül verdirmesin;
+    /// bağlantı yoksa sorgu hata verir → -1 → ödül bekler.
+    /// Gerçek oyuncular: puanı YÜKSEK olanlar ayrı sorgu (eşitler limiti doldurup yükseği dışarıda bırakmasın),
+    /// EŞİT puanlılar ayrı sorgu + kalıcı anahtar (uid). Hata → -1.
+    private static void CountRealAbove(string path, int points, string myKey, string owner, int limit, int plausibleMax,
+        Action<int> done)
+    {
+        Db.Collection(path).WhereGreaterThan("score", points).Limit(limit).GetSnapshotAsync(Source.Server)
+            .ContinueWithOnMainThread(higher =>
+            {
+                if (FirebaseAuthService.UserId != owner || higher.IsFaulted || higher.IsCanceled) { Defer(higher.Exception); done(-1); return; }
+                int above = 0;
+                foreach (var doc in higher.Result.Documents)
                 {
-                    if (GameDiagnostics.Backend)
-                        Debug.LogWarning($"[Leaderboard] master final rank deferred: {task.Exception?.GetBaseException().Message}");
-                    done(-1);
-                    return;
+                    if (doc.Id == owner) continue;
+                    if (doc.TryGetValue("score", out long sc) && sc > plausibleMax) continue;
+                    above++;
                 }
-                int realAbove = 0;
-                foreach (var doc in task.Result.Documents)
-                    if (doc.Id != owner) realAbove++;
-                done(1 + botsAbove + realAbove);
+                Db.Collection(path).WhereEqualTo("score", points).Limit(200).GetSnapshotAsync(Source.Server)
+                    .ContinueWithOnMainThread(equal =>
+                    {
+                        if (FirebaseAuthService.UserId != owner || equal.IsFaulted || equal.IsCanceled) { Defer(equal.Exception); done(-1); return; }
+                        foreach (var doc in equal.Result.Documents)
+                            if (doc.Id != owner && KeyAbove(RealKey(doc.Id), myKey)) above++;
+                        done(above);
+                    });
             });
+    }
+
+    private static void Defer(AggregateException e)
+    {
+        if (GameDiagnostics.Backend)
+            Debug.LogWarning($"[Leaderboard] final rank deferred: {e?.GetBaseException().Message}");
     }
 
     internal static string CurrentWeekId => WeekId();

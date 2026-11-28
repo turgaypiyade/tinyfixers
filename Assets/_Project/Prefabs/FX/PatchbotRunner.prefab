@@ -121,15 +121,16 @@ MonoBehaviour:
   takeoffPropellerFrames: []
   takeoffPropellerFps: 18
   spinnerFrames:
-  - {fileID: 21300000, guid: b2f6ebd737ef44264be0e91981cf1db2, type: 3}
-  - {fileID: 21300000, guid: 1eb3ad322087f4e4298aa3ee754f23fc, type: 3}
-  - {fileID: 21300000, guid: e459efb7d43e94bef8160ab2d6ac96a9, type: 3}
-  - {fileID: 21300000, guid: bfa4bd2c964074b19bbb06c696e035fb, type: 3}
+  - {fileID: 21300000, guid: 65b92e55c4a343fd91674d9ab7d12914, type: 3}
   spinnerFps: 30
   spinnerSpinSpeed: 1440
   animateFramesWhileSpinning: 0
   spinnerTiltX: 30
   spinnerTiltY: 0
+  spinnerRingSprite: {fileID: 21300000, guid: 2788dcbf53834fdab0b0f1559fdc2e6c, type: 3}
+  spinnerRingSpinSpeed: 900
+  spinnerRingScale: 1.1
+  spinnerRingAlpha: 1
   separationDuration: 0.16
   propellerRiseFactor: 0.35
   bodyRetreatSprite: {fileID: 21300000, guid: 98cc830716f274b7796cfce1eeeca02a, type: 3}

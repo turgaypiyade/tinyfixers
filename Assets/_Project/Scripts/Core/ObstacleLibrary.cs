@@ -61,6 +61,16 @@ public class ObstacleDef
     public List<StageRule> stages = new();
     [Tooltip("Obstacle'a özel ek görsel parçalar. Gameplay stage sayısına dahil değildir.")]
     public List<Sprite> auxiliarySprites = new();
+
+    // Named parts used by procedural views. Serialized references travel with the filtered definition.
+    public Sprite[] viewSprites;
+    public Sprite ViewSprite(string spriteName)
+    {
+        if (viewSprites != null)
+            foreach (var sprite in viewSprites)
+                if (sprite != null && sprite.name == spriteName) return sprite;
+        return null;
+    }
     [Tooltip("Açık ise kural reddinde alternatif context ile tekrar denemeye izin verir. Varsayılan kapalıdır.")]
     public bool allowCrossContextFallback = false;
     [Tooltip("Açık ise normal match hasarı sadece requiredNormalMatchTileType ile gelir. Special/Booster etkilenmez.")]

@@ -55,6 +55,7 @@ public sealed class WorldTourMap : MonoBehaviour
         rt.offsetMax = new Vector2(0f, -topInset);
         var map = go.AddComponent<WorldTourMap>();
         map._catalog = catalog;
+        ProgressiveContent.RegisterCities(catalog);
         map.Construct();
         return map;
     }

@@ -27,6 +27,10 @@ public class ChapterThemeLibrary : ScriptableObject
     [SerializeField] private ChapterTheme masterLeagueTheme;
     [SerializeField] private LevelCatalog levelCatalog;
 
+    [System.Serializable]
+    public struct RemoteTheme { public int chapter; public string guid; }
+    [SerializeField, HideInInspector] private List<RemoteTheme> remoteThemes = new();
+
     // ── Public API ───────────────────────────────────────────────────
 
     /// <summary>Converts a 1-based global level number to a 1-based chapter number.</summary>
@@ -41,6 +45,8 @@ public class ChapterThemeLibrary : ScriptableObject
     /// If no exact match, falls back to the last entry in the list.</summary>
     public ChapterTheme GetThemeForChapter(int chapter)
     {
+        foreach (var entry in remoteThemes)
+            if (entry.chapter == chapter) return ProgressiveContent.Resolve<ChapterTheme>(entry.guid);
         if (themes == null || themes.Count == 0) return null;
 
         for (int i = 0; i < themes.Count; i++)
@@ -49,11 +55,15 @@ public class ChapterThemeLibrary : ScriptableObject
                 return themes[i];
         }
 
-        // Fallback: chapter wraps to the last available theme
+        // Keep the original final-chapter fallback after its local reference is moved to a bundle.
+        ChapterTheme fallback = null;
         for (int i = themes.Count - 1; i >= 0; i--)
-            if (themes[i] != null) return themes[i];
-
-        return null;
+            if (themes[i] != null) { fallback = themes[i]; break; }
+        int lastRemoteChapter = fallback != null ? fallback.chapterIndex : 0;
+        string lastRemoteGuid = null;
+        foreach (var entry in remoteThemes)
+            if (entry.chapter > lastRemoteChapter) { lastRemoteChapter = entry.chapter; lastRemoteGuid = entry.guid; }
+        return lastRemoteGuid != null ? ProgressiveContent.Resolve<ChapterTheme>(lastRemoteGuid) : fallback;
     }
 
     /// <summary>Reads current_level from PlayerPrefs and returns the matching theme.</summary>

@@ -1475,6 +1475,17 @@ MonoBehaviour:
     legacyBlocksCells: 0
     legacyBehavior: 1
   - id: 64
+    viewSprites:
+    - {fileID: 21300000, guid: b287d3c8d97e456fbb914469a91566f5, type: 3}
+    - {fileID: 21300000, guid: 328ee9a5e2a04996a5fb84468bf40df5, type: 3}
+    - {fileID: 21300000, guid: 9afd3783581442b7a30a2199bdba7c1e, type: 3}
+    - {fileID: 21300000, guid: 926aa655bcbe4e678080e5a372c0f522, type: 3}
+    - {fileID: 21300000, guid: a583aee12e584614b353edc8c32a00aa, type: 3}
+    - {fileID: 21300000, guid: 20b46cc93148456083dcc43646128f99, type: 3}
+    - {fileID: 21300000, guid: fd7f4e0d58c24a28ab1aea29473bc6e0, type: 3}
+    - {fileID: 21300000, guid: a6b903c8258140ddbf9ac378932301e7, type: 3}
+    - {fileID: 21300000, guid: 564ff4ac0d3747ee949d13d0ee551920, type: 3}
+    - {fileID: 21300000, guid: e4abf52358244269b4a1552ceae8659d, type: 3}
     stages:
     - sprite: {fileID: 21300000, guid: c94dd7e302ff4df0bdfd35dbd9ff6752, type: 3}
       damageRule: 5
@@ -3508,6 +3519,29 @@ MonoBehaviour:
     legacyBlocksCells: 1
     legacyBehavior: 1
   - id: 68
+    viewSprites:
+    - {fileID: 21300000, guid: 229dfee01341429b82ea5a17f7203de9, type: 3}
+    - {fileID: 21300000, guid: ee831210b9ab40fd9410c7b40883706f, type: 3}
+    - {fileID: 21300000, guid: ea717f63e59e430bb0192f41ce8ae205, type: 3}
+    - {fileID: 21300000, guid: 17b53a74391a4520bdb6b933c1af0f11, type: 3}
+    - {fileID: 21300000, guid: 7bba3b3b261544f2be08a2cb8747608a, type: 3}
+    - {fileID: 21300000, guid: 0ee962a739484a1897e07f241014d7aa, type: 3}
+    - {fileID: 21300000, guid: aec550dc14b541bd9a8a21711fb527b1, type: 3}
+    - {fileID: 21300000, guid: 0c1a4e80dc9e4c468974c880cc0c1414, type: 3}
+    - {fileID: 21300000, guid: b0f8c8fa6f4445d9a2fd56048b5b5e22, type: 3}
+    - {fileID: 21300000, guid: 695a572c7d094752b84fe2e3ad7afa89, type: 3}
+    - {fileID: 21300000, guid: d70badb2686243c1b037ff519af38d05, type: 3}
+    - {fileID: 21300000, guid: ec853aa106804a14b1ad46f3a9f04892, type: 3}
+    - {fileID: 21300000, guid: ad97e086416c47b5b3964d91a511866b, type: 3}
+    - {fileID: 21300000, guid: ddda4364f015422399d54908dfaf1573, type: 3}
+    - {fileID: 21300000, guid: 67bbf38f2ad04dff836bde5ed1637b9d, type: 3}
+    - {fileID: 21300000, guid: 6b808d921d3e4773b02ba773d217439e, type: 3}
+    - {fileID: 21300000, guid: 682e74ad4d99476a8427728ec69304a6, type: 3}
+    - {fileID: 21300000, guid: 9421740d393742aba3a7a7c562da2a52, type: 3}
+    - {fileID: 21300000, guid: 6624c25a34ff4d1a8ca5bcd760e59e8e, type: 3}
+    - {fileID: 21300000, guid: d765596cd6244a35903b2fc9ed831207, type: 3}
+    - {fileID: 21300000, guid: 6b26c71d73234b56a3b4301f0a745d46, type: 3}
+    - {fileID: 21300000, guid: 26dfe7f8eb3b4024a45c16ffd263b26c, type: 3}
     stages:
     - sprite: {fileID: 21300000, guid: b0f8c8fa6f4445d9a2fd56048b5b5e22, type: 3}
       damageRule: 1
@@ -3686,6 +3720,20 @@ MonoBehaviour:
     legacyBlocksCells: 0
     legacyBehavior: 4
   - id: 70
+    viewSprites:
+    - {fileID: 21300000, guid: e92dcda3082b4b11b1d0adaca71d3e48, type: 3}
+    - {fileID: 21300000, guid: 6fa75fab734f4ad585d6bb076183cd3c, type: 3}
+    - {fileID: 21300000, guid: 01099857383b4af7a14616d2dacfe424, type: 3}
+    - {fileID: 21300000, guid: f1ee8d0f18f8405bae9f6c49b5cbee1e, type: 3}
+    - {fileID: 21300000, guid: c004008efbbc48b88a927b36ae06898c, type: 3}
+    - {fileID: 21300000, guid: 2650079ea75e4332873d9aac49a9cc21, type: 3}
+    - {fileID: 21300000, guid: 3cedd1e3863a4511a5e309036360f326, type: 3}
+    - {fileID: 21300000, guid: 1d88d0a19a0d4c66bbac0872c388bd42, type: 3}
+    - {fileID: 21300000, guid: fed879630532433a8e849b9f80ab5435, type: 3}
+    - {fileID: 21300000, guid: ee831210b9ab40fd9410c7b40883706f, type: 3}
+    - {fileID: 21300000, guid: ea717f63e59e430bb0192f41ce8ae205, type: 3}
+    - {fileID: 21300000, guid: 17b53a74391a4520bdb6b933c1af0f11, type: 3}
+    - {fileID: 21300000, guid: 7bba3b3b261544f2be08a2cb8747608a, type: 3}
     stages:
     - sprite: {fileID: 21300000, guid: e92dcda3082b4b11b1d0adaca71d3e48, type: 3}
       damageRule: 1

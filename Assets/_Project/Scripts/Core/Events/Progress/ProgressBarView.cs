@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Collections;
 using TMPro;
 using UnityEngine;
@@ -84,7 +85,7 @@ public class ProgressBarView : MonoBehaviour
 
     // ── Bilgi (i) ────────────────────────────────────────────────
     // Hedef açıklaması barın altında yazmaz: hedef ikonunun sağ alt köşesine (kenardan taşan) küçük (i) konur;
-    // ikona ya da (i)'ye dokununca açıklama ortak mesaj penceresinde (RuntimeChoicePopup) açılır.
+    // ikona ya da (i)'ye dokununca açıklama ikonun üstünde göz atma balonunda (RewardPeekBubble) açılır.
 
     private void EnsureInfoBadge()
     {
@@ -119,15 +120,30 @@ public class ProgressBarView : MonoBehaviour
         badgeButton.onClick.AddListener(ShowGoalInfo);
     }
 
+    // Popup yerine ortak göz atma balonu (kullanıcı 2026-11-28): açıklama + ilerleme + hedefin ödülü, ikonun üstünde.
+    // Kök = kök canvas (panel kenarda olsa da balon ekrana sığsın); panel kapanınca balon kendiliğinden kapanır.
+    private static readonly List<RewardPeekBubble.Item> s_infoReward = new(1);
+
     private void ShowGoalInfo()
     {
         var svc = ProgressEventService.Instance;
         if (svc == null || goalIndex >= svc.Goals.Count) return;
         var goal = svc.Goals[goalIndex];
         if (goal == null || goal.Definition == null) return;
-        string body = goal.Definition.GetDescription() + "\n\n"
-            + GameLocalization.GetFormat("progress_info_progress", goal.CurrentCount, goal.Definition.targetCount);
-        RuntimeChoicePopup.Show(GameLocalization.Get("progress_info_title"), body);
+        var canvas = goalIconImage != null ? goalIconImage.canvas : null;
+        if (canvas == null) return;
+        var def = goal.Definition;
+        string text = "<b>" + GameLocalization.Get("progress_info_title") + "</b>\n" + def.GetDescription() + "\n"
+            + GameLocalization.GetFormat("progress_info_progress", goal.CurrentCount, def.targetCount);
+        s_infoReward.Clear();
+        if (def.reward != null && !goal.IsRewardClaimed)
+            s_infoReward.Add(new RewardPeekBubble.Item(def.reward.ResolveIcon(), rewardAmountText != null
+                ? rewardAmountText.text
+                : def.EffectiveRewardDurationMinutes > 0
+                    ? GameLocalization.GetFormat("progress_reward_minutes", def.EffectiveRewardDurationMinutes)
+                    : $"+{def.reward.amount}"));
+        RewardPeekBubble.On((RectTransform)canvas.rootCanvas.transform)
+            ?.Toggle(this, text, s_infoReward, goalIconImage.rectTransform);
     }
 
     private IEnumerator CoApplyFillNextFrame(float normalized, int current, int target)

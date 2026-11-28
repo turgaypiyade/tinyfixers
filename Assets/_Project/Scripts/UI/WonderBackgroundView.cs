@@ -31,6 +31,7 @@ public class WonderBackgroundView : MonoBehaviour
 
     void OnEnable()
     {
+        ProgressiveContent.RegisterCities(catalog);
         WonderProgress.OnWonderCompleted += HandleWonderCompleted;
         WonderProgress.OnBackgroundChanged += HandleBackgroundChanged;
         RefreshInstant();
@@ -38,6 +39,7 @@ public class WonderBackgroundView : MonoBehaviour
 
     void OnDisable()
     {
+        ProgressiveContent.CancelEvent(this);
         WonderProgress.OnWonderCompleted -= HandleWonderCompleted;
         WonderProgress.OnBackgroundChanged -= HandleBackgroundChanged;
     }
@@ -49,6 +51,8 @@ public class WonderBackgroundView : MonoBehaviour
     public void RefreshInstant()
     {
         var bg = WonderProgress.BackgroundWonder(catalog);
+        if (bg != null && ProgressiveContent.GateEvent(this, "mission-" + bg.wonderId, RefreshInstant,
+            () => isActiveAndEnabled && WonderProgress.BackgroundWonder(catalog) == bg)) return;
         if (bg != null) BuildWonder(bg);
         else ShowDefault();
         Container.anchoredPosition = Vector2.zero;
@@ -59,6 +63,8 @@ public class WonderBackgroundView : MonoBehaviour
         // Yeni completed harika = artık BackgroundWonder. Sağdan kaydırarak getir.
         var bg = WonderProgress.BackgroundWonder(catalog);
         if (bg == null) { RefreshInstant(); return; }
+        if (ProgressiveContent.GateEvent(this, "mission-" + bg.wonderId, () => HandleWonderCompleted(completedIndex),
+            () => isActiveAndEnabled && WonderProgress.BackgroundWonder(catalog) == bg)) return;
         BuildWonder(bg);
         if (_slide != null) StopCoroutine(_slide);
         _slide = StartCoroutine(SlideInFromRight());

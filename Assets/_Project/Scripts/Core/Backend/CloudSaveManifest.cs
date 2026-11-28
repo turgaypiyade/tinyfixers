@@ -116,6 +116,9 @@ public static class CloudSaveManifest
         ProgressResetRevisionKey,
         "player_name",
         "player_weekly_score_week", // player_weekly_score'un ait olduğu ISO hafta (ör. 2026-W45)
+        WeeklyRaceRewards.KeyPendingWeek,     // haftalık yarış ödülü bekleyen hafta
+        WeeklyRaceRewards.KeyClaimedWeek,     // haftalık yarış ödülü alınan son hafta (çift teslim yok)
+        WeeklyRaceRewards.KeyClaimStep,       // yarıda kalan teslimin ilerlemesi ("hafta#sıra#n")
         MasterLeague.KeyBest,         // bu turda geçilen lig seviyeleri + en iyi puanları
         MasterLeague.KeyWeeklyWeek,   // Usta Ligi haftalık puanının haftası
         "legal_accepted_version", // kabul edilen Şartlar/Gizlilik sürümü (LegalConsent)
@@ -141,6 +144,7 @@ public static class CloudSaveManifest
         "gearcup_state_v1",
         "harvest_cycle",
         "giftfestival_state_v1",
+        "clawmachine_state_v1",
         "iap_processed_transactions",
         "bridge_join_ticks",
         "bridge_lastask_ticks",

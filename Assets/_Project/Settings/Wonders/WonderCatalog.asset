@@ -12,9 +12,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 406ccfed272f74ba3b500617ff634ac3, type: 3}
   m_Name: WonderCatalog
   m_EditorClassIdentifier: Assembly-CSharp::WonderCatalog
-  firstWonderTotalStars: 45
-  secondWonderTotalStars: 50
-  lastWonderTotalStars: 65
   defaultBackground: {fileID: 21300000, guid: 7590a0dcb9c8240b5b719823ce570a5e, type: 3}
   defaultCharacters:
   - name: DefaultSkyBird
@@ -52,7 +49,7 @@ MonoBehaviour:
   chestTiers:
   - rewards:
     - type: 0
-      amount: 100
+      amount: 50
       durationMinutes: 0
       icon: {fileID: 0}
       nameLocalizationKey: 
@@ -74,7 +71,7 @@ MonoBehaviour:
       weight: 10
   - rewards:
     - type: 0
-      amount: 150
+      amount: 75
       durationMinutes: 0
       icon: {fileID: 0}
       nameLocalizationKey: 
@@ -103,7 +100,7 @@ MonoBehaviour:
       weight: 10
   - rewards:
     - type: 0
-      amount: 200
+      amount: 100
       durationMinutes: 0
       icon: {fileID: 0}
       nameLocalizationKey: 
@@ -132,7 +129,7 @@ MonoBehaviour:
       weight: 10
   - rewards:
     - type: 0
-      amount: 300
+      amount: 150
       durationMinutes: 0
       icon: {fileID: 0}
       nameLocalizationKey: 
@@ -161,7 +158,7 @@ MonoBehaviour:
       weight: 10
   - rewards:
     - type: 0
-      amount: 350
+      amount: 175
       durationMinutes: 0
       icon: {fileID: 0}
       nameLocalizationKey: 
@@ -190,7 +187,7 @@ MonoBehaviour:
       weight: 10
   - rewards:
     - type: 0
-      amount: 450
+      amount: 225
       durationMinutes: 0
       icon: {fileID: 0}
       nameLocalizationKey: 
@@ -219,7 +216,7 @@ MonoBehaviour:
       weight: 10
   - rewards:
     - type: 0
-      amount: 500
+      amount: 250
       durationMinutes: 0
       icon: {fileID: 0}
       nameLocalizationKey: 
@@ -253,3 +250,6 @@ MonoBehaviour:
       nameLocalizationKey: 
       fallbackName: 
       weight: 10
+  firstWonderTotalStars: 45
+  secondWonderTotalStars: 50
+  lastWonderTotalStars: 65

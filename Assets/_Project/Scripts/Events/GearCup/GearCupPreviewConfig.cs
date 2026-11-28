@@ -87,7 +87,7 @@ public sealed class GearCupPreviewConfig : ScriptableObject
 
     private static GearCupPreviewConfig shared;
     public static GearCupPreviewConfig Shared => shared != null ? shared
-        : (shared = Resources.Load<GearCupPreviewConfig>("Events/GearCupConfig"));
+        : (shared = ProgressiveContent.EventSourceConfig<GearCupPreviewConfig>("Events/GearCupConfig"));
 
     [Header("Reward packages and fallback team artwork")]
     public RewardSample[] rewards = new RewardSample[3];

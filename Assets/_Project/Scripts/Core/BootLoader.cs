@@ -96,7 +96,7 @@ public class BootLoader : MonoBehaviour
 
             // Assetleri loading sırasında yükle; MainMenu Awake/Start ancak restore kararı
             // verilip sync gate açıldıktan sonra çalışsın.
-            if (loadingShown && sceneLoad == null)
+            if (loadingShown && sceneLoad == null && !ProgressiveContent.Enabled)
             {
                 sceneLoad = SceneManager.LoadSceneAsync(nextSceneName);
                 if (sceneLoad != null) sceneLoad.allowSceneActivation = false;
@@ -143,6 +143,7 @@ public class BootLoader : MonoBehaviour
         if (!FirebaseCloudSaveService.RestoreResolved && !CurrencyLedger.EverSynced)
             CurrencyLedger.AdoptLocalAsBase();
         CurrencyLedger.OpenSyncGate();
+        yield return ProgressiveContent.RequireCurrent();
 
         // Ağ bekleyişi bitti. Yavaş cihazda kalan yerel sahne yüklemesi sırasında görsel
         // ve Loading noktaları yaşamaya devam etsin.

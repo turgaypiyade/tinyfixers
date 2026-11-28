@@ -45,8 +45,8 @@ public static class GiftFestivalUI
     public static TMP_Text Label(string name, Transform parent, GiftFestivalConfig cfg, string text, float size, Vector2 box, Vector2 pos, Color? tint = null)
     {
         var label = Rect(name, parent, box, pos).gameObject.AddComponent<TextMeshProUGUI>();
-        if (cfg.Art.font != null) label.font = cfg.Art.font;
-        if (cfg.Art.fontMaterial != null) label.fontSharedMaterial = cfg.Art.fontMaterial;
+        if (cfg.menuFont != null) label.font = cfg.menuFont;
+        if (cfg.menuFontMaterial != null) label.fontSharedMaterial = cfg.menuFontMaterial;
         label.text = text; label.color = tint ?? Cream;
         label.fontSize = label.fontSizeMax = size; label.fontSizeMin = size * 0.65f;
         label.enableAutoSizing = true; label.alignment = TextAlignmentOptions.Center;

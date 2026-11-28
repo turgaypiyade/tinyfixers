@@ -1011,7 +1011,7 @@ public class TopHudController : MonoBehaviour
                 // az/eşitse mevcut key'leri topla. remainingToProduce = goal.remaining − sahadaki key
                 // (bkz. KeyGeneratorService.RecomputeGoalRemaining: remaining = capacity − landed + onBoard).
                 bool producing = board != null && !board.KeyGeneratorProductionComplete;
-                int keysOnBoard = board != null ? board.CountTilesOfType(TileType.Key) : 0;
+                int keysOnBoard = board != null ? board.CountCollectibleKeys() : 0;
                 int remainingToProduce = Mathf.Max(0, goal.remaining - keysOnBoard);
                 if (producing && remainingToProduce > keysOnBoard)
                 {

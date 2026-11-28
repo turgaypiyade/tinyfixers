@@ -147,14 +147,40 @@ public sealed class TeamBrowserController : MonoBehaviour
             // Seçili sekme parlak mavi, diğeri mor (ortak buton ailesi); sprite yoksa eski renkler.
             if (UiButtons.SpriteOf(UiButtons.Kind.Blue) != null)
             {
-                UiButtons.Apply(searchTabBg, search ? UiButtons.Kind.Blue : UiButtons.Kind.Purple);
-                UiButtons.Apply(createTabBg, search ? UiButtons.Kind.Purple : UiButtons.Kind.Blue);
+                // Liderlik alt-seçimleriyle aynı aile: seçili mavi, seçili değil koyu lacivert (2026-11-25).
+                UiButtons.Apply(searchTabBg, search ? UiButtons.Kind.PillBlue : UiButtons.Kind.PillNavy);
+                UiButtons.Apply(createTabBg, search ? UiButtons.Kind.PillNavy : UiButtons.Kind.PillBlue);
+                FitTabPill(searchTabBg);
+                FitTabPill(createTabBg);
             }
             else
             {
                 if (searchTabBg != null) searchTabBg.color = search ? theme.accentAmber : theme.screenBackground;
                 if (createTabBg != null) createTabBg.color = search ? theme.screenBackground : theme.accentAmber;
             }
+        }
+    }
+
+    // ButonwoStroke hapı RM oranında kalsın (kullanıcı 2026-11-25: Katıl/Oluştur kocaman, yazı minikti):
+    // en fazla 420×84, merkez sabit; yazı yüzün içinde okunur boy. Yalnız sabit çapalı (esnemeyen) rect'e uygulanır.
+    private static void FitTabPill(Image bg)
+    {
+        if (bg == null) return;
+        var rt = bg.rectTransform;
+        if (Mathf.Approximately(rt.anchorMin.x, rt.anchorMax.x) && Mathf.Approximately(rt.anchorMin.y, rt.anchorMax.y))
+        {
+            // Geniş hap (yatay esner): en çok 440×90.
+            rt.sizeDelta = new Vector2(Mathf.Min(rt.sizeDelta.x, 440f), Mathf.Min(rt.sizeDelta.y, 90f));
+        }
+        foreach (var label in bg.GetComponentsInChildren<TMP_Text>(true))
+        {
+            label.enableAutoSizing = true;
+            label.fontSizeMax = 38f;
+            label.fontSizeMin = 24f;
+            label.textWrappingMode = TextWrappingModes.NoWrap;
+            var lrt = label.rectTransform;
+            lrt.anchorMin = Vector2.zero; lrt.anchorMax = Vector2.one;
+            lrt.offsetMin = new Vector2(16f, 8f); lrt.offsetMax = new Vector2(-16f, -6f);
         }
     }
 

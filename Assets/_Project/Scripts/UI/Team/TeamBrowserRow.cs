@@ -24,7 +24,8 @@ public sealed class TeamBrowserRow : MonoBehaviour
         if (!wired)
         {
             if (infoButton != null) infoButton.onClick.AddListener(() => this.onInfo?.Invoke());
-            UiButtons.Apply(infoButton, UiButtons.Kind.Orange);
+            // Kapsül turuncu yerine ButonwoStroke ailesi (kullanıcı 2026-11-25): ikincil eylem = mavi.
+            UiButtons.Apply(infoButton, UiButtons.Kind.BluePlain);
             wired = true;
         }
 

@@ -13,11 +13,6 @@ MonoBehaviour:
   m_Name: ScreenCrackConfig
   m_EditorClassIdentifier: 
   crackSprite: {fileID: 0}
-  monkeyWalk:
-  - {fileID: 21300000, guid: 984126fecbfba4a308ad43b4ab1f619d, type: 3}
-  - {fileID: 21300000, guid: 2bbbcca26096d4b97a6754d30b659511, type: 3}
-  monkeyBend:
-  - {fileID: 21300000, guid: 8b5a5dca4613a4b13814e8bb70a19fca, type: 3}
-  - {fileID: 21300000, guid: 12bf5e8d5d5304d5c9aa7d92fb41fe9b, type: 3}
-  - {fileID: 21300000, guid: b894ddd2e25f24c51b161384ca5efc0c, type: 3}
+  monkeyWalk: []
+  monkeyBend: []
   useWeldingSfx: 1

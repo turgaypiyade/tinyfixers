@@ -29,6 +29,9 @@ public sealed class WorldTourGlobeButton : MonoBehaviour
     private const float OrbitRx = 0.52f, OrbitRy = 0.20f, OrbitTiltDeg = 18f, PlaneParkDeg = -25f;   // park: sağda, kürenin önünde, burun sağ-yukarı
     private const float PlaneSize = 0.40f;
     private const float PlaneNoseDeg = 14f;   // görselde gövde ekseni (kuyruk→burun), sağ-hafif yukarı
+    /// Odak (öğretici deliği) yarıçapı / kürenin yarı boyu: uçağın tüm yörüngesi dahil (uçak yoksa 1 = yalnız küre).
+    public float FocusRadiusRatio => _plane != null ? 2f * (OrbitRx + PlaneSize * 0.707107f) : 1f;
+
     private bool _punching;
     private readonly Vector3[] _placementCorners = new Vector3[4];
     private Canvas _placementCanvas;

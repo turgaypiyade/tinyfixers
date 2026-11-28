@@ -284,6 +284,9 @@ public sealed class WorldTourTutorial : MonoBehaviour
         target.localScale = targetBaseScale;          // delik büyümeden ölçülür (nabızla titremesin)
         Rect box = HoleOf(target);
         float radius = Mathf.Max(box.width, box.height) * 0.5f;
+        // Dünya butonu: delik kürenin etrafında dönen uçağı da kapsasın (yalnız küre kutusu uçağı karartmada bırakıyordu).
+        if (globe != null && target == (RectTransform)globe.transform)
+            radius = (radius - HolePadding) * globe.FocusRadiusRatio + HolePadding;
         Rect hole = new Rect(box.center.x - radius, box.center.y - radius, radius * 2f, radius * 2f);
         float pulse = 0.5f - 0.5f * Mathf.Cos(Mathf.Repeat(tapTime / PulsePeriod, 1f) * Mathf.PI * 2f);
         target.localScale = targetBaseScale * (1f + PulseScale * pulse);

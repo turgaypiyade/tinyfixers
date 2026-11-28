@@ -293,7 +293,13 @@ public sealed class SpecialChainRunner : BoardAction
         // Line+Pulse fused emisyonu: önce 3x3 cross süpürülür; yol üstündeki special'lar
         // VARDIĞI AN eşzamanlı alt-zincir olur (queue'ya değil). Sonra (varsa) seed zinciri.
         if (linePulseCrossCenter.HasValue)
+        {
+            // Line+Line (crossHalf 0, yalnız bu combo): haç başlarken merkezde çapraz ateşleme parlaması.
+            // Yalnız görsel; süpürme/zamanlama aynen.
+            if (crossHalf == 0)
+                LineCrossIgnitionFx.Play(board, linePulseCrossCenter.Value);
             yield return SweepCross(sequencer, linePulseCrossCenter.Value, processed);
+        }
 
         while (queue.Count > 0)
         {

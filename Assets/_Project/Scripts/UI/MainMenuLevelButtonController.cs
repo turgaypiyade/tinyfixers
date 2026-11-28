@@ -80,6 +80,8 @@ public class MainMenuLevelButtonController : MonoBehaviour, IPointerDownHandler,
         bool leagueMoment = MasterLeagueIntro.TryPlay(this, levelCatalog)
             // Geçen haftanın lig ödülü (sıra hesaplanınca açılır); hesaplanamazsa sıra özete/bildirim iznine geçer.
             || MasterLeagueRewardPopup.TryShow(this, ShowNextOpeningPopup)
+            // Geçen haftanın Haftalık Yarış ödülü (ilk 3): sıra hesaplanınca tören açılır.
+            || WeeklyRaceRewardFlow.TryShow(this, ShowNextOpeningPopup)
             || MasterLeagueSummary.TryShow(this, levelCatalog);
         if (!leagueMoment) NotificationPermissionPrompt.TryShow(this);
         StoreReviewService.TryRequestOnMainMenu();
@@ -313,6 +315,7 @@ public class MainMenuLevelButtonController : MonoBehaviour, IPointerDownHandler,
         }
 
         SyncMasterLeagueSession();
+        if (ProgressiveContent.Gate(this, () => StartLevel())) return LevelStartResult.Started;
 
         if (preLevelSpecialPopup == null)
             preLevelSpecialPopup = FindPreLevelPopupInScene();
@@ -329,7 +332,7 @@ public class MainMenuLevelButtonController : MonoBehaviour, IPointerDownHandler,
             return LevelStartResult.Started;
 
         ShowLoadingScreen();
-        SceneManager.LoadScene(gameSceneName);
+        ProgressiveContent.LoadScene(gameSceneName);
         return LevelStartResult.Started;
     }
 
@@ -649,7 +652,7 @@ public class MainMenuLevelButtonController : MonoBehaviour, IPointerDownHandler,
         // progress-event service is refreshed by TryResetProgress before this reload.
         if (prefsLevelKey != CurrentLevel.PrefsKey) PlayerPrefs.SetInt(prefsLevelKey, 1);
         PlayerPrefs.Save();
-        SceneManager.LoadScene(gameObject.scene.name);
+        ProgressiveContent.LoadScene(gameObject.scene.name);
     }
 
     private void PlayDebugLevel()

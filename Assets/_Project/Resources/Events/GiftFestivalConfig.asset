@@ -130,3 +130,6 @@ MonoBehaviour:
   - 1
   autoShowJoinPopup: 1
   introSeconds: 2.6
+  menuLogo: {fileID: 21300000, guid: 682f0ae8afb36413aa7d79d0aa7b04cc, type: 3}
+  menuFont: {fileID: 11400000, guid: 020a75041a4a04fb28f301a2fa0a06db, type: 2}
+  menuFontMaterial: {fileID: 2100000, guid: 232a0859d918b48b6b3575c8e23ffacc, type: 2}

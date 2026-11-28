@@ -12,13 +12,16 @@ public class BoardInitService
     /// rastgele komşular onlarla hazır eşleşme kurmayacak şekilde seçilir (önceden tanımlı öğretici tahtaları).</param>
     /// <param name="keepPinnedDeadlock">Yalnız karıştırma jokeri öğreticisi (27): hamle enjeksiyonu pinli taşa dokunmaz.</param>
     public TileType[,] SimulateInitialTypes(int width, int height, bool[,] holes, TileType[] randomPool,
-        int[,] pinnedTypes = null, bool keepPinnedDeadlock = false)
+        int[,] pinnedTypes = null, bool keepPinnedDeadlock = false, bool favorSpecialMatches = false)
     {
         var types = new TileType[width, height];
         var filled = new bool[width, height];
 
         TileType[,] fallbackCandidate = null;
 
+        TileType[,] bestOpening = null;
+        int bestScore = -1;
+        int candidates = 0;
         const int maxAttempts = 96;
         for (int attempt = 0; attempt < maxAttempts; attempt++)
         {
@@ -62,10 +65,23 @@ public class BoardInitService
                 continue;
 
             if (HasAnyPlayableMove(types, holes))
-                return CloneTypes(types);
+            {
+                if (!favorSpecialMatches) return CloneTypes(types);
+                int score = CountFourMatchWindows(types, holes);
+                if (score > bestScore)
+                {
+                    bestOpening ??= new TileType[width, height];
+                    System.Array.Copy(types, bestOpening, types.Length);
+                    bestScore = score;
+                }
+                if (++candidates == 3) return bestOpening;
+                continue;
+            }
 
             fallbackCandidate = CloneTypes(types);
         }
+
+        if (bestOpening != null) return bestOpening;
 
         if (fallbackCandidate != null &&
             TryInjectPlayableMove(fallbackCandidate, keepPinnedDeadlock ? WithPinnedLocked(holes, pinnedTypes) : holes, randomPool) &&
@@ -76,6 +92,46 @@ public class BoardInitService
         }
 
         return fallbackCandidate ?? CloneTypes(types);
+    }
+
+    // A four-cell line must already contain three matching tiles and have a donor
+    // outside the line that the player can swap into the remaining position.
+    private static int CountFourMatchWindows(TileType[,] types, bool[,] locked)
+    {
+        int width = types.GetLength(0), height = types.GetLength(1);
+        bool Matches(int x, int y, TileType color) => x >= 0 && y >= 0 && x < width && y < height
+            && !locked[x, y] && types[x, y] == color;
+
+        bool HasOpportunity(int x, int y, int dx, int dy)
+        {
+            if (x + 3 * dx >= width || y + 3 * dy >= height) return false;
+            var first = types[x, y];
+            var second = types[x + dx, y + dy];
+            var color = first == second ? first : types[x + 2 * dx, y + 2 * dy];
+            int gap = -1;
+            for (int k = 0; k < 4; k++)
+            {
+                int cx = x + k * dx, cy = y + k * dy;
+                if (locked[cx, cy]) return false;
+                if (types[cx, cy] == color) continue;
+                if (gap >= 0) return false;
+                gap = k;
+            }
+            if (gap < 0) return false;
+            int gx = x + gap * dx, gy = y + gap * dy;
+            return Matches(gx + dy, gy + dx, color) || Matches(gx - dy, gy - dx, color)
+                || (gap == 0 && Matches(gx - dx, gy - dy, color))
+                || (gap == 3 && Matches(gx + dx, gy + dy, color));
+        }
+
+        int score = 0;
+        for (int y = 0; y < height; y++)
+            for (int x = 0; x < width; x++)
+            {
+                if (HasOpportunity(x, y, 1, 0)) score++;
+                if (HasOpportunity(x, y, 0, 1)) score++;
+            }
+        return score;
     }
 
     private static bool[,] WithPinnedLocked(bool[,] holes, int[,] pinnedTypes)

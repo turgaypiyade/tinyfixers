@@ -39,9 +39,15 @@ public sealed class StreakBoosterMenuBadge : MonoBehaviour
     [Tooltip("Kenar yumuşaklığı (0..0.1 texture oranı).")]
     [SerializeField, Range(0f, 0.1f)] private float edgeSoftness01 = 0.02f;
 
+    private static readonly Color PlateColor = new Color(0.92f, 0.42f, 0.08f);   // alev turuncusu
+    private static readonly Color TrackColor = new Color(0.18f, 0.08f, 0.02f, 0.55f);
+
     private int targetStage;
     private float displayedFill;
     private float velFill;
+    private Sprite ownedRingSprite;
+    private Texture2D ownedRingTexture;
+    private Image progressTrack;
 
     private void Awake()
     {
@@ -59,7 +65,44 @@ public sealed class StreakBoosterMenuBadge : MonoBehaviour
             progressFill.fillMethod = Image.FillMethod.Radial360;
             progressFill.fillOrigin = (int)Image.Origin360.Bottom;
             progressFill.fillClockwise = clockwise;
+            BuildTrack();
         }
+
+        // Seri sayısı (1/3) diğer etkinlik ikonları gibi alttaki plakada; kilitliyken "SEVİYE N" de buraya yazılır.
+        if (stageLabel == null) stageLabel = CreateStageLabel();
+        EventIconPlate.Attach(stageLabel, PlateColor);
+    }
+
+    // Seri 0'dayken de halkanın "dolacak çubuk" olduğu okunsun: yeşil dolumun altında koyu, yarı saydam iz.
+    private void BuildTrack()
+    {
+        var src = progressFill.rectTransform;
+        var go = new GameObject("ProgressTrack", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        go.layer = gameObject.layer;
+        var rt = (RectTransform)go.transform;
+        rt.SetParent(src.parent, false);
+        rt.SetSiblingIndex(src.GetSiblingIndex());   // dolumun hemen altında
+        rt.anchorMin = src.anchorMin; rt.anchorMax = src.anchorMax; rt.pivot = src.pivot;
+        rt.anchoredPosition = src.anchoredPosition; rt.sizeDelta = src.sizeDelta;
+        var img = go.GetComponent<Image>();
+        progressTrack = img;
+        img.sprite = progressFill.sprite;   // aynı halka
+        img.color = TrackColor;
+        img.raycastTarget = false;
+    }
+
+    private TMP_Text CreateStageLabel()
+    {
+        var go = new GameObject("StageLabel", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
+        go.layer = gameObject.layer;
+        go.transform.SetParent(transform, false);
+        var label = go.GetComponent<TextMeshProUGUI>();
+        label.fontSize = label.fontSizeMax = 22f;
+        label.fontSizeMin = 14f;
+        label.enableAutoSizing = true;
+        label.textWrappingMode = TextWrappingModes.NoWrap;
+        label.raycastTarget = false;
+        return label;
     }
 
     // Prosedürel yeşil HALKA (annulus): merkezden uzaklığa göre iç/dış yarıçap arası opak, kenarlar yumuşak.
@@ -73,7 +116,9 @@ public sealed class StreakBoosterMenuBadge : MonoBehaviour
             wrapMode = TextureWrapMode.Clamp,
             filterMode = FilterMode.Bilinear
         };
-        var px = new Color[size * size];
+        ownedRingTexture = tex;
+        // Write into the texture's native buffer; no temporary 1 MB managed Color array.
+        var px = tex.GetPixelData<Color32>(0);
         float inner = Mathf.Clamp01(innerRadius01);
         float outer = Mathf.Clamp(outerRadius01, inner + 0.01f, 1f);
         float soft = Mathf.Max(0.0001f, edgeSoftness01);
@@ -88,9 +133,18 @@ public sealed class StreakBoosterMenuBadge : MonoBehaviour
             float a = Mathf.Clamp01((r - inner) / soft) * Mathf.Clamp01((outer - r) / soft);
             px[y * size + x] = new Color(1f, 1f, 1f, a);
         }
-        tex.SetPixels(px);
-        tex.Apply();
-        return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 100f);
+        tex.Apply(false, true); // Upload once and discard the CPU copy.
+        ownedRingSprite = Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f),
+            100f, 0, SpriteMeshType.FullRect);
+        return ownedRingSprite;
+    }
+
+    private void OnDestroy()
+    {
+        if (progressFill != null && progressFill.sprite == ownedRingSprite) progressFill.sprite = null;
+        if (progressTrack != null) Destroy(progressTrack.gameObject);
+        if (ownedRingSprite != null) Destroy(ownedRingSprite);
+        if (ownedRingTexture != null) Destroy(ownedRingTexture);
     }
 
     private void OnEnable()

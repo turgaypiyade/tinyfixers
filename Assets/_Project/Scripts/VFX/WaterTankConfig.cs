@@ -40,6 +40,19 @@ public class WaterTankConfig : ScriptableObject
     [Tooltip("Son vuruşta (dağılırken) saçılan parça sayısı. Parçalar crackFrames'in son karesinden kesilir.")]
     [Min(0)] public int breakShardCount = 8;
 
+    [Header("Çatlak sızıntısı (ara vuruştan kırılana kadar)")]
+    [Tooltip("Çatlak depodan su sızan noktalar — deponun görselinde normalize (0-1, sol-alt köken). " +
+             "Varsayılanlar Bidon3 çatlaklarına göre. Boş = sızıntı kapalı.")]
+    public List<Vector2> leakPoints = new() { new Vector2(0.27f, 0.40f), new Vector2(0.37f, 0.58f), new Vector2(0.81f, 0.50f) };
+    [Tooltip("Sürekli sızıntıda aynı noktadan ardışık damla aralığı (sn, ±%25 rastgele).")]
+    public float leakInterval = 0.38f;
+    [Tooltip("Vuruş anındaki yoğun sızıntı süresi (sn); bu sürede aralık leakBurstInterval.")]
+    public float leakBurstDuration = 0.9f;
+    [Tooltip("Vuruş anındaki yoğun sızıntı aralığı (sn).")]
+    public float leakBurstInterval = 0.12f;
+    [Tooltip("Sızıntı damlası boyu (depo genişliği oranı).")]
+    [Range(0.02f, 0.3f)] public float leakSizeRatio = 0.09f;
+
     [Header("Kırılma patlaması (dağılma)")]
     [Tooltip("Depo dağılırken merkezden her yöne saçılan, sadece görsel damla sayısı. 0 = kapalı.")]
     [Min(0)] public int burstDropletCount = 12;

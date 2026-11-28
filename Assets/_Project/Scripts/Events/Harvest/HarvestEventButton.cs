@@ -24,6 +24,7 @@ public sealed class HarvestEventButton : MonoBehaviour
     private void Awake()
     {
         if (button != null) button.onClick.AddListener(OnClick);
+        EventIconPlate.Attach(labelText, new Color(0.25f, 0.60f, 0.12f));
     }
 
     private void OnEnable()
@@ -50,11 +51,15 @@ public sealed class HarvestEventButton : MonoBehaviour
         bool unlocked = HarvestState.IsUnlocked(cfg);
         // Açılış seviyesine kadar gizlemek yerine kilitli göster (EventLockOverlay); açılınca kendi takvimi.
         if (!unlocked && cfg != null && EventLockOverlay.Apply(visibilityRoot, cfg.minLevelGate, labelText)) return;
-        EventLockOverlay.Release(visibilityRoot);
         bool isLive = unlocked && HarvestState.IsLive(cfg, now);
-        if (visibilityRoot != null && visibilityRoot.activeSelf != isLive)
+        // Seviye açık ama pencere kapalı: gizlemek yerine gri "YAKINDA" (kullanıcı 2026-11-28; seviyeye gelince
+        // kaybolması aldatıcıydı). Dokununca balon başlamasına kalan süreyi söyler.
+        if (unlocked && !isLive) EventLockOverlay.ApplyWaiting(visibilityRoot, HarvestSchedule.GetNextStart(cfg, now), labelText);
+        else EventLockOverlay.Release(visibilityRoot);
+        bool show = unlocked;
+        if (visibilityRoot != null && visibilityRoot.activeSelf != show)
         {
-            visibilityRoot.SetActive(isLive);
+            visibilityRoot.SetActive(show);
             force = true;
         }
         if (!unlocked) return;

@@ -138,6 +138,7 @@ public sealed class RisingMapScreen : SafariMapScreenBase
 
     public override void Open(SafariEventController owner, SafariRoundOutcome outcome)
     {
+        if (ProgressiveContent.GateEvent(this, EventContentPolicy.Safari, () => Open(owner, outcome), () => owner != null && owner.IsEventAvailable)) return;
         controller = owner;
         showRequested = true;
         if (topHud != null) topHud.Bind(owner);
@@ -205,6 +206,7 @@ public sealed class RisingMapScreen : SafariMapScreenBase
 
     private void OnDisable()
     {
+        ProgressiveContent.CancelEvent(this);
         StopPresentation();
         if (crowdStack != null) crowdStack.Clear();
         hasIntroCrowd = false;

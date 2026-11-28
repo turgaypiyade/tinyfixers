@@ -135,7 +135,7 @@ public class InGameQuickSettings : MonoBehaviour
             return;
         }
 
-        SceneManager.LoadScene(mainMenuScene);
+        ProgressiveContent.LoadScene(mainMenuScene);
     }
 
     private void RefreshIcons()

@@ -12,12 +12,12 @@ using UnityEngine.UI;
 ///   • kilit kapandı: taş yuvasına gömülüp grileşir; disk döner, sıradaki taş tepeye
 ///     gelir, kartuş yeni renge/sayıya döner
 ///   • mühür açıldı: çark hızlanarak döner, sonra mühür (gövde + çark + taşlar) birçok parçaya ayrılıp savrulur
-/// Sprite'lar Resources/SealSafe altında; gövde 9-slice (köşeler hücre boyuna göre sabit). Çark ve sayaç iki
+/// Sprite'lar aktif seviyenin AncientSeal tanımında; gövde 9-slice (köşeler hücre boyuna göre sabit). Çark ve sayaç iki
 /// standart ölçüde (SizeTiers): kısa kenarı 2 hücre olan mühür ve her kenarı en az 3 hücre olan mühür.
 /// </summary>
 public sealed class AncientSealView : MonoBehaviour, ICollectionFxTarget
 {
-    private const string ArtPath = "SealSafe/";
+    private ObstacleDef definition;
 
     private static readonly Vector2 DiskCenter = new Vector2(0.5f, 0.5f);
     private const float BorderReferenceCells = 1.5f;
@@ -43,8 +43,8 @@ public sealed class AncientSealView : MonoBehaviour, ICollectionFxTarget
     // zeminde aynı okunurluk. Gölge ayrı bir kopya yazıdır (TMP underlay keyword'ü build'de soyulabilir).
     private static readonly string[] PlateNames =
         { "SealCounterPlateRed", "SealCounterPlateYellow", "SealCounterPlateGreen" };
-    private static readonly Sprite[] plateSprites = new Sprite[3];
-    private static Sprite neutralPlate;
+    private readonly Sprite[] plateSprites = new Sprite[3];
+    private Sprite neutralPlate;
     private static readonly Color32 CounterDark = new Color32(28, 14, 10, 255);
     private const float CounterOutlineWidth = 0.4f;
     private const float ShadowDrop = 0.012f;   // gövde boyuna oranla aşağı kayma
@@ -89,14 +89,15 @@ public sealed class AncientSealView : MonoBehaviour, ICollectionFxTarget
     private readonly Queue<IEnumerator> sequence = new();
     private Coroutine sequenceCo;
 
-    public static bool HasArt => Resources.Load<Sprite>(ArtPath + "SealBody") != null;
 
-    public static AncientSealView Create(RectTransform parent)
+
+    public static AncientSealView Create(RectTransform parent, ObstacleDef definition)
     {
         var go = new GameObject("AncientSeal", typeof(RectTransform));
         go.layer = parent.gameObject.layer;
         go.transform.SetParent(parent, false);
         var view = go.AddComponent<AncientSealView>();
+        view.definition = definition;
         view.Build();
         return view;
     }
@@ -546,7 +547,7 @@ public sealed class AncientSealView : MonoBehaviour, ICollectionFxTarget
         if (plate != null && counterPlateImage.sprite != plate) counterPlateImage.sprite = plate;
     }
 
-    private static Sprite PlateFor(int lockIdx)
+    private Sprite PlateFor(int lockIdx)
     {
         if (lockIdx < 0 || lockIdx >= PlateNames.Length)
             return neutralPlate != null ? neutralPlate : (neutralPlate = Load("SealCounterPlate"));
@@ -604,7 +605,7 @@ public sealed class AncientSealView : MonoBehaviour, ICollectionFxTarget
     private static string GemName(int lockIdx)
         => lockIdx == 0 ? "SealGemRed" : lockIdx == 1 ? "SealGemYellow" : "SealGemGreen";
 
-    private static Sprite Load(string name) => Resources.Load<Sprite>(ArtPath + name);
+    private Sprite Load(string name) => definition?.ViewSprite(name);
 
     private RectTransform NewImage(string name, Transform parent, Sprite sprite, out Image img)
     {

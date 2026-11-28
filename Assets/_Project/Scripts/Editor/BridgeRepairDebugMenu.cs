@@ -30,9 +30,12 @@ public static class BridgeRepairDebugMenu
     private static void OpenMap()
     {
         var ctrl = UnityEngine.Object.FindFirstObjectByType<BridgeRepairController>(FindObjectsInactive.Include);
-        if (ctrl == null) { if (GameDiagnostics.EditorTools)
-            Debug.LogWarning("[BridgeRepairDebug] Sahnede BridgeRepairController yok."); return; }
-        ctrl.OnIconClicked();
+        if (ctrl == null)
+        {
+            Debug.LogWarning("[BridgeRepairDebug] Yarış önizlemesi için MainMenu sahnesini Play modunda aç.");
+            return;
+        }
+        ctrl.OpenDebugPreview();
     }
 
     [MenuItem(Root + "Yarış Ekranını Aç (Play)", true)]

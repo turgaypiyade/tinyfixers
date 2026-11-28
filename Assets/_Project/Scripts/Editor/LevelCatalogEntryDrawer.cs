@@ -11,11 +11,12 @@ public sealed class LevelCatalogEntryDrawer : PropertyDrawer
     public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
     {
         var level = property.FindPropertyRelative("level");
-        var data = property.FindPropertyRelative("levelData");
+        var data = property.FindPropertyRelative("bundledLevelData");
         if (level != null)
         {
             string text = "Level " + level.intValue;
-            if (data != null && data.objectReferenceValue == null) text += " — boş";
+            if (data != null && data.objectReferenceValue == null)
+                text += string.IsNullOrEmpty(property.FindPropertyRelative("remoteGuid")?.stringValue) ? " — boş" : " — indirilebilir";
             label = new GUIContent(text, label.tooltip);
         }
         EditorGUI.PropertyField(position, property, label, true);

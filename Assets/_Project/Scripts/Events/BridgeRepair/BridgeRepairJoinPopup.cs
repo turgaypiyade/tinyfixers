@@ -10,6 +10,8 @@ using UnityEngine.UI;
 /// </summary>
 public sealed class BridgeRepairJoinPopup : MonoBehaviour
 {
+    private void OnDisable() => ProgressiveContent.CancelEvent(this);
+
     [SerializeField] private GameObject root;
     [SerializeField] private RectTransform popupRoot;
     [SerializeField] private TMP_Text titleText;
@@ -55,6 +57,7 @@ public sealed class BridgeRepairJoinPopup : MonoBehaviour
 
     public void Show(DateTime end, Action continueAction, Action laterAction)
     {
+        if (ProgressiveContent.GateEvent(this, EventContentPolicy.Bridge, () => Show(end, continueAction, laterAction), () => DateTime.UtcNow < end)) return;
         onContinue = continueAction;
         onLater = laterAction;
         windowEnd = end;

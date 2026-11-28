@@ -100,7 +100,8 @@ public sealed class PatchBotSpecial
     public static List<BoardAction> LaunchGroupSolo(
         BoardController board,
         List<Vector2Int> cells,
-        Func<TileView, PatchBotTargetCoordinator, PatchBotExecutionRuntime> buildRuntime)
+        Func<TileView, PatchBotTargetCoordinator, PatchBotExecutionRuntime> buildRuntime,
+        bool diveFlourish = false)
     {
         var actions = new List<BoardAction>();
         if (board == null || cells == null || cells.Count == 0 || buildRuntime == null)
@@ -127,6 +128,11 @@ public sealed class PatchBotSpecial
             // Solo mod: initialClearAction (pompa) + arrival'da tam finalize (solo hit + cascade).
             rt.FinalizeAtEnd = true;
             rt.ClearOriginOnDashStart = false;
+
+            // Combo gösterisi: bu botun KENDİ dash'i yay + pike çizer. Servis durumsuz (yalnız board),
+            // bot başına ayrı örnek + bütçe 1 → varışta zincirlenen dash'ler normal uçar.
+            if (diveFlourish)
+                rt.PatchbotService = new PatchbotComboService(board) { DiveFlourishBudget = 1 };
 
             var res = special.Execute(rt);
             if (res != null && res.Actions != null && res.Actions.Count > 0)

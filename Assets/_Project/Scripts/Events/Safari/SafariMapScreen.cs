@@ -21,6 +21,8 @@ using UnityEngine.UI;
 /// </summary>
 public sealed class SafariMapScreen : SafariMapScreenBase
 {
+    private void OnDisable() => ProgressiveContent.CancelEvent(this);
+
     [Header("Kök")]
     [SerializeField] private GameObject root;
 
@@ -96,6 +98,7 @@ public sealed class SafariMapScreen : SafariMapScreenBase
 
     public override void Open(SafariEventController owner, SafariRoundOutcome outcome)
     {
+        if (ProgressiveContent.GateEvent(this, EventContentPolicy.Safari, () => Open(owner, outcome), () => owner != null && owner.IsEventAvailable)) return;
         controller = owner;
         gameObject.SetActive(true);
         if (root != null) root.SetActive(true);

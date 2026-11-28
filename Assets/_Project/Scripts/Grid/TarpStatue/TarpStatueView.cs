@@ -11,11 +11,11 @@ using UnityEngine.UI;
 ///   • sayaç 0 → branda alttan yukarı soyulur, etiket ipten kopup düşer, taş blok görünür,
 ///   • taş vuruşu → aşama sprite'ı değişir, taştan parçalar kopup düşer,
 ///   • son vuruş → bitmiş heykel parlar, hedefe uçar (servis), çerçeve + zemin parçalanıp savrulur.
-/// Sprite'lar Resources/TarpStatue/ (hepsi aynı kadraj, 512 px).
+/// Sprite'lar aktif seviyenin TarpStatue tanımında (hepsi aynı kadraj, 512 px).
 /// </summary>
 public sealed class TarpStatueView : MonoBehaviour, ICollectionFxTarget
 {
-    private const string Dir = "TarpStatue/";
+    private ObstacleDef definition;
     private static readonly string[] TagNames = { "Tag_Red", "Tag_Yellow", "Tag_Blue", "Tag_Green" };
     private static readonly Color[] Tints =
     {
@@ -53,6 +53,7 @@ public sealed class TarpStatueView : MonoBehaviour, ICollectionFxTarget
         if (!image.TryGetComponent<TarpStatueView>(out var view))
             view = image.gameObject.AddComponent<TarpStatueView>();
         view.boundBoard = board;
+        view.definition = board?.ActiveLevelData?.obstacleLibrary?.Get(ObstacleId.TarpStatue);
         view.Build(color);
         view.SetCountInstant(remainingCount);
         view.SetStoneStage(StageForRemaining(remainingHits));
@@ -445,13 +446,5 @@ public sealed class TarpStatueView : MonoBehaviour, ICollectionFxTarget
         if (target != null) target.localScale = Vector3.one;
     }
 
-    private static readonly System.Collections.Generic.Dictionary<string, Sprite> spriteCache = new();
-
-    private static Sprite Load(string name)
-    {
-        if (spriteCache.TryGetValue(name, out var s) && s != null) return s;
-        s = Resources.Load<Sprite>(Dir + name);
-        spriteCache[name] = s;
-        return s;
-    }
+    private Sprite Load(string name) => definition?.ViewSprite(name);
 }

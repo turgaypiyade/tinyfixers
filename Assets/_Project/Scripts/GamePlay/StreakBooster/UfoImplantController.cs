@@ -40,12 +40,58 @@ public sealed class UfoImplantController : MonoBehaviour
     [Tooltip("Prosedürel ışının kalınlığı (px).")]
     [SerializeField, Min(2f)] private float beamWidth = 22f;
 
+    [Header("Pervane (helikopter)")]
+    [Tooltip("Pervane dönüşü (tur/sn). Önden bakış: pervanenin yatay ölçeği cos(açı). 0 = döndürme.")]
+    [SerializeField, Min(0f)] private float rotorRevsPerSecond = 4.5f;
+
+    // Helikopter görseli (kullanıcı 2026-11-26): UFO.png = gövde (pervanesiz); pervane + göbek ayrı sprite'lar
+    // Resources/StreakBooster'dan, ufo'nun çocuğu olarak kurulur. Konumlar kaynak görselde (1405×1119) normalize.
+    private const string RotorSpritePath = "StreakBooster/HeliRotor";
+    private const string HubSpritePath = "StreakBooster/HeliHub";
+    private static readonly Rect RotorArea = Rect.MinMaxRect(0.0705f, 0.8499f, 0.9295f, 0.9669f);
+    private const float RotorPivotX = 0.5008f;
+    private static readonly Rect HubArea = Rect.MinMaxRect(0.4164f, 0.8651f, 0.5858f, 0.9964f);
+    private RectTransform rotor;
+
     private BoardController board;
     private bool hovering;
+    private bool visualsCancelled;
+    private bool ownsInputLock;
+    private PreLevelSpecialRuntimeInjector injector;
+    private readonly List<GameObject> activeBeams = new(3);
+
+    private void OnDisable()
+    {
+        visualsCancelled = true;
+        hovering = false;
+        // The injector owns placement and may finish granting rewards without the visuals.
+        // Its currently running FlyInGate also checks visualsCancelled after every yield.
+        if (injector != null)
+        {
+            injector.PrePlacementGate = null;
+            injector.OnSpecialPlaced = null;
+            injector.OnPlacementFinished = null;
+        }
+        StopAllCoroutines();
+        for (int i = 0; i < activeBeams.Count; i++)
+            if (activeBeams[i] != null) Destroy(activeBeams[i]);
+        activeBeams.Clear();
+        if (rotor != null) rotor.localScale = Vector3.one;
+        if (ufo != null) ufo.gameObject.SetActive(false);
+        ReleaseInputLock();
+    }
+
+    private void ReleaseInputLock()
+    {
+        if (!ownsInputLock) return;
+        ownsInputLock = false;
+        if (board != null) board.SetInputLocked(false);
+    }
 
     private IEnumerator Start()
     {
         if (ufo != null) ufo.gameObject.SetActive(false);
+        if (visualsCancelled) yield break;
         // Simulation owns its explicitly configured starting boosters. Saved streak
         // rewards must not silently change either control or boosted samples.
         if (RuntimeSimulationSession.IsActive) yield break;
@@ -78,7 +124,8 @@ public sealed class UfoImplantController : MonoBehaviour
 
         // Dedicated injector (prelevel selection'ı ezmez). Hook'ları bağla; timing'i injector yönetir:
         // board+loading hazır → PrePlacementGate (uç gel) → her special'da OnSpecialPlaced (ışın) → bitti (uç git).
-        var injector = PreLevelSpecialRuntimeInjector.CreateDedicated(earned);
+        BuildRotor();   // yalnız teslimat olacaksa
+        injector = PreLevelSpecialRuntimeInjector.CreateDedicated(earned);
         if (injector == null)
             yield break;
 
@@ -87,7 +134,8 @@ public sealed class UfoImplantController : MonoBehaviour
         injector.OnPlacementFinished = () =>
         {
             // Taşlar yerleşti → oyuncu artık oynayabilir. UFO uçup giderken oyun serbest.
-            if (board != null) board.SetInputLocked(false);
+            ReleaseInputLock();
+            if (visualsCancelled || !isActiveAndEnabled) return;
             StartCoroutine(FlyOut());
         };
     }
@@ -95,17 +143,23 @@ public sealed class UfoImplantController : MonoBehaviour
     // Injector board hazır olunca çağırır: UFO uçup gelir, hover'a oturur.
     private IEnumerator FlyInGate()
     {
-        if (ufo == null) yield break;
+        if (visualsCancelled || !isActiveAndEnabled || ufo == null) yield break;
 
         // Tutorial/hint overlay'i ekrandayken UFO GELMESİN — önce onlar bitsin (kılavuz-swap
         // tutorial'ı varsa oyuncu onu yaparken input SERBEST kalmalı, o yüzden kilit tutorial'lardan SONRA).
         yield return WaitForTutorialsClear();
+        if (visualsCancelled || !isActiveAndEnabled || ufo == null) yield break;
 
         // Teslimat boyunca oyuncu OYNAYAMASIN — UFO uçup taşları yerleştirene kadar board kilitli.
         // Placement bitince OnPlacementFinished açar (UFO uçup giderken oyun serbest).
-        if (board != null) board.SetInputLocked(true);
+        if (board != null)
+        {
+            ownsInputLock = !board.IsExplicitlyLocked;
+            if (ownsInputLock) board.SetInputLocked(true);
+        }
 
         ufo.gameObject.SetActive(true);
+        if (rotor != null && rotorRevsPerSecond > 0f) StartCoroutine(SpinRotor());
         Vector2 start = hoverAnchoredPos + Vector2.up * offscreenRise;
         ufo.anchoredPosition = start;
 
@@ -113,12 +167,14 @@ public sealed class UfoImplantController : MonoBehaviour
         float e = 0f;
         while (e < d)
         {
+            if (visualsCancelled || !isActiveAndEnabled || ufo == null) yield break;
             e += Time.deltaTime;
             float k = Mathf.Clamp01(e / d);
             float eased = 1f - Mathf.Pow(1f - k, 3f); // OutCubic
             ufo.anchoredPosition = Vector2.LerpUnclamped(start, hoverAnchoredPos, eased);
             yield return null;
         }
+        if (visualsCancelled || !isActiveAndEnabled || ufo == null) yield break;
         ufo.anchoredPosition = hoverAnchoredPos;
 
         hovering = true;
@@ -140,6 +196,7 @@ public sealed class UfoImplantController : MonoBehaviour
 
         while (waited < maxWait)
         {
+            if (visualsCancelled || !isActiveAndEnabled) yield break;
             // FindFirstObjectByType (varsayılan) yalnız AKTİF objeyi bulur → overlay
             // gizliyken null döner. Show/ShowHint her ikisi de bu objeyi aktif eder.
             bool overlayActive = FindFirstObjectByType<TutorialOverlayController>() != null;
@@ -167,6 +224,46 @@ public sealed class UfoImplantController : MonoBehaviour
         }
     }
 
+    // Pervane + göbek çocuklarını kurar (sprite'lar yoksa UFO eskisi gibi tek görsel kalır).
+    private void BuildRotor()
+    {
+        if (ufo == null || rotor != null) return;
+        var rotorSprite = Resources.Load<Sprite>(RotorSpritePath);
+        var hubSprite = Resources.Load<Sprite>(HubSpritePath);
+        if (rotorSprite == null || hubSprite == null) return;
+        rotor = CreatePart("Rotor", rotorSprite, RotorArea, new Vector2(RotorPivotX, 0.5f));
+        CreatePart("RotorHub", hubSprite, HubArea, new Vector2(0.5f, 0.5f));   // pervanenin ortasını örter
+    }
+
+    private RectTransform CreatePart(string partName, Sprite sprite, Rect area, Vector2 pivot)
+    {
+        var go = new GameObject(partName, typeof(RectTransform), typeof(CanvasRenderer), typeof(UnityEngine.UI.Image));
+        go.layer = ufo.gameObject.layer;
+        var rt = (RectTransform)go.transform;
+        rt.SetParent(ufo, false);
+        rt.anchorMin = area.min;
+        rt.anchorMax = area.max;
+        rt.pivot = pivot;
+        rt.offsetMin = rt.offsetMax = Vector2.zero;
+        var img = go.GetComponent<UnityEngine.UI.Image>();
+        img.sprite = sprite;
+        img.raycastTarget = false;
+        return rt;
+    }
+
+    // Helikopter görünür olduğu sürece döner (uçuş boyunca); UFO kapanınca döngü biter — boşta çalışmaz.
+    private IEnumerator SpinRotor()
+    {
+        float phase = 0f;
+        while (ufo != null && ufo.gameObject.activeInHierarchy && rotor != null)
+        {
+            phase += Time.deltaTime * rotorRevsPerSecond * Mathf.PI * 2f;
+            if (phase > Mathf.PI * 2f) phase -= Mathf.PI * 2f;
+            rotor.localScale = new Vector3(Mathf.Cos(phase), 1f, 1f);   // önden bakış: kanatlar uzayıp kısalır
+            yield return null;
+        }
+    }
+
     private IEnumerator HoverBob()
     {
         if (hoverBobAmplitude <= 0f) yield break;
@@ -180,7 +277,7 @@ public sealed class UfoImplantController : MonoBehaviour
 
     private void FireBeam(TileView tile)
     {
-        if (tile == null || uiSpace == null || board == null || ufo == null)
+        if (visualsCancelled || !isActiveAndEnabled || tile == null || uiSpace == null || board == null || ufo == null)
             return;
 
         Vector2 from = ufo.anchoredPosition;
@@ -194,6 +291,7 @@ public sealed class UfoImplantController : MonoBehaviour
         var go = beamPrefab != null ? Instantiate(beamPrefab, uiSpace) : CreateProceduralBeam();
         var rt = go.GetComponent<RectTransform>();
         if (rt == null) { Destroy(go); yield break; }
+        activeBeams.Add(go);
 
         rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
         rt.pivot = new Vector2(0.5f, 0f); // pivot ALTTA: yukarıdan (UFO) aşağı uzasın
@@ -220,6 +318,7 @@ public sealed class UfoImplantController : MonoBehaviour
             }
             yield return null;
         }
+        activeBeams.Remove(go);
         if (go != null) Destroy(go);
     }
 

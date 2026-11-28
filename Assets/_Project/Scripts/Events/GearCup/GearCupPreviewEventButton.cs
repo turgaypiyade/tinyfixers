@@ -21,6 +21,7 @@ public sealed class GearCupPreviewEventButton : MonoBehaviour
     {
         if (!TryGetComponent(out visibility)) visibility = gameObject.AddComponent<CanvasGroup>();
         TryGetComponent(out iconAnimator);
+        EventIconPlate.Attach(countdown, new Color(0.14f, 0.28f, 0.78f));
         GameLocalization.OnLanguageChanged += Refresh;
         Refresh();
         nextRefresh = Time.unscaledTime + 1f;
@@ -52,6 +53,18 @@ public sealed class GearCupPreviewEventButton : MonoBehaviour
             if (iconAnimator != null && iconAnimator.enabled) iconAnimator.enabled = false;
             return;
         }
+        // Seviye açık, etkinlik açık ama şu an katılınamıyor (sezon arası / sonuç bekliyor): gizlemek yerine gri
+        // "YAKINDA" (kullanıcı 2026-11-28); dokununca sıradaki sezonun başlamasına kalan süre.
+        if (!unlocked && config != null && config.eventEnabled && GearCupState.IsUnlocked)
+        {
+            var now = System.DateTime.UtcNow;
+            var next = GearCupRules.SeasonStart(now, config.seasonHours).AddHours(System.Math.Max(1, config.seasonHours));
+            EventLockOverlay.ApplyWaiting(gameObject, next, countdown);
+            visibility.alpha = 1;
+            visibility.blocksRaycasts = visibility.interactable = true;
+            if (iconAnimator != null && iconAnimator.enabled) iconAnimator.enabled = false;
+            return;
+        }
         EventLockOverlay.Release(gameObject);
         visibility.alpha = unlocked ? 1 : 0;
         visibility.blocksRaycasts = visibility.interactable = unlocked;
@@ -62,7 +75,7 @@ public sealed class GearCupPreviewEventButton : MonoBehaviour
 
     private void TryShowReminder()
     {
-        if (RuntimeSimulationSession.IsActive || screen == null) return;
+        if (RuntimeSimulationSession.IsActive || screen == null || ProgressiveContent.EventPromptDismissed(EventContentPolicy.Gear)) return;
         if (!FirebaseCloudSaveService.RestoreResolved || LoadingScreenManager.IsVisible || CustomIntroLoadingManager.IsVisible)
         { menuReadyAt = -1f; return; }
         if (menuReadyAt < 0f) menuReadyAt = Time.unscaledTime;
@@ -74,6 +87,7 @@ public sealed class GearCupPreviewEventButton : MonoBehaviour
         if (!resultPending && (!config.autoShowJoinPopup || !GearCupState.CanShowInvitation || !PlayerTeamState.HasTeam)) return;
         string cycle = GearCupRules.SeasonKey(GearCupRules.SeasonStart(System.DateTime.UtcNow, config.seasonHours));
         if (!resultPending && PlayerPrefs.GetString(GearCupState.InvitationAskedKey, "") == cycle) return;
+        if (ContentDownloadOverlay.IsVisible) return;
         if (screen.gameObject.activeInHierarchy || screen.IsInvitationVisible || RuntimeChoicePopup.IsShowing
             || RewardChestRevealOverlay.IsShowing || ShopPurchaseCelebration.IsShowing || MarketNavigator.IsMenuMarketOpen()) return;
         if (FindFirstObjectByType<TutorialOverlayController>() != null) return;

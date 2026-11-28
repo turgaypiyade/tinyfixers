@@ -537,6 +537,12 @@ public class LevelCompletionLogoAnimation : MonoBehaviour
     }
     private static Sprite s_glow, s_dot, s_line, s_square, s_sparkle, s_raysSprite;
 
+    // Diğer kutlamalar (ör. haftalık yarış ödülü) aynı prosedürel parçacık dokusunu paylaşır.
+    internal static Sprite FxDotSprite { get { EnsureFxSprites(); return s_dot; } }
+    internal static Sprite FxSparkleSprite { get { EnsureFxSprites(); return s_sparkle; } }
+    internal static Sprite FxGlowSprite { get { EnsureFxSprites(); return s_glow; } }
+    internal static Sprite FxSquareSprite { get { EnsureFxSprites(); return s_square; } }
+
     private IEnumerator PlayFireworks()
     {
         if (vfxRoot == null)

@@ -2382,7 +2382,7 @@ MonoBehaviour:
   hoverBobAmplitude: 12
   hoverBobSpeed: 2
   beamDuration: 0.35
-  beamColor: {r: 0.25, g: 1, b: 0.75, a: 1}
+  beamColor: {r: 1, g: 0.82, b: 0.3, a: 1}
   beamWidth: 22
 --- !u!114 &269404763
 MonoBehaviour:
@@ -14965,7 +14965,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ObstacleHintManager
   enableHints: 1
   hintLibrary: {fileID: 11400000, guid: b3e162fb3ee094d6dbeff88c503e5efe, type: 2}
-  obstacleLibrary: {fileID: 11400000, guid: 542e279c729681244b475a353cdd0e8f, type: 2}
   overlay: {fileID: 1268021745}
   highlightDuration: 0.55
 --- !u!1 &2064608781

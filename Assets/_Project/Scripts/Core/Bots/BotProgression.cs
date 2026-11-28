@@ -13,14 +13,39 @@ using UnityEngine;
 public static class BotProgression
 {
     public static int WeeklyScore(int seed, float baseWinRate = 0.65f)
+        => WeeklyScoreFor(seed, WeekSeed(), ElapsedDaysThisWeek(), baseWinRate);
+
+    /// Geçmiş bir haftanın (ör. "2026-W47") hafta sonu haftalık puanı — haftalık yarış ödülünün kesin sırası için.
+    public static int WeeklyFinalScore(int seed, string weekId)
     {
-        var rnd = Rng(seed, salt: 73856093);
+        int ws = WeekSeedOf(weekId);
+        return ws < 0 ? -1 : WeeklyScoreFor(seed, ws, 7f, 0.65f);
+    }
+
+    /// Hafta tohumu önceden çözülmüş sürüm (döngüde metin her bot için yeniden ayrıştırılmasın).
+    public static int WeeklyFinalScore(int seed, int weekSeed) => WeeklyScoreFor(seed, weekSeed, 7f, 0.65f);
+
+    /// Bir botun hafta sonunda alabileceği EN YÜKSEK haftalık puan (25 oyun/gün × 7 gün × 0.83 × 3 puan) — bunun üstündeki
+    /// oyuncu için botları tek tek hesaplamaya gerek yok.
+    public const int WeeklyScoreCeiling = 436;
+
+    private static int WeeklyScoreFor(int seed, int weekSeed, float elapsedDays, float baseWinRate)
+    {
+        var rnd = new System.Random(unchecked(seed * 73856093) ^ weekSeed);
         float winRate = Mathf.Clamp01(baseWinRate + (float)(rnd.NextDouble() * 0.30 - 0.12)); // ~0.53–0.83
         int gamesPerDay  = rnd.Next(3, 26);
         int pointsPerWin = rnd.Next(1, 4);
 
-        double wins = gamesPerDay * ElapsedDaysThisWeek() * winRate;
+        double wins = gamesPerDay * elapsedDays * winRate;
         return Mathf.RoundToInt((float)(wins * pointsPerWin));
+    }
+
+    public static int WeekSeedOf(string weekId)
+    {
+        int dash = weekId != null ? weekId.IndexOf("-W", StringComparison.Ordinal) : -1;
+        if (dash <= 0 || !int.TryParse(weekId.Substring(0, dash), out int year)
+            || !int.TryParse(weekId.Substring(dash + 2), out int week)) return -1;
+        return year * 100 + week;
     }
 
     public static int TeamWeeklyScore(int seed)

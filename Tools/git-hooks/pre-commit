@@ -1,0 +1,16 @@
+#!/bin/sh
+# Parçalı içerik (ProgressiveContent) koruması.
+# Repo daima YEREL içerik modunda commit edilir. Uzak (etkin) mod makineye özeldir: katalog git'e girmeyen
+# üretilmiş kopyalara (RemoteContent/GeneratedLevelPacks) ve tek platformun manifestine bağlanır. Bu haliyle
+# commit edilirse diğer makinede (Windows/Android) ilk 50 level referansı boş kalır.
+# Kurulum (her makinede bir kez):  git config core.hooksPath Tools/git-hooks
+MANIFEST="Assets/_Project/Resources/ProgressiveContentManifest.json"
+if [ -f "$MANIFEST" ]; then
+  echo ""
+  echo "COMMIT ENGELLENDI: parcali icerik ETKIN (uzak) modda ($MANIFEST mevcut)."
+  echo "Unity > TinyFixers > Yayin > Parcali Icerik (R2) > 'Yerel icerik moduna geri don' butonuna bas, sonra tekrar commit et."
+  echo "(Zorunlu durumda atlamak icin: git commit --no-verify)"
+  echo ""
+  exit 1
+fi
+exit 0

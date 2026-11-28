@@ -72,6 +72,16 @@ public sealed class LeaderboardSkin : ScriptableObject
     public Sprite giftTier2;
     public Sprite giftTier3;
 
+    [Header("Haftalık kürsü (V2, 2026-11-24)")]
+    [Tooltip("Kürsü arkası sahne (perdeli atölye). BOŞ = kürsü kurulmaz, eski ilk-3 satırları kalır.")]
+    public Sprite weeklyStageBackground;
+    public Sprite podiumCardGold;
+    public Sprite podiumCardSilver;
+    public Sprite podiumCardBronze;
+    [Tooltip("Yazısız kurdele tabela; 'Haftalık Yarış' yazısı koddan.")]
+    public Sprite weeklyRaceBanner;
+    public Sprite infoButton;
+
     [Header("Satır banner sanatı")]
     [Tooltip("Satırın sağındaki dekoratif art bölgesi için varsayılan (entry.bannerArt yoksa).")]
     public Sprite defaultRowBanner;

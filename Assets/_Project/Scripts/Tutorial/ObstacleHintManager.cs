@@ -10,7 +10,6 @@ public class ObstacleHintManager : MonoBehaviour
     [Tooltip("Kapalıyken hiçbir hint gösterilmez. Hazır olduğunda aç.")]
     [SerializeField] private bool enableHints = true;
     [SerializeField] private ObstacleHintLibrary hintLibrary;
-    [SerializeField] private ObstacleLibrary obstacleLibrary;
     [SerializeField] private TutorialOverlayController overlay;
     [SerializeField, Min(0.1f)] private float highlightDuration = 0.55f;
 
@@ -41,11 +40,13 @@ public class ObstacleHintManager : MonoBehaviour
 
         try
         {
-            yield return new WaitUntil(CanIntroduceObstacle);
-            yield return new WaitForSeconds(0.3f);
-            // Recheck after the delay: an intro, resolve or another modal may have started.
-            yield return new WaitUntil(CanIntroduceObstacle);
-            yield return ShowPendingHints();
+            yield return new WaitUntil(() => board == null ||
+                (board.ActiveLevelData != null && board.ObstacleStateService != null && board.Tiles != null));
+            if (board == null) yield break;
+            var ids = CollectObstacleIds();
+            if (!ids.Exists(id => !IsHintSeen(id) && hintLibrary.TryGet(id, out _))) yield break;
+            yield return new WaitUntil(() => board == null || CanIntroduceObstacle());
+            if (board != null) yield return ShowPendingHints(ids);
         }
         finally
         {
@@ -60,11 +61,9 @@ public class ObstacleHintManager : MonoBehaviour
         && overlay != null && !overlay.IsVisible && Time.timeScale > 0f
         && !LevelIntroFun.IsPlaying;   // giriş eğlencesi (Brumo/Pemi) bitsin, ipucu sonra
 
-    private IEnumerator ShowPendingHints()
+    private IEnumerator ShowPendingHints(List<ObstacleId> ids)
     {
         if (hintLibrary == null || overlay == null) yield break;
-
-        var ids = CollectObstacleIds();
 
         foreach (var id in ids)
         {
@@ -76,7 +75,7 @@ public class ObstacleHintManager : MonoBehaviour
             bool gelLauncherPress = icon == null && BoardController.IsGelLauncher(id);
             if (icon == null && !gelLauncherPress)
             {
-                var definition = obstacleLibrary?.Get(id);
+                var definition = board.ActiveLevelData != null ? board.ActiveLevelData.obstacleLibrary?.Get(id) : null;
                 // Mud uses its bordered icon; Tube needs a display icon even without a stage sprite.
                 icon = id == ObstacleId.Mud || id == ObstacleId.Tube
                     ? definition?.GetGoalIconSprite()

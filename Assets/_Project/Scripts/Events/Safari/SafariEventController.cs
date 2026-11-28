@@ -42,6 +42,25 @@ public sealed class SafariEventController : MonoBehaviour
 
     private static DateTime UtcNow => DateTime.UtcNow;
 
+    // Seviye açık ama takvimde kapalıyken ikon gizlenmez, gri "YAKINDA" kalır (kullanıcı 2026-11-28: seviyeye gelince
+    // kaybolması aldatıcıydı). Sıradaki başlangıç önbellekte: yalnız geçince ya da 10 dk'da bir yeniden hesaplanır.
+    private DateTime nextStartCache = DateTime.MinValue, nextStartCheckedAt = DateTime.MinValue;
+
+    private void PushVisibility(bool available)
+    {
+        DateTime? waiting = null;
+        if (!available && config != null && CurrentLevel.Global >= config.minLevelGate) waiting = NextStart();
+        eventButton?.SetVisible(available, LockGate, waiting);
+    }
+
+    private DateTime NextStart()
+    {
+        var now = UtcNow;
+        bool stale = nextStartCache == DateTime.MinValue ? (now - nextStartCheckedAt).TotalMinutes >= 10 : now >= nextStartCache;
+        if (stale) { nextStartCache = SafariSchedule.GetNextStart(config, now); nextStartCheckedAt = now; }
+        return nextStartCache;
+    }
+
     [Header("Level öncesi event şeridi")]
     [Tooltip("Şerit kartındaki ikon. Boşsa ana menü event ikonunun görseli, o da yoksa lossIcon.")]
     [SerializeField] private Sprite promoIcon;
@@ -53,7 +72,7 @@ public sealed class SafariEventController : MonoBehaviour
     {
         if (Time.unscaledTime < nextVisibilityCheck) return;
         nextVisibilityCheck = Time.unscaledTime + 1f;
-        eventButton?.SetVisible(IsEventAvailable, LockGate);
+        PushVisibility(IsEventAvailable);
     }
 
     private void Awake()
@@ -63,7 +82,7 @@ public sealed class SafariEventController : MonoBehaviour
     }
 
     private void OnEnable() => PreLevelEventPromoRegistry.Register(PromoKey, BuildPromo);
-    private void OnDisable() => PreLevelEventPromoRegistry.Unregister(PromoKey);
+    private void OnDisable() { PreLevelEventPromoRegistry.Unregister(PromoKey); ProgressiveContent.CancelEvent(this); }
 
     /// Şu an katılınabilir mi: ikona basınca katılım popup'ı açılacak durumla aynı (OnIconClicked) —
     /// hiç katılmadı ya da düştü/bitirdi ve bekleme süresi doldu. Yalnız GERÇEK takvimde aktifken:
@@ -112,6 +131,7 @@ public sealed class SafariEventController : MonoBehaviour
     /// <summary>Şeritteki "Katıl": katılım popup'ı atlanır (oyuncu zaten karar verdi) → doğrudan katıl + intro/harita.</summary>
     public void JoinFromPromo()
     {
+        if (ProgressiveContent.GateEvent(this, EventContentPolicy.Safari, JoinFromPromo, () => CanJoinNow)) return;
         if (!CanJoinNow) return;
         SafariState.MarkAsked(UtcNow);
         OnJoinAccepted();
@@ -143,7 +163,7 @@ public sealed class SafariEventController : MonoBehaviour
         }
 
         bool available = IsEventAvailable;
-        eventButton?.SetVisible(available, LockGate);
+        PushVisibility(available);
         if (!available) return;
 
         // Level'den yeni döndüysek sonucu haritada animasyonla göster. Sonuç seviye bitince SafariState'te zaten
@@ -153,18 +173,15 @@ public sealed class SafariEventController : MonoBehaviour
         if (pending == SafariRoundOutcome.Advanced || pending == SafariRoundOutcome.Fell)
         {
             FallFromPitstop = SafariState.PendingFallFrom;
-            SafariState.ClearPendingOutcome();
             StartCoroutine(RunWhenClear(() => OpenMap(pending)));
             return;
         }
-        if (pending == SafariRoundOutcome.Completed) SafariState.ClearPendingOutcome();   // aşağıdaki Completed dalı gösterir
+        // Pending outcomes remain durable until the art gate succeeds and the map opens.
 
         // Eski sürümden kalan "Devam" turu (AwaitingResult): bir kez değerlendir.
         if (SafariState.RunStatus == SafariRunStatus.AwaitingResult)
         {
-            var outcome = EvaluateReturn();
-            if (outcome == SafariRoundOutcome.None) return;
-            StartCoroutine(RunWhenClear(() => OpenMap(outcome)));
+            StartCoroutine(RunWhenClear(PresentLegacyReturn));
             return;
         }
 
@@ -177,7 +194,7 @@ public sealed class SafariEventController : MonoBehaviour
 
         // Otomatik popup YALNIZ config'te açıksa. Ana menü tam yüklensin diye loading ekranı bitene
         // kadar + ek gecikme beklenir (uygulama açılışında hemen fırlamasın).
-        if (config.autoShowJoinPopup && ShouldAutoAsk())
+        if (config.autoShowJoinPopup && !ProgressiveContent.EventPromptDismissed(EventContentPolicy.Safari) && ShouldAutoAsk())
             StartCoroutine(RunWhenClear(() =>
             {
                 if (IsEventAvailable && !SafariState.HasJoined) ShowJoinPopup();
@@ -219,6 +236,7 @@ public sealed class SafariEventController : MonoBehaviour
 
     private bool IsTutorialBlocking()
     {
+        if (ContentDownloadOverlay.IsVisible) return true;
         if (FindFirstObjectByType<TutorialOverlayController>() != null) return true;
         // Mission/workshop tutorial'ı ilk kez gösteriliyorsa (görülmedi + sahnede) engelle.
         if (WorkshopRepairButtonTutorial.BlocksOpeningPopups()) return true;
@@ -261,7 +279,8 @@ public sealed class SafariEventController : MonoBehaviour
         // Yeni pencere (cycle) açıldığında SyncCycle HasJoined'i sıfırlar → o zaman popup çıkar.
         if (SafariState.HasJoined && !needsRejoin)
         {
-            OpenMap(SafariRoundOutcome.None);
+            if (SafariState.PendingOutcome != SafariRoundOutcome.None) FallFromPitstop = SafariState.PendingFallFrom;
+            OpenMap(SafariState.PendingOutcome);
             return;
         }
 
@@ -280,8 +299,18 @@ public sealed class SafariEventController : MonoBehaviour
         return SafariState.LastAskUtc == DateTime.MinValue;
     }
 
+    private void PresentLegacyReturn()
+    {
+        if (ProgressiveContent.GateEvent(this, EventContentPolicy.Safari, PresentLegacyReturn, () => IsEventAvailable)) return;
+        if (!IsEventAvailable || SafariState.RunStatus != SafariRunStatus.AwaitingResult) return;
+        var outcome = EvaluateReturn();
+        if (outcome != SafariRoundOutcome.None) OpenMap(outcome);
+    }
+
     private void ShowJoinPopup()
     {
+        if (ProgressiveContent.GateEvent(this, EventContentPolicy.Safari, ShowJoinPopup, () => CanJoinNow)) return;
+        if (!CanJoinNow) return;
         SafariState.MarkAsked(UtcNow);
         if (joinPopup != null) joinPopup.Show(this);
     }
@@ -289,7 +318,9 @@ public sealed class SafariEventController : MonoBehaviour
     /// <summary>Popup "Katıl" — katılımı işaretle ve haritayı aç.</summary>
     public void OnJoinAccepted()
     {
+        if (ProgressiveContent.GateEvent(this, EventContentPolicy.Safari, OnJoinAccepted, () => CanJoinNow)) return;
         if (!IsEventAvailable || SafariState.FallCooldownRemaining(UtcNow) > TimeSpan.Zero) return;
+        if (!CanJoinNow) return;
         SafariState.BeginRun(UtcNow);
         if (risingIntroOverlay != null)
         {
@@ -314,8 +345,10 @@ public sealed class SafariEventController : MonoBehaviour
 
     private void OpenMap(SafariRoundOutcome outcome)
     {
-        if (mapScreen == null) return;
+        if (ProgressiveContent.GateEvent(this, EventContentPolicy.Safari, () => OpenMap(outcome), () => IsEventAvailable)) return;
+        if (mapScreen == null || !IsEventAvailable) return;
         mapScreen.Open(this, outcome);
+        if (SafariState.PendingOutcome == outcome) SafariState.ClearPendingOutcome();
     }
 
     /// <summary>Düşme cooldown'ı dolmadıysa devam kilitli.</summary>

@@ -726,6 +726,10 @@ public class BoardController : MonoBehaviour
 
         public Sprite carriedSprite;
         public bool orbitCarry;
+        // Combo gösterisi: dalış düz kavis yerine yukarı yay + dik pike çizer (varış hücresi aynı;
+        // süre yalnız PatchbotDashUI.flourishMinDiveDuration alt sınırı kadar uzayabilir).
+        // Yalnız PatchBot+PatchBot combo'sunun ilk botları açar; diğer tüm yollar false.
+        public bool diveFlourish;
 
         public System.Action onStart;
         public System.Action onArrived;
@@ -1457,7 +1461,7 @@ public class BoardController : MonoBehaviour
         return true;
     }
 
-    internal int CountTilesOfType(TileType type)
+    internal int CountCollectibleKeys()
     {
         if (tiles == null)
             return 0;
@@ -1468,7 +1472,7 @@ public class BoardController : MonoBehaviour
             for (int x = 0; x < width; x++)
             {
                 var tile = tiles[x, y];
-                if (tile != null && tile.GetTileType() == type)
+                if (tile != null && tile.GetTileType() == TileType.Key && tile.GetSpecial() == TileSpecial.None)
                     count++;
             }
         }
@@ -1486,7 +1490,8 @@ public class BoardController : MonoBehaviour
         var tile = tiles != null ? tiles[x, y] : null;
         if (tile == null || !tile.IsRuntimeIdle || !tile.gameObject.activeInHierarchy
             || tile.GetSpecial() != TileSpecial.None || tile.GetTileType() == TileType.Key
-            || DimerdalRules.IsDiamond(tile.GetTileType())
+            || DimerdalRules.IsDiamond(tile.GetTileType()) || tile.KeepHiddenForCombo
+            || (fallMotion != null && fallMotion.HasPendingMotion(tile))
             || gridData == null || gridData[x, y] == null
             || tile.X != x || tile.Y != y
             || IsPendingTriggeredSpecialCell(x, y) || IsReservedTileTargetCell(x, y))
@@ -2279,7 +2284,8 @@ public class BoardController : MonoBehaviour
 
         // Yalnız karıştırma öğreticisi level'ı (27): pinli hamlesiz açılışa hamle enjekte edilmez.
         return boardInitService.SimulateInitialTypes(width, height, lockedMask, randomPool, pinned,
-            keepPinnedDeadlock: HasShuffleTutorialStep());
+            keepPinnedDeadlock: HasShuffleTutorialStep(),
+            favorSpecialMatches: levelData != null && levelData.favorOpeningSpecialMatches);
     }
     // ═══════════════════════════════════════════════════════════════
     //  Busy / State
@@ -3446,6 +3452,7 @@ public class BoardController : MonoBehaviour
 
     public void RequestSwapFromDrag(TileView from, int dirX, int dirY)
     {
+        if (ObstacleHintManager.HasPendingHints) return;
         if (from == null || !from)
             return;
         if (_tutorialJokerIndex >= 0) return;
@@ -3488,6 +3495,7 @@ public class BoardController : MonoBehaviour
 
     public void OnTileClicked(TileView tile)
     {
+        if (ObstacleHintManager.HasPendingHints) return;
         // Joker öğreticisi: yalnız seçili jokerin hedefi kabul edilir (hedef kontrolü TryUseBoosterAtCell'de).
         if (_tutorialJokerIndex >= 0)
         {

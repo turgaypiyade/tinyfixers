@@ -139,6 +139,7 @@ public sealed class GiftFestivalScreen : MonoBehaviour
 
     public void Open(RectTransform origin)
     {
+        if (ProgressiveContent.GateEvent(this, EventContentPolicy.Gift, () => Open(origin), () => cfg != null && GiftFestivalState.IsLive(cfg, DateTime.UtcNow) && GiftFestivalState.HasJoined)) return;
         if (cfg == null) return;
         GiftFestivalState.Sync(cfg, DateTime.UtcNow);
         if (!GiftFestivalState.IsLive(cfg, DateTime.UtcNow) || !GiftFestivalState.HasJoined) return;
@@ -169,6 +170,7 @@ public sealed class GiftFestivalScreen : MonoBehaviour
     }
     private void OnDisable()
     {
+        ProgressiveContent.CancelEvent(this);
         StopSounds();
         EndTutorial();
         GiftFestivalState.OnChanged -= Changed;

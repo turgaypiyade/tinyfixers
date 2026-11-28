@@ -11,7 +11,17 @@ public class LevelCatalog : ScriptableObject
         [Min(1)] public int chapter = 1;
         [Min(1)] public int level = 1;
         public string levelKey;
-        public LevelData levelData;
+        [UnityEngine.Serialization.FormerlySerializedAs("levelData")]
+        [SerializeField] private LevelData bundledLevelData;
+        [HideInInspector] public string remoteGuid;
+        [HideInInspector] public LevelKind remoteLevelKind;
+        public LevelData levelData
+        {
+            get => bundledLevelData != null ? bundledLevelData : ProgressiveContent.Resolve<LevelData>(remoteGuid);
+            set { bundledLevelData = value; remoteGuid = null; }
+        }
+        public bool HasLevel => bundledLevelData != null || !string.IsNullOrEmpty(remoteGuid);
+        public LevelKind Kind => bundledLevelData != null ? bundledLevelData.levelKind : remoteLevelKind;
 
         public bool Matches(int chapterValue, int levelValue)
         {

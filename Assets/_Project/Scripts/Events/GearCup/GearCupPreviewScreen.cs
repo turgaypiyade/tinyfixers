@@ -106,6 +106,7 @@ public sealed class GearCupPreviewScreen : MonoBehaviour
 
     private void OnDisable()
     {
+        ProgressiveContent.CancelEvent(this);
         GameLocalization.OnLanguageChanged -= Refresh;
         GearCupState.Changed -= HandleChanged;
         GearCupRuntime.Changed -= HandleChanged;
@@ -129,6 +130,7 @@ public sealed class GearCupPreviewScreen : MonoBehaviour
 
     public void Open()
     {
+        if (ProgressiveContent.GateEvent(this, EventContentPolicy.Gear, Open, () => config != null && config.eventEnabled && GearCupState.IsUnlocked)) return;
         if (config == null) { if (GameDiagnostics.CriticalErrors)
             Debug.LogWarning("[GearCup] Preview config is missing."); return; }
         if (iris != null && iris.IsRunning) return;
@@ -157,6 +159,7 @@ public sealed class GearCupPreviewScreen : MonoBehaviour
     // Invitation acceptance persists enrollment before opening the real standings.
     public void AcceptPreviewJoin()
     {
+        if (ProgressiveContent.GateEvent(this, EventContentPolicy.Gear, AcceptPreviewJoin, () => config != null && config.eventEnabled && GearCupState.IsUnlocked)) return;
         if (!GearCupState.TryJoin(out var error))
         {
             RuntimeChoicePopup.Show(L("gearcup_title", "GEAR CUP"), error,
@@ -168,6 +171,8 @@ public sealed class GearCupPreviewScreen : MonoBehaviour
 
     private void OpenEvent()
     {
+        if (ProgressiveContent.GateEvent(this, EventContentPolicy.Gear, OpenEvent, () => config != null && config.eventEnabled && GearCupState.IsUnlocked)) return;
+        if (config == null || !config.eventEnabled || !GearCupState.IsUnlocked) return;
         bool alreadyOpen = gameObject.activeSelf;
         gameObject.SetActive(true);
         if (alreadyOpen) Refresh();
@@ -470,7 +475,8 @@ public sealed class GearCupPreviewScreen : MonoBehaviour
 
     private void ShowInvitation()
     {
-        if (IsInvitationVisible) return;
+        if (ProgressiveContent.GateEvent(this, EventContentPolicy.Gear, ShowInvitation, () => config != null && config.eventEnabled && GearCupState.CanShowInvitation)) return;
+        if (IsInvitationVisible || !GearCupState.CanShowInvitation) return;
         if (joinPopup == null) joinPopup = GearCupJoinPopup.Create(transform.parent, config);
         joinPopup.Show(this);
         if (!joinPopup.gameObject.activeInHierarchy) return;

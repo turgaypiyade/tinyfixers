@@ -56,6 +56,7 @@ public sealed class RisingIntroOverlay : MonoBehaviour
 
     public void Show(SafariEventController owner)
     {
+        if (ProgressiveContent.GateEvent(this, EventContentPolicy.Safari, () => Show(owner), () => owner != null && owner.IsEventAvailable)) return;
         controller = owner;
         showRequested = true;
         gameObject.SetActive(true);
@@ -81,6 +82,7 @@ public sealed class RisingIntroOverlay : MonoBehaviour
 
     private void OnDisable()
     {
+        ProgressiveContent.CancelEvent(this);
         if (active != null) { StopCoroutine(active); active = null; }
         ClearTransferringAvatars();
     }

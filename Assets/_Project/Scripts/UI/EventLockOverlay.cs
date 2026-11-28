@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
@@ -8,6 +9,9 @@ using UnityEngine.UI;
 /// gelmeden buton gizlenmez; gri tonlanır, köşede altın kilit görünür ve butonun KENDİ süre yazısına (alttaki yazı
 /// kutusu) "SEVİYE N" yazılır. Kök aktif kalır (panel düzeninde yerini tutar). Dokunuş etkinliği açmaz, kilidi sallar.
 /// Seviye gelince kilit kaldırılır, sonrası etkinliğin kendi takvimidir.
+/// BEKLİYOR hâli (kullanıcı 2026-11-28: seviyeye gelince ikon kayboluyordu → aldatıcı): seviye açık ama etkinlik
+/// takvimde şu an kapalıysa ikon gizlenmez; gri, kilitsiz, alt bantta "YAKINDA". Dokununca balon başlamasına
+/// kalan süreyi söyler (biliniyorsa). Kullanım: <c>EventLockOverlay.ApplyWaiting(root, nextStartUtc, timeLabel)</c>.
 /// Kullanım: butonun gizleme noktasında <c>if (EventLockOverlay.Apply(root, gate, timeLabel)) return;</c>.
 /// Kilitliyken LateUpdate yazıyı korur (buton kendi Update'inde süre yazmaya çalışsa da); sallanma Update'te.
 /// </summary>
@@ -44,6 +48,8 @@ public sealed class EventLockOverlay : MonoBehaviour
     }
     private string lockText;
     private int level = -1;
+    private const int WaitingLevel = -2;   // level alanında "bekliyor" hâli
+    private DateTime nextStartUtc;
     private float shakeT = -1f;
 
     public static bool IsLocked(int unlockLevel) => CurrentLevel.Global < unlockLevel;
@@ -68,6 +74,17 @@ public sealed class EventLockOverlay : MonoBehaviour
         return true;
     }
 
+    /// Seviye açık ama etkinlik şu an kapalı (ara dönem): gizlemek yerine gri "YAKINDA". nextStart bilinmiyorsa
+    /// DateTime.MinValue. Etkinlik başlayınca çağıran Release eder (normal görünüm).
+    public static void ApplyWaiting(GameObject root, DateTime nextStart, TMP_Text timeLabel = null, bool keepTexts = false)
+    {
+        if (root == null) return;
+        if (!root.activeSelf) root.SetActive(true);
+        if (!root.TryGetComponent(out EventLockOverlay overlay)) overlay = root.AddComponent<EventLockOverlay>();
+        overlay.keepTexts = keepTexts;
+        overlay.Wait(nextStart, timeLabel);
+    }
+
     /// Kökte kilit varsa kaldırır (etkinlik gerçekten görünür olduğunda, ör. editör debug zorlaması).
     public static void Release(GameObject root)
     {
@@ -79,11 +96,39 @@ public sealed class EventLockOverlay : MonoBehaviour
         if (layer != null && level == unlockLevel) return;
         level = unlockLevel;
         if (layer == null) Build(timeLabel);
+        if (lockIcon != null) lockIcon.gameObject.SetActive(true);
         GrayOut();
         lockText = GameLocalization.GetFormat("event_locked_level", unlockLevel);
         if (label != null) label.text = lockText;
         layer.SetAsLastSibling();
         enabled = true;   // LateUpdate yazıyı korur
+    }
+
+    private void Wait(DateTime nextStart, TMP_Text timeLabel)
+    {
+        nextStartUtc = nextStart;
+        if (layer != null && level == WaitingLevel) return;
+        level = WaitingLevel;
+        if (layer == null) Build(timeLabel);
+        if (lockIcon != null) lockIcon.gameObject.SetActive(false);   // kilitli değil, yalnız henüz başlamadı
+        GrayOut();
+        lockText = GameLocalization.GetOr("event_soon", "YAKINDA");
+        if (label != null) label.text = lockText;
+        layer.SetAsLastSibling();
+        enabled = true;
+    }
+
+    // Dokunuş: kilitliyse kilit sallanır; bekliyorsa başlamasına kalan süre balonda.
+    private void OnTap()
+    {
+        if (level != WaitingLevel) { Shake(); return; }
+        var canvas = GetComponentInParent<Canvas>();
+        if (canvas == null) return;
+        var remaining = nextStartUtc - DateTime.UtcNow;
+        string text = nextStartUtc == DateTime.MinValue || remaining <= TimeSpan.Zero
+            ? GameLocalization.GetOr("event_soon_body", "Bu etkinlik yakında başlıyor.")
+            : string.Format(GameLocalization.GetOr("event_starts_in", "Başlamasına {0}"), TimeFormat.Countdown(remaining));
+        RewardPeekBubble.On((RectTransform)canvas.rootCanvas.transform)?.Toggle(this, text, null, (RectTransform)transform);
     }
 
     private void Build(TMP_Text timeLabel)
@@ -99,7 +144,7 @@ public sealed class EventLockOverlay : MonoBehaviour
         catcher.color = new Color(1f, 1f, 1f, 0f);   // görünmez: alttaki butona dokunuş gitmesin
         var tap = layer.gameObject.AddComponent<Button>();
         tap.transition = Selectable.Transition.None;
-        tap.onClick.AddListener(Shake);
+        tap.onClick.AddListener(OnTap);
 
         Vector2 size = ((RectTransform)transform).rect.size;
         float side = Mathf.Max(24f, Mathf.Min(size.x, size.y));

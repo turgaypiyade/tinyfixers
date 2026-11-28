@@ -15,6 +15,11 @@ public class PatchbotDashUI : MonoBehaviour
     private readonly List<BoardAudioDirector.ClipLoop> flightLoops = new(2);
     private BoardAudioDirector.ClipLoop legacyFlightLoop;
 
+    private const string SpinnerRingName = "PatchbotSpinnerRing";
+
+    // Şu an inişe giden botların (ilk) hedef noktaları — aynı yere inenleri görsel olarak ayırmak için.
+    private readonly List<Vector2> activeLandings = new();
+
     private GameObject RentVisual(string name, Transform parent, bool image = true)
     {
         string key = "PatchbotDash." + name;
@@ -40,6 +45,7 @@ public class PatchbotDashUI : MonoBehaviour
     {
         StopAllCoroutines();
         co = null;
+        activeLandings.Clear();
         for (int i = flightLoops.Count - 1; i >= 0; i--) flightLoops[i]?.Dispose();
         flightLoops.Clear();
         legacyFlightLoop = null;
@@ -90,6 +96,22 @@ public class PatchbotDashUI : MonoBehaviour
     [SerializeField, Range(0.5f, 4f)] private float pikeSpeedMultiplier = 2.4f;
     [Tooltip("Dalışın ivmelenme keskinliği. 1 = lineer, 2-2.5 = hedefe doğru hızlanan pike hissi.")]
     [SerializeField, Range(1f, 3f)] private float diveEaseInPower = 2.2f;
+
+    [Header("Combo Flourish (PatchBot+PatchBot: yay + pike)")]
+    [Tooltip("Tepe yüksekliği = mesafe × bu çarpan (en az 1.6 bot boyu). Büyüdükçe yay yükselir.")]
+    [SerializeField, Range(0.1f, 1.5f)] private float flourishApexFactor = 0.55f;
+    [Tooltip("Yana açılma = mesafe × bu çarpan (en az 1.2 bot boyu). Botlar sırayla sola/sağa açılır.")]
+    [SerializeField, Range(0f, 1f)] private float flourishLateralFactor = 0.35f;
+    [Tooltip("Tepede asılı kalma hissi. 0 = düz akış, 1 = tepede tam duraksama, sonra hızlanan pike.")]
+    [SerializeField, Range(0f, 1f)] private float flourishApexHang = 0.55f;
+    [Tooltip("Tepeye çıkarken ekstra büyüme (yakına gelme hissi).")]
+    [SerializeField, Range(0f, 1.5f)] private float flourishApexScaleBoost = 0.45f;
+    [Tooltip("Gösterili dalışın en kısa süresi (sn). Yakın hedefte yay göz kırpması gibi kalmasın. 0 = mesafe hızına bırak.")]
+    [SerializeField, Range(0f, 1.2f)] private float flourishMinDiveDuration = 0.45f;
+    [Tooltip("AÇIK: TÜM PatchBot uçuşları (solo, combo, Override+PatchBot) yay + pike çizer. KAPALI: yalnız PatchBot+PatchBot combo'su.")]
+    [SerializeField] private bool flourishAllDashes = true;
+    [Tooltip("Aynı noktaya inen botların iniş yeri bu kadar (× bot boyu) kaydırılır → ayrı uçuşlar görünür. YALNIZ GÖRSEL: hedef/hasar değişmez. 0 = kapalı.")]
+    [SerializeField, Range(0f, 1f)] private float landingSpreadFactor = 0.45f;
 
     [Header("Live Retargeting")]
     [SerializeField, Min(0.01f)] private float liveRetargetInterval = 0.05f;   // hedef doğrulama sıklığı (sn)
@@ -146,6 +168,14 @@ public class PatchbotDashUI : MonoBehaviour
     [SerializeField, Range(0f, 60f)] private float spinnerTiltX = 30f;
     [Tooltip("Yatay eğim (Y): diski yatay olarak cos(açı) kadar kısaltır. Genelde 0 bırakılır.")]
     [SerializeField, Range(-60f, 60f)] private float spinnerTiltY = 0f;
+    [Tooltip("Bıçağın arkasındaki ince hız halkası (ayrı görsel; bıçakla aynı eğimde, kendi hızında döner). BOŞ = halka yok.")]
+    [SerializeField] private Sprite spinnerRingSprite;
+    [Tooltip("Halkanın dönüş hızı (derece/sn). Bıçaktan yavaş olmalı ki kuyruğu okunsun.")]
+    [SerializeField, Min(0f)] private float spinnerRingSpinSpeed = 540f;
+    [Tooltip("Halka boyutu (spinner boyuna oran).")]
+    [SerializeField, Range(0.5f, 1.6f)] private float spinnerRingScale = 1.08f;
+    [Tooltip("Halka opaklığı.")]
+    [SerializeField, Range(0f, 1f)] private float spinnerRingAlpha = 0.9f;
     [Tooltip("Gövde ayrılma + pervane→spinner cross-fade süresi (sn).")]
     [SerializeField, Min(0.01f)] private float separationDuration = 0.16f;
     [Tooltip("Ayrılma sırasında pervanenin yukarı çıkış miktarı (tile boyutuna oran).")]
@@ -299,6 +329,8 @@ public class PatchbotDashUI : MonoBehaviour
 
         BoardAudioDirector.ClipLoop flightSource = null;
         Coroutine spinCycler = null;
+        Vector2 landingOffset = Vector2.zero, landingKey = Vector2.zero;
+        bool landingRegistered = false;
         try
         {
             var img = go.GetComponent<Image>();
@@ -441,6 +473,11 @@ public class PatchbotDashUI : MonoBehaviour
                 diveDuration = totalDistance > arriveEps ? Mathf.Max(0.05f, totalDistance / effectiveSpeed) : 0.01f;
             }
 
+            bool flourishOn = req.diveFlourish || flourishAllDashes;
+            // Alt sınır yalnız serbest uçuşta; zincir/sync modunda toplam süre dışarıdan sabittir (bozulmasın).
+            if (flourishOn && syncDuration <= 0f)
+                diveDuration = Mathf.Max(diveDuration, flourishMinDiveDuration);
+
             int side = ((req.from.x + req.from.y + req.to.x + req.to.y) & 1) == 0 ? -1 : 1;
             Vector2 takeoff = start + new Vector2(
                 side * Mathf.Min(size.x, size.y) * takeoffLateralFactor,
@@ -463,18 +500,40 @@ public class PatchbotDashUI : MonoBehaviour
             // Spinner uçuş boyunca frame'lerini hızlıca döngüler (pervane gibi dönme).
             spinCycler = spinnerImg != null ? StartCoroutine(SpinnerFrameCycler(spinnerImg)) : null;
 
-            yield return RunDive(rt, carryRt, size, sprite, rt.anchoredPosition, live, diveDuration, effectiveSpeed, motion, spinnerImg);
+            // Yay yüksekliği botlara göre 1.0 / 1.15 / 1.3 (aynı anda kalkanlar üst üste binmesin).
+            float flourishLane = flourishOn ? 1f + 0.15f * (((req.from.x + req.from.y * 3) % 3 + 3) % 3) : 0f;
+
+            // Aynı noktaya inen başka bot varsa iniş yerini çevresine kaydır (yalnız görsel; hasar hedef hücrede).
+            landingOffset = Vector2.zero;
+            if (live.HasTarget && landingSpreadFactor > 0f)
+            {
+                float near = Mathf.Min(size.x, size.y) * 0.6f;
+                int crowd = 0;
+                for (int i = 0; i < activeLandings.Count; i++)
+                    if ((activeLandings[i] - live.target).sqrMagnitude < near * near) crowd++;
+                if (crowd > 0)
+                {
+                    float ang = (crowd * 137.5f + (side < 0 ? 0f : 60f)) * Mathf.Deg2Rad;
+                    landingOffset = new Vector2(Mathf.Cos(ang), Mathf.Sin(ang)) * (Mathf.Min(size.x, size.y) * landingSpreadFactor);
+                }
+                landingKey = live.target;
+                activeLandings.Add(landingKey);
+                landingRegistered = true;
+            }
+
+            yield return RunDive(rt, carryRt, size, sprite, rt.anchoredPosition, live, diveDuration, effectiveSpeed, motion, spinnerImg,
+                flourishLane, side, landingOffset);
 
             if (spinCycler != null) StopCoroutine(spinCycler);
 
-            if (live.HasTarget) rt.anchoredPosition = live.target;
+            if (live.HasTarget) rt.anchoredPosition = live.target + landingOffset;
             rt.localRotation = Quaternion.identity;
             rt.localScale = Vector3.one;
 
             if (carryRt != null)
                 carryRt.localRotation = Quaternion.identity;
 
-            if (live.HasTarget) SpawnImpactSparks(live.target, size, board, req.to);
+            if (live.HasTarget) SpawnImpactSparks(live.target + landingOffset, size, board, req.to);
 
             req.onArrived?.Invoke();
             yield return StopFlightAudioRoutine(flightSource);
@@ -483,6 +542,7 @@ public class PatchbotDashUI : MonoBehaviour
         finally
         {
             if (spinCycler != null) StopCoroutine(spinCycler);
+            if (landingRegistered) activeLandings.Remove(landingKey);
             ReleaseFlightAudio(flightSource);
             ReleaseVisualTree(go);
             onComplete?.Invoke();
@@ -679,11 +739,28 @@ public class PatchbotDashUI : MonoBehaviour
         float duration,
         float homingSpeed,
         DashMotionState motion,
-        Image spinnerImg = null)
+        Image spinnerImg = null,
+        float flourishLane = 0f,
+        int flourishSide = 1,
+        Vector2 landingOffset = default)
     {
         if (!live.HasTarget) yield break;
         Vector2 initialDelta = live.target - start;
         float arc = Mathf.Clamp(initialDelta.magnitude * Mathf.Max(0f, diveArcFactor), Mathf.Min(size.x, size.y) * 0.10f, Mathf.Min(size.x, size.y) * 0.45f);
+
+        // Combo gösterisi (flourishLane > 0): kübik Bezier — yana-yukarı açılış (P1), hedefin TAM
+        // üstü (P2) → son bölüm dikey pike. P3 canlı hedeftir (retarget'i izler). Süre çağıranda
+        // (flourishMinDiveDuration alt sınırı dışında) değişmez. Kontrol noktaları VFX alanında tutulur.
+        bool flourish = flourishLane > 0f;
+        float botSize = Mathf.Min(size.x, size.y);
+        float dist = initialDelta.magnitude;
+        float apex = Mathf.Max(botSize * 1.6f, dist * flourishApexFactor) * flourishLane;
+        float lateral = Mathf.Max(botSize * 1.2f, dist * flourishLateralFactor) * (flourishSide < 0 ? -1f : 1f);
+        Rect area = vfxRoot != null ? vfxRoot.rect : new Rect(-1e5f, -1e5f, 2e5f, 2e5f);
+        float maxY = area.yMax - botSize * 1.5f;
+        Vector2 p1 = start + new Vector2(lateral, apex);
+        p1.x = Mathf.Clamp(p1.x, area.xMin + botSize, area.xMax - botSize);
+        p1.y = Mathf.Min(p1.y, maxY);
 
         float local = 0f;
         while (local < duration)
@@ -698,6 +775,27 @@ public class PatchbotDashUI : MonoBehaviour
             if (!live.HasTarget) yield break;
 
             float t = Mathf.Clamp01(local / duration);
+
+            if (flourish)
+            {
+                // Tırmanış yavaşlar → tepede kısa asılı kalma → hızlanan pike (orta noktada hız ~0).
+                float hang = t < 0.5f
+                    ? 0.5f * (1f - (1f - 2f * t) * (1f - 2f * t))
+                    : 0.5f + 0.5f * (2f * t - 1f) * (2f * t - 1f);
+                float s = Mathf.Lerp(t, hang, flourishApexHang);
+                Vector2 p3 = live.target + landingOffset;
+                Vector2 p2 = new Vector2(p3.x, Mathf.Max(p3.y, Mathf.Min(p3.y + apex, maxY)));
+                float u = 1f - s;
+                rt.anchoredPosition = u * u * u * start + 3f * u * u * s * p1 + 3f * u * s * s * p2 + s * s * s * p3;
+                rt.localRotation = Quaternion.identity;
+                rt.localScale = Vector3.one * (Mathf.Lerp(2.5f, 1.0f, t) + flourishApexScaleBoost * Mathf.Sin(t * Mathf.PI));
+
+                UpdateCarryOrbit(carryRt, size, motion.elapsed);
+                TickAfterImage(rt, spinnerImg != null ? spinnerImg.sprite : sprite, motion);
+                yield return null;
+                continue;
+            }
+
             // Ease-IN: hedefe doğru ivmelenen pike (smoothstep yerine).
             float eased = Mathf.Pow(t, Mathf.Max(1f, diveEaseInPower));
             float curve = Mathf.Sin(t * Mathf.PI) * arc;
@@ -706,7 +804,7 @@ public class PatchbotDashUI : MonoBehaviour
             Vector2 delta = live.target - start;
             Vector2 normal = delta.sqrMagnitude > 0.001f ? new Vector2(-delta.y, delta.x).normalized : Vector2.up;
 
-            rt.anchoredPosition = Vector2.LerpUnclamped(start, live.target, eased) + normal * (curve + snap);
+            rt.anchoredPosition = Vector2.LerpUnclamped(start, live.target + landingOffset, eased) + normal * (curve + snap);
             rt.localRotation = Quaternion.identity;
             rt.localScale = Vector3.one * Mathf.Lerp(2.5f, 1.0f, t);
 
@@ -719,7 +817,7 @@ public class PatchbotDashUI : MonoBehaviour
         // canlı hedefe kilitli düz uçuşla tamamla (süre sınırlı; hedef yine ölürse
         // geçerli hedef kalmazsa dalış iptal edilir).
         float homingElapsed = 0f;
-        while ((rt.anchoredPosition - live.target).magnitude > arriveEps && homingElapsed < maxRetargetHomingDuration)
+        while ((rt.anchoredPosition - (live.target + landingOffset)).magnitude > arriveEps && homingElapsed < maxRetargetHomingDuration)
         {
             float dt = Time.deltaTime;
             homingElapsed += dt;
@@ -728,7 +826,7 @@ public class PatchbotDashUI : MonoBehaviour
             TickLiveRetarget(live, dt);
             if (!live.HasTarget) yield break;
 
-            rt.anchoredPosition = Vector2.MoveTowards(rt.anchoredPosition, live.target, Mathf.Max(1f, homingSpeed) * dt);
+            rt.anchoredPosition = Vector2.MoveTowards(rt.anchoredPosition, live.target + landingOffset, Mathf.Max(1f, homingSpeed) * dt);
             rt.localRotation = Quaternion.identity;
             rt.localScale = Vector3.one;
 
@@ -767,6 +865,26 @@ public class PatchbotDashUI : MonoBehaviour
             Mathf.Cos(spinnerTiltX * Mathf.Deg2Rad),   // X-tilt → dikey squash (frizbi)
             1f);
         tiltRt.SetAsLastSibling();
+
+        // İnce hız halkası: eğim kabında bıçağın ARKASINDA (önce eklenir), alfa 0'dan başlar.
+        Image ringImg = null;
+        if (spinnerRingSprite != null)
+        {
+            var ringGo = RentVisual(SpinnerRingName, tiltGo.transform);
+            ringGo.transform.SetParent(tiltGo.transform, false);
+            var ringRt = ringGo.GetComponent<RectTransform>();
+            ringRt.anchorMin = ringRt.anchorMax = ringRt.pivot = new Vector2(0.5f, 0.5f);
+            ringRt.sizeDelta = size * spinnerRingScale;
+            ringRt.anchoredPosition = Vector2.zero;
+            ringRt.localRotation = Quaternion.identity;
+            ringRt.localScale = Vector3.one;
+            ringImg = ringGo.GetComponent<Image>();
+            ringImg.sprite = spinnerRingSprite;
+            ringImg.preserveAspect = true;
+            ringImg.raycastTarget = false;
+            ringImg.color = new Color(1f, 1f, 1f, 0f);
+            ringRt.SetAsLastSibling();
+        }
 
         // Bıçaklı spinner overlay'i (pervanenin dönüşeceği yapı), alfa 0'dan başlar.
         var spinGo = RentVisual("PatchbotBladeSpinner", tiltGo.transform);
@@ -808,6 +926,7 @@ public class PatchbotDashUI : MonoBehaviour
             float t = Mathf.Clamp01(local / safeDur);
             if (propImg != null) propImg.color = new Color(1f, 1f, 1f, 1f - t);
             spinImg.color = new Color(1f, 1f, 1f, t);
+            if (ringImg != null) ringImg.color = new Color(1f, 1f, 1f, t * spinnerRingAlpha);
 
             rt.anchoredPosition = Vector2.Lerp(startPos, risePos, t);
             rt.localScale = Vector3.one * 2.5f;
@@ -816,6 +935,7 @@ public class PatchbotDashUI : MonoBehaviour
 
         if (propImg != null) propImg.color = new Color(1f, 1f, 1f, 0f);
         spinImg.color = Color.white;
+        if (ringImg != null) ringImg.color = new Color(1f, 1f, 1f, spinnerRingAlpha);
 
         if (propView != null) propView.Stop();
         if (propGo != null) propGo.SetActive(false);
@@ -1208,6 +1328,8 @@ public class PatchbotDashUI : MonoBehaviour
             yield break;
 
         var srt = spinImg.rectTransform;
+        // Hız halkası spinner'ın kardeşi (aynı eğim kabı); kendi, daha yavaş hızında döner.
+        var ringRt = srt.parent != null ? srt.parent.Find(SpinnerRingName) as RectTransform : null;
 
         // Dönme, transform rotasyonu ile sağlanır → kesintisiz, tam 360°, boşluksuz.
         // Frame değişimi yalnızca (a) spin kapalıyken saf frame animasyonu, ya da
@@ -1236,6 +1358,8 @@ public class PatchbotDashUI : MonoBehaviour
 
             if (spinning)
                 srt.Rotate(0f, 0f, -spinnerSpinSpeed * Time.deltaTime);
+            if (ringRt != null && spinnerRingSpinSpeed > 0f)
+                ringRt.Rotate(0f, 0f, -spinnerRingSpinSpeed * Time.deltaTime);
 
             yield return null;
         }

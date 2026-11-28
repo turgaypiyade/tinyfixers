@@ -456,7 +456,7 @@ public sealed class KeyGeneratorService : MonoBehaviour
         if (capacity <= 0)
             return;
 
-        int onBoard = board.CountTilesOfType(TileType.Key);
+        int onBoard = board.CountCollectibleKeys();
         int remaining = Mathf.Clamp(capacity - landedKeys + onBoard, 0, capacity);
         board.TopHud.SetKeyGeneratorGoalRemaining(remaining, capacity);
     }

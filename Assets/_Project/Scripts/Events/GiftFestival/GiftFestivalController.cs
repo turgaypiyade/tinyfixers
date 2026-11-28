@@ -64,25 +64,26 @@ public sealed class GiftFestivalController : MonoBehaviour
         cfg = GiftFestivalConfig.Shared;
         canvasRoot = canvas;
         if (cfg == null) return;
-        // Keep the low-level main menu free of event textures and UI allocations.
-        if (GiftFestivalState.IsUnlocked(cfg)) BuildIcon(panel);
+        // Only the small local badge/font are read here; screen art is resolved after GateEvent.
+        if (GiftFestivalState.IsLive(cfg, DateTime.UtcNow)) BuildIcon(panel);
         Refresh();
     }
 
     private void BuildIcon(Transform panel)
     {
-        if (built || cfg.Art == null) return;
+        if (built || cfg.menuLogo == null) return;
         built = true;
         icon = GiftFestivalUI.Rect("GiftFestivalEventIcon", panel, Vector2.one * 150, Vector2.zero);
         // Match the authored Gear Cup / Bridge icon footprint before the idle animator captures its scale.
         icon.localScale = Vector3.one * 1.15f;
-        var logo = GiftFestivalUI.Picture("Logo", icon, cfg.Art.menuLogo, Vector2.one * 150, Vector2.zero);
+        var logo = GiftFestivalUI.Picture("Logo", icon, cfg.menuLogo, Vector2.one * 150, Vector2.zero);
         var button = icon.gameObject.AddComponent<Image>();
         button.color = Color.clear;
         GiftFestivalUI.Button(button, Open);
         logo.raycastTarget = false;
         icon.gameObject.AddComponent<EventIconAnimator>();
         countdown = GiftFestivalUI.Label("Countdown", icon, cfg, "", 21, new Vector2(121, 38), new Vector2(0, -45));
+        EventIconPlate.Attach(countdown, new Color(0.50f, 0.20f, 0.75f));
         var badgeImage = GiftFestivalUI.Picture("BallBadge", icon, BridgeRepairUI.Pill(), new Vector2(58, 42), new Vector2(58, 64));
         badgeImage.type = Image.Type.Sliced;
         badgeImage.color = new Color(0.82f, 0.1f, 0.12f);
@@ -100,6 +101,7 @@ public sealed class GiftFestivalController : MonoBehaviour
     }
     private void OnDisable()
     {
+        ProgressiveContent.CancelEvent(this);
         GiftFestivalState.OnChanged -= Refresh;
         GameLocalization.OnLanguageChanged -= Refresh;
         menuReadyAt = clearSince = -1f;
@@ -117,7 +119,8 @@ public sealed class GiftFestivalController : MonoBehaviour
         if (cfg == null || !focused || Time.unscaledTime < nextCheck) return;
         nextCheck = Time.unscaledTime + 1f;
         GiftFestivalState.Sync(cfg, DateTime.UtcNow);
-        if (!built && GiftFestivalState.IsUnlocked(cfg))
+        // The menu stays lightweight even when the event pack is not cached.
+        if (!built && GiftFestivalState.IsLive(cfg, DateTime.UtcNow))
         {
             var panel = Find(canvasRoot, "LeftEventPanel");
             if (panel != null) BuildIcon(panel);
@@ -136,7 +139,7 @@ public sealed class GiftFestivalController : MonoBehaviour
 
     private void TryShowReminder()
     {
-        if (RuntimeSimulationSession.IsActive || !cfg.autoShowJoinPopup || !built
+        if (RuntimeSimulationSession.IsActive || ProgressiveContent.EventPromptDismissed(EventContentPolicy.Gift) || !cfg.autoShowJoinPopup || !built
             || !GiftFestivalState.CanShowInvitation(cfg, DateTime.UtcNow)) return;
         if (!FirebaseCloudSaveService.RestoreResolved || LoadingScreenManager.IsVisible || CustomIntroLoadingManager.IsVisible)
         {
@@ -155,6 +158,7 @@ public sealed class GiftFestivalController : MonoBehaviour
 
     private bool IsReminderBlocked()
     {
+        if (ContentDownloadOverlay.IsVisible) return true;
         if ((screen != null && screen.gameObject.activeInHierarchy)
             || (joinPopup != null && joinPopup.gameObject.activeInHierarchy)
             || RuntimeChoicePopup.IsShowing || RewardChestRevealOverlay.IsShowing
@@ -178,7 +182,17 @@ public sealed class GiftFestivalController : MonoBehaviour
         if (cfg == null || !built) return;
         var now = DateTime.UtcNow;
         bool live = GiftFestivalState.IsLive(cfg, now);
-        if (icon.gameObject.activeSelf != live) icon.gameObject.SetActive(live);
+        // Açıldıktan sonra ara dönemde gizlemek yerine gri "YAKINDA" (kullanıcı 2026-11-28, diğer etkinliklerle aynı).
+        bool waiting = !live && GiftFestivalState.IsUnlocked(cfg);
+        bool show = live || waiting;
+        if (icon.gameObject.activeSelf != show) icon.gameObject.SetActive(show);
+        if (waiting)
+        {
+            EventLockOverlay.ApplyWaiting(icon.gameObject, GiftFestivalState.Window(cfg, now).NextStart, countdown);
+            badge.SetActive(false);
+            return;
+        }
+        EventLockOverlay.Release(icon.gameObject);
         if (!live) return;
         countdown.text = TimeFormat.Countdown(GiftFestivalState.Window(cfg, now).End - now);
         int balls = GiftFestivalState.Balls;
@@ -188,6 +202,7 @@ public sealed class GiftFestivalController : MonoBehaviour
 
     public void Open()
     {
+        if (ProgressiveContent.GateEvent(this, EventContentPolicy.Gift, Open, () => cfg != null && GiftFestivalState.IsLive(cfg, DateTime.UtcNow))) return;
         if (cfg == null) return;
         GiftFestivalState.Sync(cfg, DateTime.UtcNow);
         if (!GiftFestivalState.IsLive(cfg, DateTime.UtcNow) || cfg.Art == null) return;
@@ -207,6 +222,7 @@ public sealed class GiftFestivalController : MonoBehaviour
 
     private void Join()
     {
+        if (ProgressiveContent.GateEvent(this, EventContentPolicy.Gift, Join, () => cfg != null && GiftFestivalState.IsLive(cfg, DateTime.UtcNow) && !GiftFestivalState.HasJoined)) return;
         if (this != null && GiftFestivalState.TryJoin(cfg, DateTime.UtcNow)) OpenScreen();
     }
 
@@ -225,6 +241,7 @@ public sealed class GiftFestivalController : MonoBehaviour
 
     private void OpenScreen()
     {
+        if (ProgressiveContent.GateEvent(this, EventContentPolicy.Gift, OpenScreen, () => cfg != null && GiftFestivalState.IsLive(cfg, DateTime.UtcNow) && GiftFestivalState.HasJoined)) return;
         if (screen == null)
         {
             var rt = GiftFestivalUI.Stretch("GiftFestivalScreen", canvasRoot);

@@ -106,6 +106,10 @@ public class PreLevelSpecialInjector : MonoBehaviour
         if (board.Holes != null && board.Holes[x, y])
             return false;
 
+        // Öğreticinin sabit taşları ve adım hedefleri (RuntimeInjector ile aynı kural).
+        if (ScriptedTutorial.IsReservedCell(x, y))
+            return false;
+
         if (tile.GetSpecial() != TileSpecial.None)
             return false;
 

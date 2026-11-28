@@ -85,8 +85,8 @@ public sealed class CityTourView : MonoBehaviour
     public static bool IsOpen => _instance != null;
 
     public static bool HasArt(WonderDefinition w)
-        => w != null && (Resources.Load<Sprite>(ArtPath + w.wonderId) != null
-                         || Resources.Load<Sprite>(ArtPath + w.wonderId + "_Site") != null);
+        => w != null && (ProgressiveContent.HasRemoteCity(w.wonderId) || ProgressiveContent.LocalCitySprite(ArtPath + w.wonderId) != null
+                         || ProgressiveContent.LocalCitySprite(ArtPath + w.wonderId + "_Site") != null);
 
     // Yerinde duran karakter (masa/tezgâh görselin içinde): 2 kare, arada bir hareket karesine geçer.
     // Konum panoramaya oranla (x soldan, y alttan = ayak hizası), yükseklik panorama yüksekliğine oran.
@@ -212,6 +212,7 @@ public sealed class CityTourView : MonoBehaviour
     private RectTransform _stage;
     private CanvasGroup _group;
     private bool _closing;
+    private string _remoteCityId;
     private float _panoW, _panoH;
 
     /// Şehir görseli yoksa false döner (çağıran harika görünümüne düşer).
@@ -232,12 +233,25 @@ public sealed class CityTourView : MonoBehaviour
         if (w == null) return false;
         if (_instance != null) return true;   // zaten açık
         bool done = previewCompleted ?? WonderProgress.IsEventComplete(catalog, index);
+        ProgressiveContent.RegisterCities(catalog);
+        if (ProgressiveContent.HasRemoteCity(w.wonderId))
+        {
+            var pending = new GameObject("CityTourView", typeof(RectTransform)).AddComponent<CityTourView>();
+            _instance = pending;
+            pending._remoteCityId = w.wonderId;
+            ProgressiveContent.OpenCity(pending, w.wonderId, done, sprite => {
+                if (pending == null) return;
+                if (sprite == null) { Destroy(pending.gameObject); return; }
+                pending.Build(catalog, index, w, sprite, fromBadge);
+            });
+            return true; // An absent download is not absent art: do not open the fallback view behind it.
+        }
         // Tamamlanmış → onarılmış hâl; değilse iskeleli. Yalnız gereken büyük görsel yüklenir;
         // diğeri sadece o eksikse denenir (iki panorama birden bellekte durmasın).
         string preferred = ArtPath + w.wonderId + (done ? "" : "_Site");
         string fallback = ArtPath + w.wonderId + (done ? "_Site" : "");
-        Sprite art = Resources.Load<Sprite>(preferred);
-        if (art == null) art = Resources.Load<Sprite>(fallback);
+        Sprite art = ProgressiveContent.LocalCitySprite(preferred);
+        if (art == null) art = ProgressiveContent.LocalCitySprite(fallback);
         if (art == null) return false;
         var go = new GameObject("CityTourView", typeof(RectTransform));
         _instance = go.AddComponent<CityTourView>();
@@ -249,6 +263,7 @@ public sealed class CityTourView : MonoBehaviour
     private void OnDestroy()
     {
         if (_instance == this) _instance = null;
+        ProgressiveContent.ReleaseCity(_remoteCityId);
         EventSfx.FadeOutAmbientClip(_ambience, 0.15f);   // sahne kapanışı vb.: döngü askıda kalmasın
     }
 

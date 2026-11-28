@@ -15,6 +15,7 @@ MonoBehaviour:
   width: 9
   height: 9
   moves: 36
+  favorOpeningSpecialMatches: 1
   baseCoinReward: 10
   goals:
   - targetType: 1

@@ -6,6 +6,7 @@ using UnityEngine.UI;
 /// <summary>Owns one UI material instance; the source sprite stays untouched and non-readable.</summary>
 public sealed class BridgeRepairRiverFlow : IDisposable
 {
+    private static readonly int RiverTone = Shader.PropertyToID("_RiverTone");
     private static readonly int FlowClock = Shader.PropertyToID("_FlowClock");
     private static readonly int FlowStrength = Shader.PropertyToID("_FlowStrength");
     private static readonly int SpriteUV = Shader.PropertyToID("_SpriteUV");
@@ -25,7 +26,7 @@ public sealed class BridgeRepairRiverFlow : IDisposable
         // This mask is authored for this exact image, not for arbitrary replacement backgrounds.
         if (!sprite.name.StartsWith("BridgeRepairBG", StringComparison.Ordinal)) return;
         if (sprite.packed && sprite.packingRotation != SpritePackingRotation.None) return;
-        var template = Resources.Load<Material>("Events/BridgeRepairRiver");
+        var template = ProgressiveContent.EventResource<Material>(EventContentPolicy.Bridge, "Events/BridgeRepairRiver");
         if (template == null || template.shader == null || !template.shader.isSupported)
         {
             if (GameDiagnostics.CriticalErrors)
@@ -42,10 +43,10 @@ public sealed class BridgeRepairRiverFlow : IDisposable
         material.SetVector(SpritePixelSize, new Vector4(sprite.rect.width, sprite.rect.height, 0f, 0f));
     }
 
-    public void Tick(float deltaTime, bool enabled, float speed, float strength)
+    public void Tick(float deltaTime, bool enabled, float speed, float strength, float tone = 0f)
     {
         if (image == null || material == null) return;
-        if (!enabled || strength <= 0f || image.overrideSprite != sprite)
+        if (((!enabled || strength <= 0f) && tone <= 0f) || image.overrideSprite != sprite)
         {
             Restore();
             return;
@@ -53,14 +54,15 @@ public sealed class BridgeRepairRiverFlow : IDisposable
         if (image.material != material) image.material = material;
         // Both wave frequencies and the 6-second flow period repeat at 600 seconds.
         clock = Mathf.Repeat(clock + Mathf.Max(0f, deltaTime) * Mathf.Clamp(speed, 0f, 3f), 600f);
-        ApplyParameters(material, strength);
+        ApplyParameters(material, enabled ? strength : 0f, tone);
         // UGUI may use a stencil copy under a Mask. Keep its clock in sync as well.
         var rendered = image.materialForRendering;
-        if (rendered != null && rendered != material) ApplyParameters(rendered, strength);
+        if (rendered != null && rendered != material) ApplyParameters(rendered, enabled ? strength : 0f, tone);
     }
 
-    private void ApplyParameters(Material target, float strength)
+    private void ApplyParameters(Material target, float strength, float tone)
     {
+        target.SetFloat(RiverTone, tone);
         target.SetFloat(FlowClock, clock);
         target.SetFloat(FlowStrength, Mathf.Clamp(strength, 0f, 2f));
     }

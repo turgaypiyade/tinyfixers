@@ -9,6 +9,19 @@ using System.Collections.Generic;
 /// </summary>
 public static class BridgeRepairSchedule
 {
+    /// <summary>Sıradaki pencerenin açılışı (UTC; pencereler gün başında açılır). Aktifse ya da 14 gün içinde yoksa
+    /// DateTime.MinValue. Ana menü "YAKINDA" balonu için; çağıran önbelleğe alır (saniyede bir hesaplanmaz).</summary>
+    public static DateTime GetNextStart(BridgeRepairConfig config, DateTime utcNow)
+    {
+        if (config == null || IsActiveNow(config, utcNow)) return DateTime.MinValue;
+        for (int d = 1; d <= 14; d++)
+        {
+            var day = utcNow.Date.AddDays(d);
+            if (IsActiveNow(config, day.AddSeconds(1))) return DateTime.SpecifyKind(day, DateTimeKind.Utc);
+        }
+        return DateTime.MinValue;
+    }
+
     public static bool IsActiveNow(BridgeRepairConfig config, DateTime utcNow) =>
         TryGetActiveWindowStart(config, utcNow, out _);
 

@@ -22,6 +22,14 @@ public sealed class ComebackGiftOverlay : MonoBehaviour
     private const float GiftPop = 0.32f;
     private const int Columns = 3;
     private static readonly Vector2 Cell = new Vector2(300f, 260f);
+    // Çok ödüllü tören (haftalık yarış birincisi 10 kalem): 4 sütun, küçük hücre — başlık/alt yazıyla çakışmasın.
+    private const int WideColumns = 4;
+    private static readonly Vector2 WideCell = new Vector2(240f, 230f);
+    private int _columns = Columns;
+    private Vector2 _cell = Cell;
+    private string _titleText, _subtitleText;
+    private bool _celebrate;
+    private CelebrationFireworksFx _fireworks;
     private static readonly Color TitleSurface = new Color(0.72f, 0.30f, 0.05f);   // turuncu-kahve kontur
 
     private IReadOnlyList<DailySlotReward> _gifts;
@@ -33,12 +41,19 @@ public sealed class ComebackGiftOverlay : MonoBehaviour
     private bool _ready, _closing;
 
     public static void Show(IReadOnlyList<DailySlotReward> gifts, Action onClaim)
+        => Show(gifts, onClaim, null, null, celebrate: false);
+
+    /// Genel ödül töreni: başlık/alt yazı verilebilir; celebrate = havai fişek + saçılan taşlar (haftalık yarış).
+    public static void Show(IReadOnlyList<DailySlotReward> gifts, Action onClaim, string title, string subtitle, bool celebrate)
     {
         if (_instance != null || gifts == null || gifts.Count == 0) return;
         var go = new GameObject("ComebackGiftOverlay", typeof(RectTransform));
         _instance = go.AddComponent<ComebackGiftOverlay>();
         _instance._gifts = gifts;
         _instance._onClaim = onClaim;
+        _instance._titleText = title;
+        _instance._subtitleText = subtitle;
+        _instance._celebrate = celebrate;
         _instance.Build();
         _instance.StartCoroutine(_instance.Run());
     }
@@ -64,46 +79,64 @@ public sealed class ComebackGiftOverlay : MonoBehaviour
         var dim = NewRect("Dim", transform);
         dim.anchorMin = Vector2.zero; dim.anchorMax = Vector2.one; dim.offsetMin = dim.offsetMax = Vector2.zero;
         var dimImg = dim.gameObject.AddComponent<Image>();
-        dimImg.color = new Color(0f, 0f, 0f, DimAlpha);
+        // Tören modunda (haftalık yarış) karartma neredeyse opak (kullanıcı 2026-11-24: %97).
+        dimImg.color = new Color(0f, 0f, 0f, _celebrate ? 0.97f : DimAlpha);
         var tap = dim.gameObject.AddComponent<Button>();
         tap.transition = Selectable.Transition.None;
         tap.onClick.AddListener(HandleTap);
 
         _title = NewText("Title", new Vector2(0f, 640f), new Vector2(980f, 170f), 104f);
-        _title.text = GameLocalization.GetOr("comeback_gift_title", "Hoş Geldin Hediyesi!");
+        _title.text = _titleText ?? GameLocalization.GetOr("comeback_gift_title", "Hoş Geldin Hediyesi!");
         TitleLetterPop.ApplyRewardStyle(_title);
 
-        _subtitle = NewText("Subtitle", new Vector2(0f, 500f), new Vector2(900f, 140f), 54f);
-        _subtitle.text = GameLocalization.GetOr("comeback_gift_subtitle", "Tamir ekibinden birkaç hediye!");
+        // Tören modunda başlığın altında nefes payı: alt yazı ve ödüller biraz aşağıda.
+        _subtitle = NewText("Subtitle", new Vector2(0f, _celebrate ? 430f : 500f), new Vector2(900f, 140f), 54f);
+        _subtitle.text = _subtitleText ?? GameLocalization.GetOr("comeback_gift_subtitle", "Tamir ekibinden birkaç hediye!");
         TextSurfaceStyle.Apply(_subtitle, new Color(0.15f, 0.15f, 0.2f));
         _subtitle.alpha = 0f;
 
+        if (_celebrate) _fireworks = CelebrationFireworksFx.Create(dim);   // karartmanın üstünde, ödüllerin arkasında
+
         _grid = NewRect("Gifts", transform);
-        _grid.anchoredPosition = new Vector2(0f, 60f);
-        int rows = Mathf.CeilToInt(_gifts.Count / (float)Columns);
+        _grid.anchoredPosition = new Vector2(0f, _celebrate ? -10f : 60f);
+        if (_gifts.Count > 6) { _columns = WideColumns; _cell = WideCell; }
+        int rows = Mathf.CeilToInt(_gifts.Count / (float)_columns);
         for (int i = 0; i < _gifts.Count; i++)
         {
-            int row = i / Columns, inRow = Mathf.Min(Columns, _gifts.Count - row * Columns), col = i % Columns;
-            float x = (col - (inRow - 1) * 0.5f) * Cell.x;
-            float y = ((rows - 1) * 0.5f - row) * Cell.y;
+            int row = i / _columns, inRow = Mathf.Min(_columns, _gifts.Count - row * _columns), col = i % _columns;
+            float x = (col - (inRow - 1) * 0.5f) * _cell.x;
+            float y = ((rows - 1) * 0.5f - row) * _cell.y;
             _tiles.Add(BuildTile(_gifts[i], new Vector2(x, y)));
         }
 
         _tapText = NewText("Tap", new Vector2(0f, -700f), new Vector2(900f, 90f), 46f);
-        _tapText.text = GameLocalization.Get("common_tap_continue");
-        TextSurfaceStyle.Apply(_tapText, new Color(0.15f, 0.15f, 0.2f));
+        if (_celebrate)
+        {
+            // Açılıştaki şartlar kartının "Devam"ı ile aynı (kullanıcı 2026-11-24): buton fontu, mavi, düz yazı.
+            var popupSkin = CommonPopupSkin.Shared;
+            if (popupSkin != null && popupSkin.buttonFont != null) _tapText.font = popupSkin.buttonFont;
+            _tapText.text = GameLocalization.Get("legal_continue");
+            _tapText.color = new Color(0.25f, 0.62f, 1f, 1f);
+            _tapText.fontSizeMax = 60f;
+        }
+        else
+        {
+            _tapText.text = GameLocalization.Get("common_tap_continue");
+            TextSurfaceStyle.Apply(_tapText, new Color(0.15f, 0.15f, 0.2f));
+        }
         _tapText.alpha = 0f;
     }
 
     private RectTransform BuildTile(DailySlotReward gift, Vector2 pos)
     {
         var tile = NewRect("Gift", _grid);
-        tile.sizeDelta = Cell;
+        tile.sizeDelta = _cell;
+        float iconSize = _cell == Cell ? 180f : 150f;
         tile.anchoredPosition = pos;
         tile.localScale = Vector3.zero;
 
         var icon = NewRect("Icon", tile);
-        icon.sizeDelta = new Vector2(180f, 180f);
+        icon.sizeDelta = new Vector2(iconSize, iconSize);
         icon.anchoredPosition = new Vector2(0f, 30f);
         var img = icon.gameObject.AddComponent<Image>();
         img.sprite = gift.ResolveIcon();
@@ -111,7 +144,7 @@ public sealed class ComebackGiftOverlay : MonoBehaviour
         img.raycastTarget = false;
         img.enabled = img.sprite != null;
 
-        var label = NewTextUnder(tile, "Amount", new Vector2(0f, -95f), new Vector2(Cell.x, 70f), 50f);
+        var label = NewTextUnder(tile, "Amount", new Vector2(0f, -iconSize * 0.53f), new Vector2(_cell.x, 70f), 50f);
         label.text = gift.IsTimed ? gift.AmountLabel : Mathf.Max(1, gift.amount).ToString();
         TextSurfaceStyle.Apply(label, new Color(0.62f, 0.08f, 0.10f));   // kırmızı kurdele koyusu
         return tile;
@@ -128,6 +161,7 @@ public sealed class ComebackGiftOverlay : MonoBehaviour
         }
         _group.alpha = 1f;
 
+        if (_fireworks != null) _fireworks.Play();
         yield return TitleLetterPop.Play(_title, overlapEntrance: true);
         yield return FadeText(_subtitle, 0.25f);
         for (int i = 0; i < _tiles.Count; i++)
@@ -172,6 +206,7 @@ public sealed class ComebackGiftOverlay : MonoBehaviour
     {
         if (!_ready || _closing) return;
         _closing = true;
+        if (_fireworks != null) _fireworks.Stop();
         _onClaim?.Invoke();
         StartCoroutine(Close());
     }

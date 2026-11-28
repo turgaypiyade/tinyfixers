@@ -81,6 +81,23 @@ public class OverrideComboController : MonoBehaviour
     [SerializeField] private Sprite waveGlowSprite;
     [SerializeField] private Color  waveGlowColor    = new Color(1f, 0.85f, 0.3f, 0.40f);
 
+    [Header("Tug-of-war (ayrılırken bağ geri çeker)")]
+    [Tooltip("Ayrılmanın ne kadar ötesine kaçmaya çalışırlar (1 = eski mesafe).")]
+    [SerializeField, Range(1f, 1.6f)] private float tugEscapeFactor = 1.18f;
+    [Tooltip("Fazın bu oranından sonra bağ geri çekmeye başlar.")]
+    [SerializeField, Range(0.3f, 0.9f)] private float tugPullStart = 0.58f;
+    [Tooltip("Bağın geri çektiği oran (çarpışma bu kadar yakından başlar).")]
+    [SerializeField, Range(0f, 0.6f)] private float tugPullBack = 0.32f;
+    [Tooltip("Gerilim titremesi (px).")]
+    [SerializeField, Range(0f, 12f)] private float tugTremblePx = 4f;
+
+    [Header("Board Dim (combo anı karartma)")]
+    [Tooltip("Tahta karartması (0 = kapalı). Çarpışmada tam, dalga ilerledikçe açılır. Dokunuşu engellemez.")]
+    [SerializeField, Range(0f, 0.95f)] private float boardDimAlpha = 0.85f;
+    [SerializeField, Min(0.01f)] private float boardDimFadeIn = 0.18f;
+    [Tooltip("Dalga fazının bu oranında karartma tamamen kalkar.")]
+    [SerializeField, Range(0.1f, 1f)] private float boardDimClearAt = 0.4f;
+
     [Header("Blast Rays")]
     [SerializeField] private int blastRayCount = 20;
     [SerializeField] private float blastRayThickness = 10f;
@@ -682,6 +699,7 @@ public class OverrideComboController : MonoBehaviour
     // ─────────────────────────────────────────
     private void Cleanup()
     {
+        SetBoardDim(0f);
         ReleaseComboTurns();
         RestoreStormDefaults();
         StormStop(true);
@@ -762,8 +780,6 @@ public class OverrideComboController : MonoBehaviour
             float selfRotB   = 0f;
             Vector2 awayA = ResolveAwayDirection(_startOffsetA - _startOffsetB, Vector2.left);
             Vector2 awayB = -awayA;
-            Vector2 aLiftEnd = _startOffsetA + Vector2.up * liftDistance + awayA * separationDistance;
-            Vector2 bLiftEnd = _startOffsetB + Vector2.up * liftDistance + awayB * separationDistance;
 
             while (orbitTime < orbitDuration)
             {
@@ -771,9 +787,15 @@ public class OverrideComboController : MonoBehaviour
                 float t     = Mathf.Clamp01(orbitTime / orbitDuration);
                 float easeT = EaseInOutCubic(t);
 
-                // Rise out of the cells and drift apart before the collision.
-                Vector2 aPos = Vector2.Lerp(_startOffsetA, aLiftEnd, easeT);
-                Vector2 bPos = Vector2.Lerp(_startOffsetB, bLiftEnd, easeT);
+                // Rise out of the cells and try to escape apart; the tether then pulls them back (tug-of-war).
+                float escape = EaseOutCubic(Mathf.Clamp01(t / Mathf.Max(0.01f, tugPullStart))) * tugEscapeFactor;
+                float pull = Mathf.Clamp01((t - tugPullStart) / Mathf.Max(0.01f, 1f - tugPullStart));
+                float sep = escape - tugPullBack * EaseInOutCubic(pull)
+                            + 0.06f * Mathf.Sin(pull * Mathf.PI * 4f) * (1f - pull);   // geri-ileri gerilme
+                Vector2 tremble = new Vector2(Mathf.Sin(orbitTime * 71f), Mathf.Cos(orbitTime * 63f)) * (tugTremblePx * pull);
+                Vector2 aPos = _startOffsetA + Vector2.up * (liftDistance * easeT) + awayA * (separationDistance * sep) + tremble;
+                Vector2 bPos = _startOffsetB + Vector2.up * (liftDistance * easeT) + awayB * (separationDistance * sep) - tremble;
+                SetBoardDim(boardDimAlpha * Smooth01(orbitTime / boardDimFadeIn));
                 IconRectA.anchoredPosition = aPos;
                 IconRectB.anchoredPosition = bPos;
 
@@ -851,6 +873,7 @@ public class OverrideComboController : MonoBehaviour
                 SetAlpha(iconImageA, 1f);
                 SetAlpha(iconImageB, 1f);
                 SetFlashAlpha(Mathf.Lerp(0.18f, flashMaxAlpha * 0.75f, Mathf.InverseLerp(smashImpactFraction, 1f, t)));
+                SetBoardDim(boardDimAlpha);
 
                 TickComboTurns(Time.deltaTime, 1f, true);
                 yield return null;
@@ -938,6 +961,7 @@ public class OverrideComboController : MonoBehaviour
                 // (NOT: prefab'da shockwaveImage ve centerFlash AYNI Image — shockwave'e ayrı
                 // animasyon YOK; flash alpha'sını tek yerden, buradan yönetiyoruz.)
                 SetFlashAlpha(flashMaxAlpha * (1f - Smooth01(t / 0.25f)));
+                SetBoardDim(boardDimAlpha * (1f - Smooth01(t / Mathf.Max(0.01f, boardDimClearAt))));
 
                 // Soft fill supports the ray burst without reading as repeated rings.
                 // Cepheyle senkron büyür (rect iconSize tabanlı → scale = çap / iconSize).
@@ -1016,6 +1040,43 @@ public class OverrideComboController : MonoBehaviour
     // ─────────────────────────────────────────
     //  HELPERS
     // ─────────────────────────────────────────
+    // Tahta karartması: combo kökünün HEMEN ARKASINDA (aynı ebeveyn), ebeveyne yayılan tek Image.
+    // Bir kez yaratılır, yeniden kullanılır; dokunuşu engellemez (raycastTarget=false).
+    private Image boardDim;
+
+    private void SetBoardDim(float alpha)
+    {
+        if (alpha <= 0f)
+        {
+            if (boardDim != null && boardDim.gameObject.activeSelf) boardDim.gameObject.SetActive(false);
+            return;
+        }
+        var parentRt = transform.parent as RectTransform;
+        if (parentRt == null) return;
+        if (boardDim == null)
+        {
+            var go = new GameObject("OverrideComboBoardDim", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            go.layer = gameObject.layer;
+            go.transform.SetParent(parentRt, false);
+            var rt = (RectTransform)go.transform;
+            // Ebeveynin boyu belirsiz olabilir (nokta çapalı VFX kökü) → ekranı garanti kaplayan dev, ortalı kare.
+            rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.anchoredPosition = Vector2.zero;
+            rt.sizeDelta = new Vector2(12000f, 12000f);
+            boardDim = go.GetComponent<Image>();
+            boardDim.raycastTarget = false;
+            go.SetActive(false);   // aşağıdaki ilk-etkinleşme bloğu sıralamayı yapsın (ilk gösteride de combo'nun arkasında)
+        }
+        if (!boardDim.gameObject.activeSelf)
+        {
+            boardDim.gameObject.SetActive(true);
+            // Combo kökünün hemen arkasına (tahta/taşların önüne).
+            // Combo'nun HEMEN önüne: karartma zaten öndeyse (küçük indeks) çıkarılınca combo bir geri kayar.
+            int ci = transform.GetSiblingIndex(), di = boardDim.transform.GetSiblingIndex();
+            boardDim.transform.SetSiblingIndex(di < ci ? ci - 1 : ci);
+        }
+        boardDim.color = new Color(0f, 0f, 0f, alpha);
+    }
     private static bool IsFirstTurnRole(Vector2 a, Vector2 b)
         => Mathf.Abs(a.x - b.x) > 0.01f ? a.x < b.x : a.y >= b.y;
 

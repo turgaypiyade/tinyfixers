@@ -5,6 +5,10 @@ public class PatchbotComboService
 {
     private readonly BoardController board;
 
+    // Bu servisten kuyruğa giren ilk N dash combo gösterisiyle (yay + pike) uçar. Varışta zincirlenen
+    // yeni dash'ler bütçe bittiği için normal uçar → gösteri yalnız combo'nun kendi botlarında kalır.
+    public int DiveFlourishBudget;
+
     public PatchbotComboService(BoardController board)
     {
         this.board = board;
@@ -46,6 +50,9 @@ public class PatchbotComboService
             orbitCarry = carriedSprite != null;
         }
 
+        bool diveFlourish = DiveFlourishBudget > 0;
+        if (diveFlourish) DiveFlourishBudget--;
+
         board.EnqueuePatchbotDash(
             new BoardController.PatchbotDashRequest
             {
@@ -53,6 +60,7 @@ public class PatchbotComboService
                 to = new Vector2Int(targetX, targetY),
                 carriedSprite = carriedSprite,
                 orbitCarry = orbitCarry,
+                diveFlourish = diveFlourish,
                 onStart = onDashStart,
                 onArrived = () =>
                 {

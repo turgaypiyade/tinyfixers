@@ -60,6 +60,13 @@ public sealed class ScriptedTutorial : MonoBehaviour
                        || (level.pinnedSpecialTypes != null && i < level.pinnedSpecialTypes.Length && level.pinnedSpecialTypes[i] > 0);
             if (pinned) reserved.Add(i);
         }
+        // Adımın hedef hücreleri de korunur (kullanıcı 2026-11-25: L32 Boya Kovası öğreticisinin hedefi hücre 35 sabit taş
+        // değildi → PreLevel booster'ı (TNT) oraya yerleşti, el special'ı gösterdi, joker special'ı reddetti → oyun kilitlendi).
+        foreach (var step in level.tutorialSteps)
+        {
+            if (step.fromCell >= 0 && step.fromCell < size) reserved.Add(step.fromCell);
+            if (step.fromCell >= 0 && step.toCell >= 0 && step.toCell < size) reserved.Add(step.toCell);
+        }
 
         active = runner;
         runner.StartCoroutine(runner.Run());

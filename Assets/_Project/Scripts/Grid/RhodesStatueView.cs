@@ -7,11 +7,11 @@ using UnityEngine.UI;
 /// (LaserCannon / TarpStatue deseni): Image aşamanın TABANINI (kalkansız, kılıçsız sahne) gösterir; kalkan ve kılıç
 /// birebir yerinde duran çocuk katmanlardır. Vuruşta aşama sprite'ları değişir, kılıç yumruktan savrulur, kalkan yalpalar.
 /// Katmanlar kullanıcının tam / parçasız sahne çiftlerinden piksel farkıyla çıkarıldı (dururken görüntü = orijinal sahne).
-/// Sprite'lar Resources/RhodesStatue/ (S{n}_Base 1024², parçalar kırpılmış; konumlar aşağıdaki tuval oranlarında).
+/// Sprite'lar aktif seviyenin RhodesStatue tanımında (S{n}_Base 1024², parçalar kırpılmış; konumlar aşağıdaki tuval oranlarında).
 /// </summary>
 public sealed class RhodesStatueView : MonoBehaviour
 {
-    private const string Dir = "RhodesStatue/";
+    private ObstacleDef definition;
 
     // Parça kutusu (tuval oranı, sol-üst köşeden x, y, w, h) — Rhodes katman çıkarma betiğinin ölçtüğü değerler.
     private static readonly Rect[] SwordRect =
@@ -36,16 +36,17 @@ public sealed class RhodesStatueView : MonoBehaviour
     private Coroutine hitCo;
     private int lastNearbyFrame = -1;
     private float lastSwingTime = -10f;
-    private static readonly Sprite[] StoneChips = new Sprite[4];
+    private readonly Sprite[] StoneChips = new Sprite[4];
 
     /// Kalan vuruş → aşama: 4 sağlam, 3 çatlak, 2 iskele açığa çıkmış, 1 yalnız baş + iskele.
     public static int StageForRemaining(int remainingHits) => Mathf.Clamp(5 - remainingHits, 1, 4);
 
-    public static RhodesStatueView Ensure(Image image, int remainingHits)
+    public static RhodesStatueView Ensure(Image image, int remainingHits, ObstacleDef definition)
     {
         if (image == null) return null;
         if (!image.TryGetComponent<RhodesStatueView>(out var view))
             view = image.gameObject.AddComponent<RhodesStatueView>();
+        view.definition = definition;
         view.Build();
         view.SetStage(StageForRemaining(remainingHits));
         return view;
@@ -172,7 +173,7 @@ public sealed class RhodesStatueView : MonoBehaviour
         float span = Mathf.Min(size.x, size.y);
         for (int i = 0; i < StoneChips.Length; i++)
         {
-            if (StoneChips[i] == null) StoneChips[i] = Resources.Load<Sprite>("TarpStatue/Chip_" + i);
+            if (StoneChips[i] == null) StoneChips[i] = Load("Chip_" + i);
             float side = i % 2 == 0 ? -1f : 1f;
             float x = side * (i < 2 ? 0.22f : 0.11f);
             float y = i < 2 ? 0.17f : -0.12f;
@@ -250,10 +251,5 @@ public sealed class RhodesStatueView : MonoBehaviour
         if (shield != null) { shield.localRotation = Quaternion.identity; shield.localScale = Vector3.one; }
     }
 
-    private static Sprite Load(string name)
-    {
-        var s = Resources.Load<Sprite>(Dir + name);
-        if (s == null && GameDiagnostics.CriticalErrors) Debug.LogWarning($"[RhodesStatue] Sprite yok: {Dir}{name}");
-        return s;
-    }
+    private Sprite Load(string name) => definition?.ViewSprite(name);
 }

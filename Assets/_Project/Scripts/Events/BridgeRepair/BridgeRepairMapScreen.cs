@@ -102,6 +102,48 @@ public sealed class BridgeRepairMapScreen : MonoBehaviour
 
     public void Open(BridgeRepairController owner, bool animate)
     {
+        if (ProgressiveContent.GateEvent(this, EventContentPolicy.Bridge, () => Open(owner, animate), () => owner != null && owner.IsEventAvailable)) return;
+        OpenScreen(owner, animate, false);
+    }
+
+#if UNITY_EDITOR
+    public void OpenPreview(BridgeRepairController owner) => OpenScreen(owner, false, true);
+#endif
+
+#if UNITY_EDITOR
+    private enum BridgePaint { Ahsap, MercanKirmizisi, KobaltMavisi, ZumrutYesili }
+    [SerializeField] private BridgePaint previewBridgePaint = BridgePaint.MercanKirmizisi;
+    private BridgePaint? appliedPaint;
+    private Material previewPaintMaterial;
+
+    private void RefreshPreviewPaint()
+    {
+        if (appliedPaint == previewBridgePaint) return;
+        appliedPaint = previewBridgePaint;
+        if (previewPaintMaterial == null && previewBridgePaint != BridgePaint.Ahsap)
+        {
+            var shader = UnityEditor.AssetDatabase.LoadAssetAtPath<Shader>("Assets/_Project/Editor/BridgePaintPreview.shader");
+            if (shader == null || !shader.isSupported) return;
+            previewPaintMaterial = new Material(shader) { hideFlags = HideFlags.HideAndDontSave };
+        }
+        Color color = previewBridgePaint switch
+        {
+            BridgePaint.MercanKirmizisi => new Color(1f, 0.30f, 0.22f),
+            BridgePaint.KobaltMavisi => new Color(0.24f, 0.52f, 1f),
+            BridgePaint.ZumrutYesili => new Color(0.18f, 0.83f, 0.50f),
+            _ => Color.white
+        };
+        var material = previewBridgePaint == BridgePaint.Ahsap ? null : previewPaintMaterial;
+        foreach (var lane in lanes) lane.SetPreviewPaint(material, color);
+    }
+#endif
+    private bool preview;
+    [SerializeField, Range(0f, 1f), Tooltip("Debug yarış önizlemesinde su rengi: 0 orijinal, 1 sakin turkuaz.")]
+    private float previewRiverTone = 0.6f;
+
+    private void OpenScreen(BridgeRepairController owner, bool animate, bool previewMode)
+    {
+        preview = previewMode;
         controller = owner;
         showRequested = true;
         gameObject.SetActive(true);
@@ -113,7 +155,7 @@ public sealed class BridgeRepairMapScreen : MonoBehaviour
         StopAllCoroutines();
         screenMotion?.Reset();
         if (riverFlow == null) riverFlow = new BridgeRepairRiverFlow(boardImage);
-        riverFlow.Tick(0f, animateRiver, riverFlowSpeed, riverFlowStrength);
+        riverFlow.Tick(0f, animateRiver, riverFlowSpeed, riverFlowStrength, preview ? previewRiverTone : 0f);
         bannerOpen = false;
         EventSfx.StartAmbient();
         // Daire geçişi: ikondan açılır. Sunum (board oturması, başlık düşmesi) aynı anda başlar.
@@ -136,7 +178,7 @@ public sealed class BridgeRepairMapScreen : MonoBehaviour
     {
         if (presenting || bannerOpen || controller == null) return;
         EventSfx.Play(x => x.uiTap);
-        if (controller.CanPlay) controller.RequestPlay();
+        if (!preview && controller.CanPlay) controller.RequestPlay();
         else HideAnimated();
     }
 
@@ -145,7 +187,7 @@ public sealed class BridgeRepairMapScreen : MonoBehaviour
     // Ekran açıkken ilerleme değişirse (ör. debug +1, zaman atlama) hemen oynat.
     private void HandleStateChanged()
     {
-        if (controller == null || presenting || !isActiveAndEnabled) return;
+        if (preview || controller == null || presenting || !isActiveAndEnabled) return;
         if (root != null && !root.activeInHierarchy) return;
         StopAllCoroutines();
         StartCoroutine(Present(true));
@@ -163,6 +205,7 @@ public sealed class BridgeRepairMapScreen : MonoBehaviour
 
     private void OnDisable()
     {
+        ProgressiveContent.CancelEvent(this);
         BridgeRepairState.OnChanged -= HandleStateChanged;
         StopAllCoroutines();
         screenMotion?.Reset();
@@ -170,15 +213,24 @@ public sealed class BridgeRepairMapScreen : MonoBehaviour
         presenting = false;
     }
 
-    private void OnDestroy() => riverFlow?.Dispose();
+    private void OnDestroy()
+    {
+        riverFlow?.Dispose();
+#if UNITY_EDITOR
+        if (previewPaintMaterial != null) Destroy(previewPaintMaterial);
+#endif
+    }
 
     // ── Yerleşim ─────────────────────────────────────────────────
 
     private void LateUpdate()
     {
         if (!IsOpen) return;
+#if UNITY_EDITOR
+        if (preview) RefreshPreviewPaint();
+#endif
         screenMotion?.Tick(Time.unscaledDeltaTime);
-        riverFlow?.Tick(Mathf.Min(Time.unscaledDeltaTime, 0.05f), animateRiver, riverFlowSpeed, riverFlowStrength);
+        riverFlow?.Tick(Mathf.Min(Time.unscaledDeltaTime, 0.05f), animateRiver, riverFlowSpeed, riverFlowStrength, preview ? previewRiverTone : 0f);
         FitBoard();
         RefreshTimer();
         if (continueText != null && continueText.gameObject.activeInHierarchy)
@@ -243,6 +295,26 @@ public sealed class BridgeRepairMapScreen : MonoBehaviour
         Canvas.ForceUpdateCanvases();
 
         var cfg = controller.Config;
+        if (preview)
+        {
+            RebuildLanes(cfg);
+#if UNITY_EDITOR
+            appliedPaint = null;
+            RefreshPreviewPaint();
+#endif
+            foreach (var avatar in podiumAvatars)
+                if (avatar != null) Destroy(avatar);
+            podiumAvatars.Clear();
+            podiumOccupants.Clear();
+            foreach (var lane in lanes)
+            {
+                int steps = (lane.Contestant.lane + 1) * cfg.levelsToFinish / (lanes.Count + 1);
+                lane.SetInstant(steps, 0);
+            }
+            if (statusText != null) statusText.text = string.Empty;
+            presenting = false;
+            yield break;
+        }
         DateTime now = DateTime.UtcNow;
         int wins = Mathf.Min(BridgeRepairState.Wins, cfg.levelsToFinish);
         DateTime fromUtc = now;
@@ -347,7 +419,7 @@ public sealed class BridgeRepairMapScreen : MonoBehaviour
             Vector2 left = lanesRoot.InverseTransformPoint(l.position);
             Vector2 right = lanesRoot.InverseTransformPoint(r.position);
             lanes.Add(BridgeLaneView.Create(lanesRoot, tagsLayer, cfg, metrics, c, left, right,
-                TagLeftAnchor(c.lane, left), bridgeLeftSprite, bridgeRightSprite, bridgeSegmentSprite));
+                TagLeftAnchor(c.lane, left), bridgeLeftSprite, bridgeRightSprite, bridgeSegmentSprite, preview));
         }
     }
 

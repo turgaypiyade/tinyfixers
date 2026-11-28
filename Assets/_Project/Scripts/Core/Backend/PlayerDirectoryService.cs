@@ -48,6 +48,7 @@ public static class PlayerDirectoryService
     /// <summary>Profil alanları son yazımdan beri değiştiyse players/{uid} dokümanını tazeler.</summary>
     public static void UpsertIfChanged()
     {
+        if (EditorBackendGuard.BlockPublicWrites) return;   // editör testi: oyuncu dizini/liderlik/takım kartı yazılmaz
         if (RuntimeSimulationSession.IsActive || !FirebaseAuthService.IsReady
             || !FirebaseCloudSaveService.RestoreResolved || FirebaseCloudSaveService.SuspendForDeletion) return;
 

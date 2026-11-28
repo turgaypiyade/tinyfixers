@@ -50,6 +50,7 @@ public sealed class SafariJoinPopupController : MonoBehaviour
 
     public void Show(SafariEventController owner)
     {
+        if (ProgressiveContent.GateEvent(this, EventContentPolicy.Safari, () => Show(owner), () => owner != null && owner.IsEventAvailable)) return;
         controller = owner;
         showRequested = true;
         gameObject.SetActive(true);
@@ -84,6 +85,7 @@ public sealed class SafariJoinPopupController : MonoBehaviour
 
     private void OnDisable()
     {
+        ProgressiveContent.CancelEvent(this);
         if (entrance != null) { StopCoroutine(entrance); entrance = null; }
     }
 

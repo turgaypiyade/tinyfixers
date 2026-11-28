@@ -50,7 +50,7 @@ public static class MarketNavigator
         }
 
         PendingOpenMarket = true;
-        SceneManager.LoadScene(MainMenuSceneName);
+        ProgressiveContent.LoadScene(MainMenuSceneName);
     }
 
     /// <summary>Ana menü marketi şu an açık mı (alt menü bu sahnede var ve market sekmesi seçili)?

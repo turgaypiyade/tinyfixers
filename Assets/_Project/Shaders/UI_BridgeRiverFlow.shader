@@ -5,6 +5,7 @@ Shader "TinyFixers/UI/BridgeRiverFlow"
         [PerRendererData] _MainTex ("Sprite Texture", 2D) = "white" {}
         _Color ("Tint", Color) = (1,1,1,1)
         _WaterMask ("River mask (linear data)", 2D) = "black" {}
+        _RiverTone ("Calm water tone", Range(0,1)) = 0
         _FlowStrength ("Flow strength", Range(0,2)) = 1
         _FlowClock ("Unscaled flow clock", Float) = 0
         _FlowTint ("Highlight tint", Color) = (0.82,0.98,1,1)
@@ -68,7 +69,7 @@ Shader "TinyFixers/UI/BridgeRiverFlow"
             sampler2D _MainTex, _WaterMask;
             fixed4 _Color, _TextureSampleAdd, _FlowTint;
             float4 _SpriteUV, _SpritePixelSize, _ClipRect;
-            float _FlowClock, _FlowStrength, _StreakIntensity, _SparkleIntensity, _Horizon;
+            float _RiverTone, _FlowClock, _FlowStrength, _StreakIntensity, _SparkleIntensity, _Horizon;
 
             // Hücre y ekseninde 64'lük periyot: kaydırma 600 sn'lik saatle dikişsiz döner.
             float Hash(float2 c)
@@ -155,6 +156,7 @@ Shader "TinyFixers/UI/BridgeRiverFlow"
                 float flowLight = (streak * _StreakIntensity + sparkle * _SparkleIntensity) * fadeFar;
                 moving *= 1.0 + (nC - 0.5) * 0.10 * saturate(_FlowStrength);
                 moving += _FlowTint.rgb * flowLight * saturate(_FlowStrength);
+                moving = lerp(moving, fixed3(0.32, 0.64, 0.70), _RiverTone * 0.65);
                 fixed4 color = fixed4(lerp(original.rgb, moving, river), original.a) * i.color;
 
                 #ifdef UNITY_UI_CLIP_RECT

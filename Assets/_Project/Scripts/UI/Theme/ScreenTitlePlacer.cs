@@ -10,10 +10,12 @@ public sealed class ScreenTitlePlacer : MonoBehaviour
 {
     private RectTransform root;
     private Vector2 lastRootSize;
+    private float extraDown;
 
-    public void Init(RectTransform screenRoot)
+    public void Init(RectTransform screenRoot, float extraDown = 0f)
     {
         root = screenRoot;
+        this.extraDown = extraDown;
         lastRootSize = Vector2.zero;
         Place();
     }
@@ -32,6 +34,6 @@ public sealed class ScreenTitlePlacer : MonoBehaviour
     {
         if (root == null) return;
         lastRootSize = root.rect.size;
-        ScreenTitleStyle.PlaceAtCommonPosition((RectTransform)transform, root);
+        ScreenTitleStyle.PlaceAtCommonPosition((RectTransform)transform, root, extraDown);
     }
 }

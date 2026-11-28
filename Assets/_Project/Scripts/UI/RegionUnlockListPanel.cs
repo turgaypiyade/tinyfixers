@@ -105,6 +105,14 @@ public sealed class RegionUnlockListPanel : MonoBehaviour
 
     public void Open()
     {
+        var active = WonderMode ? WonderProgress.ActiveWonder(wonderCatalog) : null;
+        if (active != null && ProgressiveContent.GateEvent(this, "mission-" + active.wonderId, Open)) return;
+        if (!WonderMode && ProgressiveContent.GateEvent(this, EventContentPolicy.MissionMap, Open)) return;
+        OpenReady();
+    }
+
+    private void OpenReady()
+    {
         if (!WonderMode && worldMap == null) { if (GameDiagnostics.CriticalErrors)
             Debug.LogWarning("[RegionPanel] worldMap atanmamış."); return; }
 
@@ -139,7 +147,7 @@ public sealed class RegionUnlockListPanel : MonoBehaviour
         inViewMode = false;
     }
 
-    private void OnDisable() => ShowStarChip(false);
+    private void OnDisable() { ShowStarChip(false); ProgressiveContent.CancelEvent(this); }
 
     private void ShowStarChip(bool visible)
     {
@@ -564,6 +572,9 @@ public sealed class RegionUnlockListPanel : MonoBehaviour
             yield break;
         }
 
+        var selected = wonderCatalog.Get(eventIndex);
+        if (selected == null || ProgressiveContent.GateEvent(this, "mission-" + selected.wonderId,
+            () => OnWonderTaskClicked(eventIndex), () => !isAnimating && inViewMode)) yield break;
         isAnimating = true;
         Vector3 starSource = ResolveStarSource(eventIndex);
         int fromStage = WonderProgress.StageOf(eventIndex);

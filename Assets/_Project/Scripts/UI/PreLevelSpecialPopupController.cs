@@ -193,8 +193,11 @@ public class PreLevelSpecialPopupController : MonoBehaviour
 
     public void Open(bool retry)
     {
+        if (ProgressiveContent.Gate(this, () => Open(retry))) return;
         retryMode = retry;
         levelStartRequested = false;
+        adSpecialSlot = null;
+        ++adSession;
 
         int level = PlayerPrefs.GetInt(prefsLevelKey, 1);
         bool isUnlocked = level >= specialsUnlockLevel;
@@ -218,6 +221,9 @@ public class PreLevelSpecialPopupController : MonoBehaviour
         currentTheme = ResolveTheme();
         ApplyTheme(currentTheme);
         ConfigureSlots(isUnlocked);
+        bool adOffer = RewardedAdCaps.CanOffer(AdPlacement.PreLevelSpecial);
+        foreach (var slot in slots) slot.SetAdAvailable(adOffer);
+        if (adOffer) RewardedAdCaps.NoteOffer(AdPlacement.PreLevelSpecial);
         RefreshLocalizedTexts();
         RefreshCounts();
         RefreshGoalsPreview();
@@ -601,15 +607,33 @@ public class PreLevelSpecialPopupController : MonoBehaviour
         if (slot == null)
             return;
 
+        if (!isFreeSession && !slot.IsTimedActive && slot != adSpecialSlot
+            && PreLevelSpecialInventory.GetCount(slot.Special) <= 0)
+        {
+            if (adSpecialSlot != null || AdService.IsShowing || levelStartRequested) return;
+            int session = adSession;
+            RewardedAdCaps.Show(AdPlacement.PreLevelSpecial, () =>
+            {
+                if (this == null || !isActiveAndEnabled || session != adSession || levelStartRequested) return;
+                adSpecialSlot = slot;
+                slot.SetSelected(true);
+                foreach (var item in slots) item.SetAdAvailable(false);
+                PlayOneShot(selectSfx);
+            });
+            return;
+        }
         slot.ToggleSelected();
         PlayOneShot(selectSfx);
     }
 
+    private PreLevelSpecialSlotView adSpecialSlot;
+    private int adSession;
     private bool levelStartRequested;
 
     private void HandleContinueClicked()
     {
-        if (levelStartRequested) return;
+        if (levelStartRequested || AdService.IsShowing) return;
+        if (ProgressiveContent.Gate(this, HandleContinueClicked)) return;
         if (!LivesManager.HasLives)
         {
             // Can yok → "Canın Bitti" teklifi (paket / reklam / market); can gelince oyun başlar.
@@ -633,7 +657,7 @@ public class PreLevelSpecialPopupController : MonoBehaviour
             userSelected.Add(slot.Special);
 
             // Free oyunda seçimler hak düşürmez.
-            if (!isFreeSession)
+            if (!isFreeSession && slot != adSpecialSlot)
                 PreLevelSpecialInventory.Spend(slot.Special, 1);
         }
 
@@ -661,7 +685,7 @@ public class PreLevelSpecialPopupController : MonoBehaviour
             return;
 
         ShowLoadingScreen();
-        SceneManager.LoadScene(gameSceneName);
+        ProgressiveContent.LoadScene(gameSceneName);
     }
 
     private bool TryShowCustomIntro()
@@ -698,7 +722,7 @@ public class PreLevelSpecialPopupController : MonoBehaviour
         if (cancelLoadsMainMenu)
         {
             ShowLoadingScreen();
-            SceneManager.LoadScene(mainMenuSceneName);
+            ProgressiveContent.LoadScene(mainMenuSceneName);
             return;
         }
 

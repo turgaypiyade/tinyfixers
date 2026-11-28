@@ -21,7 +21,8 @@ public static class ScreenTitleStyle
 
     /// <summary>Ekran kökünün altındaki "TopBar/Title" yazısını biçimlendirir ve ortak konuma koyar.
     /// font = ortak başlık fontu (UITheme.headingFont) — sahnede farklı fontla kurulmuş başlıklar da eşitlenir.</summary>
-    public static void ApplyToScreen(Transform screenRoot, TMP_FontAsset font = null)
+    /// extraDown: bu ekrana özel ek aşağı kaydırma (ör. Liderlik, kullanıcı 2026-11-24).
+    public static void ApplyToScreen(Transform screenRoot, TMP_FontAsset font = null, float extraDown = 0f)
     {
         if (screenRoot == null) return;
         var title = screenRoot.Find("TopBar/Title");
@@ -33,17 +34,17 @@ public static class ScreenTitleStyle
         // Konum bileşeni: panel ilk açılışta henüz boyutlanmamış olabilir / ekran boyu değişebilir →
         // başlık her etkinleşmede ve boyut değişiminde ortak konuma yeniden oturur.
         if (!title.TryGetComponent(out ScreenTitlePlacer placer)) placer = title.gameObject.AddComponent<ScreenTitlePlacer>();
-        placer.Init(screenRoot as RectTransform);
+        placer.Init(screenRoot as RectTransform, extraDown);
     }
 
     // TopBar'ın kendi yerleşiminden bağımsız: ekran kökünün üstünden CenterFromTop aşağıda, tam genişlik.
-    internal static void PlaceAtCommonPosition(RectTransform title, RectTransform root)
+    internal static void PlaceAtCommonPosition(RectTransform title, RectTransform root, float extraDown = 0f)
     {
         if (title == null || root == null || title.parent is not RectTransform parent) return;
 
         Rect r = root.rect;
         if (r.height <= 1f) return;
-        Vector3 worldCenter = root.TransformPoint(new Vector3(r.center.x, r.yMax - CenterFromTop, 0f));
+        Vector3 worldCenter = root.TransformPoint(new Vector3(r.center.x, r.yMax - CenterFromTop - extraDown, 0f));
         Vector3 local = parent.InverseTransformPoint(worldCenter);
 
         title.anchorMin = title.anchorMax = title.pivot = new Vector2(0.5f, 0.5f);

@@ -63,8 +63,8 @@ public static class MasterLeague
     // ── Havuz ve sıra ───────────────────────────────────────────────
 
     public static bool IsEligible(LevelCatalog.LevelEntry entry)
-        => entry != null && entry.levelData != null && entry.level >= MinPoolLevel
-           && entry.level % 10 != 9 && entry.levelData.levelKind != LevelKind.BossDuel;
+        => entry != null && entry.HasLevel && entry.level >= MinPoolLevel
+           && entry.level % 10 != 9 && entry.Kind != LevelKind.BossDuel;
 
     /// Katalogdaki uygun seviyeler, numaraya göre sıralı (karıştırmanın deterministik tabanı).
     public static List<int> Pool(LevelCatalog catalog)

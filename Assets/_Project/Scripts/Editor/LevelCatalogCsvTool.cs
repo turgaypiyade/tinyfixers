@@ -116,6 +116,7 @@ public static class LevelCatalogCsvTool
         foreach (var guid in AssetDatabase.FindAssets("t:LevelData"))
         {
             var p = AssetDatabase.GUIDToAssetPath(guid);
+            if (p.StartsWith("Assets/_Project/RemoteContent/GeneratedLevelPacks/", StringComparison.Ordinal)) continue;
             var d = AssetDatabase.LoadAssetAtPath<LevelData>(p);
             if (d == null) continue;
             if (byName.ContainsKey(d.name)) duplicate.Add(d.name);

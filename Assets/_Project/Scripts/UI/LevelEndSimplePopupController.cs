@@ -213,6 +213,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
     // level 5 bitince menü (ilk joker/PreLevel kullanımı level 6). Kayıpta normal fail akışı. Usta Ligi'nde uygulanmaz.
     private const int ContinuousPlayUntilLevel = 5;
     private bool continueToNextLevel;
+    private int completedLevelForPrompt;
     [SerializeField] private string prefsLevelKey = "current_level";
     [SerializeField] private LevelCatalog levelCatalog;
 
@@ -739,8 +740,25 @@ public class LevelEndSimplePopupController : MonoBehaviour
 
     private void HandleSuccessCloseClicked()
     {
+        // Menüsüz ilk levellar: bildirim izni burada sorulur (ana menü L5'ten sonra açılır, erken bırakan hiç
+        // sorulmuyordu). Cevaptan sonra aynı geçiş sürer; çarpı (ana menü) yolu menüdeki mevcut soruya kalır.
+        if (waitingForNotificationPrompt) return;   // popup sonraki karede kurulur; çift dokunuş geçişi başlatmasın
+        if (continueToNextLevel && !returningToMainMenu
+            && NotificationPermissionPrompt.TryShowBeforeNextLevel(this, completedLevelForPrompt, ContinueAfterNotificationPrompt))
+        {
+            waitingForNotificationPrompt = true;
+            return;
+        }
         // Progress-event son sandığı artık ANA MENÜDE açılır (kullanıcı 2026-11-18: sandık oyun sahnesinde/başka
         // ekranda açılıyordu). MainMenuRewardCollectFx: başlık → sandık → altın sayaca → diğerleri level butonuna.
+        ReturnToMainMenuImmediate();
+    }
+
+    private bool waitingForNotificationPrompt;
+
+    private void ContinueAfterNotificationPrompt()
+    {
+        waitingForNotificationPrompt = false;
         ReturnToMainMenuImmediate();
     }
 
@@ -775,7 +793,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
         if (library == null) library = Resources.Load<ChapterThemeLibrary>("ChapterThemeLibrary");
         LoadingScreenManager.Show(library != null ? library.GetRandomLoadingImage() : null, minimumDisplayTime: 0f);
         // İlk levellar: menü yerine aynı oyun sahnesi yeniden açılır; level, current_level'den (zaten +1) okunur.
-        SceneManager.LoadScene(continueToNextLevel ? gameObject.scene.name : mainMenuSceneName, LoadSceneMode.Single);
+        ProgressiveContent.LoadScene(continueToNextLevel ? gameObject.scene.name : mainMenuSceneName, LoadSceneMode.Single);
     }
 
     private void QueueSuccessReturnToMainMenu()
@@ -988,7 +1006,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
         var library = chapterThemeApplier != null ? chapterThemeApplier.ThemeLibrary : null;
         if (library == null) library = Resources.Load<ChapterThemeLibrary>("ChapterThemeLibrary");
         LoadingScreenManager.Show(library != null ? library.GetRandomLoadingImage() : null, minimumDisplayTime: 0f);
-        SceneManager.LoadScene(mainMenuSceneName);
+        ProgressiveContent.LoadScene(mainMenuSceneName);
     }
 
     private void SetBlockerVisible(bool isVisible)
@@ -1823,6 +1841,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
         ApplyRewardVisuals(stars, coins, score);
         SaveRewards(stars, coins, score);
         int completedLevel = ResolveCurrentLevelNumber();
+        completedLevelForPrompt = completedLevel;
         AdvanceToNextLevel();
         continueToNextLevel = completedLevel < ContinuousPlayUntilLevel
                               && levelCatalog != null && completedLevel < levelCatalog.MaximumGlobalLevel;
@@ -2072,15 +2091,26 @@ public class LevelEndSimplePopupController : MonoBehaviour
         board.ForceFullBoardSync();
     }
 
-    // Reklamla bedava devam: level başına 2 hak, 1. reklam +2, 2. reklam +1 hamle (RewardedAdCaps.Continue =
+    // Reklamla bedava devam: level başına 2 hak, 1. reklam +5, 2. reklam +3 hamle ve güçlendirici (RewardedAdCaps.Continue =
     // LevelAdRight; altın teklifinden bağımsız). Hak yalnız reklam gerçekten izlenince harcanır.
     private void WatchAdThenContinue()
     {
         if (_abandonWarning || board == null || !RewardedAdCaps.CanOffer(AdPlacement.Continue) || AdService.IsShowing) return;
+        bool bonusSpecial = LevelAdRight.UsedCount == 1;
         int adMoves = LevelAdRight.NextAdMoves;
         RewardedAdCaps.Show(AdPlacement.Continue, () =>
         {
             if (this == null || board == null) return;
+            if (bonusSpecial)
+            {
+                var special = UnityEngine.Random.Range(0, 3) switch
+                {
+                    0 => TileSpecial.LineH,
+                    1 => TileSpecial.PulseCore,
+                    _ => TileSpecial.SystemOverride
+                };
+                PreLevelSpecialInventory.Add(special, 1);
+            }
             PerformContinue(rewardedAd: true, overrideMoves: adMoves);
         });
     }
@@ -2136,7 +2166,7 @@ public class LevelEndSimplePopupController : MonoBehaviour
         rt.anchoredPosition = failContinueGroupHome + new Vector2(width * 0.5f + gap * 0.5f, size * 0.08f);
         rt.SetAsLastSibling();
         failAdButton.SetVisible(show);
-        if (show) failAdButton.SetRibbonText(LocalizedFormat("ad_continue_ribbon", "+{0} HAMLE", LevelAdRight.NextAdMoves));
+        if (show) failAdButton.SetRibbonText(LocalizedFormat("ad_continue_ribbon", "+{0} HAMLE", LevelAdRight.NextAdMoves) + (LevelAdRight.UsedCount == 1 ? LocalizedText("ad_continue_bonus", " + HEDİYE") : ""));
         // Teklif yalnız fail popup'ı gerçekten açıkken sayılır: level açılışında gizli popup da bu yoldan hazırlanıyordu
         // ve her level_start'a sahte bir ad_offer ekliyordu (izlenme oranı ad_reward/ad_offer bozuluyordu).
         if (show && failPopupShown && !failAdOfferNoted)

@@ -27,3 +27,4 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 4433002ff7cd472888ff3d800f3e6a3d, type: 2}
   masterLeagueTheme: {fileID: 11400000, guid: 83117925ac1a4c5db07656a472bd5c11, type: 2}
   levelCatalog: {fileID: 11400000, guid: 6791aed5a9bc44f4af246ccebce32906, type: 2}
+  remoteThemes: []

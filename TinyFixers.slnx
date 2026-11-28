@@ -3,6 +3,7 @@
   <Project Path="Unity.AI.Toolkit.Asset.csproj" />
   <Project Path="Unity.PlasticSCM.Editor.csproj" />
   <Project Path="Unity.Services.Core.Internal.csproj" />
+  <Project Path="Assembly-CSharp-Editor.csproj" />
   <Project Path="Unity.ShaderGraph.Editor.csproj" />
   <Project Path="Unity.Mathematics.csproj" />
   <Project Path="Unity.Multiplayer.Center.Editor.csproj" />
@@ -115,7 +116,6 @@
   <Project Path="Unity.AI.Assistant.API.Editor.csproj" />
   <Project Path="Unity.InputSystem.TestFramework.csproj" />
   <Project Path="Unity.AI.Generators.Tools.csproj" />
-  <Project Path="Assembly-CSharp-Editor.csproj" />
   <Project Path="Unity.Services.Deployment.Editor.Shared.csproj" />
   <Project Path="Unity.VisualScripting.Shared.Editor.csproj" />
   <Project Path="Unity.AI.Pbr.Srp.csproj" />

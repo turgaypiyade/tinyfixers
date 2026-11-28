@@ -161,7 +161,7 @@ public static class AuthLinkService
                     CancelConflict();
                     SetBusy(false);
                     OnLinked?.Invoke(provider);
-                    SceneManager.LoadScene("MainMenu");
+                    ProgressiveContent.LoadScene("MainMenu");
                 };
                 FirebaseCloudSaveService.OnRestored += restored;
                 FirebaseCloudSaveService.OnRestoreFailed += RestoreFailed;

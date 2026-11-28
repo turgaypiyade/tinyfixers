@@ -6,7 +6,7 @@ using UnityEngine;
 public sealed class GiftFestivalArt : ScriptableObject
 {
     private static GiftFestivalArt shared;
-    public static GiftFestivalArt Shared => shared != null ? shared : (shared = Resources.Load<GiftFestivalArt>("Events/GiftFestivalArt"));
+    public static GiftFestivalArt Shared => shared != null ? shared : (shared = ProgressiveContent.EventSourceConfig<GiftFestivalArt>("Events/GiftFestivalArt"));
     public Sprite menuLogo, background, topSign, board, glass, giftSymbol;
     [Tooltip("Optional continuous tall panorama. The lower section should match the gameplay field.")]
     public Sprite introPanorama;

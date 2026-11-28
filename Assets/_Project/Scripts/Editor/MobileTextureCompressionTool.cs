@@ -39,7 +39,7 @@ public static class MobileTextureCompressionTool
         "Assets/_Project/Art/UI/Obstacles/",
         "Assets/_Project/Art/Icons/Specials/",
         "Assets/_Project/Art/Icons/Boosters/",
-        "Assets/_Project/Resources/SealSafe/",
+        "Assets/_Project/Art/UI/Obstacles/SealSafe/",
     };
 
     private static int MobileMaxSize(string path, int importerMax)

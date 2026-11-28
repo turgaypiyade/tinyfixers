@@ -131,3 +131,11 @@ __pycache__/
 
 # Seviye önizleme dışa aktarımları (Tools/export_level_previews.py) — kullanılmıyor, repoya girmez (2026-11-22)
 Exports/LevelPreviews/
+
+# Generated immutable content bundles and verification receipts (never credentials).
+/Exports/ProgressiveContent/
+/Exports/PlayerBuild/
+# Recreated by the progressive-content editor tool; restore local content mode
+# before sharing source changes so no generated references remain in the catalog.
+/Assets/_Project/RemoteContent/GeneratedLevelPacks/
+/Assets/_Project/RemoteContent/GeneratedLevelPacks.meta

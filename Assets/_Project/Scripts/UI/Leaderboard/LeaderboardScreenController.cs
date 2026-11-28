@@ -71,6 +71,17 @@ public sealed class LeaderboardScreenController : MonoBehaviour
 
     private ILeaderboardService service;
     private readonly List<LeaderboardRow> rows = new();
+    // Haftalık kürsü (V2): bir kez kurulur, listenin ilk çocuğu; ilk 3 sıra satır olarak basılmaz.
+    private WeeklyPodiumView podium;
+    private readonly List<LeaderboardEntry> podiumTop = new(3);
+    private VerticalLayoutGroup contentLayout;
+    private int contentBottomPadding = -1;
+    // Kürsülü Haftalık'ta liste alanı tab bandının ALTINA girer: üst kenar biraz yukarı, liste bandın arkasında
+    // çizilir → perdeli sahne bandın altına "sokulmuş" görünür (kullanıcı 2026-11-24).
+    private const float PodiumTuckUnderBand = 20f;
+    // "Liderlik Panosu" başlığı ortak konumdan biraz aşağıda (kullanıcı 2026-11-24: çentiğe çok yakındı).
+    private const float TitleExtraDown = 24f;
+    private float listAreaTopOffset = float.NaN;
     private readonly List<FriendSuggestionRow> suggestionRows = new();
     private readonly Dictionary<LeaderboardTab, int> subFilterByTab = new();
     private LeaderboardTab current = LeaderboardTab.Weekly;
@@ -89,7 +100,7 @@ public sealed class LeaderboardScreenController : MonoBehaviour
         PlayerProfile.OnChanged += OnSocialReady;
         fetchedThisVisit.Clear();
         WireTabs();
-        ScreenTitleStyle.ApplyToScreen(transform, theme != null ? theme.headingFont : null);
+        ScreenTitleStyle.ApplyToScreen(transform, theme != null ? theme.headingFont : null, TitleExtraDown);
         SocialBackdrop.ApplyToScreen(transform);
         Build(current);
     }
@@ -138,9 +149,38 @@ public sealed class LeaderboardScreenController : MonoBehaviour
         if (findFriendButton != null && findFriendPopup != null)
             findFriendButton.onClick.AddListener(findFriendPopup.Open);
         UiButtons.Apply(findFriendButton, UiButtons.Kind.Green);
+        // "Arkadaş Bul" yazısı butona göre minik kalıyordu: okunur boy (sığmazsa küçülür).
+        if (findFriendButton != null)
+            foreach (var label in findFriendButton.GetComponentsInChildren<TMP_Text>(true))
+            {
+                label.enableAutoSizing = true;
+                label.fontSizeMax = 44f;
+                label.fontSizeMin = 26f;
+                label.textWrappingMode = TextWrappingModes.NoWrap;
+            }
 
+        ExtendBandDown();
         ApplyTogglePillLayout();
         wired = true;
+    }
+
+    // Kırmızı bant aşağı uzar (kullanıcı 2026-11-25): ButonwoStroke hapları sıkıştırılmadan doğal oranında sığsın.
+    // Tüm sekmeler için tek yer: bandın ALT kenarı iner, liste/ekle görünümü de aynı miktar aşağı başlar. Bir kez.
+    private const float BandExtraHeight = 30f;
+    private bool bandExtended;
+
+    private void ExtendBandDown()
+    {
+        if (bandExtended || connectedBand == null) return;
+        bandExtended = true;
+        var band = connectedBand.rectTransform;
+        band.offsetMin = new Vector2(band.offsetMin.x, band.offsetMin.y - BandExtraHeight);
+        if (listAreaRoot != null && listAreaRoot.transform is RectTransform list)
+            list.offsetMax = new Vector2(list.offsetMax.x, list.offsetMax.y - BandExtraHeight);
+        if (addFriendsRoot != null && addFriendsRoot.transform is RectTransform add)
+            add.offsetMax = new Vector2(add.offsetMax.x, add.offsetMax.y - BandExtraHeight);
+        if (timeChip != null)
+            timeChip.rectTransform.anchoredPosition -= new Vector2(0f, BandExtraHeight * 0.5f);
     }
 
     // Alt-toggle hapları (Dünya/Ülke, Liste/Ekle) skin'deki boyuttan runtime'da kurulur — sahnedeki
@@ -148,22 +188,35 @@ public sealed class LeaderboardScreenController : MonoBehaviour
     private void ApplyTogglePillLayout()
     {
         if (skin == null) return;
+        Vector2 pill = PillSize();
         for (int i = 0; i < toggleButtons.Length; i++)
         {
             if (toggleButtons[i] == null) continue;
             var rt = (RectTransform)toggleButtons[i].transform;
-            rt.sizeDelta = skin.togglePillSize;
+            rt.sizeDelta = pill;
             rt.anchoredPosition = new Vector2(i == 0 ? -skin.togglePillSpread : skin.togglePillSpread,
                 rt.anchoredPosition.y);
 
             var label = i < toggleLabels.Length ? toggleLabels[i] : null;
             if (label == null) continue;
             label.enableAutoSizing = true;
-            label.fontSizeMax = skin.togglePillFontSize;
-            label.fontSizeMin = skin.togglePillFontSize * 0.6f;
+            // ButonwoStroke hapı (2026-11-25): yüzün alt kenarında kalın dudak var → yazı alanı yüzün içine,
+            // biraz yukarı; uzun etiket ("Arkadaş Listesi") okunur boyda kalsın.
+            label.fontSizeMax = skin.togglePillFontSize;   // büyük yazı hapı esnetiyordu (kullanıcı 2026-11-25)
+            label.fontSizeMin = 24f;
             label.textWrappingMode = TextWrappingModes.NoWrap;
+            label.alignment = TextAlignmentOptions.Center;
+            var lrt = label.rectTransform;
+            lrt.anchorMin = Vector2.zero; lrt.anchorMax = Vector2.one;
+            lrt.offsetMin = new Vector2(16f, 8f);
+            lrt.offsetMax = new Vector2(-16f, -6f);
         }
     }
+
+    // Hap = ButonwoStroke görselinin KENDİ en/boy oranı (kullanıcı 2026-11-25: esnetilince buton bozuluyor).
+    // Yükseklik skin'den, genişlik sprite oranından.
+    // Geniş hap (BuyButton tabanlı 9-slice) yatay esnemeye uygun → skin ölçüsü doğrudan (2026-11-25).
+    private Vector2 PillSize() => skin.togglePillSize;
 
     private int CurrentSubFilter
         => subFilterByTab.TryGetValue(current, out int v) ? v : 0;
@@ -178,6 +231,11 @@ public sealed class LeaderboardScreenController : MonoBehaviour
     private void Build(LeaderboardTab tab)
     {
         current = tab;
+        // Arkadaşı yokken sekme "Arkadaş Ekle" ile AÇILIR (kural: boş liste yerine öneriler), ama hap seçimi gerçek
+        // kalır: "Arkadaş Listesi"ne basınca liste gösterilir (kullanıcı 2026-11-25: iki hap da aynı görünümü
+        // açtığı için basınca hiçbir şey olmuyordu).
+        if (tab == LeaderboardTab.Friends && !subFilterByTab.ContainsKey(tab) && !FriendState.HasFriends)
+            subFilterByTab[tab] = 1;
         if (fetchedThisVisit.Add(tab)) service?.Fetch(tab);
         Render();
     }
@@ -199,7 +257,7 @@ public sealed class LeaderboardScreenController : MonoBehaviour
         // Arkadaşlar sekmesi: "Ekle" toggle'ı — veya hiç arkadaş yokken "Liste" — öneri
         // görünümünü açar (kullanıcı kuralı: liste boşsa öneriler gelsin, arama hep elde).
         bool addFriendsView = current == LeaderboardTab.Friends
-            && (CurrentSubFilter == 1 || !FriendState.HasFriends);
+            && CurrentSubFilter == 1;
         if (addFriendsRoot != null) addFriendsRoot.SetActive(addFriendsView);
         if (listAreaRoot != null) listAreaRoot.SetActive(!addFriendsView);
         if (!addFriendsView && findFriendPopup != null && findFriendPopup.gameObject.activeSelf)
@@ -220,8 +278,13 @@ public sealed class LeaderboardScreenController : MonoBehaviour
         var entries = service?.GetEntries(current, CurrentSubFilter);
         var self = entries?.Find(e => e.isSelf);
 
-        // Kendi sıran görünür listede mi? (667 gibi kopuk sıralar altta pinlenir)
-        bool selfIsPinned = self != null && entries != null && self.rank > entries.Count;
+        bool podiumOn = UpdatePodium(entries);
+
+        // Kendi sıran görünür listede mi? (667 gibi kopuk sıralar altta pinlenir). Kürsülü Haftalık'ta kürsü
+        // ekranın büyük kısmını kapladığı için ilk 3 dışındaysan her zaman altta sabit.
+        bool selfIsPinned = self != null && entries != null
+            && (self.rank > entries.Count || (podiumOn && self.rank > 3));
+        ApplyPinnedPadding(selfIsPinned);
 
         if (selfRow != null)
         {
@@ -250,6 +313,7 @@ public sealed class LeaderboardScreenController : MonoBehaviour
             foreach (var entry in entries)
             {
                 if (entry.isSelf && selfIsPinned) continue;   // pinli, listede tekrar etme
+                if (podiumOn && entry.rank <= 3) continue;     // kürsüde
                 EnsureAvatar(entry);
                 var row = Instantiate(rowPrefab, contentContainer);
                 row.Bind(entry, theme, skin, current);
@@ -273,6 +337,76 @@ public sealed class LeaderboardScreenController : MonoBehaviour
         ApplyScreenBackground();
         UpdateTabVisuals();
         UpdateToggleVisuals();
+        // Kürsü başlığı, alt-toggle butonlarıyla aynı yazı tipini kullanır (stil uygulandıktan sonra okunur).
+        if (podium != null && podium.gameObject.activeSelf)
+        {
+            if (contentContainer != null) LayoutRebuilder.ForceRebuildLayoutImmediate(contentContainer);
+            podium.RefreshTexts();
+        }
+    }
+
+    // Kürsü (Haftalık + Oyuncular): skin'de sahne görseli varsa kurulur/bağlanır; diğer sekmelerde gizlenir.
+    private bool UpdatePodium(List<LeaderboardEntry> entries)
+    {
+        bool podiumTab = current == LeaderboardTab.Weekly || current == LeaderboardTab.Players;
+        bool on = podiumTab && skin != null && skin.weeklyStageBackground != null
+            && contentContainer != null && entries != null && entries.Exists(e => e.rank <= 3);
+        TuckListUnderBand(on);
+        if (!on)
+        {
+            if (podium != null) podium.gameObject.SetActive(false);
+            return false;
+        }
+
+        if (podium == null) podium = WeeklyPodiumView.Create(contentContainer, skin, theme);
+        podium.gameObject.SetActive(true);
+        podium.transform.SetAsFirstSibling();
+
+        podiumTop.Clear();
+        foreach (var e in entries)
+            if (e.rank <= 3) { EnsureAvatar(e); podiumTop.Add(e); }
+
+        float width = contentContainer.rect.width, bleed = 0f;
+        if (contentContainer.TryGetComponent(out HorizontalOrVerticalLayoutGroup g))
+        {
+            width -= g.padding.horizontal;
+            bleed = g.padding.left;   // sahne liste kenar boşluğunu da kaplasın (kenardan kenara)
+        }
+        // Ödül (hediye + i + balon) yalnız normal Haftalık Yarış'ta; Usta Ligi alt filtresi (1) kendi ödülünü kullanır.
+        bool weekly = current == LeaderboardTab.Weekly && CurrentSubFilter == 0;
+        string title = weekly
+            ? GameLocalization.GetOr("leaderboard_weekly_race", "Haftalık Yarış")
+            : current == LeaderboardTab.Weekly
+                ? GameLocalization.GetOr("leaderboard_sub_master", "Usta Ligi")
+                : GameLocalization.GetOr("leaderboard_players_podium", "En İyi Ustalar");
+        podium.Bind(podiumTop, width > 1f ? width : 1032f, bleed, weekly, title);
+        return true;
+    }
+
+    private void TuckListUnderBand(bool tuck)
+    {
+        if (listAreaRoot == null || connectedBand == null) return;
+        var area = listAreaRoot.transform as RectTransform;
+        if (area == null || area.parent != connectedBand.transform.parent) return;
+        if (float.IsNaN(listAreaTopOffset))
+        {
+            listAreaTopOffset = area.offsetMax.y;
+            // Bir kez: liste alanı bandın hemen ÖNÜNE (bant üstte çizilir). Diğer sekmelerde fark yok
+            // (orada liste bandla örtüşmez).
+            area.SetSiblingIndex(connectedBand.transform.GetSiblingIndex());
+        }
+        float top = listAreaTopOffset + (tuck ? PodiumTuckUnderBand : 0f);
+        if (!Mathf.Approximately(area.offsetMax.y, top)) area.offsetMax = new Vector2(area.offsetMax.x, top);
+    }
+
+    // Altta sabit satır varken listenin sonu onun arkasında kalmasın: alt boşluk bir satır kadar açılır.
+    private void ApplyPinnedPadding(bool pinned)
+    {
+        if (contentContainer == null) return;
+        if (contentLayout == null && !contentContainer.TryGetComponent(out contentLayout)) return;
+        if (contentBottomPadding < 0) contentBottomPadding = contentLayout.padding.bottom;
+        int target = contentBottomPadding + (pinned && skin != null ? Mathf.RoundToInt(skin.rowHeight) + 16 : 0);
+        if (contentLayout.padding.bottom != target) contentLayout.padding.bottom = target;
     }
 
     // Tam ekran arka plan sprite'ı (title bandı gömülü) atanmışsa onu kullan;
@@ -428,10 +562,11 @@ public sealed class LeaderboardScreenController : MonoBehaviour
             var bg = toggleBackgrounds[i];
             if (bg == null) continue;
 
-            // Ortak buton ailesi varsa: seçili turuncu, diğeri mor (yazı beyaz + konturlu).
-            if (UiButtons.SpriteOf(UiButtons.Kind.Orange) != null)
+            // Ortak buton ailesi varsa (yazı beyaz + buton renginin koyusu kontur).
+            if (UiButtons.SpriteOf(UiButtons.Kind.PillBlue) != null)
             {
-                var kind = selected ? UiButtons.Kind.Orange : UiButtons.Kind.Purple;
+                // ButonwoStroke ailesi (kapsül değil): seçili mavi, seçili değil koyu lacivert (kullanıcı 2026-11-25).
+                var kind = selected ? UiButtons.Kind.PillBlue : UiButtons.Kind.PillNavy;
                 UiButtons.Apply(bg, kind);
                 if (toggleLabels[i] != null) UiButtons.StyleLabel(toggleLabels[i], kind);
                 continue;
@@ -466,11 +601,12 @@ public sealed class LeaderboardScreenController : MonoBehaviour
         if (skin == null || toggleButtons.Length < 2 || toggleButtons[0] == null || toggleButtons[1] == null) return;
         var left = (RectTransform)toggleButtons[0].transform;
         var right = (RectTransform)toggleButtons[1].transform;
-        float w = skin.togglePillSize.x, spread = skin.togglePillSpread;
+        Vector2 pillSize = PillSize();
+        float w = pillSize.x, spread = skin.togglePillSpread;
         bool chipShown = hasToggle && timeChip != null && timeChip.gameObject.activeSelf;
         if (!chipShown || left.parent is not RectTransform parent)
         {
-            left.sizeDelta = right.sizeDelta = skin.togglePillSize;
+            left.sizeDelta = right.sizeDelta = pillSize;
             left.anchoredPosition = new Vector2(-spread, left.anchoredPosition.y);
             right.anchoredPosition = new Vector2(spread, right.anchoredPosition.y);
             return;
@@ -486,7 +622,9 @@ public sealed class LeaderboardScreenController : MonoBehaviour
         float startX = chipRight + ChipGap - anchorX;       // sol hapın sol kenarı (çapaya göre)
         float endX = spread + w * 0.5f;                     // sağ hapın sağ kenarı (değişmez)
         float width = Mathf.Max(w * 0.5f, (endX - startX - gap) * 0.5f);
-        left.sizeDelta = right.sizeDelta = new Vector2(width, skin.togglePillSize.y);
+        // Çip yanında: oranı koruyarak küçül (yalnız genişlik daralırsa buton bozulur).
+        float h2 = Mathf.Min(pillSize.y, width * pillSize.y / Mathf.Max(1f, pillSize.x));
+        left.sizeDelta = right.sizeDelta = new Vector2(h2 * pillSize.x / pillSize.y, h2);
         left.anchoredPosition = new Vector2(startX + width * 0.5f, left.anchoredPosition.y);
         right.anchoredPosition = new Vector2(endX - width * 0.5f, right.anchoredPosition.y);
     }

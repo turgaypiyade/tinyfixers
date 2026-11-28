@@ -28,6 +28,7 @@ public sealed class BridgeRepairEventButton : MonoBehaviour
         if (button == null) button = GetComponent<Button>();
         if (button != null) button.onClick.AddListener(() => controller?.OnIconClicked());
         if (visibilityRoot == null) visibilityRoot = gameObject;
+        EventIconPlate.Attach(labelText, new Color(0.12f, 0.45f, 0.85f));
     }
 
     private void OnEnable()
@@ -42,10 +43,13 @@ public sealed class BridgeRepairEventButton : MonoBehaviour
     private void Update() => RefreshLabel(force: false);
 
     /// <paramref name="lockedUntilLevel"/>: etkinliğin açılış seviyesi; gelinmemişse gizlemek yerine kilitli gösterilir.
-    public void SetVisible(bool visible, int lockedUntilLevel = 0)
+    /// <paramref name="waitingUntil"/>: seviye açık ama takvimde kapalı → gizlemek yerine gri "YAKINDA" (sıradaki
+    /// başlangıç; bilinmiyorsa DateTime.MinValue). null = gerçekten gizle (config yok vb.).
+    public void SetVisible(bool visible, int lockedUntilLevel = 0, DateTime? waitingUntil = null)
     {
         if (visible) EventLockOverlay.Release(visibilityRoot);
         else if (EventLockOverlay.Apply(visibilityRoot, lockedUntilLevel, labelText)) return;
+        else if (waitingUntil.HasValue) { EventLockOverlay.ApplyWaiting(visibilityRoot, waitingUntil.Value, labelText); return; }
         if (visibilityRoot != null && visibilityRoot.activeSelf != visible)
             visibilityRoot.SetActive(visible);
         if (visible) { RefreshProgress(); RefreshLabel(force: true); }

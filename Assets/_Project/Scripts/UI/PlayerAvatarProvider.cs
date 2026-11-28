@@ -24,6 +24,16 @@ public static class PlayerAvatarProvider
         get { var l = Lib; return l != null ? l.GetCharacterId(PlayerProfile.AvatarId) : string.Empty; }
     }
 
+    public static Sprite ForCharacter(string characterId)
+    {
+        var library = Lib;
+        if (library == null || string.IsNullOrEmpty(characterId)) return null;
+        for (int i = 0; i < library.Count; i++)
+            if (string.Equals(library.GetCharacterId(i), characterId, System.StringComparison.OrdinalIgnoreCase))
+                return library.Get(i);
+        return null;
+    }
+
     public static Sprite PickForSeed(string seed)
     {
         var l = Lib;

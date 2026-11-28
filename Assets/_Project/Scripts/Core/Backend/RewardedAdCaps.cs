@@ -2,11 +2,11 @@ using System;
 using UnityEngine;
 
 /// <summary>Ödüllü reklam yerleri (analitikte sayı olarak gider — sırayı DEĞİŞTİRME, yalnız sona ekle).</summary>
-public enum AdPlacement { Continue = 0, Life = 1, WheelSpin = 2 }
+public enum AdPlacement { Continue = 0, Life = 1, WheelSpin = 2, PreLevelSpecial = 3 }
 
 /// <summary>
 /// Ödüllü reklamın TEK kapısı: yer başına günlük sınır + analitik (Docs/Monetization/RewardedAds_Plan.md).
-/// Continue = seviye başına 2 hak (+2, +1 hamle; LevelAdRight); diğerleri yerel günde N.
+/// Continue = seviye başına 2 hak (+5, +3 hamle; LevelAdRight); diğerleri yerel günde N.
 /// Hak yalnız reklam GERÇEKTEN izlenince harcanır; yarıda kapanan/yüklenemeyen reklam hakkı yemez.
 /// Sayaçlar cihaz yerelidir (bulut kaydına girmez): ödülün kendisi cüzdan/envanter yoluyla kaydedilir.
 /// </summary>
@@ -19,6 +19,7 @@ public static class RewardedAdCaps
     {
         AdPlacement.Life => 3,
         AdPlacement.WheelSpin => 1,
+        AdPlacement.PreLevelSpecial => 3,   // seviye başı reklamla güçlendirici: günde 3 (mağaza/hak değerini korur)
         _ => int.MaxValue,
     };
 
